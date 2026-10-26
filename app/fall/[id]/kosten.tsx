@@ -1,6 +1,7 @@
 import { router } from 'expo-router';
 import { StyleSheet, View } from 'react-native';
 
+import { DemoHint } from '@/components/app/DemoHint';
 import { CaseFileCard } from '@/components/app/CaseFileCard';
 import { CaseScreen, useCaseId } from '@/components/app/CaseScreen';
 import { CostCompare } from '@/components/app/CostCompare';
@@ -114,6 +115,7 @@ export default function Kosten() {
         )
       }
     >
+      <DemoHint id="kosten" />
       {finding?.component ? <Text variant="meta">{t.findingMeta(finding.component)}</Text> : null}
       <Text variant="h1" accessibilityRole="header">
         {replacement ? t.titleReplacement : t.title}

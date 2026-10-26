@@ -3,6 +3,7 @@ import { router, usePreventRemove } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
+import { DemoHint } from '@/components/app/DemoHint';
 import { CaseScreen, useCaseId } from '@/components/app/CaseScreen';
 import { leaveCase } from '@/components/nav/leaveCase';
 import {
@@ -161,6 +162,7 @@ export default function Anleitung() {
         </>
       }
     >
+      <DemoHint id="anleitung" />
       <StepProgress total={guide.steps.length} current={step} />
       {current.img ? (
         <PhotoFrame label={t.images[current.img as keyof typeof t.images] ?? current.t} />

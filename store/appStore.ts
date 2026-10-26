@@ -53,6 +53,8 @@ export interface DemoSettings {
   claimScenario: 'freigeben' | 'ablehnen';
   /** Selbstbeteiligung im Pitch, Standard aus der Konfiguration */
   deductible: Cents;
+  /** Geschlossene Tipps */
+  dismissedHints: string[];
 }
 
 export const defaultDemoSettings: DemoSettings = {
@@ -62,6 +64,7 @@ export const defaultDemoSettings: DemoSettings = {
   videoScenario: 'verbunden',
   claimScenario: 'freigeben',
   deductible: demoConfig.contract.deductible,
+  dismissedHints: [],
 };
 
 export type NewDevice = Omit<Device, 'id' | 'householdId' | 'createdAt'>;
@@ -282,7 +285,20 @@ export function createAppStore(storage: StateStorage = AsyncStorage, env: StoreE
             return device;
           },
 
-          setDemo: (patch) => set((s) => ({ demo: { ...s.demo, ...patch } })),
+          setDemo: (patch) =>
+            set((s) => ({
+              demo: {
+                ...s.demo,
+                ...patch,
+                // Hinweise wieder an: auch geschlossene Tipps kommen zurück
+                dismissedHints: patch.hints ? [] : (patch.dismissedHints ?? s.demo.dismissedHints),
+              },
+              // Der Vertrag zeigt dieselbe Selbstbeteiligung wie die Demo-Einstellung
+              contracts:
+                patch.deductible === undefined
+                  ? s.contracts
+                  : s.contracts.map((c) => ({ ...c, deductible: patch.deductible! })),
+            })),
 
           createCase: ({ deviceId, entry, problemLabel }) => {
             const p = person();

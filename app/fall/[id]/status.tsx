@@ -1,5 +1,6 @@
 import { router } from 'expo-router';
 
+import { DemoHint } from '@/components/app/DemoHint';
 import { CaseScreen, useCaseId } from '@/components/app/CaseScreen';
 import { leaveCase } from '@/components/nav/leaveCase';
 import { ActionBar, Button, Card, FactList, Text, Timeline } from '@/components/ds';
@@ -61,6 +62,7 @@ export default function Status() {
         </ActionBar>
       }
     >
+      <DemoHint id="status" />
       <Text variant="meta">{de.common.dot(t.caseNumber(c.id), c.problemLabel)}</Text>
       <Text variant="h1" accessibilityRole="header" accessibilityLiveRegion="polite">
         {view.headline}

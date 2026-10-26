@@ -1,6 +1,7 @@
 import { router } from 'expo-router';
 import { Image, StyleSheet, View } from 'react-native';
 
+import { DemoHint } from '@/components/app/DemoHint';
 import { CaseScreen, useCaseId } from '@/components/app/CaseScreen';
 import { ActionBar, Button, Card, ConfidenceLabel, FactList, InfoBox, Text } from '@/components/ds';
 import { demoConfig } from '@/config/demo.config';
@@ -102,6 +103,7 @@ export default function Ergebnis() {
         </ActionBar>
       }
     >
+      <DemoHint id="ergebnis" />
       <View style={styles.from}>
         <View
           style={[

@@ -2,6 +2,7 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 
+import { DemoHint } from '@/components/app/DemoHint';
 import { AppHeader, Button, Icon, NavRow, Screen, Sheet, Text, TextField } from '@/components/ds';
 import { guides, type GuideId } from '@/data/guides';
 import { de } from '@/i18n/de';
@@ -94,6 +95,7 @@ export default function ProblemMelden() {
 
   return (
     <Screen header={header}>
+      <DemoHint id="problem" />
       <Text variant="meta">{t.forDevice(deviceTitle(device))}</Text>
       <Text variant="h1" accessibilityRole="header">
         {t.title}

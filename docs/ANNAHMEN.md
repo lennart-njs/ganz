@@ -136,3 +136,12 @@ Annahmen, die ich beim Bauen getroffen habe. Jede lässt sich ändern.
 - **Widerruf im Profil:** Jede Weitergabe und Einwilligung steht mit Empfänger, Grundlage („Für deine Anfrage“ oder „Einwilligung“) und Datum dort. „Widerrufen“ ist ein Tap (Art. 7 Abs. 3 DSGVO). Gehört die Einwilligung zu einem Fall, kommt der Widerruf als Ereignis in die Fallakte. Die Einwilligung „Einzelfälle an den Hersteller“ gehört zu keinem Fall, ihr Widerruf steht an der Einwilligung selbst.
 - **Mitteilungen** lassen sich im Profil an- und ausschalten. Hat das System sie abgelehnt, öffnet der Schalter die Einstellungen.
 - **Demo-Bereich** (Galerie, Onboarding neu starten) steht bis Schritt 13 sichtbar im Profil.
+
+## Schritt 13: Demo-Modus und Whitelabel
+
+- **Demo-Modus** an oder aus über `demoConfig.demo.enabled`. Alles Weitere steuert die Demo-Steuerung: 7-mal innerhalb von 3 Sekunden auf die Versionsnummer im Profil tippen.
+- **Demo-Steuerung:** Szenarien für Fehlererkennung, Typenschild, Videocall und Freigabe, Selbstbeteiligung 0 € oder 50 €, Hinweise an/aus, „Offene Fälle einen Schritt weiter“, Komponenten-Galerie und „Alles zurücksetzen“. Die Selbstbeteiligung gilt auch für den gespeicherten Vertrag.
+- **Hinweise** sind schließbare Tipps auf den wichtigen Screens, Texte angelehnt an die Demo-Leiste. „Hinweise an“ holt geschlossene Tipps zurück.
+- **Hinweise aus = keine Demo-Spur:** keine Tipps, kein „Wartezeit überspringen“, kein „Nächster Schritt (Demo)“, keine Kennzeichnung „Beispielwerte“ und kein Beispielfoto nach abgelehnter Kamera. Ein Test prüft Startseite, Kosten, Termin, Status und Profil.
+- **Whitelabel:** Alle Namen kommen aus `config/demo.config.ts`. Ein Test prüft, dass `i18n/de.ts` keinen dieser Namen enthält, und rendert die Screens mit einem anderen Versicherer. Die Beispiele in der Galerie sind darum neutral.
+- **Platzhalter aus Schritt 4** sind entfernt. Alle Screens haben jetzt Inhalt.

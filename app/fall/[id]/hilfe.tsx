@@ -2,6 +2,7 @@ import { router } from 'expo-router';
 import { useState } from 'react';
 import { Linking, StyleSheet, View } from 'react-native';
 
+import { DemoHint } from '@/components/app/DemoHint';
 import { CaseFileCard } from '@/components/app/CaseFileCard';
 import { CaseScreen, useCaseId } from '@/components/app/CaseScreen';
 import {
@@ -77,6 +78,7 @@ export default function Hilfe() {
         </ActionBar>
       }
     >
+      <DemoHint id="hilfe" />
       <PhotoFrame label={t.photo} />
       <Text variant="h1" accessibilityRole="header">
         {t.title}

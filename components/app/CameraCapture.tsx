@@ -6,6 +6,7 @@ import { AppState, Linking, Platform, Pressable, StyleSheet, View } from 'react-
 import { Button, Text } from '@/components/ds';
 import { demoConfig } from '@/config/demo.config';
 import { de } from '@/i18n/de';
+import { useAppStore } from '@/store/appStore';
 import { useTheme } from '@/theme';
 
 export interface CapturedPhoto {
@@ -41,10 +42,13 @@ export function CameraCapture({ onCapture, help, top }: CameraCaptureProps) {
     return () => sub.remove();
   }, [getPermission]);
 
+  const hints = useAppStore((s) => s.demo.hints);
   const demoPhoto = () => onCapture({ uri: '', source: 'demo' });
-  const demoOption = demoConfig.demo.enabled ? (
-    <Button label={de.camera.useDemoPhoto} variant="link" onPress={demoPhoto} />
-  ) : null;
+  // Beispielfoto trotz abgelehnter Kamera: nur im Demo-Modus mit Hinweisen
+  const demoOption =
+    demoConfig.demo.enabled && hints ? (
+      <Button label={de.camera.useDemoPhoto} variant="link" onPress={demoPhoto} />
+    ) : null;
 
   const shoot = async () => {
     if (!camera.current || busy) return;

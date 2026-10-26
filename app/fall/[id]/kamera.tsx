@@ -1,6 +1,7 @@
 import { router } from 'expo-router';
 import { useState } from 'react';
 
+import { DemoHint } from '@/components/app/DemoHint';
 import { CameraCapture, type CapturedPhoto } from '@/components/app/CameraCapture';
 import { CaseScreen, useCaseId } from '@/components/app/CaseScreen';
 import { SegmentedControl } from '@/components/ds';
@@ -33,6 +34,7 @@ export default function Kamera() {
 
   return (
     <CaseScreen title={de.screens.kamera} scroll={false}>
+      <DemoHint id="kamera" />
       <CameraCapture
         help={de.camera.help[mode]}
         onCapture={capture}

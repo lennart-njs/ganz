@@ -1,8 +1,11 @@
 import Constants from 'expo-constants';
 import { router } from 'expo-router';
 import type { ReactNode } from 'react';
-import { Linking, StyleSheet, View } from 'react-native';
+import { useRef, useState } from 'react';
+import { Linking, Pressable, StyleSheet, View } from 'react-native';
 
+import { DemoControlSheet } from '@/components/app/DemoControlSheet';
+import { DemoHint } from '@/components/app/DemoHint';
 import {
   Button,
   Card,
@@ -44,6 +47,19 @@ export default function Profil() {
   );
   const caseConsents = consents.filter((c) => c.purpose !== 'hersteller_einzelfall');
   const version = Constants.expoConfig?.version ?? '';
+  const [demoOpen, setDemoOpen] = useState(false);
+  const taps = useRef<number[]>([]);
+
+  const tapVersion = () => {
+    if (!demoConfig.demo.enabled) return;
+    const now = Date.now();
+    // Sieben Taps innerhalb von 3 Sekunden
+    taps.current = [...taps.current.filter((x) => now - x < 3000), now];
+    if (taps.current.length >= 7) {
+      taps.current = [];
+      setDemoOpen(true);
+    }
+  };
 
   const toggleManufacturer = (on: boolean) => {
     const s = useAppStore.getState();
@@ -80,6 +96,7 @@ export default function Profil() {
       <Text variant="h1" accessibilityRole="header">
         {de.screens.profil}
       </Text>
+      <DemoHint id="profil" />
 
       <Section title={t.person}>
         <Card>
@@ -161,14 +178,20 @@ export default function Profil() {
         <Text variant="body">{t.privacyText}</Text>
       </Disclosure>
 
-      <Section title={t.demo}>
-        <NavRow title={de.nav.gallery} onPress={() => router.push('/galerie')} />
-        <NavRow title={de.nav.restartOnboarding} onPress={() => useAppStore.getState().reset()} />
-      </Section>
-
-      <Text variant="caption" align="center">
-        {t.version(version)}
-      </Text>
+      {/* Versteckte Geste: 7-mal tippen öffnet die Demo-Steuerung (Review 3, Punkt 13) */}
+      <Pressable
+        onPress={tapVersion}
+        accessibilityRole="text"
+        accessibilityLabel={t.version(version)}
+        style={styles.version}
+      >
+        <Text variant="caption" align="center">
+          {t.version(version)}
+        </Text>
+      </Pressable>
+      {demoConfig.demo.enabled ? (
+        <DemoControlSheet visible={demoOpen} onClose={() => setDemoOpen(false)} />
+      ) : null}
     </Screen>
   );
 }
@@ -176,4 +199,5 @@ export default function Profil() {
 const styles = StyleSheet.create({
   section: { gap: 10, marginTop: 8 },
   gap: { marginTop: 8 },
+  version: { minHeight: 44, justifyContent: 'center' },
 });

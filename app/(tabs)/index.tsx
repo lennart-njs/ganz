@@ -1,6 +1,7 @@
 import { router } from 'expo-router';
 import { StyleSheet, View } from 'react-native';
 
+import { DemoHint } from '@/components/app/DemoHint';
 import { DeviceCard } from '@/components/app/DeviceCard';
 import { OpenCaseCard } from '@/components/app/OpenCaseCard';
 import { SearchPill } from '@/components/app/SearchPill';
@@ -23,6 +24,7 @@ export default function Geraete() {
   return (
     <Screen>
       <Wordmark size={26} />
+      <DemoHint id="home" />
       <SearchPill onPress={report} />
 
       {openCases.map((c) => (
