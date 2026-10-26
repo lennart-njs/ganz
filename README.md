@@ -1,13 +1,32 @@
 # ganz – Haushalts-App (Prototyp)
 
-Status: Phase 1 (Review und Bauplan). Noch kein App-Code.
+Status: Phase 2 (Build). Expo SDK 58, React Native 0.88, TypeScript strict, Expo Router.
 
-- `docs/REVIEW.md` – UX-Review der Klick-Demo v1.0, Ist- und Soll-Flow
-- `docs/BUILD_PLAN.md` – Stack, Screens, Datenmodell, Schritte für Phase 2
-- `reference/demo-v1.0/` – Quelle: Canvas „ganz – Demo v1.0“ (Stand 25.10.2026)
+## Start in 3 Befehlen
+
+```bash
+npm install
+npx expo start
+# QR-Code mit Expo Go scannen (iPhone: Kamera-App, Android: Expo Go)
+```
+
+Voraussetzungen: Node 20 oder neuer, Expo Go (SDK 58) auf dem Handy, Handy und Rechner im selben WLAN.
+Klappt das WLAN nicht: `npx expo start --tunnel`.
+
+## Prüfen
+
+```bash
+npm run check      # Typecheck, Lint, Prettier und Tests
+npm test           # nur Tests
+npm run lint       # nur Lint
+```
+
+## Ordner
+
+- `app/` – Screens (Expo Router)
+- `i18n/de.ts` – alle Texte
+- `docs/` – Review, Bauplan, Entscheidungen, Annahmen
 - `design-system/` – ganz-Designsystem (verbindlich)
-- `assets/photos/` – Markenfotos (folgen)
+- `reference/demo-v1.0/` – Klick-Demo v1.0 (nur Spezifikation)
 
-## Start mit Claude Code
-1. `docs/ENTSCHEIDUNGEN.md` ausfüllen.
-2. Claude Code in diesem Ordner starten und den Start-Prompt einfügen.
+Weitere Ordner kommen mit den Schritten aus `docs/BUILD_PLAN.md` Abschnitt 5.

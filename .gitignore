@@ -1,4 +1,15 @@
 node_modules/
 .expo/
 dist/
+web-build/
+expo-env.d.ts
 .DS_Store
+*.tsbuildinfo
+.metro-health-check*
+npm-debug.*
+.env*.local
+coverage/
+
+# generated native folders
+/ios
+/android

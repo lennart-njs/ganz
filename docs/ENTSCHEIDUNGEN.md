@@ -3,7 +3,7 @@
 Ausgefüllt von Lennart. Vorbelegt mit den Vorschlägen aus dem Review. Ändere nur, was nicht passt.
 
 ## Freigabe
-- [ ] Phase 1 (REVIEW.md, BUILD_PLAN.md) ist freigegeben.
+- [x] Phase 1 (REVIEW.md, BUILD_PLAN.md) ist freigegeben. (Freigabe im Chat am 26.10.2026)
 
 ## Offene Fragen aus REVIEW Abschnitt 9
 

@@ -1,0 +1,23 @@
+{
+  "expo": {
+    "name": "ganz",
+    "slug": "ganz",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "scheme": "ganz",
+    "userInterfaceStyle": "automatic",
+    "ios": {
+      "supportsTablet": false
+    },
+    "android": {
+      "predictiveBackGestureEnabled": false
+    },
+    "web": {
+      "output": "single"
+    },
+    "plugins": ["expo-router"],
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}
