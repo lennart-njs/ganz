@@ -1,0 +1,174 @@
+import { BackHandler } from 'react-native';
+import { act, fireEvent, renderRouter, screen } from 'expo-router/testing-library';
+
+import { de } from '@/i18n/de';
+import { useAppStore } from '@/store/appStore';
+
+const APP = './app';
+
+const caseScreens = [
+  'meldungen',
+  'kamera',
+  'analyse',
+  'rueckfrage',
+  'ergebnis',
+  'anleitung',
+  'hilfe',
+  'warteraum',
+  'videocall',
+  'befund',
+  'kosten',
+  'termin',
+  'status',
+  'abschluss',
+  'fallakte',
+];
+
+// Vor renderRouter ohne act(): Der Store wird direkt gesetzt.
+function finishOnboarding() {
+  useAppStore.setState({ onboardingDone: true });
+}
+
+beforeEach(() => {
+  useAppStore.getState().reset();
+});
+
+describe('Onboarding', () => {
+  test('beim ersten Start kommt das Onboarding, danach die Tabs', async () => {
+    const r = await renderRouter(APP, { initialUrl: '/' });
+    expect(r.getPathname()).toBe('/willkommen');
+    await fireEvent.press(screen.getByRole('button', { name: de.nav.next }));
+    expect(r.getPathname()).toBe('/schutz');
+    await fireEvent.press(screen.getByRole('button', { name: de.nav.next }));
+    expect(r.getPathname()).toBe('/geraet-bestaetigen');
+    await fireEvent.press(screen.getByRole('button', { name: de.nav.onboardingDone }));
+    expect(r.getPathname()).toBe('/');
+    expect(screen.getByRole('header', { name: de.screens.geraete })).toBeTruthy();
+  });
+
+  test('ohne Onboarding sind Fall-Screens gesperrt', async () => {
+    const r = await renderRouter(APP, { initialUrl: '/fall/GS-24817/status' });
+    expect(r.getPathname()).toBe('/willkommen');
+  });
+});
+
+describe('Tabs', () => {
+  // Auf iOS haben Tabs die Rolle „button“ (Fix in React Navigation), auf Android „tab“.
+  test('drei Tabs: Geräte, Fälle, Profil', async () => {
+    finishOnboarding();
+    const r = await renderRouter(APP, { initialUrl: '/' });
+    await fireEvent.press(screen.getByRole('button', { name: new RegExp(`^${de.tabs.cases}`) }));
+    expect(r.getPathname()).toBe('/faelle');
+    await fireEvent.press(screen.getByRole('button', { name: new RegExp(`^${de.tabs.profile}`) }));
+    expect(r.getPathname()).toBe('/profil');
+    await fireEvent.press(screen.getByRole('button', { name: new RegExp(`^${de.tabs.devices}`) }));
+    expect(r.getPathname()).toBe('/');
+  });
+});
+
+describe('Jeder Screen hat einen Ausweg', () => {
+  test.each(caseScreens)('Fall-Screen %s: Zurück und Schließen', async (name) => {
+    finishOnboarding();
+    await renderRouter(APP, { initialUrl: `/fall/GS-24817/${name}` });
+    expect(screen.getByRole('button', { name: de.a11y.back })).toBeTruthy();
+    expect(screen.getByRole('button', { name: de.a11y.close })).toBeTruthy();
+  });
+
+  test.each(['/fall/neu', '/geraet/geraet-demo', '/geraet/neu', '/galerie'])(
+    '%s: Zurück',
+    async (url) => {
+      finishOnboarding();
+      await renderRouter(APP, { initialUrl: url });
+      expect(screen.getAllByRole('button', { name: de.a11y.back }).length).toBeGreaterThan(0);
+    },
+  );
+
+  test('Schließen-Sheet: „Später weitermachen“ pausiert den Fall und führt zu den Tabs', async () => {
+    finishOnboarding();
+    const c = useAppStore
+      .getState()
+      .createCase({ deviceId: 'd', entry: 'foto', problemLabel: 'Wasserablauf' });
+    const r = await renderRouter(APP, { initialUrl: '/' });
+    await act(async () => {
+      require('expo-router').router.push(`/fall/${c.id}/hilfe`);
+    });
+    expect(r.getPathname()).toBe(`/fall/${c.id}/hilfe`);
+    await fireEvent.press(screen.getByRole('button', { name: de.a11y.close }));
+    await fireEvent.press(screen.getByRole('button', { name: de.closeCase.later }));
+    expect(r.getPathname()).toBe('/');
+    expect(useAppStore.getState().cases[c.id]?.pausedAt).toBeDefined();
+  });
+
+  test('Schließen-Sheet: Abbrechen braucht einen Grund', async () => {
+    finishOnboarding();
+    const c = useAppStore
+      .getState()
+      .createCase({ deviceId: 'd', entry: 'foto', problemLabel: 'Wasserablauf' });
+    await renderRouter(APP, { initialUrl: `/fall/${c.id}/hilfe` });
+    await fireEvent.press(screen.getByRole('button', { name: de.a11y.close }));
+    await fireEvent.press(screen.getByRole('button', { name: de.closeCase.cancel }));
+    const confirm = screen.getByRole('button', { name: de.closeCase.confirmCancel });
+    expect(confirm).toBeDisabled();
+    await fireEvent.press(screen.getByRole('radio', { name: de.closeCase.reasons[0] }));
+    await fireEvent.press(screen.getByRole('button', { name: de.closeCase.confirmCancel }));
+    expect(useAppStore.getState().cases[c.id]?.status).toBe('abgebrochen');
+    expect(useAppStore.getState().cases[c.id]?.cancelReason).toBe(de.closeCase.reasons[0]);
+  });
+});
+
+describe('Zurück', () => {
+  async function openFlow() {
+    finishOnboarding();
+    const r = await renderRouter(APP, { initialUrl: '/' });
+    await fireEvent.press(screen.getByRole('button', { name: de.nav.whatIsBroken }));
+    await fireEvent.press(screen.getByRole('button', { name: de.nav.takePhoto }));
+    await fireEvent.press(screen.getByRole('button', { name: de.nav.shutter }));
+    expect(r.getPathname()).toBe('/fall/GS-24817/analyse');
+    return r;
+  }
+
+  test('der Zurück-Button geht einen Screen zurück, am Anfang aus dem Fall heraus', async () => {
+    const r = await openFlow();
+    await fireEvent.press(screen.getByRole('button', { name: de.a11y.back }));
+    expect(r.getPathname()).toBe('/fall/GS-24817/kamera');
+    await fireEvent.press(screen.getByRole('button', { name: de.a11y.back }));
+    expect(r.getPathname()).toBe('/fall/neu');
+    await fireEvent.press(screen.getByRole('button', { name: de.a11y.back }));
+    expect(r.getPathname()).toBe('/');
+  });
+
+  test('Android-Zurück verhält sich gleich wie der Zurück-Button', async () => {
+    type Handler = Parameters<typeof BackHandler.addEventListener>[1];
+    const listeners: Handler[] = [];
+    const spy = jest.spyOn(BackHandler, 'addEventListener').mockImplementation((_, handler) => {
+      listeners.push(handler);
+      return { remove: () => listeners.splice(listeners.indexOf(handler), 1) };
+    });
+    const pressBack = () =>
+      act(async () => {
+        [...listeners].reverse().some((l) => l({} as Parameters<Handler>[0]));
+      });
+
+    const r = await openFlow();
+    await pressBack();
+    expect(r.getPathname()).toBe('/fall/GS-24817/kamera');
+    await pressBack();
+    expect(r.getPathname()).toBe('/fall/neu');
+    await pressBack();
+    expect(r.getPathname()).toBe('/');
+    spy.mockRestore();
+  });
+
+  test('Wischgeste: Fall-Stack erlaubt die Zurück-Geste, das Modal lässt sich nicht wegwischen', () => {
+    // Die Geste selbst ist nativ. Wir prüfen die Optionen, die sie steuern.
+    const fallLayout = require('../app/fall/_layout').default;
+    const rootSource = require('fs').readFileSync(require.resolve('../app/_layout.tsx'), 'utf8');
+    expect(fallLayout).toBeDefined();
+    expect(rootSource).toMatch(/presentation: 'fullScreenModal', gestureEnabled: false/);
+    const fallSource = require('fs').readFileSync(
+      require.resolve('../app/fall/_layout.tsx'),
+      'utf8',
+    );
+    expect(fallSource).toMatch(/gestureEnabled: true/);
+  });
+});

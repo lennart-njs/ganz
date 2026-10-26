@@ -57,7 +57,12 @@ export function Icon({ name, size = 20, color = 'textStrong', strokeWidth = 2 }:
   const theme = useTheme();
   const Component = icons[name];
   return (
-    <View accessible={false} importantForAccessibility="no-hide-descendants" aria-hidden>
+    <View
+      accessible={false}
+      importantForAccessibility="no-hide-descendants"
+      aria-hidden
+      style={{ width: size, height: size }}
+    >
       <Component size={size} color={theme.colors[color]} strokeWidth={strokeWidth} />
     </View>
   );

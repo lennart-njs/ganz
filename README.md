@@ -24,10 +24,17 @@ npm run lint       # nur Lint
 
 ## Ordner
 
-- `app/` – Screens (Expo Router)
+- `app/` – Screens (Expo Router): `(onboarding)`, `(tabs)`, `geraet/`, `fall/` (modaler Stack)
+- `components/ds/` – Designsystem in React Native, Galerie unter Profil → „Komponenten (Demo)“
+- `model/` – Datenmodell und Status-Maschine
+- `store/` – Zustand mit Speicherung auf dem Gerät
+- `config/demo.config.ts` – Versicherer, Händler, Hersteller, Preise (Beispielwerte)
+- `data/guides.ts` – Anleitungen, wörtlich aus der Demo
 - `i18n/de.ts` – alle Texte
 - `docs/` – Review, Bauplan, Entscheidungen, Annahmen
 - `design-system/` – ganz-Designsystem (verbindlich)
 - `reference/demo-v1.0/` – Klick-Demo v1.0 (nur Spezifikation)
 
-Weitere Ordner kommen mit den Schritten aus `docs/BUILD_PLAN.md` Abschnitt 5.
+Stand: Schritte 1 bis 4 aus `docs/BUILD_PLAN.md` Abschnitt 5. Screens ab Schritt 5 sind Platzhalter mit funktionierender Navigation.
+
+Onboarding neu starten: Profil → „Onboarding neu starten (Demo)“.

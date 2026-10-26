@@ -36,3 +36,14 @@ Annahmen, die ich beim Bauen getroffen habe. Jede lässt sich ändern.
 - **Schrittfotos:** In den Anleitungen stehen statt der Blob-URLs der Demo die Schlüssel `fehler` und `pumpe`.
 - **Vergleich der Anleitungen** läuft als Jest-Test (`npm run guides:check`), weil `data/guides.ts` TypeScript ist. Er liest `guides()` direkt aus `reference/demo-v1.0/Main.dc.html`.
 - **Texte:** Eine Lint-Regel findet Text in JSX und in Text-Props (`label`, `title`, `accessibilityLabel` usw.) außerhalb von `i18n/de.ts`. Ausnahme: `data/guides.ts` (Anleitungsdaten) und `config/demo.config.ts` (Beispielwerte). Texte für einzelne Screens kommen mit den Screens dazu.
+
+## Schritt 4: Navigation
+
+- **Routen** wie im Bauplan. Einzige Abweichung: Der Onboarding-Screen heißt `geraet-bestaetigen` statt `geraet`, weil `/geraet/…` schon das Gerätedetail ist.
+- **Onboarding-Sperre** über `Stack.Protected` im Root-Layout. Vor dem Onboarding sind Tabs, Gerät und Fall nicht erreichbar. `(onboarding)/index` leitet `/` auf „Willkommen“ um. Ohne diese Umleitung landete ein frischer Start auf „Unmatched Route“.
+- **Fall als modaler Stack** mit `presentation: 'fullScreenModal'` und ohne Wischen nach unten. Sonst ließe sich der Fall am Schließen-Sheet vorbei wegwischen. Im Fall gehen Wischgeste (iOS, ganze Breite), Android-Zurück und der Zurück-Button gleich einen Screen zurück. Auf dem ersten Screen verlassen alle drei den Fall.
+- **X im Fall** öffnet das Schließen-Sheet: „Später weitermachen“ setzt `pausedAt`, „Fall abbrechen“ braucht einen Grund (B-04). Die Gründe sind ein Vorschlag.
+- **Call-Screens ersetzen sich** (`replace`): Nach dem Auflegen führt Zurück nicht in den Videocall oder den Warteraum.
+- **Platzhalter:** Screens ab Schritt 5 zeigen nur Titel, den geplanten Schritt und die Wege weiter. Sie nutzen bis dahin die Demo-Fallnummer GS-24817 und ein Demo-Gerät (`components/nav/demoIds.ts`).
+- **Tab-Leiste:** Standard-Tab-Leiste von Expo Router, im Theme eingefärbt, mit Lucide-Icons. Die Beschriftungen wachsen wie im System nicht mit der Schrift. iOS zeigt sie bei langem Drücken groß (Large Content Viewer).
+- **Galerie** liegt im Profil („Komponenten (Demo)“), bis es in Schritt 13 die Demo-Steuerung gibt. Dort gibt es auch „Onboarding neu starten (Demo)“.
