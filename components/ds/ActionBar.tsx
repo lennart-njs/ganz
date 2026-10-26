@@ -1,5 +1,5 @@
-import { StyleSheet, View } from 'react-native';
-import type { ReactNode } from 'react';
+import { Children, Fragment, isValidElement, type ReactNode } from 'react';
+import { StyleSheet, View, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useTheme } from '@/theme';
@@ -7,24 +7,44 @@ import { useTheme } from '@/theme';
 import { Text } from './Text';
 import { useLargeText } from './useLargeText';
 
+/** Ab dieser Breite passen Info und eine Aktion nebeneinander (große iPhones, Tablets) */
+const rowMinWidth = 428;
+
+/** Aktionen als flache Liste, auch wenn sie in einem Fragment stecken */
+function flatten(children: ReactNode): ReactNode[] {
+  return Children.toArray(children).flatMap((child) =>
+    isValidElement<{ children?: ReactNode }>(child) && child.type === Fragment
+      ? flatten(child.props.children)
+      : [child],
+  );
+}
+
 interface ActionBarProps {
-  /** Info links, z. B. „Schritt 2 von 7“ */
+  /** Info, z. B. „Schritt 2 von 7“ */
   meta?: string;
   sub?: string;
-  /** Aktion(en) rechts oder in voller Breite */
+  /** Aktion(en) */
   children: ReactNode;
 }
 
-/** Feste Leiste unten: links Info, rechts Aktion. Ohne Info: Aktion in voller Breite. */
+/**
+ * Feste Leiste unten. Auf breiten Screens: links Info, rechts eine Aktion.
+ * Sonst steht die Info als Zeile über den Aktionen, und mehrere Aktionen teilen sich die Breite.
+ * Ab 150 % Schrift stehen alle Aktionen untereinander.
+ */
 export function ActionBar({ meta, sub, children }: ActionBarProps) {
   const theme = useTheme();
   const insets = useSafeAreaInsets();
-  const stacked = useLargeText() || !meta;
+  const { width } = useWindowDimensions();
+  const large = useLargeText();
+  const actions = flatten(children);
+  const row = !!meta && !large && actions.length === 1 && width >= rowMinWidth;
+  const splitActions = !large && actions.length > 1 && !!meta;
   return (
     <View
       style={[
         styles.bar,
-        stacked ? styles.stacked : styles.row,
+        row ? styles.row : styles.stacked,
         {
           paddingBottom: Math.max(insets.bottom, 12) + 8,
           paddingHorizontal: theme.gutter,
@@ -34,12 +54,22 @@ export function ActionBar({ meta, sub, children }: ActionBarProps) {
       ]}
     >
       {meta ? (
-        <View style={!stacked && styles.info} accessible>
+        <View style={row ? styles.info : styles.infoLine} accessible>
           <Text variant="labelStrong">{meta}</Text>
           {sub ? <Text variant="meta">{sub}</Text> : null}
         </View>
       ) : null}
-      <View style={stacked ? styles.actionsStacked : styles.actionsRow}>{children}</View>
+      <View
+        style={row ? styles.actionsRow : splitActions ? styles.actionsSplit : styles.actionsStacked}
+      >
+        {splitActions
+          ? actions.map((action, i) => (
+              <View key={i} style={styles.split}>
+                {action}
+              </View>
+            ))
+          : actions}
+      </View>
     </View>
   );
 }
@@ -49,6 +79,9 @@ const styles = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center' },
   stacked: { flexDirection: 'column', alignItems: 'stretch' },
   info: { flex: 1 },
+  infoLine: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'baseline', columnGap: 8 },
   actionsRow: { flexDirection: 'row', gap: 8, flexShrink: 0 },
+  actionsSplit: { flexDirection: 'row', gap: 8 },
+  split: { flex: 1 },
   actionsStacked: { gap: 8 },
 });

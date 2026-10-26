@@ -14,7 +14,16 @@ interface TextFieldProps extends Omit<TextInputProps, 'style' | 'placeholderText
   rows?: number;
 }
 
-export function TextField({ label, hint, error, multiline, rows = 4, ...rest }: TextFieldProps) {
+export function TextField({
+  label,
+  hint,
+  error,
+  multiline,
+  rows = 4,
+  onFocus,
+  onBlur,
+  ...rest
+}: TextFieldProps) {
   const theme = useTheme();
   const [focus, setFocus] = useState(false);
   const scale = theme.previewFontScale ?? 1;
@@ -36,11 +45,11 @@ export function TextField({ label, hint, error, multiline, rows = 4, ...rest }: 
         textAlignVertical={multiline ? 'top' : 'center'}
         onFocus={(e) => {
           setFocus(true);
-          rest.onFocus?.(e);
+          onFocus?.(e);
         }}
         onBlur={(e) => {
           setFocus(false);
-          rest.onBlur?.(e);
+          onBlur?.(e);
         }}
         {...rest}
         style={{

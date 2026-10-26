@@ -1,5 +1,6 @@
-import type { ReactNode } from 'react';
-import { ScrollView, StyleSheet, View } from 'react-native';
+import { useState, type ReactNode } from 'react';
+import { Platform, StyleSheet, View } from 'react-native';
+import { KeyboardAwareScrollView, KeyboardStickyView } from 'react-native-keyboard-controller';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useTheme } from '@/theme';
@@ -14,10 +15,20 @@ interface ScreenProps {
   safeTop?: boolean;
 }
 
-/** Gerüst eines Screens: Kopf, scrollender Inhalt mit 20 px Rand, feste Leiste unten. */
+/** Abstand zwischen Eingabefeld und Leiste, wenn die Tastatur offen ist */
+const fieldGap = 16;
+
+/**
+ * Gerüst eines Screens: Kopf, scrollender Inhalt mit 20 px Rand, feste Leiste unten.
+ * Bei offener Tastatur rückt die Leiste über die Tastatur, und der Inhalt scrollt
+ * das aktive Eingabefeld darüber.
+ */
 export function Screen({ header, footer, children, scroll = true, safeTop = true }: ScreenProps) {
   const theme = useTheme();
   const insets = useSafeAreaInsets();
+  const [footerHeight, setFooterHeight] = useState(0);
+  // Die Leiste hat unten schon den Home-Indicator-Abstand. Über der Tastatur fällt er weg.
+  const footerInset = Math.max(insets.bottom, 12);
   return (
     <View
       style={[
@@ -27,20 +38,29 @@ export function Screen({ header, footer, children, scroll = true, safeTop = true
     >
       {header}
       {scroll ? (
-        <ScrollView
+        <KeyboardAwareScrollView
           style={styles.root}
           contentContainerStyle={[
             styles.content,
             { paddingHorizontal: theme.gutter, paddingBottom: footer ? 24 : insets.bottom + 24 },
           ]}
+          bottomOffset={(footer ? footerHeight - footerInset : 0) + fieldGap}
           keyboardShouldPersistTaps="handled"
+          keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
         >
           {children}
-        </ScrollView>
+        </KeyboardAwareScrollView>
       ) : (
         <View style={styles.root}>{children}</View>
       )}
-      {footer}
+      {footer ? (
+        <KeyboardStickyView
+          offset={{ opened: footerInset }}
+          onLayout={(e) => setFooterHeight(e.nativeEvent.layout.height)}
+        >
+          {footer}
+        </KeyboardStickyView>
+      ) : null}
     </View>
   );
 }

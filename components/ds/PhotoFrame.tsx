@@ -1,4 +1,10 @@
-import { Image, StyleSheet, View, type ImageSourcePropType } from 'react-native';
+import {
+  Image,
+  StyleSheet,
+  View,
+  useWindowDimensions,
+  type ImageSourcePropType,
+} from 'react-native';
 
 import { de } from '@/i18n/de';
 import { useTheme } from '@/theme';
@@ -15,9 +21,14 @@ interface PhotoFrameProps {
   compact?: boolean;
 }
 
+/** Unter dieser Höhe (iPhone SE, mini) werden große Fotos flacher, damit der Text sichtbar bleibt */
+const shortScreen = 760;
+
 /** Foto mit 12 px Radius. Ohne Foto: beschrifteter Platzhalter. */
 export function PhotoFrame({ label, source, ratio = 16 / 10, compact }: PhotoFrameProps) {
   const theme = useTheme();
+  const { height } = useWindowDimensions();
+  const aspectRatio = !compact && height < shortScreen ? Math.max(ratio, 2) : ratio;
   return (
     <View
       accessible
@@ -26,7 +37,7 @@ export function PhotoFrame({ label, source, ratio = 16 / 10, compact }: PhotoFra
       style={[
         styles.frame,
         {
-          aspectRatio: ratio,
+          aspectRatio,
           borderRadius: theme.radius.media,
           backgroundColor: theme.colors.surfaceMuted,
         },

@@ -1,5 +1,13 @@
 import type { ReactNode } from 'react';
-import { Modal, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import {
+  KeyboardAvoidingView,
+  Modal,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  View,
+} from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { de } from '@/i18n/de';
@@ -27,7 +35,10 @@ export function Sheet({ visible, onClose, title, children }: SheetProps) {
       statusBarTranslucent
       navigationBarTranslucent
     >
-      <View style={styles.root}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        style={styles.root}
+      >
         <Pressable
           style={[StyleSheet.absoluteFill, { backgroundColor: theme.colors.backdrop }]}
           accessibilityRole="button"
@@ -49,14 +60,18 @@ export function Sheet({ visible, onClose, title, children }: SheetProps) {
           ]}
         >
           <View style={[styles.handle, { backgroundColor: theme.colors.borderDefault }]} />
-          <ScrollView contentContainerStyle={styles.content} bounces={false}>
+          <ScrollView
+            contentContainerStyle={styles.content}
+            bounces={false}
+            keyboardShouldPersistTaps="handled"
+          >
             <Text variant="title" accessibilityRole="header">
               {title}
             </Text>
             {children}
           </ScrollView>
         </View>
-      </View>
+      </KeyboardAvoidingView>
     </Modal>
   );
 }

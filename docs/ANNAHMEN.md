@@ -154,3 +154,11 @@ Annahmen, die ich beim Bauen getroffen habe. Jede lässt sich ändern.
 - **Fehler gefunden und behoben:** Das Ergebnis brach ab, wenn nach dem Befund der Fachkraft jemand zum Ergebnis zurückkam. Es zeigt jetzt das letzte Ergebnis der Fehlererkennung.
 - **VoiceOver und TalkBack** prüft der Test über die Rollen und Labels, die die Plattform vorliest. Ein Durchgang mit eingeschaltetem Screenreader auf einem echten Gerät steht noch aus.
 - **Dokumente:** `docs/DATA_MODEL.md` (welches Dashboard welche Felder liest), `docs/BEFUNDE.md` (Abgleich aller P0- und P1-Befunde).
+
+## Review nach Schritt 14 (Rückmeldung vom Gerätetest)
+
+### Layout und Tastatur
+
+- **Aktionsleiste:** Info links und Aktion rechts nur noch ab 428 pt Breite und mit genau einer Aktion. Auf kleineren iPhones steht die Info als eine Zeile über den Aktionen, zwei Aktionen teilen sich die Breite. Vorher brach „Schritt 1 von 7“ in drei Zeilen.
+- **Fotos auf kleinen Screens:** Unter 760 pt Höhe (iPhone SE, mini) sind große Fotos mindestens 2 : 1, damit Titel und Schritttext ohne Scrollen sichtbar sind.
+- **Tastatur:** `react-native-keyboard-controller` (in Expo Go enthalten). Der Inhalt scrollt das aktive Feld über die Tastatur, die Leiste unten wandert mit. Bottom Sheets weichen auf dem iPhone mit `KeyboardAvoidingView` aus, auf Android passt das System das Fenster an.
