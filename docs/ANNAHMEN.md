@@ -47,3 +47,15 @@ Annahmen, die ich beim Bauen getroffen habe. Jede lässt sich ändern.
 - **Platzhalter:** Screens ab Schritt 5 zeigen nur Titel, den geplanten Schritt und die Wege weiter. Sie nutzen bis dahin die Demo-Fallnummer GS-24817 und ein Demo-Gerät (`components/nav/demoIds.ts`).
 - **Tab-Leiste:** Standard-Tab-Leiste von Expo Router, im Theme eingefärbt, mit Lucide-Icons. Die Beschriftungen wachsen wie im System nicht mit der Schrift. iOS zeigt sie bei langem Drücken groß (Large Content Viewer).
 - **Galerie** liegt im Profil („Komponenten (Demo)“), bis es in Schritt 13 die Demo-Steuerung gibt. Dort gibt es auch „Onboarding neu starten (Demo)“.
+
+## Schritt 5: Onboarding, Geräte, Gerätedetail, Gerät hinzufügen
+
+- **Mock-Services** liegen in `services/mock/`, die App nutzt nur `services` aus `services/index.ts`. Wartezeiten sind künstlich (Vertrag 0,8 s, Typenschild 1,2 s). Tests schalten sie ab.
+- **Verknüpfung:** Vertragsnummer und Händler-Code werden ohne Leerzeichen, Bindestriche und Groß/klein verglichen. Danach gehören alle Geräte des Vertragsmodells (WKB 130), die schon in der App sind, zum Vertrag.
+- **Ohne Schutz** endet das Onboarding mit „Gerät hinzufügen“ oder „Später hinzufügen“. Die Startseite zeigt dann einen Leerzustand.
+- **Typenschild-Scan:** Der Mock „erkennt“ das Gerät aus der Konfiguration mit erfundener M.-Nr. und Fabrik-Nr. (`demoConfig.device.typePlate`). Das Demo-Szenario „nicht erkannt“ zeigt den Fehlerfall. Der Prototyp kennt nur einen Hersteller, die Eingabe von Hand bietet darum nur diesen an.
+- **Kamera:** Vor dem Systemdialog erklärt die App, wofür sie die Kamera braucht (B-15). Ist sie abgelehnt, führt ein Button in die Einstellungen. Im Browser und ohne Kamera gibt es ein Beispielfoto, im Demo-Modus auch nach einer Ablehnung.
+- **Pflege** steht nur im Gerätedetail, nicht auf der Startseite (B-01). Die Zeilen öffnen bis Schritt 8 „Problem melden“.
+- **Kundendienst** kommt aus `Manufacturer.serviceContact` und öffnet die Telefon-App. Das ist der einzige Weg aus der App heraus und im Soll-Flow so vorgesehen.
+- **Schutz nachträglich verknüpfen** geht aus dem Gerätedetail (`/schutz-verknuepfen`).
+- **Selbstbeteiligung** zeigt den Wert aus den Demo-Einstellungen, Standard 0 € aus der Konfiguration.

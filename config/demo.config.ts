@@ -60,6 +60,8 @@ export const demoConfig = {
     category: 'waschmaschine' as DeviceCategory,
     model: 'WKB 130',
     purchaseDate: '2023-03-15T00:00:00+01:00',
+    /** Was der Typenschild-Scan im Mock „erkennt“. Nummern sind erfunden. */
+    typePlate: { materialNumber: '11 450 120', serialNumber: '000/94512873' },
   },
 
   household: {

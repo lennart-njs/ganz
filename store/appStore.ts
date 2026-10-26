@@ -15,6 +15,7 @@ import {
 } from '@/model/caseMachine';
 import type {
   Booking,
+  Cents,
   Case,
   CaseEntry,
   CaseEvent,
@@ -36,8 +37,32 @@ import { defaultEnv, type StoreEnv } from './env';
 export const STORE_KEY = 'ganz-app';
 export const STORE_VERSION = 1;
 
+/** Einstellungen für Pitch und Tests. Steuerung im Profil (Schritt 13). */
+export interface DemoSettings {
+  /** Schließbare Tipps und Kennzeichnung „Beispielwerte“ */
+  hints: boolean;
+  scanScenario: 'erkannt' | 'nicht_erkannt';
+  diagnosisScenario: 'standard' | 'unsicher' | 'unscharf';
+  videoScenario: 'verbunden' | 'keine_fachkraft';
+  claimScenario: 'freigeben' | 'ablehnen';
+  /** Selbstbeteiligung im Pitch, Standard aus der Konfiguration */
+  deductible: Cents;
+}
+
+export const defaultDemoSettings: DemoSettings = {
+  hints: demoConfig.demo.hints,
+  scanScenario: 'erkannt',
+  diagnosisScenario: 'standard',
+  videoScenario: 'verbunden',
+  claimScenario: 'freigeben',
+  deductible: demoConfig.contract.deductible,
+};
+
+export type NewDevice = Omit<Device, 'id' | 'householdId' | 'createdAt'>;
+
 export interface AppData {
   onboardingDone: boolean;
+  demo: DemoSettings;
   household?: Household;
   persons: Person[];
   contracts: Contract[];
@@ -67,6 +92,10 @@ export interface AppActions {
   /** Legt Haushalt und Person beim ersten Start an. Idempotent. */
   ensureHousehold: () => Person;
   completeOnboarding: () => void;
+  /** Legt den Vertrag aus der Konfiguration an (nach erfolgreicher Prüfung). */
+  linkContract: (via: Contract['linkedVia']) => Contract;
+  addDevice: (input: NewDevice) => Device;
+  setDemo: (patch: Partial<DemoSettings>) => void;
   createCase: (input: { deviceId: Id; entry: CaseEntry; problemLabel: string }) => Case;
   runCommand: (caseId: Id, command: CaseCommand, options?: CommandOptions) => Case;
   pauseCase: (caseId: Id) => void;
@@ -82,6 +111,7 @@ export type AppState = AppData & AppActions;
 
 export const initialData: AppData = {
   onboardingDone: false,
+  demo: defaultDemoSettings,
   persons: [],
   contracts: [],
   devices: [],
@@ -139,6 +169,61 @@ export function createAppStore(storage: StateStorage = AsyncStorage, env: StoreE
           },
 
           completeOnboarding: () => set({ onboardingDone: true }),
+
+          linkContract: (via) => {
+            const p = person();
+            const now = env.now();
+            const cfg = demoConfig;
+            const contract: Contract = {
+              id: env.newId('vertrag'),
+              householdId: get().household?.id ?? '',
+              kind: cfg.contract.kind,
+              provider: { id: cfg.insurer.id, kind: 'versicherer', name: cfg.insurer.name },
+              soldBy: { id: cfg.dealer.id, kind: 'haendler', name: cfg.dealer.name },
+              productName: cfg.contract.productName,
+              contractNumber: cfg.contract.number,
+              policyholderId: p.id,
+              validFrom: cfg.contract.validFrom,
+              validUntil: cfg.contract.validUntil,
+              deductible: get().demo.deductible,
+              coveredDeviceIds: [],
+              linkedVia: via,
+              linkedAt: now,
+            };
+            // Geräte aus dem Vertrag, die schon in der App sind, gehören dazu.
+            const covered = get().devices.filter(
+              (d) => d.manufacturerId === cfg.manufacturer.id && d.model === cfg.device.model,
+            );
+            contract.coveredDeviceIds = covered.map((d) => d.id);
+            set((s) => ({
+              contracts: [contract],
+              devices: s.devices.map((d) =>
+                covered.includes(d) ? { ...d, contractId: contract.id } : d,
+              ),
+            }));
+            return contract;
+          },
+
+          addDevice: (input) => {
+            person();
+            const device: Device = {
+              ...input,
+              id: env.newId('geraet'),
+              householdId: get().household?.id ?? '',
+              createdAt: env.now(),
+            };
+            set((s) => ({
+              devices: [...s.devices, device],
+              contracts: s.contracts.map((c) =>
+                c.id === device.contractId
+                  ? { ...c, coveredDeviceIds: [...c.coveredDeviceIds, device.id] }
+                  : c,
+              ),
+            }));
+            return device;
+          },
+
+          setDemo: (patch) => set((s) => ({ demo: { ...s.demo, ...patch } })),
 
           createCase: ({ deviceId, entry, problemLabel }) => {
             const p = person();
@@ -259,8 +344,14 @@ export function createAppStore(storage: StateStorage = AsyncStorage, env: StoreE
         name: STORE_KEY,
         version: STORE_VERSION,
         storage: createJSONStorage(() => storage),
+        // Neue Einstellungen ergänzen gespeicherte Stände, statt sie zu verlieren.
+        merge: (persisted, current) => {
+          const p = (persisted ?? {}) as Partial<AppData>;
+          return { ...current, ...p, demo: { ...current.demo, ...p.demo } };
+        },
         partialize: (s): AppData => ({
           onboardingDone: s.onboardingDone,
+          demo: s.demo,
           household: s.household,
           persons: s.persons,
           contracts: s.contracts,
@@ -290,6 +381,19 @@ export function selectOpenCases(s: AppData): Case[] {
   return Object.values(s.cases)
     .filter((c) => !isClosed(c.status))
     .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
+}
+
+export function selectContract(s: AppData): Contract | undefined {
+  return s.contracts[0];
+}
+
+export function selectDevice(s: AppData, id: Id | undefined): Device | undefined {
+  return s.devices.find((d) => d.id === id);
+}
+
+/** Offener Fall eines Geräts, neuester zuerst */
+export function selectOpenCaseForDevice(s: AppData, deviceId: Id): Case | undefined {
+  return selectOpenCases(s).find((c) => c.deviceId === deviceId);
 }
 
 export function selectCaseEvents(s: AppData, caseId: Id): CaseEvent[] {

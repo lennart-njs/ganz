@@ -1,6 +1,12 @@
-import { PlaceholderScreen } from '@/components/nav/PlaceholderScreen';
-import { de } from '@/i18n/de';
+import { router } from 'expo-router';
+
+import { DeviceScan } from '@/components/app/DeviceScan';
 
 export default function GeraetNeu() {
-  return <PlaceholderScreen title={de.screens.geraetNeu} step={5} />;
+  return (
+    <DeviceScan
+      onBack={() => router.back()}
+      onDone={(device) => router.replace(`/geraet/${device.id}`)}
+    />
+  );
 }

@@ -27,6 +27,12 @@ const caseScreens = [
 // Vor renderRouter ohne act(): Der Store wird direkt gesetzt.
 function finishOnboarding() {
   useAppStore.setState({ onboardingDone: true });
+  useAppStore.getState().addDevice({
+    manufacturerId: 'miele',
+    category: 'waschmaschine',
+    model: 'WKB 130',
+    identifiedBy: 'manuell',
+  });
 }
 
 beforeEach(() => {
@@ -37,13 +43,13 @@ describe('Onboarding', () => {
   test('beim ersten Start kommt das Onboarding, danach die Tabs', async () => {
     const r = await renderRouter(APP, { initialUrl: '/' });
     expect(r.getPathname()).toBe('/willkommen');
-    await fireEvent.press(screen.getByRole('button', { name: de.nav.next }));
+    await fireEvent.press(screen.getByRole('button', { name: de.onboarding.start }));
     expect(r.getPathname()).toBe('/schutz');
-    await fireEvent.press(screen.getByRole('button', { name: de.nav.next }));
+    await fireEvent.press(screen.getByRole('button', { name: de.common.later }));
     expect(r.getPathname()).toBe('/geraet-bestaetigen');
-    await fireEvent.press(screen.getByRole('button', { name: de.nav.onboardingDone }));
+    await fireEvent.press(screen.getByRole('button', { name: de.onboarding.skipDevice }));
     expect(r.getPathname()).toBe('/');
-    expect(screen.getByRole('header', { name: de.screens.geraete })).toBeTruthy();
+    expect(screen.getByRole('header', { name: de.home.myDevices })).toBeTruthy();
   });
 
   test('ohne Onboarding sind Fall-Screens gesperrt', async () => {
@@ -120,7 +126,9 @@ describe('Zurück', () => {
   async function openFlow() {
     finishOnboarding();
     const r = await renderRouter(APP, { initialUrl: '/' });
-    await fireEvent.press(screen.getByRole('button', { name: de.nav.whatIsBroken }));
+    await fireEvent.press(
+      screen.getByRole('button', { name: new RegExp(`^${de.home.searchTitle}`) }),
+    );
     await fireEvent.press(screen.getByRole('button', { name: de.nav.takePhoto }));
     await fireEvent.press(screen.getByRole('button', { name: de.nav.shutter }));
     expect(r.getPathname()).toBe('/fall/GS-24817/analyse');

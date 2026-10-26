@@ -17,6 +17,9 @@ import { ThemeProvider, useTheme } from '@/theme';
 
 SplashScreen.preventAutoHideAsync();
 
+// Ein Fall-Link öffnet das Modal über den Tabs, nicht als erste Karte.
+export const unstable_settings = { anchor: '(tabs)' };
+
 function RootStack() {
   const theme = useTheme();
   const onboardingDone = useAppStore((s) => s.onboardingDone);
@@ -36,6 +39,7 @@ function RootStack() {
           <Stack.Screen name="(tabs)" />
           <Stack.Screen name="geraet/[id]" />
           <Stack.Screen name="geraet/neu" />
+          <Stack.Screen name="schutz-verknuepfen" />
           {/* Fall als modaler Stack (B-50). Kein Wegwischen nach unten: Schließen nur über X. */}
           <Stack.Screen
             name="fall"

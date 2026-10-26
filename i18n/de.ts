@@ -170,6 +170,169 @@ export const de = {
     { guideId: 'zulauf', title: 'Zulaufsiebe prüfen', sub: 'Etwa alle sechs Monate' },
   ],
 
+  common: {
+    example: (value: string) => `z. B. ${value}`,
+    /** Mittelpunkt als Trenner wie im Designsystem */
+    dot: (...parts: string[]) => parts.filter(Boolean).join(' · '),
+    exampleValues: 'Beispielwerte',
+    later: 'Später',
+    cancel: 'Abbrechen',
+    change: 'Ändern',
+    loading: 'Wird geladen',
+    free: 'kostenfrei',
+    phoneHint: 'Öffnet die Telefon-App.',
+  },
+
+  onboarding: {
+    welcomePhoto: 'Waschmaschine in einer Küche',
+    welcomeTitle: 'Reparatur, die mit einem Foto beginnt.',
+    welcomeText:
+      'ganz erkennt, was deinem Haushaltsgerät fehlt, führt dich durch einfache Reparaturen und holt einen Fachbetrieb, wenn es nicht selbst geht.',
+    privacyTitle: 'Was mit deinen Daten passiert',
+    privacyText:
+      'ganz speichert Fotos, Gerätedaten und den Verlauf deiner Fälle auf diesem Gerät. Weitergegeben wird nur, was du vorher bestätigst: an die Fachkraft, den Betrieb oder deinen Versicherer. Jede Einwilligung kannst du im Profil widerrufen.',
+    privacyBasis:
+      'Grundlage ist dein Nutzungsvertrag mit ganz (Art. 6 Abs. 1 lit. b DSGVO). Einwilligungen für Zusätzliches fragen wir einzeln.',
+    start: 'Los geht’s',
+    testPhase: 'Noch in der Testphase.',
+    linkTitle: 'Verknüpf deinen Schutz.',
+    linkText:
+      'Hast du einen Geräteschutz, zum Beispiel eine Garantieverlängerung? Dann zeigt ganz dir, was abgedeckt ist.',
+    viaLabel: 'Womit verknüpfst du?',
+    via: { vertragsnummer: 'Vertragsnummer', haendler_code: 'Händler-Code' },
+    hint: {
+      vertragsnummer: 'Steht auf deinem Vertrag oder in der E-Mail zum Abschluss.',
+      haendler_code: 'Steht auf deinem Kaufbeleg.',
+    },
+    unknown: {
+      vertragsnummer: 'Diese Nummer kennen wir nicht. Prüf sie bitte noch einmal.',
+      haendler_code: 'Diesen Code kennen wir nicht. Prüf ihn bitte noch einmal.',
+    },
+    empty: 'Gib zuerst eine Nummer ein.',
+    checking: 'Wird geprüft',
+    link: 'Schutz verknüpfen',
+    laterHint:
+      'Ohne Schutz funktioniert ganz auch. Reparaturen zahlst du dann selbst und siehst den Preis vorher.',
+    linked: (product: string, insurer: string) => `${product} bei ${insurer} verknüpft.`,
+    confirmTitle: 'Ist das dein Gerät?',
+    confirmText: (insurer: string) => `Dieses Gerät steht in deinem Vertrag bei ${insurer}.`,
+    confirmYes: 'Ja, das ist es',
+    otherDevice: 'Anderes Gerät',
+    otherDeviceSub: 'Typenschild fotografieren',
+    firstDeviceTitle: 'Füg dein erstes Gerät hinzu.',
+    firstDeviceText: 'Am schnellsten mit einem Foto vom Typenschild.',
+    addDevice: 'Gerät hinzufügen',
+    skipDevice: 'Später hinzufügen',
+  },
+
+  home: {
+    searchTitle: 'Was ist kaputt?',
+    searchSub: 'Foto, Meldung oder Symptom',
+    myDevices: 'Deine Geräte',
+    protectionActive: 'Geräteschutz aktiv',
+    addDevice: 'Gerät hinzufügen',
+    addDeviceSub: 'Typenschild fotografieren',
+    emptyTitle: 'Noch kein Gerät',
+    emptyText:
+      'Füg dein erstes Gerät hinzu. Dann führt dich ganz bei Problemen Schritt für Schritt.',
+    openCase: 'Offener Fall',
+    caseNumber: (id: string) => `Fall ${id}`,
+    openCaseLabel: (id: string) => `Offener Fall · Fall ${id}`,
+    continueCase: 'Weitermachen',
+  },
+
+  deviceStatus: {
+    laeuft: 'läuft',
+    problem: 'Problem gemeldet',
+    hilfe: 'Hilfe angefragt',
+    reparatur: (slot: string) => `Reparatur ${slot}`,
+  },
+
+  device: {
+    meta: (category: string, since: string) => `${category} · seit ${since}`,
+    photo: (name: string) => name,
+    reportProblem: 'Problem melden',
+    sections: {
+      status: 'Status',
+      protection: 'Schutz',
+      maintenance: 'Pflege laut Hersteller',
+      guides: 'Anleitungen',
+      cases: 'Fälle',
+      service: 'Kundendienst',
+      device: 'Gerät',
+    },
+    protectionFacts: {
+      product: 'Schutz',
+      provider: 'Über',
+      validUntil: 'Gültig bis',
+      deductible: 'Selbstbeteiligung',
+      number: 'Vertrag',
+    },
+    noProtection: 'Kein Schutz verknüpft',
+    noProtectionText: 'Reparaturen zahlst du selbst. Den Preis siehst du vorher.',
+    deviceFacts: {
+      manufacturer: 'Hersteller',
+      model: 'Modell',
+      category: 'Gerät',
+      materialNumber: 'M.-Nr.',
+      serialNumber: 'Fabrik-Nr.',
+      purchased: 'Gekauft',
+    },
+    guideSource: (source: string) => `Aus der ${source}`,
+    noCases: 'Noch keine Fälle zu diesem Gerät.',
+    serviceSub: (phone: string, free: boolean) => (free ? `${phone} · kostenfrei` : phone),
+    notFound: 'Dieses Gerät gibt es nicht mehr.',
+  },
+
+  scan: {
+    title: 'Fotografier das Typenschild.',
+    where: 'Bei Waschmaschinen sitzt es meist bei geöffneter Tür oberhalb des Schauglases.',
+    takePhoto: 'Typenschild fotografieren',
+    manual: 'Manuell eingeben',
+    reading: 'Typenschild wird gelesen',
+    recognized: 'Erkannt',
+    recognizedText: 'Prüf die Angaben. Stimmt etwas nicht, kannst du es ändern.',
+    accept: 'Gerät übernehmen',
+    edit: 'Angaben ändern',
+    notRecognizedTitle: 'Wir konnten das Typenschild nicht lesen.',
+    notRecognizedText:
+      'Achte auf gutes Licht und halte das Schild ganz in den Rahmen. Oder gib die Angaben selbst ein.',
+    retry: 'Noch einmal fotografieren',
+    formTitle: 'Gerät eingeben',
+    manufacturer: 'Hersteller',
+    category: 'Art des Geräts',
+    model: 'Modell',
+    materialNumber: 'M.-Nr. (optional)',
+    serialNumber: 'Fabrik-Nr. (optional)',
+    modelRequired: 'Gib das Modell ein.',
+    save: 'Gerät speichern',
+    manufacturerHint: 'Im Prototyp gibt es einen Hersteller.',
+  },
+
+  camera: {
+    permissionTitle: 'ganz braucht deine Kamera.',
+    permissionText:
+      'Damit fotografierst du Display, Typenschild oder Bauteil. Die Fotos bleiben in deinem Fall. Aus der Galerie laden geht nicht, damit jedes Foto als Nachweis zählt.',
+    allow: 'Kamera erlauben',
+    deniedTitle: 'Die Kamera ist nicht erlaubt.',
+    deniedText:
+      'Erlaube den Zugriff in den Einstellungen deines Telefons. Danach geht es hier weiter.',
+    openSettings: 'Einstellungen öffnen',
+    unavailableTitle: 'Hier gibt es keine Kamera.',
+    unavailableText: 'Für die Demo nehmen wir ein Beispielfoto.',
+    useDemoPhoto: 'Beispielfoto nehmen',
+    shutter: 'Foto aufnehmen',
+    modesLabel: 'Was fotografierst du?',
+    modes: { display: 'Display', typenschild: 'Typenschild', bauteil: 'Bauteil' },
+    help: {
+      display: 'Halte das Display in den Rahmen. Wir lesen die Meldung.',
+      typenschild: 'Bei geöffneter Tür oberhalb des Schauglases. Wir erkennen Modell und Baujahr.',
+      bauteil: 'Zeig das Bauteil oder den Schaden. Wir erkennen Teil und sichtbare Schäden.',
+    },
+    preview: 'Kamerabild',
+    failed: 'Das Foto hat nicht geklappt. Versuch es noch einmal.',
+  },
+
   /** Navigation und Platzhalter bis zum jeweiligen Schritt aus BUILD_PLAN Abschnitt 5 */
   nav: {
     placeholder: (step: number) =>

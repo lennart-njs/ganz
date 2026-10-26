@@ -14,3 +14,29 @@ jest.mock('@expo-google-fonts/schibsted-grotesk', () => ({
   SchibstedGrotesk_600SemiBold: 3,
   SchibstedGrotesk_700Bold: 4,
 }));
+
+// Mock-Services ohne Wartezeit
+require('@/services/mock/timing').timing.scale = 0;
+
+// Kamera: Berechtigung je Test steuerbar, Aufnahme liefert ein Testbild.
+jest.mock('expo-camera', () => {
+  const React = require('react');
+  const { View } = require('react-native');
+  const permission = { current: { granted: true, canAskAgain: true, status: 'granted' } };
+  const CameraView = React.forwardRef((props: { onCameraReady?: () => void }, ref: unknown) => {
+    React.useImperativeHandle(ref, () => ({
+      takePictureAsync: async () => ({ uri: 'file:///test.jpg', width: 1200, height: 900 }),
+    }));
+    React.useEffect(() => props.onCameraReady?.(), []);
+    return React.createElement(View, { testID: 'camera-view' });
+  });
+  return {
+    CameraView,
+    __permission: permission,
+    useCameraPermissions: () => [
+      permission.current,
+      jest.fn(async () => permission.current),
+      jest.fn(async () => permission.current),
+    ],
+  };
+});

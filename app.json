@@ -17,7 +17,15 @@
     },
     "plugins": [
       "expo-router",
-      "expo-font"
+      "expo-font",
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "ganz nutzt die Kamera für Fotos von Display, Typenschild und Bauteil. Die Fotos bleiben in deinem Fall.",
+          "microphonePermission": false,
+          "recordAudioAndroid": false
+        }
+      ]
     ]
   }
 }
