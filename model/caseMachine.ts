@@ -137,6 +137,8 @@ export interface CommandContext {
   note?: string;
   /** Für abbrechen */
   cancelReason?: string;
+  /** Andere Lösung als die Standard-Lösung des Befehls, z. B. 'pflege_erledigt' */
+  resolution?: CaseResolution;
 }
 
 export interface CommandResult {
@@ -224,7 +226,7 @@ export function applyCommand(c: Case, command: CaseCommand, ctx: CommandContext)
       events.push(event(c, ctx, type, command === 'abbrechen' ? { reason: ctx.cancelReason } : {}));
   }
 
-  const resolution = resolutions[command];
+  const resolution = resolutions[command] && (ctx.resolution ?? resolutions[command]);
   if (resolution) next.resolution = resolution;
   if (to === 'erledigt' || to === 'abgebrochen') next.closedAt = ctx.now;
   if (to === 'abgebrochen') next.cancelReason = ctx.cancelReason;

@@ -79,3 +79,15 @@ Annahmen, die ich beim Bauen getroffen habe. Jede lässt sich ändern.
 - **„Bevor du anfängst“** nennt das Werkzeug aus der Anleitung. Die Anleitung „Wasserablauf“ braucht keins. Die Demo nannte eine Dauer von 15 Minuten. Die steht nicht in der Anleitung, darum zeige ich sie nicht.
 - **Kostenhinweis** im Ergebnis ohne Zusage (B-13). Ein Test prüft alle Texte in `i18n/de.ts` auf Formulierungen wie „übernimmt die Kosten“ oder „kostet dich nichts“.
 - **Sicherheitswert** als Zahl (`confidenceScore`) bleibt intern. Die App zeigt nur „hoch“, „mittel“ oder „unsicher“.
+
+## Schritt 8: Anleitung
+
+- **Fortschritt im Store:** `GuideRun.currentStep` und `completedSteps` werden bei jedem Schritt gespeichert. Ein Neustart führt über die Karte „Offener Fall“ direkt in den gespeicherten Schritt. „Weitermachen“ löscht `pausedAt`.
+- **Zurück = Schritt zurück:** Ab Schritt 2 sperrt `usePreventRemove` das Entfernen des Screens. Zurück-Button, Android-Zurück und die Wischgeste auf iOS lösen dann „Schritt zurück“ aus. In Schritt 1 verlassen sie die Anleitung. Wer den Fall über das X verlässt, kommt trotzdem hinaus.
+- **Ende je nach Art (B-08):** Störung fragt „Läuft die Maschine wieder?“ mit „Läuft noch nicht“ und „Läuft wieder“. Pflege und Hinweise enden mit „Fertig“. Bei einem Pflege-Fall gilt „Fertig“ auch für die Störungs-Anleitung „Zulaufsiebe“. „Nicht selbst lösbar“ (Türentriegelung, Waterproof) bietet nur „Hilfe holen“.
+- **Pflege-Fälle** enden mit `resolution: 'pflege_erledigt'` und führen zurück zur Startseite. Sie stehen in den Fällen.
+- **Sicherheitsbestätigung (Q-13):** Bei Waterproof muss „Der Wasserhahn ist zu“ angehakt sein, bevor es weitergeht. Der Haken wird als Ereignis gespeichert. Weitere Schritte lassen sich in `lib/guideMeta.ts` ergänzen.
+- **„Geht nicht“** öffnet ein Sheet mit optionaler Notiz für die Fachkraft (Q-15). Abbruchschritt und Notiz stehen im `GuideRun`.
+- **Schrittfotos** sind beschriftete Platzhalter („Display mit Meldung“, „Laugenfilter hinter der Klappe“).
+- **Haptik** bei „Erledigt“ und „Läuft wieder“ (Q-8).
+- **Quelle** jeder Anleitung steht klein unter dem Schritt (B-56).

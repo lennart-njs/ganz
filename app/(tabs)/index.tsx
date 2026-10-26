@@ -31,7 +31,10 @@ export default function Geraete() {
           caseId={c.id}
           title={c.problemLabel}
           detail={caseProgressLabel(state, c)}
-          onContinue={() => router.push(resumeHref(state, c))}
+          onContinue={() => {
+            if (c.pausedAt) state.resumeCase(c.id);
+            router.push(resumeHref(state, c));
+          }}
         />
       ))}
 

@@ -443,6 +443,31 @@ export const de = {
     missing: 'Noch kein Ergebnis.',
   },
 
+  guide: {
+    source: (manufacturer: string) => `aus der Anleitung von ${manufacturer}`,
+    noSelf: 'Nicht selbst lösbar',
+    noSelfSub: (manufacturer: string) => `laut Anleitung von ${manufacturer}`,
+    youNeed: 'Du brauchst',
+    beforeTitle: 'Bevor du anfängst',
+    done: 'Erledigt',
+    notWorking: 'Geht nicht',
+    runsAgain: 'Läuft wieder',
+    stillBroken: 'Läuft noch nicht',
+    finished: 'Fertig',
+    getHelp: 'Hilfe holen',
+    question: 'Läuft die Maschine wieder?',
+    images: { fehler: 'Display mit Meldung', pumpe: 'Laugenfilter hinter der Klappe' },
+    confirm: { waterproof: 'Der Wasserhahn ist zu' },
+    confirmFirst: (what: string) => `Bitte bestätige zuerst: ${what}.`,
+    notWorkingTitle: 'Was klappt nicht?',
+    notWorkingText:
+      'Kein Problem. Wir holen Hilfe. Die Fachkraft sieht, bis wohin du gekommen bist.',
+    noteLabel: 'Notiz für die Fachkraft (optional)',
+    notePlaceholder: 'z. B. Der Filter lässt sich nicht drehen.',
+    missing: 'Diese Anleitung gibt es nicht mehr.',
+    sourceDocument: (doc: string) => `Quelle: ${doc}`,
+  },
+
   /** Navigation und Platzhalter bis zum jeweiligen Schritt aus BUILD_PLAN Abschnitt 5 */
   nav: {
     placeholder: (step: number) =>

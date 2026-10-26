@@ -110,6 +110,12 @@ export interface AppActions {
   startGuide: (caseId: Id, guideId: string) => GuideRun;
   /** Hilfe holen, wenn der Status es erlaubt. Sonst ohne Wirkung. */
   escalate: (caseId: Id) => void;
+  /** Schritt erledigt oder Schritt zurück. Der Fortschritt bleibt gespeichert (B-05). */
+  moveGuideStep: (runId: Id, direction: 'next' | 'back') => void;
+  /** Sicherheitshinweis bestätigt, z. B. „Der Wasserhahn ist zu“ (Q-13) */
+  confirmSafety: (runId: Id, step: number) => void;
+  /** Beendet die Anleitung. „Geht nicht“ speichert den Abbruchschritt und die Notiz (B-06). */
+  finishGuide: (runId: Id, outcome: NonNullable<GuideRun['outcome']>, note?: string) => void;
   pauseCase: (caseId: Id) => void;
   resumeCase: (caseId: Id) => void;
   grantConsent: (input: NewConsent) => Consent;
@@ -408,6 +414,99 @@ export function createAppStore(storage: StateStorage = AsyncStorage, env: StoreE
                     ],
             }));
             return run;
+          },
+
+          moveGuideStep: (runId, direction) => {
+            const run = get().guideRuns[runId];
+            if (!run || run.endedAt) return;
+            const step = run.currentStep;
+            const next: GuideRun =
+              direction === 'next'
+                ? {
+                    ...run,
+                    currentStep: step + 1,
+                    completedSteps: [...new Set([...run.completedSteps, step])],
+                  }
+                : { ...run, currentStep: Math.max(0, step - 1) };
+            const ev: CaseEvent = {
+              id: env.newId('ev'),
+              caseId: run.caseId,
+              type: direction === 'next' ? 'schritt_erledigt' : 'schritt_zurueck',
+              at: env.now(),
+              actor: householdActor(),
+              payload: { guideRunId: runId, guideId: run.guideId, step: step + 1 },
+            };
+            set((s) => ({
+              guideRuns: { ...s.guideRuns, [runId]: next },
+              events: [...s.events, ev],
+            }));
+          },
+
+          confirmSafety: (runId, step) => {
+            const run = get().guideRuns[runId];
+            if (!run) return;
+            get().addEvent({
+              caseId: run.caseId,
+              type: 'sicherheit_bestaetigt',
+              actor: householdActor(),
+              payload: { guideRunId: runId, guideId: run.guideId, step: step + 1 },
+            });
+          },
+
+          finishGuide: (runId, outcome, note) => {
+            const run = get().guideRuns[runId];
+            if (!run || run.endedAt) return;
+            const now = env.now();
+            const step = run.currentStep;
+            const done =
+              outcome === 'laeuft_wieder' || outcome === 'fertig' || outcome === 'laeuft_nicht';
+            const ended: GuideRun = {
+              ...run,
+              outcome,
+              endedAt: now,
+              completedSteps: done
+                ? [...new Set([...run.completedSteps, step])]
+                : run.completedSteps,
+              abortedAtStep: outcome === 'geht_nicht' ? step : undefined,
+              abortNote: outcome === 'geht_nicht' && note?.trim() ? note.trim() : undefined,
+            };
+            const payload = { guideRunId: runId, guideId: run.guideId, step: step + 1 };
+            const events: CaseEvent[] = [
+              ...(outcome === 'geht_nicht'
+                ? [
+                    {
+                      id: env.newId('ev'),
+                      caseId: run.caseId,
+                      type: 'schritt_geht_nicht' as const,
+                      at: now,
+                      actor: householdActor(),
+                      payload: { ...payload, note: ended.abortNote },
+                    },
+                  ]
+                : []),
+              {
+                id: env.newId('ev'),
+                caseId: run.caseId,
+                type: 'anleitung_beendet',
+                at: now,
+                actor: householdActor(),
+                payload: { ...payload, outcome },
+              },
+            ];
+            set((s) => ({
+              guideRuns: { ...s.guideRuns, [runId]: ended },
+              events: [...s.events, ...events],
+            }));
+            const c = getCase(run.caseId);
+            if (outcome === 'laeuft_wieder' || outcome === 'fertig') {
+              if (canTransition(c.status, 'selbst_geloest')) {
+                get().runCommand(c.id, 'selbst_geloest', {
+                  resolution: c.entry === 'pflege' ? 'pflege_erledigt' : undefined,
+                });
+              }
+            } else {
+              get().escalate(c.id);
+            }
           },
 
           escalate: (caseId) => {

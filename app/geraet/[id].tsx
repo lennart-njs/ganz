@@ -88,7 +88,10 @@ export default function GeraetDetail() {
             caseId={openCase.id}
             title={openCase.problemLabel}
             detail={caseProgressLabel(state, openCase)}
-            onContinue={() => router.push(resumeHref(state, openCase))}
+            onContinue={() => {
+              if (openCase.pausedAt) state.resumeCase(openCase.id);
+              router.push(resumeHref(state, openCase));
+            }}
           />
         ) : (
           <Text variant="body">{deviceStatusLabel(state, device.id)}</Text>
