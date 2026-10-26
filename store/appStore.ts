@@ -6,6 +6,7 @@ import { createJSONStorage, persist, type StateStorage } from 'zustand/middlewar
 import { demoConfig } from '@/config/demo.config';
 import {
   applyCommand,
+  canTransition,
   isClosed,
   pauseCase as pause,
   resumeCase as resume,
@@ -98,6 +99,15 @@ export interface AppActions {
   setDemo: (patch: Partial<DemoSettings>) => void;
   createCase: (input: { deviceId: Id; entry: CaseEntry; problemLabel: string }) => Case;
   runCommand: (caseId: Id, command: CaseCommand, options?: CommandOptions) => Case;
+  /** Ändert Einstieg oder Bezeichnung eines Falls, solange er offen ist */
+  updateCase: (caseId: Id, patch: Partial<Pick<Case, 'entry' | 'problemLabel'>>) => void;
+  /** Entfernt einen Fall ohne Inhalt (nur angelegt, kein Foto, kein Ergebnis, keine Anleitung) */
+  discardIfEmpty: (caseId: Id) => void;
+  addDiagnosis: (input: Omit<Diagnosis, 'id' | 'createdAt'>) => Diagnosis;
+  /** Startet eine Anleitung. Aus „offen“ wechselt der Fall in die Selbsthilfe. */
+  startGuide: (caseId: Id, guideId: string) => GuideRun;
+  /** Hilfe holen, wenn der Status es erlaubt. Sonst ohne Wirkung. */
+  escalate: (caseId: Id) => void;
   pauseCase: (caseId: Id) => void;
   resumeCase: (caseId: Id) => void;
   grantConsent: (input: NewConsent) => Consent;
@@ -269,6 +279,100 @@ export function createAppStore(storage: StateStorage = AsyncStorage, env: StoreE
             });
             commit(result);
             return result.case;
+          },
+
+          updateCase: (caseId, patch) =>
+            set((s) => {
+              const c = s.cases[caseId];
+              if (!c || c.status !== 'offen') return {};
+              return { cases: { ...s.cases, [caseId]: { ...c, ...patch, updatedAt: env.now() } } };
+            }),
+
+          discardIfEmpty: (caseId) =>
+            set((s) => {
+              const c = s.cases[caseId];
+              const empty =
+                c &&
+                c.status === 'offen' &&
+                !c.photoIds.length &&
+                !c.diagnosisIds.length &&
+                !c.guideRunIds.length;
+              if (!empty) return {};
+              const { [caseId]: _removed, ...cases } = s.cases;
+              return { cases, events: s.events.filter((e) => e.caseId !== caseId) };
+            }),
+
+          addDiagnosis: (input) => {
+            const d: Diagnosis = { ...input, id: env.newId('ergebnis'), createdAt: env.now() };
+            const c = getCase(input.caseId);
+            const ev: CaseEvent = {
+              id: env.newId('ev'),
+              caseId: c.id,
+              type: 'ergebnis_erkannt',
+              at: d.createdAt,
+              actor: d.source === 'fehlererkennung' ? { kind: 'system' } : householdActor(),
+              payload: {
+                diagnosisId: d.id,
+                mode: d.mode,
+                errorPattern: d.errorPattern,
+                confidence: d.confidence,
+                source: d.source,
+              },
+            };
+            set((s) => ({
+              diagnoses: [...s.diagnoses, d],
+              cases: {
+                ...s.cases,
+                [c.id]: { ...c, diagnosisIds: [...c.diagnosisIds, d.id], updatedAt: d.createdAt },
+              },
+              events: [...s.events, ev],
+            }));
+            return d;
+          },
+
+          startGuide: (caseId, guideId) => {
+            const now = env.now();
+            const run: GuideRun = {
+              id: env.newId('anleitung'),
+              caseId,
+              guideId,
+              startedAt: now,
+              currentStep: 0,
+              completedSteps: [],
+            };
+            const before = getCase(caseId);
+            if (before.status === 'offen') {
+              get().runCommand(caseId, 'anleitung_starten');
+            }
+            const c = getCase(caseId);
+            set((s) => ({
+              guideRuns: { ...s.guideRuns, [run.id]: run },
+              cases: { ...s.cases, [caseId]: { ...c, guideRunIds: [...c.guideRunIds, run.id] } },
+              events:
+                before.status === 'offen'
+                  ? s.events.map((e) =>
+                      e.caseId === caseId && e.type === 'anleitung_gestartet' && !e.payload.guideId
+                        ? { ...e, payload: { ...e.payload, guideId, guideRunId: run.id } }
+                        : e,
+                    )
+                  : [
+                      ...s.events,
+                      {
+                        id: env.newId('ev'),
+                        caseId,
+                        type: 'anleitung_gestartet',
+                        at: now,
+                        actor: householdActor(),
+                        payload: { guideId, guideRunId: run.id },
+                      },
+                    ],
+            }));
+            return run;
+          },
+
+          escalate: (caseId) => {
+            const c = getCase(caseId);
+            if (canTransition(c.status, 'hilfe_holen')) get().runCommand(caseId, 'hilfe_holen');
           },
 
           pauseCase: (caseId) =>

@@ -59,3 +59,12 @@ Annahmen, die ich beim Bauen getroffen habe. Jede lässt sich ändern.
 - **Kundendienst** kommt aus `Manufacturer.serviceContact` und öffnet die Telefon-App. Das ist der einzige Weg aus der App heraus und im Soll-Flow so vorgesehen.
 - **Schutz nachträglich verknüpfen** geht aus dem Gerätedetail (`/schutz-verknuepfen`).
 - **Selbstbeteiligung** zeigt den Wert aus den Demo-Einstellungen, Standard 0 € aus der Konfiguration.
+
+## Schritt 6: Problem melden, Meldungen, Symptome, „Etwas anderes“
+
+- **Ein Fall entsteht mit der ersten Wahl** in „Problem melden“. Verlässt man den Screen ohne Inhalt (kein Foto, kein Ergebnis, keine Anleitung), verschwindet der Entwurf wieder. Eine zweite Wahl nutzt denselben Entwurf.
+- **Gerät:** „Problem melden“ gilt für das Gerät, von dem man kommt, sonst für das erste Gerät. Eine Geräte-Auswahl kommt erst mit mehreren Geräten.
+- **Meldung im Display** speichert ein Ergebnis mit Quelle `nutzerangabe` und startet direkt die Anleitung (3 Taps ab der Startseite).
+- **Symptom** startet direkt die Anleitung (2 Taps). „Bevor du anfängst“ steht in Schritt 1 (Schritt 8).
+- **„Etwas anderes“** ist ein Sheet mit Freitext. Der Text geht als Antwort auf „Was ist passiert?“ in die Fallakte, dann folgt „Hilfe holen“. Ein Foto lässt sich hier noch nicht anhängen, die Fachkraft sieht das Gerät im Videocall.
+- **Kein Link nach außen:** Ein Test prüft, dass `app/`, `components/`, `i18n/` und `config/` keine Web-Adresse und keinen Chat enthalten.

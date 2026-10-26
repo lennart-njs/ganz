@@ -123,7 +123,16 @@ export default function GeraetDetail() {
             key={m.guideId}
             title={m.title}
             sub={m.sub}
-            onPress={() => router.push(`/fall/neu?geraet=${device.id}&pflege=${m.guideId}`)}
+            onPress={() => {
+              const st = useAppStore.getState();
+              const c = st.createCase({
+                deviceId: device.id,
+                entry: 'pflege',
+                problemLabel: m.title,
+              });
+              st.startGuide(c.id, m.guideId);
+              router.push(`/fall/${c.id}/anleitung`);
+            }}
           />
         ))}
       </Section>

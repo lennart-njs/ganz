@@ -129,7 +129,7 @@ describe('Zurück', () => {
     await fireEvent.press(
       screen.getByRole('button', { name: new RegExp(`^${de.home.searchTitle}`) }),
     );
-    await fireEvent.press(screen.getByRole('button', { name: de.nav.takePhoto }));
+    await fireEvent.press(screen.getByRole('button', { name: new RegExp(`^${de.problem.photo}`) }));
     await fireEvent.press(screen.getByRole('button', { name: de.nav.shutter }));
     expect(r.getPathname()).toBe('/fall/GS-24817/analyse');
     return r;

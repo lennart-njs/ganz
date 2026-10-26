@@ -333,6 +333,29 @@ export const de = {
     failed: 'Das Foto hat nicht geklappt. Versuch es noch einmal.',
   },
 
+  problem: {
+    title: 'Was ist los?',
+    photo: 'Foto machen',
+    photoSub: 'Intelligente Fehlererkennung für Display, Typenschild oder Bauteil',
+    describe: 'Oder beschreib es so, wie du es am Telefon erzählen würdest:',
+    other: 'Etwas anderes',
+    otherSub: 'Beschreib es in eigenen Worten',
+    otherTitle: 'Was ist passiert?',
+    otherLabel: 'Deine Beschreibung',
+    otherPlaceholder: 'z. B. Die Maschine riecht verbrannt.',
+    otherHint: 'Die Fachkraft liest das vor dem Videocall.',
+    otherTooShort: 'Schreib bitte ein paar Worte dazu.',
+    getHelp: 'Hilfe holen',
+    photoLabel: 'Foto',
+    noDevice: 'Füg zuerst ein Gerät hinzu. Dann führt ganz dich durch die Lösung.',
+    forDevice: (name: string) => `Für ${name}`,
+  },
+
+  messages: {
+    title: 'Was steht im Display?',
+    displayIcon: 'Display',
+  },
+
   /** Navigation und Platzhalter bis zum jeweiligen Schritt aus BUILD_PLAN Abschnitt 5 */
   nav: {
     placeholder: (step: number) =>
