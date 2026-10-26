@@ -6,3 +6,5 @@ reference/
 docs/
 package-lock.json
 *.md
+tsconfig.json
+app.json

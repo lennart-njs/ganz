@@ -44,6 +44,8 @@ ganz ist ein Reparatur-Marktplatz für Haushaltsgeräte (Testphase, Deutschland)
 
 Es gibt kein Icon-Set. ganz arbeitet mit Wörtern statt Symbolen. Einzige Zeichen, als kleine Inline-SVG (2–2.2px Strich, runde Enden, Ink oder Ink 500): Zurück-Chevron, Weiter-Chevron, Häkchen in der Checkbox, Senden-Pfeil, Auflegen-Hörer. Bewertung mit dem Unicode-Stern ★. Kein Emoji. Wird ein größeres Icon-Set nötig, Lucide (gleiche Strichstärke) verwenden und das hier vermerken.
 
+**Vermerk App (Phase 2, 26.10.2026):** Die App nutzt ein kleines Lucide-Set (`lucide-react-native`, Strich 2): Zurück, Weiter, Aufklappen, Schließen, Häkchen, Warndreieck (nur mit dem Wort „Achtung“), Tab-Leiste (Haus, Ordner, Person), Kamera, Mikrofon an/aus, Kamera an/aus, Auflegen, Suche, Plus. Jedes Icon steht neben einem Wort oder hat ein Label am Bedienteil. Liste: `components/ds/Icon.tsx`.
+
 **Logo:** Es gibt keine Logodatei. Die Wortmarke ist „ganz“ in Schibsted Grotesk 600, Tracking -0.03em (Komponente `Wordmark`).
 
 ---
