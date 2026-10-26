@@ -7,3 +7,7 @@ Status: Phase 1 (Review und Bauplan). Noch kein App-Code.
 - `reference/demo-v1.0/` – Quelle: Canvas „ganz – Demo v1.0“ (Stand 25.10.2026)
 - `design-system/` – ganz-Designsystem (verbindlich)
 - `assets/photos/` – Markenfotos (folgen)
+
+## Start mit Claude Code
+1. `docs/ENTSCHEIDUNGEN.md` ausfüllen.
+2. Claude Code in diesem Ordner starten und den Start-Prompt einfügen.
