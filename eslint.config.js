@@ -19,6 +19,28 @@ const colorLiterals = [
   },
 ];
 
+// Alle Texte in i18n/de.ts (CLAUDE.md). Gilt für Screens und Komponenten.
+const textProps =
+  'label|title|sub|meta|message|placeholder|hint|error|accessibilityLabel|accessibilityHint';
+const textLiterals = [
+  {
+    selector: 'JSXText[value=/\\p{L}/u]',
+    message: 'Text gehört in i18n/de.ts.',
+  },
+  {
+    selector: 'JSXExpressionContainer > Literal[value=/\\p{L}/u]',
+    message: 'Text gehört in i18n/de.ts.',
+  },
+  {
+    selector: `JSXAttribute[name.name=/^(${textProps})$/] > Literal`,
+    message: 'Text gehört in i18n/de.ts.',
+  },
+  {
+    selector: `JSXAttribute[name.name=/^(${textProps})$/] > JSXExpressionContainer > TemplateLiteral`,
+    message: 'Text gehört in i18n/de.ts. Platzhalter als Funktion dort anlegen.',
+  },
+];
+
 module.exports = defineConfig([
   expoConfig,
   prettierRecommended,
@@ -30,6 +52,12 @@ module.exports = defineConfig([
     ignores: ['theme/**'],
     rules: {
       'no-restricted-syntax': ['error', ...colorLiterals],
+    },
+  },
+  {
+    files: ['app/**/*.{ts,tsx}', 'components/**/*.{ts,tsx}'],
+    rules: {
+      'no-restricted-syntax': ['error', ...colorLiterals, ...textLiterals],
     },
   },
   {

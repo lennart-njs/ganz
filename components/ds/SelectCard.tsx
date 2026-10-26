@@ -1,6 +1,7 @@
 import { Pressable, StyleSheet, View } from 'react-native';
 import type { ReactNode } from 'react';
 
+import { de } from '@/i18n/de';
 import { useTheme } from '@/theme';
 
 import { Icon } from './Icon';
@@ -20,7 +21,7 @@ export function SelectCard({ title, sub, selected, onPress, media }: SelectCardP
   return (
     <Pressable
       accessibilityRole="radio"
-      accessibilityLabel={sub ? `${title}, ${sub}` : title}
+      accessibilityLabel={de.a11y.withSub(title, sub)}
       accessibilityState={{ checked: selected }}
       onPress={onPress}
       style={[

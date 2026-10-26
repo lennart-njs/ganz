@@ -16,6 +16,8 @@ export const de = {
     collapsed: 'eingeklappt',
     photo: (label: string) => `Foto: ${label}`,
     timelinePending: 'offen',
+    fact: (label: string, value: string) => `${label}: ${value}`,
+    withSub: (title: string, sub?: string) => (sub ? `${title}, ${sub}` : title),
   },
   symbols: {
     star: '★',
@@ -23,6 +25,7 @@ export const de = {
   ds: {
     attention: 'Achtung',
     confidence: 'Sicherheit',
+    confidenceLabel: (level: string) => `Sicherheit: ${level}`,
     confidenceLevel: {
       hoch: 'hoch',
       mittel: 'mittel',
@@ -30,6 +33,145 @@ export const de = {
     },
     photoPlaceholder: (label: string) => `Foto folgt: ${label}`,
   },
+  tabs: {
+    devices: 'Geräte',
+    cases: 'Fälle',
+    profile: 'Profil',
+  },
+
+  /** Titel der Screens (BUILD_PLAN Abschnitt 2) */
+  screens: {
+    willkommen: 'Willkommen',
+    schutz: 'Schutz verknüpfen',
+    geraetBestaetigen: 'Gerät bestätigen',
+    geraete: 'Geräte',
+    faelle: 'Fälle',
+    profil: 'Profil',
+    geraetDetail: 'Gerät',
+    geraetNeu: 'Gerät hinzufügen',
+    problem: 'Problem melden',
+    meldungen: 'Meldung im Display',
+    kamera: 'Foto machen',
+    analyse: 'Intelligente Fehlererkennung',
+    rueckfrage: 'Rückfrage',
+    ergebnis: 'Ergebnis',
+    anleitung: 'Anleitung',
+    hilfe: 'Hilfe holen',
+    warteraum: 'Verbindung',
+    videocall: 'Videocall',
+    befund: 'Befund',
+    kosten: 'Kosten und Schadenmeldung',
+    termin: 'Betrieb und Termin',
+    status: 'Fall-Status',
+    abschluss: 'Abschluss',
+    fallakte: 'Fallakte',
+  },
+
+  /** Status eines Falls, wie die Nutzerin ihn sieht */
+  caseStatus: {
+    offen: 'Offen',
+    selbsthilfe: 'Anleitung läuft',
+    eskaliert: 'Hilfe angefragt',
+    freigabe_noetig: (insurer: string) => `Freigabe durch ${insurer}`,
+    freigegeben: 'Kosten freigegeben',
+    abgelehnt: 'Kosten nicht freigegeben',
+    in_reparatur: 'Reparatur geplant',
+    erledigt: 'Erledigt',
+    abgebrochen: 'Abgebrochen',
+  },
+
+  /** Einträge der Fallakte (CaseEvent.type) */
+  caseEvent: {
+    fall_angelegt: 'Problem gemeldet',
+    foto_aufgenommen: 'Foto aufgenommen',
+    ergebnis_erkannt: 'Ergebnis der Intelligenten Fehlererkennung',
+    rueckfrage_beantwortet: 'Rückfrage beantwortet',
+    anleitung_gestartet: 'Anleitung gestartet',
+    schritt_erledigt: 'Schritt erledigt',
+    schritt_zurueck: 'Schritt zurück',
+    schritt_geht_nicht: 'Schritt ging nicht',
+    sicherheit_bestaetigt: 'Sicherheitshinweis bestätigt',
+    anleitung_beendet: 'Anleitung beendet',
+    weitergabe_bestaetigt: 'Weitergabe bestätigt',
+    einwilligung_widerrufen: 'Einwilligung widerrufen',
+    videocall_angefragt: 'Videocall angefragt',
+    videocall_gestartet: 'Videocall gestartet',
+    videocall_beendet: 'Videocall beendet',
+    befund_erstellt: 'Befund erstellt',
+    angebot_erstellt: 'Kostenvoranschlag erstellt',
+    schaden_gemeldet: 'Schadenfall gemeldet',
+    freigabe_entschieden: 'Freigabe entschieden',
+    termin_angefragt: 'Termin angefragt',
+    termin_bestaetigt: 'Termin bestätigt',
+    betrieb_unterwegs: 'Betrieb ist unterwegs',
+    reparatur_abgeschlossen: 'Reparatur abgeschlossen',
+    abschluss_bestaetigt: 'Läuft wieder',
+    problem_besteht_weiter: 'Problem besteht weiter',
+    bewertet: 'Bewertet',
+    pausiert: 'Später weitermachen',
+    fortgesetzt: 'Fortgesetzt',
+    abgebrochen: 'Fall abgebrochen',
+    status_geaendert: 'Status geändert',
+  },
+
+  consentPurpose: {
+    weitergabe_fachkraft: 'Weitergabe an die Fachkraft',
+    weitergabe_versicherer: 'Weitergabe an den Versicherer',
+    weitergabe_betrieb: 'Weitergabe an den Betrieb',
+    screenshots_im_call: 'Screenshots im Videocall',
+    hersteller_einzelfall: 'Einzelfall an den Hersteller',
+    mitteilungen: 'Mitteilungen',
+  },
+
+  deviceCategory: {
+    waschmaschine: 'Waschmaschine',
+    geschirrspueler: 'Geschirrspüler',
+    trockner: 'Trockner',
+    kuehlschrank: 'Kühlschrank',
+  },
+
+  partner: {
+    authorized: (manufacturer: string) => `${manufacturer}-autorisiert`,
+    independent: 'Freie Werkstatt',
+    distance: (km: string) => `${km} km`,
+  },
+
+  /** Einstiege in „Problem melden“ (aus der Demo, Main.dc.html) */
+  problems: [
+    {
+      id: 'meldung',
+      label: 'Display zeigt eine Meldung',
+      sub: 'z. B. Wasserablauf, Waterproof, Fehler F',
+    },
+    { id: 'nass', label: 'Wäsche ist noch nass', sub: 'Nicht richtig geschleudert' },
+    { id: 'tuer', label: 'Tür geht nicht auf', sub: 'Nach oder während des Programms' },
+    { id: 'wackelt', label: 'Maschine wackelt oder wandert', sub: 'Beim Schleudern' },
+    { id: 'einspuel', label: 'Reste im Einspülkasten', sub: 'Waschmittel wird nicht eingespült' },
+    { id: 'start', label: 'Maschine startet nicht', sub: 'Display bleibt dunkel' },
+  ],
+
+  /** Meldungen im Display (aus der Demo) */
+  displayMessages: [
+    { guideId: 'zulauf', code: 'Wasserzulauf', hint: 'Programm abgebrochen' },
+    { guideId: 'ablauf', code: 'Wasserablauf', hint: 'Programm abgebrochen' },
+    { guideId: 'waterproof', code: 'Waterproof', hint: 'Wasserschutz hat ausgelöst' },
+    { guideId: 'fehlerf', code: 'Fehler F', hint: 'Defekt' },
+    { guideId: 'verriegelung', code: 'Türverriegelung', hint: 'Tür rastet nicht ein' },
+    { guideId: 'entriegelung', code: 'Türentriegelung', hint: 'Schloss blockiert' },
+    { guideId: 'dosierung', code: 'Dosierung prüfen', hint: 'Am Programmende' },
+    { guideId: 'hygiene', code: 'Hygiene-Info', hint: 'Am Programmende' },
+  ],
+
+  /** Pflege am Gerät (aus der Demo) */
+  maintenance: [
+    {
+      guideId: 'hygiene',
+      title: 'Hygienewäsche 75 °C',
+      sub: 'Gegen Keime, wenn du oft kalt wäschst',
+    },
+    { guideId: 'zulauf', title: 'Zulaufsiebe prüfen', sub: 'Etwa alle sechs Monate' },
+  ],
+
   galerie: {
     title: 'Komponenten',
     intro:

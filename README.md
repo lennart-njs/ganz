@@ -18,6 +18,7 @@ Klappt das WLAN nicht: `npx expo start --tunnel`.
 ```bash
 npm run check      # Typecheck, Lint, Prettier und Tests
 npm test           # nur Tests
+npm run guides:check  # Anleitungen gegen die Demo prüfen
 npm run lint       # nur Lint
 ```
 

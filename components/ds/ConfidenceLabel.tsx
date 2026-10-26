@@ -14,7 +14,7 @@ export function ConfidenceLabel({ level }: { level: ConfidenceLevel }) {
   const theme = useTheme();
   const word = de.ds.confidenceLevel[level];
   return (
-    <View style={styles.row} accessible accessibilityLabel={`${de.ds.confidence}: ${word}`}>
+    <View style={styles.row} accessible accessibilityLabel={de.ds.confidenceLabel(word)}>
       <View style={styles.bars}>
         {[0, 1, 2].map((i) => (
           <View
@@ -31,7 +31,7 @@ export function ConfidenceLabel({ level }: { level: ConfidenceLevel }) {
         ))}
       </View>
       <Text variant="body" tone="strong">
-        {`${de.ds.confidence}: ${word}`}
+        {de.ds.confidenceLabel(word)}
       </Text>
     </View>
   );

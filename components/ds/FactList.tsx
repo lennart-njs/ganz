@@ -1,5 +1,6 @@
 import { StyleSheet, View } from 'react-native';
 
+import { de } from '@/i18n/de';
 import { useTheme } from '@/theme';
 
 import { Text } from './Text';
@@ -25,7 +26,7 @@ export function FactList({ items, dense, ruled, labelShare = 0.38 }: FactListPro
         <View
           key={`${label}-${i}`}
           accessible
-          accessibilityLabel={`${label}: ${value}`}
+          accessibilityLabel={de.a11y.fact(label, value)}
           style={[
             stacked ? styles.stacked : styles.row,
             ruled && {

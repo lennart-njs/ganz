@@ -21,3 +21,18 @@ Annahmen, die ich beim Bauen getroffen habe. Jede lässt sich ändern.
 - **Bildschirm-spezifische Komponenten** (CameraFrame, ShutterButton, SearchPill, DeviceCard, OpenCaseCard, CostCompare, VideoStage, RoundButton) baue ich mit ihren Screens. Die Tab-Leiste kommt mit der Navigation in Schritt 4.
 - **Typed Routes aus.** Die Typen entstehen erst beim `expo start`. Ohne sie läuft `tsc` auch in einem frischen Klon.
 - **Lucide-Set** im README des Designsystems vermerkt.
+
+## Schritt 3: Modell, Status-Maschine, Store, Konfiguration, Texte, Anleitungen
+
+- **Typen** stehen unverändert aus dem Bauplan in `model/types.ts`. Die Status-Maschine liegt getrennt in `model/caseMachine.ts`, als reine Funktionen ohne Uhr.
+- **Schadenmeldung:** `schaden_melden` geht nur, wenn die meldende Person selbst handelt und eine nicht widerrufene Bestätigung `weitergabe_versicherer` für diesen Fall hat. Das System kann keinen Schadenfall anlegen.
+- **Bestätigung mit Fallbezug** erzeugt das Ereignis `weitergabe_bestaetigt`, ein Widerruf `einwilligung_widerrufen`.
+- **Fallnummer** beginnt bei GS-24817, wie im Versicherer-Portal der Demo.
+- **Aufteilung der 189 €:** Teil 119 €, Arbeit 70 €. Die Entscheidungen nennen nur die Summe. Das Datenmodell braucht beide Werte.
+- **Kaufdatum und Schutzbeginn** 15.03.2023, Schutz bis 31.03.2028. Die Entscheidungen nennen nur den Monat.
+- **Haushalt:** Name „Sam“, Adresse „Beispielstraße 12, 12043 Berlin“. Fiktiv, nur für Zusammenfassung und Termin.
+- **Händler und Händler-Code** bleiben `[HÄNDLER]` und `[CODE]`, bis du sie einträgst.
+- **Anleitungstyp:** `hygiene` ist Pflege, `dosierung` ist Hinweis, alle anderen sind Störung. Die Pflege-Zeile „Zulaufsiebe prüfen“ öffnet die Störungs-Anleitung `zulauf`. Ob sie mit „Fertig“ endet, entscheidet der Einstieg des Falls (`entry: 'pflege'`), nicht die Anleitung.
+- **Schrittfotos:** In den Anleitungen stehen statt der Blob-URLs der Demo die Schlüssel `fehler` und `pumpe`.
+- **Vergleich der Anleitungen** läuft als Jest-Test (`npm run guides:check`), weil `data/guides.ts` TypeScript ist. Er liest `guides()` direkt aus `reference/demo-v1.0/Main.dc.html`.
+- **Texte:** Eine Lint-Regel findet Text in JSX und in Text-Props (`label`, `title`, `accessibilityLabel` usw.) außerhalb von `i18n/de.ts`. Ausnahme: `data/guides.ts` (Anleitungsdaten) und `config/demo.config.ts` (Beispielwerte). Texte für einzelne Screens kommen mit den Screens dazu.

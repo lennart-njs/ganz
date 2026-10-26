@@ -1,5 +1,6 @@
 import { Pressable, StyleSheet } from 'react-native';
 
+import { de } from '@/i18n/de';
 import { useTheme } from '@/theme';
 
 import { Text } from './Text';
@@ -18,7 +19,7 @@ export function ChoiceChip({ label, selected, onPress, sub, mode = 'radio' }: Ch
   return (
     <Pressable
       accessibilityRole={mode}
-      accessibilityLabel={sub ? `${label}, ${sub}` : label}
+      accessibilityLabel={de.a11y.withSub(label, sub)}
       accessibilityState={{ checked: selected }}
       onPress={onPress}
       style={[
