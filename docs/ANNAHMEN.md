@@ -145,3 +145,12 @@ Annahmen, die ich beim Bauen getroffen habe. Jede lässt sich ändern.
 - **Hinweise aus = keine Demo-Spur:** keine Tipps, kein „Wartezeit überspringen“, kein „Nächster Schritt (Demo)“, keine Kennzeichnung „Beispielwerte“ und kein Beispielfoto nach abgelehnter Kamera. Ein Test prüft Startseite, Kosten, Termin, Status und Profil.
 - **Whitelabel:** Alle Namen kommen aus `config/demo.config.ts`. Ein Test prüft, dass `i18n/de.ts` keinen dieser Namen enthält, und rendert die Screens mit einem anderen Versicherer. Die Beispiele in der Galerie sind darum neutral.
 - **Platzhalter aus Schritt 4** sind entfernt. Alle Screens haben jetzt Inhalt.
+
+## Schritt 14: Barrierefreiheit und Qualität
+
+- **Audit-Test** (`__tests__/a11y.test.tsx`) rendert alle 25 Screens mit einem Fall auf dem Golden Path. Er prüft jedes Bedienteil auf Rolle, Label und mindestens 44 pt, jedes Eingabefeld auf ein Label und dass kein Text gekürzt wird. Bei 200 % Schrift prüft er, dass jeder Text mitwächst und keine Spalte mit fester Breite bleibt.
+- **Ausnahmen:** Die Tab-Leiste kommt von React Navigation. Sie ist 70 pt hoch, ihre Beschriftung wächst wie im System nicht mit. Die Sterne der Bewertung sind ein Zeichen in einem 48-pt-Feld mit eigenem Label.
+- **Kopfzeile:** Lange Titel brechen um, statt abgeschnitten zu werden.
+- **Fehler gefunden und behoben:** Das Ergebnis brach ab, wenn nach dem Befund der Fachkraft jemand zum Ergebnis zurückkam. Es zeigt jetzt das letzte Ergebnis der Fehlererkennung.
+- **VoiceOver und TalkBack** prüft der Test über die Rollen und Labels, die die Plattform vorliest. Ein Durchgang mit eingeschaltetem Screenreader auf einem echten Gerät steht noch aus.
+- **Dokumente:** `docs/DATA_MODEL.md` (welches Dashboard welche Felder liest), `docs/BEFUNDE.md` (Abgleich aller P0- und P1-Befunde).

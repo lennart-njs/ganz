@@ -62,7 +62,7 @@ export function DeviceCard({ title, meta, status, protectedBy, onPress }: Device
 }
 
 const styles = StyleSheet.create({
-  card: { gap: 8 },
+  card: { gap: 8, minHeight: 44 },
   badge: { position: 'absolute', top: 12, left: 12, paddingHorizontal: 12, paddingVertical: 6 },
   row: { flexDirection: 'row', alignItems: 'baseline', gap: 8, flexWrap: 'wrap' },
   title: { flex: 1 },

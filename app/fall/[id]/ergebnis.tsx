@@ -8,6 +8,7 @@ import { demoConfig } from '@/config/demo.config';
 import { guides, type GuideId } from '@/data/guides';
 import { de } from '@/i18n/de';
 import { formatEuro } from '@/i18n/format';
+import { latestDiagnosis } from '@/lib/caseView';
 import { deviceTitle, getManufacturer } from '@/lib/devices';
 import type { ErrorPattern } from '@/services';
 import { useAppStore } from '@/store/appStore';
@@ -21,7 +22,10 @@ export default function Ergebnis() {
   const caseId = useCaseId();
   const state = useAppStore();
   const c = state.cases[caseId];
-  const diagnosis = c ? state.diagnoses.find((d) => d.id === c.diagnosisIds.at(-1)) : undefined;
+  // Das letzte Ergebnis der Fehlererkennung, nicht ein späterer Befund der Fachkraft
+  const diagnosis = c
+    ? (latestDiagnosis(state, c, 'fehlererkennung') ?? latestDiagnosis(state, c, 'nutzerangabe'))
+    : undefined;
   const device = state.devices.find((d) => d.id === c?.deviceId);
   const photo = state.photos.find((p) => p.id === diagnosis?.photoIds[0]);
   const contract = state.contracts.find((k) => k.id === device?.contractId);
@@ -72,6 +76,13 @@ export default function Ergebnis() {
 
   const pattern = diagnosis.errorPattern as ErrorPattern;
   const guide = guides[diagnosis.guideId as GuideId];
+  if (!guide) {
+    return (
+      <CaseScreen title={de.screens.ergebnis}>
+        <Text variant="body">{t.missing}</Text>
+      </CaseScreen>
+    );
+  }
   const tools = [...new Set(guide.steps.map((s) => s.tool).filter((x): x is string => !!x))];
   const manufacturer = getManufacturer(device.manufacturerId).name;
 

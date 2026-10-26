@@ -50,7 +50,7 @@ export function AppHeader({ title, onBack, onClose }: AppHeaderProps) {
       </View>
       <View style={styles.title}>
         {title ? (
-          <Text variant="label" align="center" accessibilityRole="header" numberOfLines={2}>
+          <Text variant="label" align="center" accessibilityRole="header">
             {title}
           </Text>
         ) : null}
