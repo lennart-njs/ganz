@@ -40,3 +40,11 @@ jest.mock('expo-camera', () => {
     ],
   };
 });
+
+// Lokale Mitteilungen: Erlaubnis und Aufrufe prüfbar
+jest.mock('expo-notifications', () => ({
+  setNotificationHandler: jest.fn(),
+  getPermissionsAsync: jest.fn(async () => ({ granted: false, canAskAgain: true })),
+  requestPermissionsAsync: jest.fn(async () => ({ granted: true, canAskAgain: true })),
+  scheduleNotificationAsync: jest.fn(async () => 'id'),
+}));

@@ -90,6 +90,9 @@ export const demoConfig = {
   /** Sichtbare Fallnummer. GS-24817 ist auch im Versicherer-Portal der Demo. */
   caseNumber: { prefix: 'GS-', start: 24817 },
 
+  /** Mock-Timer für Freigabe und Betrieb. Im Demo-Modus geht es auch per Tap. */
+  timers: { claimMs: 10_000, bookingStepMs: 5_000 },
+
   /** EU-Ökodesign: Lieferfrist für Original-Ersatzteile (echter Fakt) */
   ecoDesignDeliveryDays: 15,
 } as const;

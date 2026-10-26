@@ -19,6 +19,7 @@ import { demoConfig } from '@/config/demo.config';
 import { de } from '@/i18n/de';
 import { formatDecimal, formatEuro } from '@/i18n/format';
 import { getManufacturer } from '@/lib/devices';
+import { notifications } from '@/services/notifications';
 import { useAppStore } from '@/store/appStore';
 
 const t = de.appointment;
@@ -76,6 +77,13 @@ export default function Termin() {
       partName: quote?.repair.partName,
     });
     router.replace(`/fall/${caseId}/status`);
+    // Systemdialog für Mitteilungen erst jetzt, beim ersten Bedarf (Review 4.1)
+    if (useAppStore.getState().notifications === 'offen') {
+      notifications
+        .requestPermission()
+        .then((ok) => useAppStore.getState().setNotifications(ok ? 'erlaubt' : 'abgelehnt'))
+        .catch(() => undefined);
+    }
   };
 
   const summary: [string, string][] = [

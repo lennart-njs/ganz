@@ -5,6 +5,7 @@ import { createJSONStorage, persist, type StateStorage } from 'zustand/middlewar
 
 import { demoConfig } from '@/config/demo.config';
 import { de } from '@/i18n/de';
+import { notifications } from '@/services/notifications';
 import {
   applyCommand,
   canStartVideoCall,
@@ -65,9 +66,13 @@ export const defaultDemoSettings: DemoSettings = {
 
 export type NewDevice = Omit<Device, 'id' | 'householdId' | 'createdAt'>;
 
+export type NotificationSetting = 'offen' | 'erlaubt' | 'abgelehnt';
+
 export interface AppData {
   onboardingDone: boolean;
   demo: DemoSettings;
+  /** Lokale Mitteilungen: erst nach dem Systemdialog, der nach „Termin anfragen“ kommt */
+  notifications: NotificationSetting;
   household?: Household;
   persons: Person[];
   contracts: Contract[];
@@ -133,6 +138,12 @@ export interface AppActions {
     selfPay: boolean;
     partName?: string;
   }) => Booking;
+  setNotifications: (value: NotificationSetting) => void;
+  /** Nächster Schritt der Simulation: Freigabe, Bestätigung, unterwegs, repariert (BUILD_PLAN 5.1) */
+  simulateNext: (caseId: Id) => boolean;
+  /** Abschluss nach der Reparatur: „Läuft wieder“ oder „Problem besteht weiter“ */
+  confirmRepair: (caseId: Id, works: boolean) => void;
+  rateBooking: (bookingId: Id, stars: 1 | 2 | 3 | 4 | 5) => void;
   /** Befund der Fachkraft oder des Betriebs, bei Reparatur mit Kostenvoranschlag */
   setFinding: (
     caseId: Id,
@@ -159,6 +170,7 @@ export type AppState = AppData & AppActions;
 export const initialData: AppData = {
   onboardingDone: false,
   demo: defaultDemoSettings,
+  notifications: 'offen',
   persons: [],
   contracts: [],
   devices: [],
@@ -746,6 +758,126 @@ export function createAppStore(storage: StateStorage = AsyncStorage, env: StoreE
             return booking;
           },
 
+          setNotifications: (value) => set({ notifications: value }),
+
+          simulateNext: (caseId) => {
+            const cfg = demoConfig;
+            const c = get().cases[caseId];
+            if (!c) return false;
+            const booking = activeBooking(get(), caseId);
+            const insurer = cfg.insurer.shortName;
+            const partner = booking?.provider.name ?? '';
+            const notify = (msg: { title: string; body: string }) => {
+              if (get().notifications === 'erlaubt')
+                notifications.notify(msg.title, msg.body).catch(() => undefined);
+            };
+            const setBooking = (patch: Partial<Booking>) =>
+              set((s) => ({
+                bookings: s.bookings.map((b) => (b.id === booking!.id ? { ...b, ...patch } : b)),
+              }));
+            const betrieb: CaseEvent['actor'] = { kind: 'betrieb', name: partner };
+
+            if (c.status === 'freigabe_noetig') {
+              const approve = get().demo.claimScenario === 'freigeben';
+              const quote = get().quotes.find((q) => q.id === c.quoteId);
+              get().runCommand(caseId, approve ? 'freigabe_erteilt' : 'freigabe_abgelehnt', {
+                actor: { kind: 'versicherer', name: cfg.insurer.name },
+                decisionActor: 'mensch',
+                approvedAmount: approve ? quote?.repair.total : undefined,
+              });
+              notify(approve ? de.notify.freigegeben(insurer) : de.notify.abgelehnt(insurer));
+              return true;
+            }
+            if (!booking) return false;
+            const confirmable =
+              c.status === 'freigegeben' ||
+              c.status === 'in_reparatur' ||
+              (c.status === 'eskaliert' && booking.kind === 'vor_ort_diagnose');
+            if (booking.status === 'angefragt' && confirmable) {
+              setBooking({ status: 'bestaetigt' });
+              if (c.status === 'freigegeben') {
+                get().runCommand(caseId, 'termin_bestaetigt', { actor: betrieb });
+              } else {
+                get().addEvent({
+                  caseId,
+                  type: 'termin_bestaetigt',
+                  actor: betrieb,
+                  payload: { bookingId: booking.id },
+                });
+              }
+              notify(de.notify.bestaetigt(partner, booking.slotLabel));
+              return true;
+            }
+            if (booking.status === 'bestaetigt') {
+              setBooking({ status: 'unterwegs' });
+              get().addEvent({
+                caseId,
+                type: 'betrieb_unterwegs',
+                actor: betrieb,
+                payload: { bookingId: booking.id },
+              });
+              notify(de.notify.unterwegs(partner));
+              return true;
+            }
+            if (booking.status === 'unterwegs') {
+              if (booking.kind === 'vor_ort_diagnose') {
+                setBooking({ status: 'erledigt' });
+                get().setFinding(caseId, 'reparatur', 'betrieb');
+                notify(de.notify.diagnose(partner));
+                return true;
+              }
+              const photo = get().addPhoto({
+                caseId,
+                deviceId: c.deviceId,
+                purpose: 'abschluss',
+                source: 'betrieb',
+                uri: '',
+              });
+              setBooking({ status: 'erledigt', completionPhotoId: photo.id });
+              get().addEvent({
+                caseId,
+                type: 'reparatur_abgeschlossen',
+                actor: betrieb,
+                payload: { bookingId: booking.id, photoId: photo.id },
+              });
+              notify(de.notify.repariert(partner));
+              return true;
+            }
+            return false;
+          },
+
+          confirmRepair: (caseId, works) => {
+            const c = getCase(caseId);
+            if (works) {
+              if (canTransition(c.status, 'repariert')) get().runCommand(caseId, 'repariert');
+              get().addEvent({
+                caseId,
+                type: 'abschluss_bestaetigt',
+                actor: householdActor(),
+                payload: {},
+              });
+            } else if (canTransition(c.status, 'problem_besteht_weiter')) {
+              get().runCommand(caseId, 'problem_besteht_weiter');
+            }
+          },
+
+          rateBooking: (bookingId, stars) => {
+            const booking = get().bookings.find((b) => b.id === bookingId);
+            if (!booking) return;
+            const at = env.now();
+            set((s) => ({
+              bookings: s.bookings.map((b) =>
+                b.id === bookingId ? { ...b, rating: { stars, at } } : b,
+              ),
+            }));
+            get().addEvent({
+              caseId: booking.caseId,
+              type: 'bewertet',
+              actor: householdActor(),
+              payload: { bookingId, stars },
+            });
+          },
+
           escalate: (caseId) => {
             const c = getCase(caseId);
             if (canTransition(c.status, 'hilfe_holen')) get().runCommand(caseId, 'hilfe_holen');
@@ -832,6 +964,7 @@ export function createAppStore(storage: StateStorage = AsyncStorage, env: StoreE
         partialize: (s): AppData => ({
           onboardingDone: s.onboardingDone,
           demo: s.demo,
+          notifications: s.notifications,
           household: s.household,
           persons: s.persons,
           contracts: s.contracts,
@@ -861,6 +994,38 @@ export function selectOpenCases(s: AppData): Case[] {
   return Object.values(s.cases)
     .filter((c) => !isClosed(c.status))
     .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
+}
+
+/** Laufender Termin eines Falls (nicht storniert) */
+export function activeBooking(s: AppData, caseId: Id): Booking | undefined {
+  return [...s.bookings].reverse().find((b) => b.caseId === caseId && b.status !== 'storniert');
+}
+
+const bookingEvents: CaseEvent['type'][] = [
+  'termin_angefragt',
+  'termin_bestaetigt',
+  'betrieb_unterwegs',
+  'freigabe_entschieden',
+];
+
+/** Wann der nächste simulierte Schritt fällig ist (ms seit 1970). Ohne nächsten Schritt: undefined. */
+export function nextSimulationDue(s: AppData, caseId: Id): number | undefined {
+  const c = s.cases[caseId];
+  if (!c) return undefined;
+  const { claimMs, bookingStepMs } = demoConfig.timers;
+  if (c.status === 'freigabe_noetig' && c.claim) return Date.parse(c.claim.reportedAt) + claimMs;
+  const booking = activeBooking(s, caseId);
+  if (!booking || booking.status === 'erledigt') return undefined;
+  if (
+    booking.status === 'angefragt' &&
+    (c.status === 'freigabe_noetig' || c.status === 'abgelehnt')
+  )
+    return undefined;
+  const last = s.events
+    .filter((e) => e.caseId === caseId && bookingEvents.includes(e.type))
+    .map((e) => Date.parse(e.at))
+    .sort((a, b) => b - a)[0];
+  return (last ?? Date.parse(booking.createdAt)) + bookingStepMs;
 }
 
 export function selectContract(s: AppData): Contract | undefined {

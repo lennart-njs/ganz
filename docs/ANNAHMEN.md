@@ -116,3 +116,15 @@ Annahmen, die ich beim Bauen getroffen habe. Jede lässt sich ändern.
 - **Laugenpumpe:** Der Betrieb bestellt und baut ein (Entscheidung 3). Der Store lehnt einen Versand der Pumpe an den Haushalt ab. Der Ökodesign-Text sagt, dass die 15 Arbeitstage für den Betrieb gelten (Review 4.1).
 - **Vor-Ort-Diagnose** aus „Hilfe holen“ bucht einen Termin ohne Kostenvoranschlag. Den Voranschlag macht der Betrieb vor Ort (Schritt 11).
 - **Weitergabe an den Betrieb** wird mit „Termin anfragen“ bestätigt und als Einwilligung `weitergabe_betrieb` gespeichert.
+
+## Schritt 11: Fall-Status, Mitteilungen, Abschluss
+
+- **Simulation:** Ein Timer im Root-Layout prüft jede Sekunde, ob ein Schritt fällig ist. Freigabe 10 s nach der Meldung, danach je 5 s: Termin bestätigt, Betrieb unterwegs, repariert (`demoConfig.timers`). Fällige Schritte aus der Zeit vor einem Neustart laufen sofort. Im Demo-Modus mit Hinweisen gibt es „Nächster Schritt (Demo)“.
+- **Freigabe** entscheidet im Mock ein Mensch (`actor: 'mensch'`, Art. 22 DSGVO). Das Demo-Szenario „ablehnen“ zeigt den Ablehnungsweg.
+- **Ein Termin vorbehaltlich Freigabe** wird erst nach der Freigabe bestätigt. Bei Selbstzahlung sofort.
+- **Repariert** heißt: Der Betrieb meldet „fertig“ mit Abschlussfoto (Platzhalter). Der Fall bleibt `in_reparatur`, bis die Nutzerin „Läuft wieder“ oder „Problem besteht weiter“ wählt.
+- **Vor-Ort-Diagnose:** Nach dem Besuch legt der Mock einen Befund vom Betrieb mit Kostenvoranschlag an. Der Status führt dann zu „Kosten ansehen“.
+- **Mitteilungen:** Der Systemdialog kommt erst nach „Termin anfragen“ (Review 4.1). Die Antwort steht im Store (`notifications`). Nur bei „erlaubt“ gibt es lokale Mitteilungen bei jedem Wechsel. In Expo Go auf Android sind Mitteilungen aus, weil Expo Go sie dort nicht mehr vollständig unterstützt. Auf dem iPhone funktionieren lokale Mitteilungen.
+- **Bewertung** gilt dem Betrieb und erscheint nach „Läuft wieder“.
+- **„Problem besteht weiter“** öffnet einen erledigten oder reparierten Fall wieder (`eskaliert`) und führt zu „Hilfe holen“.
+- **„Fertig“** im Abschluss führt zum Tab „Fälle“.

@@ -12,6 +12,7 @@ import { useEffect } from 'react';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { useAppStore } from '@/store/appStore';
+import { useCaseSimulation } from '@/store/useCaseSimulation';
 import { useHydrated } from '@/store/useHydrated';
 import { ThemeProvider, useTheme } from '@/theme';
 
@@ -23,6 +24,7 @@ export const unstable_settings = { anchor: '(tabs)' };
 function RootStack() {
   const theme = useTheme();
   const onboardingDone = useAppStore((s) => s.onboardingDone);
+  useCaseSimulation();
   return (
     <>
       <StatusBar style={theme.scheme === 'dark' ? 'light' : 'dark'} />

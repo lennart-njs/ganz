@@ -657,6 +657,101 @@ export const de = {
       'Gerade hat kein Betrieb in deiner Nähe Zeit. Wir melden uns, sobald einer frei ist.',
   },
 
+  status: {
+    caseNumber: (id: string) => `Fall ${id}`,
+    headline: {
+      pruefung: (insurer: string) => `${insurer} prüft die Kosten.`,
+      freigegeben: (insurer: string) => `${insurer} hat die Kosten freigegeben.`,
+      abgelehnt: (insurer: string) => `${insurer} übernimmt die Kosten nicht.`,
+      angefragt: 'Termin angefragt.',
+      bestaetigt: (slot: string) => `Termin steht: ${slot}.`,
+      unterwegs: (partner: string) => `${partner} ist unterwegs.`,
+      repariert: 'Repariert.',
+      diagnoseFertig: 'Der Betrieb hat einen Kostenvoranschlag gemacht.',
+      rueckruf: (slot: string) => `Rückruf angefragt: ${slot}.`,
+      ersatzgeraet: (insurer: string) => `${insurer} meldet sich zum Ersatzgerät.`,
+      erledigt: 'Erledigt.',
+      abgebrochen: 'Abgebrochen.',
+      hilfe: 'Hilfe angefragt.',
+    },
+    text: {
+      pruefung: 'Du bekommst eine Mitteilung, sobald die Entscheidung da ist.',
+      angefragt: (partner: string) =>
+        `${partner} bestätigt den Termin. Danach bekommst du eine Mitteilung.`,
+      bestaetigt: (partner: string) => `${partner} bringt die Original-Laugenpumpe mit.`,
+      unterwegs: 'Bitte sorg dafür, dass die Maschine gut erreichbar ist.',
+      repariert: 'Sag uns, ob die Maschine wieder läuft.',
+      diagnoseFertig: 'Sieh dir die Kosten an und entscheide, wie es weitergeht.',
+      rueckruf: 'Die Fachkraft ruft dich an. Deine Fallakte hat sie schon.',
+    },
+    timeline: {
+      gemeldet: 'Problem gemeldet',
+      schaden: 'Schadenfall gemeldet',
+      freigabe: (insurer: string) => `Freigabe durch ${insurer}`,
+      freigegeben: (insurer: string) => `${insurer} hat freigegeben`,
+      abgelehnt: (insurer: string) => `${insurer} hat abgelehnt`,
+      angefragt: 'Termin angefragt',
+      bestaetigt: 'Termin bestätigt',
+      unterwegs: 'Betrieb unterwegs',
+      repariert: 'Repariert',
+      diagnose: 'Kostenvoranschlag vom Betrieb',
+      rueckruf: 'Rückruf angefragt',
+      next: 'als Nächstes',
+    },
+    booking: 'Termin',
+    toFinish: 'Zum Abschluss',
+    whatNext: 'Wie geht es weiter?',
+    seeCosts: 'Kosten ansehen',
+    caseFile: 'Fallakte ansehen',
+    toDevices: 'Zu meinen Geräten',
+    demoNext: 'Nächster Schritt (Demo)',
+  },
+
+  notify: {
+    freigegeben: (insurer: string) => ({
+      title: 'Kosten freigegeben',
+      body: `${insurer} übernimmt die Reparatur laut Vertrag.`,
+    }),
+    abgelehnt: (insurer: string) => ({
+      title: 'Keine Freigabe',
+      body: `${insurer} hat abgelehnt. Du entscheidest, wie es weitergeht.`,
+    }),
+    bestaetigt: (partner: string, slot: string) => ({
+      title: 'Termin bestätigt',
+      body: `${partner} kommt ${slot}.`,
+    }),
+    unterwegs: (partner: string) => ({
+      title: 'Betrieb unterwegs',
+      body: `${partner} ist auf dem Weg zu dir.`,
+    }),
+    repariert: (partner: string) => ({
+      title: 'Repariert',
+      body: `${partner} ist fertig. Läuft die Maschine wieder?`,
+    }),
+    diagnose: (partner: string) => ({
+      title: 'Kostenvoranschlag da',
+      body: `${partner} hat die Maschine geprüft.`,
+    }),
+  },
+
+  finish: {
+    photo: 'Abschlussfoto vom Betrieb',
+    photoSelf: 'Waschmaschine läuft wieder',
+    solvedTitle: 'Wieder ganz.',
+    solvedText:
+      'Du hast es selbst repariert. Der Fall liegt in deinen Fällen, falls das Problem wiederkommt.',
+    solvedCallText:
+      'Im Videocall gelöst. Der Fall liegt in deinen Fällen, falls das Problem wiederkommt.',
+    repairedTitle: 'Repariert.',
+    repairedText: (partner: string) => `${partner} hat die Laugenpumpe getauscht.`,
+    question: 'Läuft die Maschine wieder?',
+    runsAgain: 'Läuft wieder',
+    stillBroken: 'Problem besteht weiter',
+    rate: 'Wie zufrieden bist du mit dem Betrieb?',
+    thanks: 'Danke für deine Bewertung.',
+    done: 'Fertig',
+  },
+
   /** Navigation und Platzhalter bis zum jeweiligen Schritt aus BUILD_PLAN Abschnitt 5 */
   nav: {
     placeholder: (step: number) =>
