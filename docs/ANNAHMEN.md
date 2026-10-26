@@ -128,3 +128,11 @@ Annahmen, die ich beim Bauen getroffen habe. Jede lässt sich ändern.
 - **Bewertung** gilt dem Betrieb und erscheint nach „Läuft wieder“.
 - **„Problem besteht weiter“** öffnet einen erledigten oder reparierten Fall wieder (`eskaliert`) und führt zu „Hilfe holen“.
 - **„Fertig“** im Abschluss führt zum Tab „Fälle“.
+
+## Schritt 12: Fälle, Fallakte, Profil
+
+- **Fälle:** offene oben, abgeschlossene darunter, jeweils nach letzter Änderung. Ein offener Fall führt dorthin, wo er steht, ein abgeschlossener in die Fallakte.
+- **Fallakte:** Kurzfassung (Gerät, Problem, Ergebnis, Schritte, Fotos, Befund, Kosten), Weitergaben mit Empfänger und Datum, dazu der ganze Verlauf aus `CaseEvent` mit lesbaren Zeilen (`lib/caseEvents.ts`). Teilen als PDF folgt mit Schritt 15.
+- **Widerruf im Profil:** Jede Weitergabe und Einwilligung steht mit Empfänger, Grundlage („Für deine Anfrage“ oder „Einwilligung“) und Datum dort. „Widerrufen“ ist ein Tap (Art. 7 Abs. 3 DSGVO). Gehört die Einwilligung zu einem Fall, kommt der Widerruf als Ereignis in die Fallakte. Die Einwilligung „Einzelfälle an den Hersteller“ gehört zu keinem Fall, ihr Widerruf steht an der Einwilligung selbst.
+- **Mitteilungen** lassen sich im Profil an- und ausschalten. Hat das System sie abgelehnt, öffnet der Schalter die Einstellungen.
+- **Demo-Bereich** (Galerie, Onboarding neu starten) steht bis Schritt 13 sichtbar im Profil.

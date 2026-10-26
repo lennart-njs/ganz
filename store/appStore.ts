@@ -368,13 +368,15 @@ export function createAppStore(storage: StateStorage = AsyncStorage, env: StoreE
                 source: d.source,
               },
             };
+            // Befunde von Fachkraft oder Betrieb haben ein eigenes Ereignis (befund_erstellt)
+            const isResult = d.source === 'fehlererkennung' || d.source === 'nutzerangabe';
             set((s) => ({
               diagnoses: [...s.diagnoses, d],
               cases: {
                 ...s.cases,
                 [c.id]: { ...c, diagnosisIds: [...c.diagnosisIds, d.id], updatedAt: d.createdAt },
               },
-              events: [...s.events, ev],
+              events: isResult ? [...s.events, ev] : s.events,
             }));
             return d;
           },
@@ -929,18 +931,18 @@ export function createAppStore(storage: StateStorage = AsyncStorage, env: StoreE
             const now = env.now();
             const target = get().consents.find((c) => c.id === consentId);
             if (!target || target.revokedAt) return;
-            const ev: CaseEvent = {
-              id: env.newId('ev'),
-              caseId: target.caseId ?? '',
-              type: 'einwilligung_widerrufen',
-              at: now,
-              actor: householdActor(),
-              payload: { consentId, purpose: target.purpose },
-            };
             set((s) => ({
               consents: s.consents.map((c) => (c.id === consentId ? { ...c, revokedAt: now } : c)),
-              events: [...s.events, ev],
             }));
+            // In die Fallakte, wenn die Einwilligung zu einem Fall gehört. Sonst steht der Widerruf an der Einwilligung.
+            if (target.caseId) {
+              get().addEvent({
+                caseId: target.caseId,
+                type: 'einwilligung_widerrufen',
+                actor: householdActor(),
+                payload: { consentId, purpose: target.purpose, recipient: target.recipient.name },
+              });
+            }
           },
 
           addEvent: (input) => {

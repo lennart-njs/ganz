@@ -752,6 +752,77 @@ export const de = {
     done: 'Fertig',
   },
 
+  cases: {
+    open: 'Offen',
+    closed: 'Abgeschlossen',
+    emptyTitle: 'Noch keine Fälle',
+    emptyText: 'Jeder Fall wird hier gespeichert. Du entscheidest, wer ihn sieht.',
+    report: 'Problem melden',
+    rowSub: (device: string, status: string, date: string) => `${device} · ${status} · ${date}`,
+  },
+
+  file: {
+    title: (id: string) => `Fall ${id}`,
+    status: (label: string) => `Status: ${label}`,
+    history: 'Verlauf',
+    shared: 'Weitergegeben an',
+    sharedLine: (recipient: string, date: string) => `${recipient} · ${date}`,
+    revoked: (date: string) => `widerrufen am ${date}`,
+    none: 'Noch nichts weitergegeben.',
+    event: {
+      step: (n: number, title: string) => `Schritt ${n}: ${title}`,
+      guide: (title: string) => `Anleitung: ${title}`,
+      outcome: {
+        laeuft_wieder: 'Läuft wieder',
+        laeuft_nicht: 'Läuft noch nicht',
+        geht_nicht: 'Geht nicht',
+        fertig: 'Fertig',
+      },
+      photo: (purpose: string) => `Foto: ${purpose}`,
+      status: (label: string) => `Status: ${label}`,
+      shared: (recipient: string) => `an ${recipient}`,
+      decision: { freigegeben: 'freigegeben', abgelehnt: 'abgelehnt', rueckfrage: 'Rückfrage' },
+      by: { mensch: 'von einem Menschen', regel: 'automatisch' },
+      callback: (slot: string) => `Rückruf: ${slot}`,
+      booking: (partner: string, slot: string) => `${partner} · ${slot}`,
+      stars: (n: number) => `${n} von 5 Sternen`,
+      answer: (q: string, a: string) => `${q} ${a}`,
+      note: (note: string) => `Notiz: ${note}`,
+      reason: (reason: string) => `Grund: ${reason}`,
+      detail: (title: string, detail: string) => `${title} · ${detail}`,
+    },
+  },
+
+  profile: {
+    person: 'Du',
+    name: 'Name',
+    address: 'Adresse',
+    protection: 'Schutz',
+    linkProtection: 'Schutz verknüpfen',
+    consents: 'Weitergaben und Einwilligungen',
+    consentsText:
+      'Hier siehst du, wer welche Daten bekommen hat. Du kannst jede Weitergabe so einfach widerrufen, wie du sie bestätigt hast.',
+    noConsents: 'Noch keine Weitergaben.',
+    basis: { vertrag: 'Für deine Anfrage', einwilligung: 'Einwilligung' },
+    consentLine: (recipient: string, basis: string, date: string) =>
+      `${recipient} · ${basis} · ${date}`,
+    revoke: 'Widerrufen',
+    revokeLabel: (purpose: string, recipient: string) => `${purpose} an ${recipient} widerrufen`,
+    revokedOn: (date: string) => `Widerrufen am ${date}`,
+    optional: 'Freiwillig',
+    manufacturerCase: (manufacturer: string) => `Einzelfälle an ${manufacturer} weitergeben`,
+    manufacturerCaseSub:
+      'Mit Gerät und Seriennummer, damit der Hersteller Fehler besser versteht. Ohne dein Ja gehen nur Zahlen ohne Personenbezug an den Hersteller.',
+    notifications: 'Mitteilungen zum Fall-Status',
+    notificationsSub: 'Wenn sich bei Freigabe oder Termin etwas ändert.',
+    notificationsDenied: 'In den Einstellungen deines Telefons ausgeschaltet.',
+    privacy: 'Datenschutz',
+    privacyText:
+      'Verantwortlich ist ganz. Wir speichern Fotos, Gerätedaten, Schritte und Befunde zu deinen Fällen. Weitergegeben wird nur, was du vorher bestätigst. Du hast das Recht auf Auskunft, Berichtigung, Löschung und Widerspruch.',
+    version: (v: string) => `Version ${v}`,
+    demo: 'Demo',
+  },
+
   /** Navigation und Platzhalter bis zum jeweiligen Schritt aus BUILD_PLAN Abschnitt 5 */
   nav: {
     placeholder: (step: number) =>
