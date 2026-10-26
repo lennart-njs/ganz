@@ -1,0 +1,833 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<title>ganz – Haushalt-App</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#FFFFFF}
+a{color:#16181A}a:hover{color:#3C3F43}
+button{font-family:inherit}
+button:focus-visible,a:focus-visible{outline:2px solid #16181A;outline-offset:2px}
+.scroll{scrollbar-width:none}.scroll::-webkit-scrollbar{display:none}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; box-sizing: border-box; background: #FFFFFF; color: #16181A; font-family: 'Schibsted Grotesk', system-ui, sans-serif; font-size: 16px; line-height: 1.45; display: flex; flex-direction: column; overflow: hidden">
+
+<!-- Demo-Tipp -->
+<sc-if value="{{showHint}}" hint-placeholder-val="{{ true }}">
+  <div style="flex-shrink: 0; min-height: 36px; background: #16181A; color: #F5F4F0; display: flex; align-items: center; gap: 10px; padding: 8px 16px; box-sizing: border-box; font-size: 13px; line-height: 1.3">
+    <span style="flex-shrink: 0; border: 1px solid #5C5F63; border-radius: 999px; padding: 1px 8px; font-size: 12px; color: #D6D5D0">Demo</span>
+    <span>{{hint}}</span>
+  </div>
+</sc-if>
+
+<!-- Kopfzeile -->
+<sc-if value="{{showHeader}}" hint-placeholder-val="{{ false }}">
+  <div style="height: 60px; flex-shrink: 0; display: grid; grid-template-columns: 44px minmax(0, 1fr) 44px; align-items: center; padding: 0 16px; border-bottom: 1px solid #E6E4DE">
+    <button onClick="{{back}}" aria-label="Zurück" style="width: 36px; height: 36px; border-radius: 999px; border: 1px solid #D8D6CF; background: #FFFFFF; color: #16181A; display: flex; align-items: center; justify-content: center; cursor: pointer; padding: 0">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"></path></svg>
+    </button>
+    <div style="text-align: center; font-weight: 600; font-size: 16px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{headerTitle}}</div>
+    <span></span>
+  </div>
+</sc-if>
+
+<!-- Inhalt -->
+<div class="scroll" style="flex: 1; min-height: 0; overflow-y: auto">
+
+  <!-- ===== HOME ===== -->
+  <sc-if value="{{isHome}}" hint-placeholder-val="{{ true }}">
+    <div style="padding: 20px 24px 32px; display: flex; flex-direction: column">
+      <div style="font-weight: 600; font-size: 26px; letter-spacing: -0.03em">ganz</div>
+
+      <button onClick="{{startProblem}}" style="margin-top: 18px; min-height: 60px; border-radius: 999px; border: 1px solid #E6E4DE; background: #FFFFFF; box-shadow: 0 3px 12px rgba(22,24,26,0.10); display: flex; align-items: center; gap: 14px; padding: 8px 20px; cursor: pointer; text-align: left; color: #16181A">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-4-4"></path></svg>
+        <span style="display: flex; flex-direction: column">
+          <span style="font-weight: 600; font-size: 15px">Was ist kaputt?</span>
+          <span style="font-size: 13px; color: #5C5F63">Foto, Meldung oder Symptom</span>
+        </span>
+      </button>
+
+      <div style="margin-top: 32px; font-weight: 600; font-size: 22px; letter-spacing: -0.02em">Deine Geräte</div>
+
+      <button onClick="{{startProblem}}" style="margin-top: 14px; border: 0; background: transparent; padding: 0; text-align: left; cursor: pointer; color: #16181A; display: flex; flex-direction: column; gap: 12px">
+        <div style="position: relative; width: 342px; height: 280px; border-radius: 12px; overflow: hidden; background: #D8D6CF">
+          <img src="/_blob/ce0d408b6d9189b01cddecca3f9e1971" alt="Display einer Waschmaschine" style="width: 100%; height: 100%; object-fit: cover; display: block">
+          <span style="position: absolute; top: 14px; left: 14px; background: #FFFFFF; color: #16181A; font-size: 13px; font-weight: 600; padding: 6px 12px; border-radius: 999px">Geräteschutz aktiv</span>
+        </div>
+        <div style="display: flex; justify-content: space-between; align-items: baseline; gap: 8px">
+          <span style="font-weight: 600; font-size: 16px">Miele WKB 130</span>
+          <span style="font-size: 14px; color: #3C3F43; display: flex; align-items: center; gap: 6px"><span style="width: 7px; height: 7px; border-radius: 999px; background: #16181A; display: inline-block"></span>läuft</span>
+        </div>
+        <div style="margin-top: -10px; font-size: 15px; color: #5C5F63">Waschmaschine · seit 03/2023 · M.-Nr. 10 162 440</div>
+      </button>
+
+      <div style="margin-top: 20px; border: 1px solid #D8D6CF; border-radius: 12px; padding: 16px; display: flex; gap: 14px; align-items: flex-start">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex-shrink: 0"><path d="M12 3l8 3v6c0 4.5-3.4 8-8 9-4.6-1-8-4.5-8-9V6z"></path><path d="M9 12l2 2 4-4"></path></svg>
+        <span style="display: flex; flex-direction: column">
+          <span style="font-size: 16px; font-weight: 600">Garantieverlängerung bis 03/2028</span>
+          <span style="font-size: 14px; color: #5C5F63">{{vName}} · Reparaturen laufen direkt über ganz</span>
+        </span>
+      </div>
+
+      <div style="margin-top: 36px; font-weight: 600; font-size: 22px; letter-spacing: -0.02em">Pflege laut Hersteller</div>
+      <div style="margin-top: 6px; display: flex; flex-direction: column">
+        <sc-for list="{{maintenance}}" as="m" hint-placeholder-count="2">
+          <button onClick="{{m.open}}" style="border: 0; border-bottom: 1px solid #E6E4DE; background: transparent; padding: 18px 0; display: flex; align-items: center; gap: 16px; cursor: pointer; text-align: left; color: #16181A; min-height: 72px">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3 2"></path></svg>
+            <span style="flex: 1; display: flex; flex-direction: column">
+              <span style="font-size: 16px">{{m.title}}</span>
+              <span style="font-size: 14px; color: #5C5F63">{{m.sub}}</span>
+            </span>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#5C5F63" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"></path></svg>
+          </button>
+        </sc-for>
+        <button onClick="{{goScan}}" style="border: 0; background: transparent; padding: 18px 0; display: flex; align-items: center; gap: 16px; cursor: pointer; text-align: left; color: #16181A; min-height: 72px">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8V5a1 1 0 0 1 1-1h3M16 4h3a1 1 0 0 1 1 1v3M20 16v3a1 1 0 0 1-1 1h-3M8 20H5a1 1 0 0 1-1-1v-3M12 9v6M9 12h6"></path></svg>
+          <span style="flex: 1; display: flex; flex-direction: column">
+            <span style="font-size: 16px">Gerät hinzufügen</span>
+            <span style="font-size: 14px; color: #5C5F63">Typenschild fotografieren</span>
+          </span>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#5C5F63" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"></path></svg>
+        </button>
+      </div>
+    </div>
+  </sc-if>
+
+  <!-- ===== SCAN ===== -->
+  <sc-if value="{{isScan}}" hint-placeholder-val="{{ false }}">
+    <div style="padding: 24px; display: flex; flex-direction: column; gap: 20px">
+      <div style="font-weight: 500; font-size: 28px; line-height: 1.12; letter-spacing: -0.03em">Fotografier das Typenschild.</div>
+      <div style="position: relative; width: 342px; height: 260px; border-radius: 12px; overflow: hidden; background: #16181A">
+        <img src="/_blob/210309d13f7c618ff2f3a1fb3635be81" alt="Typenschild an einer Waschmaschine" style="width: 100%; height: 100%; object-fit: cover; display: block; opacity: 0.85">
+        <div style="position: absolute; left: 50px; right: 50px; top: 50px; bottom: 50px; border: 2px solid rgba(255,255,255,0.9); border-radius: 12px"></div>
+      </div>
+      <div style="font-size: 15px; color: #3C3F43">Bei der WKB 130 sitzt es bei geöffneter Tür oberhalb des Schauglases.</div>
+      <div style="border: 1px solid #D8D6CF; border-radius: 12px; padding: 18px; display: flex; flex-direction: column; gap: 4px">
+        <div style="font-size: 13px; color: #5C5F63; font-weight: 500">Erkannt</div>
+        <div style="font-size: 18px; font-weight: 600">Miele WKB 130</div>
+        <div style="font-size: 14px; color: #5C5F63">Anleitung, Meldungen, Ersatzteile und Pflegeplan sind geladen.</div>
+      </div>
+    </div>
+  </sc-if>
+
+  <!-- ===== PROBLEM ===== -->
+  <sc-if value="{{isProblem}}" hint-placeholder-val="{{ false }}">
+    <div style="padding: 24px 24px 32px">
+      <div style="font-weight: 500; font-size: 28px; line-height: 1.12; letter-spacing: -0.03em">Was ist los?</div>
+      <button onClick="{{goCamera}}" style="margin-top: 20px; width: 100%; border: 0; border-radius: 12px; background: #16181A; color: #F5F4F0; padding: 20px; display: flex; align-items: center; gap: 16px; cursor: pointer; text-align: left; min-height: 96px">
+        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h3l2-3h6l2 3h3v11H4z"></path><circle cx="12" cy="13" r="3.5"></circle></svg>
+        <span style="display: flex; flex-direction: column; gap: 2px">
+          <span style="font-size: 18px; font-weight: 600">Foto machen</span>
+          <span style="font-size: 14px; color: #D6D5D0">Intelligente Fehlererkennung für Display, Typenschild oder Bauteil</span>
+        </span>
+      </button>
+      <a href="https://claude.ai/artifact/Sp1N5jR5KKLECPFo8Xwj5F" style="margin-top: 12px; text-decoration: none; color: #16181A; border: 1px solid #D8D6CF; border-radius: 12px; padding: 16px 20px; display: flex; align-items: center; gap: 16px; min-height: 76px; box-sizing: border-box">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5h16v11H9l-5 4z"></path><path d="M8 9h8M8 12h5"></path></svg>
+        <span style="flex: 1; display: flex; flex-direction: column; gap: 2px">
+          <span style="font-size: 17px; font-weight: 600">Mit ganz chatten</span>
+          <span style="font-size: 14px; color: #5C5F63">Live: Fehler finden und Schritt für Schritt beheben</span>
+        </span>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#5C5F63" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 17L17 7M9 7h8v8"></path></svg>
+      </a>
+      <div style="margin-top: 28px; font-size: 15px; color: #5C5F63">Oder beschreib es so, wie du es am Telefon erzählen würdest:</div>
+      <div style="margin-top: 4px; display: flex; flex-direction: column">
+        <sc-for list="{{problems}}" as="p" hint-placeholder-count="6">
+          <button onClick="{{p.pick}}" style="border: 0; border-bottom: 1px solid #E6E4DE; background: transparent; padding: 16px 0; display: flex; align-items: center; gap: 16px; cursor: pointer; text-align: left; color: #16181A; min-height: 68px">
+            <span style="flex: 1; display: flex; flex-direction: column">
+              <span style="font-size: 16px; font-weight: 500">{{p.label}}</span>
+              <span style="font-size: 14px; color: #5C5F63">{{p.sub}}</span>
+            </span>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#5C5F63" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"></path></svg>
+          </button>
+        </sc-for>
+      </div>
+    </div>
+  </sc-if>
+
+  <!-- ===== KAMERA ===== -->
+  <sc-if value="{{isCamera}}" hint-placeholder-val="{{ false }}">
+    <div style="{{darkStyle}}">
+      <div style="padding: 16px 24px 0; display: flex; justify-content: center">
+        <div role="group" aria-label="Was fotografierst du?" style="display: flex; background: #3C3F43; border-radius: 9px; padding: 3px; gap: 2px">
+          <sc-for list="{{modes}}" as="md" hint-placeholder-count="3">
+            <button onClick="{{md.pick}}" aria-pressed="{{md.pressed}}" style="{{md.style}}">{{md.label}}</button>
+          </sc-for>
+        </div>
+      </div>
+      <div style="margin: 20px 24px 0; position: relative; height: 420px; border-radius: 12px; overflow: hidden; background: #3C3F43">
+        <img src="{{modeImg}}" alt="{{modeAlt}}" style="width: 100%; height: 100%; object-fit: cover; display: block">
+        <div style="position: absolute; left: 36px; right: 36px; top: 70px; bottom: 70px; border: 2px solid rgba(255,255,255,0.9); border-radius: 12px"></div>
+      </div>
+      <div style="margin-top: 14px; text-align: center; font-size: 14px; color: #D6D5D0; padding: 0 32px">{{modeHelp}}</div>
+      <div style="margin-top: 20px; display: flex; justify-content: center">
+        <button onClick="{{shoot}}" aria-label="Foto aufnehmen" style="width: 76px; height: 76px; border-radius: 999px; border: 4px solid #F5F4F0; background: transparent; padding: 4px; cursor: pointer">
+          <span style="display: block; width: 100%; height: 100%; border-radius: 999px; background: #F5F4F0"></span>
+        </button>
+      </div>
+    </div>
+  </sc-if>
+
+  <!-- ===== ANALYSE ===== -->
+  <sc-if value="{{isAnalyzing}}" hint-placeholder-val="{{ false }}">
+    <div style="{{darkStyle}}">
+      <div style="margin: 24px 24px 0; height: 300px; border-radius: 12px; overflow: hidden; background: #3C3F43">
+        <img src="{{modeImg}}" alt="{{modeAlt}}" style="width: 100%; height: 100%; object-fit: cover; display: block; opacity: 0.55">
+      </div>
+      <div style="padding: 28px 24px 0">
+        <div style="font-weight: 500; font-size: 26px; line-height: 1.12; letter-spacing: -0.03em; color: #F5F4F0">Intelligente Fehlererkennung</div>
+        <div style="margin-top: 20px; display: flex; flex-direction: column; gap: 14px">
+          <sc-for list="{{scanItems}}" as="si" hint-placeholder-count="4">
+            <div style="{{si.style}}">
+              <sc-if value="{{si.done}}" hint-placeholder-val="{{ false }}">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5 9-10"></path></svg>
+              </sc-if>
+              <sc-if value="{{si.pending}}" hint-placeholder-val="{{ true }}">
+                <span style="width: 18px; height: 18px; border-radius: 999px; border: 2px solid #5C5F63; box-sizing: border-box; display: inline-block"></span>
+              </sc-if>
+              <span>{{si.label}}</span>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <!-- ===== ERGEBNIS ===== -->
+  <sc-if value="{{isResult}}" hint-placeholder-val="{{ false }}">
+    <div style="padding: 20px 24px 32px; display: flex; flex-direction: column">
+      <div style="display: flex; gap: 14px; align-items: center">
+        <span style="width: 64px; height: 64px; border-radius: 10px; overflow: hidden; flex-shrink: 0; background: #D8D6CF; display: block">
+          <img src="{{modeImg}}" alt="" style="width: 100%; height: 100%; object-fit: cover; display: block">
+        </span>
+        <span style="font-size: 14px; color: #5C5F63">Aus deinem Foto {{modeFrom}} und den Gerätedaten</span>
+      </div>
+      <div style="margin-top: 20px; font-weight: 500; font-size: 28px; line-height: 1.12; letter-spacing: -0.03em">Wahrscheinlich ist der Laugenfilter verstopft.</div>
+      <div style="margin-top: 8px; font-size: 17px; color: #3C3F43">Das lässt sich meist selbst lösen. Wir führen dich Schritt für Schritt durch.</div>
+
+      <div style="margin-top: 24px; display: flex; flex-direction: column">
+        <sc-for list="{{findings}}" as="f" hint-placeholder-count="5">
+          <div style="display: flex; justify-content: space-between; gap: 16px; padding: 14px 0; border-bottom: 1px solid #E6E4DE">
+            <span style="font-size: 15px; color: #5C5F63">{{f.k}}</span>
+            <span style="font-size: 15px; font-weight: 500; text-align: right">{{f.v}}</span>
+          </div>
+        </sc-for>
+      </div>
+
+      <div style="margin-top: 20px; background: #F5F4F0; border-radius: 12px; padding: 16px; display: flex; gap: 12px">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex-shrink: 0; margin-top: 1px"><path d="M12 3l8 3v6c0 4.5-3.4 8-8 9-4.6-1-8-4.5-8-9V6z"></path><path d="M9 12l2 2 4-4"></path></svg>
+        <span style="font-size: 15px">Gedeckt über deine Garantieverlängerung bei {{vName}}. Falls du Hilfe brauchst, kostet dich das nichts extra.</span>
+      </div>
+
+      <button onClick="{{goVideo}}" style="margin-top: 16px; align-self: flex-start; border: 0; background: transparent; padding: 0; min-height: 44px; font-size: 16px; font-weight: 500; color: #16181A; text-decoration: underline; cursor: pointer">Lieber gleich mit einer Fachkraft sprechen</button>
+    </div>
+  </sc-if>
+
+  <!-- ===== FEHLERMELDUNGEN ===== -->
+  <sc-if value="{{isCodes}}" hint-placeholder-val="{{ false }}">
+    <div style="padding: 24px 24px 32px">
+      <div style="font-weight: 500; font-size: 28px; line-height: 1.12; letter-spacing: -0.03em">Was steht im Display?</div>
+      <div style="margin-top: 12px; display: flex; flex-direction: column">
+        <sc-for list="{{codes}}" as="c" hint-placeholder-count="8">
+          <button onClick="{{c.pick}}" style="border: 0; border-bottom: 1px solid #E6E4DE; background: transparent; padding: 16px 0; display: flex; align-items: center; gap: 16px; cursor: pointer; text-align: left; color: #16181A; min-height: 68px">
+            <span style="width: 44px; height: 32px; border-radius: 6px; background: #16181A; display: flex; align-items: center; justify-content: center; flex-shrink: 0">
+              <span style="width: 22px; height: 3px; border-radius: 2px; background: #EDECE7; display: block"></span>
+            </span>
+            <span style="flex: 1; display: flex; flex-direction: column">
+              <span style="font-size: 16px; font-weight: 500">{{c.code}}</span>
+              <span style="font-size: 14px; color: #5C5F63">{{c.hint}}</span>
+            </span>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#5C5F63" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"></path></svg>
+          </button>
+        </sc-for>
+      </div>
+    </div>
+  </sc-if>
+
+  <!-- ===== ANLEITUNG ===== -->
+  <sc-if value="{{isGuide}}" hint-placeholder-val="{{ false }}">
+    <div style="padding: 20px 24px 32px; display: flex; flex-direction: column; gap: 20px">
+      <div style="display: flex; gap: 4px">
+        <sc-for list="{{segments}}" as="seg" hint-placeholder-count="5">
+          <div style="{{seg.style}}"></div>
+        </sc-for>
+      </div>
+      <sc-if value="{{hasImg}}" hint-placeholder-val="{{ false }}">
+        <div style="width: 342px; height: 220px; border-radius: 12px; overflow: hidden; background: #D8D6CF">
+          <img src="{{stepImg}}" alt="{{stepTitle}}" style="width: 100%; height: 100%; object-fit: cover; display: block">
+        </div>
+      </sc-if>
+      <div style="display: flex; flex-direction: column; gap: 10px">
+        <div style="font-size: 14px; color: #5C5F63">{{guideTitle}}</div>
+        <div style="font-weight: 500; font-size: 28px; line-height: 1.12; letter-spacing: -0.03em">{{stepTitle}}</div>
+        <div style="font-size: 17px; line-height: 1.5; color: #3C3F43">{{stepText}}</div>
+      </div>
+      <sc-if value="{{hasTool}}" hint-placeholder-val="{{ false }}">
+        <div style="display: flex; align-items: center; gap: 14px; padding: 16px 0; border-top: 1px solid #E6E4DE; border-bottom: 1px solid #E6E4DE">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 0 0 5.4-5.4l-2.5 2.5-2.4-.6-.6-2.4z"></path></svg>
+          <span style="display: flex; flex-direction: column">
+            <span style="font-size: 14px; color: #5C5F63">Du brauchst</span>
+            <span style="font-size: 16px; font-weight: 500">{{stepTool}}</span>
+          </span>
+        </div>
+      </sc-if>
+      <sc-if value="{{hasWarn}}" hint-placeholder-val="{{ false }}">
+        <div style="background: #F5F4F0; border-radius: 12px; padding: 16px; display: flex; gap: 12px; font-size: 15px; line-height: 1.45; color: #16181A">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex-shrink: 0; margin-top: 1px"><path d="M12 3l9.5 17h-19z"></path><path d="M12 10v4M12 17h.01"></path></svg>
+          <span>{{stepWarn}}</span>
+        </div>
+      </sc-if>
+      <a href="https://claude.ai/artifact/Sp1N5jR5KKLECPFo8Xwj5F" style="align-self: flex-start; min-height: 44px; display: flex; align-items: center; gap: 8px; font-size: 16px; font-weight: 500; color: #16181A">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5h16v11H9l-5 4z"></path></svg>
+        Frag ganz zu diesem Schritt
+      </a>
+      <sc-if value="{{showAsk}}" hint-placeholder-val="{{ false }}">
+        <div style="padding-top: 8px; border-top: 1px solid #E6E4DE; font-weight: 600; font-size: 20px; letter-spacing: -0.02em">Läuft die Maschine wieder?</div>
+      </sc-if>
+    </div>
+  </sc-if>
+
+  <!-- ===== ESKALATION ===== -->
+  <sc-if value="{{isEscalate}}" hint-placeholder-val="{{ false }}">
+    <div style="padding: 20px 24px 32px; display: flex; flex-direction: column">
+      <div style="width: 342px; height: 200px; border-radius: 12px; overflow: hidden; background: #D8D6CF">
+        <img src="/_blob/de2450aeb5e74ddecb1398143bdc49f1" alt="Frau zeigt einer Fachkraft im Videocall ihre Waschmaschine" style="width: 100%; height: 100%; object-fit: cover; display: block">
+      </div>
+      <div style="margin-top: 24px; font-weight: 500; font-size: 28px; line-height: 1.12; letter-spacing: -0.03em">Kein Problem. Wir holen Hilfe.</div>
+      <div style="margin-top: 8px; font-size: 17px; color: #3C3F43">Am schnellsten geht es im Videocall. Die Fachkraft sieht dein Protokoll und muss nichts doppelt fragen.</div>
+
+      <div style="margin-top: 20px; background: #F5F4F0; border-radius: 12px; padding: 16px; display: flex; gap: 12px">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex-shrink: 0; margin-top: 1px"><path d="M12 3l8 3v6c0 4.5-3.4 8-8 9-4.6-1-8-4.5-8-9V6z"></path><path d="M9 12l2 2 4-4"></path></svg>
+        <span style="font-size: 15px">{{vName}} übernimmt die Kosten. Selbstbeteiligung: 0 €. Ein Schadenfall wurde automatisch angelegt.</span>
+      </div>
+
+      <div style="margin-top: 20px; display: flex; flex-direction: column">
+        <button onClick="{{goVideo}}" style="border: 0; border-bottom: 1px solid #E6E4DE; background: transparent; padding: 18px 0; display: flex; align-items: center; gap: 16px; cursor: pointer; text-align: left; color: #16181A; min-height: 72px">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="6" width="13" height="12" rx="2"></rect><path d="M16 10l5-3v10l-5-3"></path></svg>
+          <span style="flex: 1; display: flex; flex-direction: column">
+            <span style="font-size: 16px; font-weight: 500">Videocall mit Fachkraft</span>
+            <span style="font-size: 14px; color: #5C5F63">Jetzt verfügbar</span>
+          </span>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#5C5F63" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"></path></svg>
+        </button>
+        <button onClick="{{goBook}}" style="border: 0; border-bottom: 1px solid #E6E4DE; background: transparent; padding: 18px 0; display: flex; align-items: center; gap: 16px; cursor: pointer; text-align: left; color: #16181A; min-height: 72px">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 0 0 5.4-5.4l-2.5 2.5-2.4-.6-.6-2.4z"></path></svg>
+          <span style="flex: 1; display: flex; flex-direction: column">
+            <span style="font-size: 16px; font-weight: 500">Fachbetrieb kommt vorbei</span>
+            <span style="font-size: 14px; color: #5C5F63">Termin wählen, Protokoll geht mit</span>
+          </span>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#5C5F63" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"></path></svg>
+        </button>
+        <a href="tel:08002244666" style="text-decoration: none; color: #16181A; border-bottom: 1px solid #E6E4DE; padding: 18px 0; display: flex; align-items: center; gap: 16px; min-height: 72px; box-sizing: border-box">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2"></path></svg>
+          <span style="flex: 1; display: flex; flex-direction: column">
+            <span style="font-size: 16px; font-weight: 500">Miele Kundendienst</span>
+            <span style="font-size: 14px; color: #5C5F63">0800 22 44 666 · kostenfrei</span>
+          </span>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#5C5F63" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"></path></svg>
+        </a>
+      </div>
+
+      <div style="margin-top: 24px; border: 1px solid #D8D6CF; border-radius: 12px; padding: 18px; display: flex; flex-direction: column; gap: 10px">
+        <div style="display: flex; justify-content: space-between; align-items: baseline">
+          <span style="font-weight: 600; font-size: 16px">Diagnose-Protokoll</span>
+          <span style="font-size: 13px; color: #5C5F63">Miele WKB 130</span>
+        </div>
+        <div style="font-size: 15px"><span style="color: #5C5F63">Meldung:</span> {{guideCode}}</div>
+        <sc-for list="{{tried}}" as="t" hint-placeholder-count="3">
+          <div style="display: flex; gap: 10px; font-size: 15px; align-items: center">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#16181A" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5 9-10"></path></svg>
+            <span>{{t.t}}</span>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+  </sc-if>
+
+  <!-- ===== VIDEOCALL ===== -->
+  <sc-if value="{{isVideo}}" hint-placeholder-val="{{ false }}">
+    <div style="{{videoStyle}}">
+      <img src="/_blob/0cfa91b3d934410ab9954d2ed94ba062" alt="Fachkraft im Videocall" style="position: absolute; left: 0; top: 0; width: 100%; height: 100%; object-fit: cover; display: block">
+      <div style="position: absolute; left: 0; right: 0; top: 0; height: 160px; background: linear-gradient(180deg, rgba(22,24,26,0.7) 0%, rgba(22,24,26,0) 100%)"></div>
+      <div style="position: absolute; left: 0; right: 0; bottom: 0; height: 320px; background: linear-gradient(0deg, rgba(22,24,26,0.92) 0%, rgba(22,24,26,0) 100%)"></div>
+      <div style="position: absolute; left: 20px; top: 20px; color: #F5F4F0">
+        <div style="font-size: 17px; font-weight: 600">Jonas K. · Fachkraft</div>
+        <div style="font-size: 13px; color: #D6D5D0">Hausgeräte Brandt · 04:12</div>
+      </div>
+      <div style="position: absolute; right: 16px; top: 16px; width: 96px; height: 140px; border-radius: 12px; overflow: hidden; border: 2px solid rgba(255,255,255,0.6)">
+        <img src="/_blob/4390cd4d6468de11ac2697336f7cf2a1" alt="Eigenes Kamerabild: Laugenpumpe" style="width: 100%; height: 100%; object-fit: cover; display: block">
+      </div>
+      <div style="position: absolute; left: 20px; right: 20px; bottom: 132px; display: flex; flex-direction: column; gap: 8px">
+        <div style="align-self: flex-start; background: rgba(245,244,240,0.95); color: #16181A; border-radius: 12px; padding: 10px 14px; font-size: 15px; max-width: 280px">Dreh bitte den Pumpenflügel mit dem Finger. Klemmt er?</div>
+        <div style="align-self: flex-start; border: 1px solid rgba(255,255,255,0.6); color: #F5F4F0; border-radius: 999px; padding: 4px 12px; font-size: 13px">Sieht dein Protokoll: {{guideCode}} · {{triedCount}} Schritte erledigt</div>
+      </div>
+      <div style="position: absolute; left: 0; right: 0; bottom: 36px; display: flex; justify-content: center; gap: 24px">
+        <button aria-label="Mikrofon" style="width: 56px; height: 56px; border-radius: 999px; border: 1px solid rgba(255,255,255,0.6); background: transparent; color: #F5F4F0; display: flex; align-items: center; justify-content: center; cursor: pointer">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"></rect><path d="M5 11a7 7 0 0 0 14 0M12 18v3"></path></svg>
+        </button>
+        <button aria-label="Kamera wechseln" style="width: 56px; height: 56px; border-radius: 999px; border: 1px solid rgba(255,255,255,0.6); background: transparent; color: #F5F4F0; display: flex; align-items: center; justify-content: center; cursor: pointer">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h3l2-3h6l2 3h3v11H4z"></path><path d="M9 13a3 3 0 0 1 5-2M15 13a3 3 0 0 1-5 2"></path></svg>
+        </button>
+        <button onClick="{{hangUp}}" aria-label="Auflegen" style="width: 56px; height: 56px; border-radius: 999px; border: 0; background: #C8372D; color: #FFFFFF; display: flex; align-items: center; justify-content: center; cursor: pointer">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 14c5-5 13-5 18 0l-2 3-4-1v-3a10 10 0 0 0-6 0v3l-4 1z"></path></svg>
+        </button>
+      </div>
+    </div>
+  </sc-if>
+
+  <!-- ===== ENTSCHEIDUNG ===== -->
+  <sc-if value="{{isDecide}}" hint-placeholder-val="{{ false }}">
+    <div style="padding: 24px 24px 32px; display: flex; flex-direction: column">
+      <div style="font-size: 14px; color: #5C5F63">Ergebnis des Videocalls</div>
+      <div style="margin-top: 6px; font-weight: 500; font-size: 28px; line-height: 1.12; letter-spacing: -0.03em">Die Laugenpumpe ist defekt. Reparieren lohnt sich.</div>
+      <div style="margin-top: 8px; font-size: 17px; color: #3C3F43">Der Pumpenflügel blockiert. Die Pumpe wird getauscht, der Rest der Maschine ist in Ordnung.</div>
+
+      <div style="margin-top: 24px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px">
+        <div style="border: 2px solid #16181A; border-radius: 12px; padding: 16px; display: flex; flex-direction: column; gap: 4px">
+          <span style="font-size: 14px; color: #5C5F63">Reparatur</span>
+          <span style="font-size: 26px; font-weight: 600; letter-spacing: -0.02em">189 €</span>
+          <span style="font-size: 13px; color: #5C5F63">Teil und Arbeit</span>
+        </div>
+        <div style="border: 1px solid #D8D6CF; border-radius: 12px; padding: 16px; display: flex; flex-direction: column; gap: 4px">
+          <span style="font-size: 14px; color: #5C5F63">Ersatzgerät</span>
+          <span style="font-size: 26px; font-weight: 600; letter-spacing: -0.02em; color: #5C5F63">899 €</span>
+          <span style="font-size: 13px; color: #5C5F63">vergleichbares Modell</span>
+        </div>
+      </div>
+      <div style="margin-top: 10px; font-size: 13px; color: #5C5F63">Beispielwerte. Für dich fallen keine Kosten an, {{vName}} trägt alles (Selbstbeteiligung 0 €).</div>
+
+      <div style="margin-top: 28px; font-weight: 600; font-size: 20px; letter-spacing: -0.02em">Wie soll es weitergehen?</div>
+      <div style="margin-top: 14px; display: flex; flex-direction: column; gap: 12px">
+        <sc-for list="{{paths}}" as="pa" hint-placeholder-count="2">
+          <button onClick="{{pa.pick}}" aria-pressed="{{pa.pressed}}" style="{{pa.style}}">
+            <span style="font-size: 16px; font-weight: 600">{{pa.title}}</span>
+            <span style="font-size: 14px; color: #5C5F63">{{pa.sub}}</span>
+          </button>
+        </sc-for>
+      </div>
+    </div>
+  </sc-if>
+
+  <!-- ===== BUCHUNG ===== -->
+  <sc-if value="{{isBook}}" hint-placeholder-val="{{ false }}">
+    <div style="padding: 24px 24px 32px; display: flex; flex-direction: column">
+      <div style="font-weight: 500; font-size: 28px; line-height: 1.12; letter-spacing: -0.03em">Wer soll kommen?</div>
+      <div style="margin-top: 20px; display: flex; flex-direction: column; gap: 12px">
+        <sc-for list="{{partners}}" as="p" hint-placeholder-count="2">
+          <button onClick="{{p.pick}}" aria-pressed="{{p.pressed}}" style="{{p.style}}">
+            <span style="width: 88px; height: 88px; border-radius: 10px; overflow: hidden; flex-shrink: 0; background: #D8D6CF; display: block">
+              <img src="{{p.img}}" alt="" style="width: 100%; height: 100%; object-fit: cover; display: block">
+            </span>
+            <span style="flex: 1; display: flex; flex-direction: column; gap: 2px">
+              <span style="font-size: 16px; font-weight: 600">{{p.name}}</span>
+              <span style="font-size: 14px; color: #5C5F63">{{p.kind}}</span>
+              <span style="font-size: 14px; color: #5C5F63">{{p.meta}}</span>
+            </span>
+          </button>
+        </sc-for>
+      </div>
+      <div style="margin-top: 32px; font-weight: 600; font-size: 20px; letter-spacing: -0.02em">Wann passt es dir?</div>
+      <div style="margin-top: 14px; display: flex; flex-wrap: wrap; gap: 8px">
+        <sc-for list="{{slots}}" as="s" hint-placeholder-count="4">
+          <button onClick="{{s.pick}}" aria-pressed="{{s.pressed}}" style="{{s.style}}">{{s.label}}</button>
+        </sc-for>
+      </div>
+      <div style="margin-top: 32px; padding-top: 24px; border-top: 1px solid #E6E4DE; display: flex; gap: 14px">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex-shrink: 0"><path d="M7 3h8l4 4v14H7z"></path><path d="M15 3v4h4M10 12h6M10 16h6"></path></svg>
+        <span style="font-size: 15px; color: #3C3F43">Der Betrieb bekommt Modell, M.-Nr., Fotos, Videocall-Befund und deine erledigten Schritte. Er bringt die Laugenpumpe gleich mit. Abgerechnet wird direkt mit {{vName}}.</span>
+      </div>
+    </div>
+  </sc-if>
+
+  <!-- ===== ABSCHLUSS ===== -->
+  <sc-if value="{{isDone}}" hint-placeholder-val="{{ false }}">
+    <div style="padding: 20px 24px 32px; display: flex; flex-direction: column">
+      <div style="width: 342px; height: 240px; border-radius: 12px; overflow: hidden; background: #D8D6CF">
+        <img src="{{doneImg}}" alt="" style="width: 100%; height: 100%; object-fit: cover; display: block">
+      </div>
+      <div style="margin-top: 24px; font-weight: 500; font-size: 34px; line-height: 1.08; letter-spacing: -0.03em">{{doneTitle}}</div>
+      <div style="margin-top: 10px; font-size: 17px; color: #3C3F43">{{doneText}}</div>
+
+      <div style="margin-top: 28px; padding-top: 20px; border-top: 1px solid #E6E4DE; font-size: 14px; color: #5C5F63">Demo: Derselbe Fall aus anderer Sicht</div>
+      <a href="Versicherer.dc.html" style="text-decoration: none; color: #16181A; border-bottom: 1px solid #E6E4DE; padding: 16px 0; display: flex; align-items: center; gap: 16px; min-height: 64px; box-sizing: border-box">
+        <span style="flex: 1; display: flex; flex-direction: column">
+          <span style="font-size: 16px; font-weight: 600">So sieht ihn der Versicherer</span>
+          <span style="font-size: 14px; color: #5C5F63">Fall prüfen und freigeben</span>
+        </span>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#5C5F63" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"></path></svg>
+      </a>
+      <a href="Hersteller.dc.html" style="text-decoration: none; color: #16181A; border-bottom: 1px solid #E6E4DE; padding: 16px 0; display: flex; align-items: center; gap: 16px; min-height: 64px; box-sizing: border-box">
+        <span style="flex: 1; display: flex; flex-direction: column">
+          <span style="font-size: 16px; font-weight: 600">So sieht ihn der Hersteller</span>
+          <span style="font-size: 14px; color: #5C5F63">Fehlerbilder und Ersatzteilbedarf</span>
+        </span>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#5C5F63" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"></path></svg>
+      </a>
+    </div>
+  </sc-if>
+
+  <!-- ===== VERLAUF ===== -->
+  <sc-if value="{{isHistory}}" hint-placeholder-val="{{ false }}">
+    <div style="padding: 20px 24px 32px; display: flex; flex-direction: column">
+      <div style="font-weight: 500; font-size: 34px; line-height: 1.08; letter-spacing: -0.03em">Verlauf</div>
+      <sc-if value="{{historyEmpty}}" hint-placeholder-val="{{ true }}">
+        <div style="margin-top: 24px; padding-top: 24px; border-top: 1px solid #E6E4DE; display: flex; flex-direction: column; gap: 8px">
+          <div style="font-weight: 600; font-size: 20px; letter-spacing: -0.02em">Noch nichts repariert</div>
+          <div style="font-size: 16px; color: #5C5F63">Jede Diagnose landet hier. Als Nachweis für Betrieb, Hersteller oder Versicherung.</div>
+          <button onClick="{{startProblem}}" style="margin-top: 12px; align-self: flex-start; min-height: 50px; padding: 0 20px; border: 1px solid #16181A; border-radius: 8px; background: #FFFFFF; color: #16181A; font-size: 16px; font-weight: 500; cursor: pointer">Problem melden</button>
+        </div>
+      </sc-if>
+      <div style="margin-top: 12px; display: flex; flex-direction: column">
+        <sc-for list="{{log}}" as="e" hint-placeholder-count="0">
+          <div style="border-bottom: 1px solid #E6E4DE; padding: 18px 0; display: flex; flex-direction: column; gap: 2px">
+            <div style="display: flex; justify-content: space-between; gap: 8px">
+              <span style="font-size: 16px; font-weight: 600">{{e.title}}</span>
+              <span style="font-size: 14px; color: #5C5F63">Heute</span>
+            </div>
+            <span style="font-size: 14px; color: #5C5F63">Miele WKB 130 · {{e.steps}}</span>
+            <span style="font-size: 15px; color: #16181A">{{e.result}}</span>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+  </sc-if>
+</div>
+
+<!-- Aktionsleiste -->
+<sc-if value="{{showBar}}" hint-placeholder-val="{{ false }}">
+  <div style="flex-shrink: 0; border-top: 1px solid #E6E4DE; background: #FFFFFF; padding: 14px 24px 26px; display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 84px; box-sizing: border-box">
+    <sc-if value="{{barHasMeta}}" hint-placeholder-val="{{ true }}">
+      <span style="display: flex; flex-direction: column; min-width: 0">
+        <span style="font-size: 16px; font-weight: 600">{{barMeta}}</span>
+        <span style="font-size: 13px; color: #5C5F63">{{barSub}}</span>
+      </span>
+    </sc-if>
+    <sc-if value="{{barSecondary}}" hint-placeholder-val="{{ false }}">
+      <button onClick="{{goEscalate}}" style="min-height: 50px; padding: 0 20px; border: 1px solid #BDBBB4; border-radius: 8px; background: #FFFFFF; color: #16181A; font-size: 16px; font-weight: 500; cursor: pointer; flex: 1">Nein</button>
+    </sc-if>
+    <button onClick="{{barAction}}" style="{{barBtnStyle}}">{{barLabel}}</button>
+  </div>
+</sc-if>
+
+<!-- Tab-Leiste -->
+<sc-if value="{{showTabs}}" hint-placeholder-val="{{ true }}">
+  <nav aria-label="Hauptnavigation" style="height: 72px; flex-shrink: 0; border-top: 1px solid #E6E4DE; background: #FFFFFF; display: flex; justify-content: center; gap: 56px; padding-bottom: 8px; box-sizing: border-box">
+    <button onClick="{{goHome}}" style="{{tabHomeStyle}}">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4.5" y="2.5" width="15" height="19" rx="2"></rect><circle cx="12" cy="13" r="4.5"></circle><path d="M8 6h2"></path></svg>
+      Geräte
+    </button>
+    <button onClick="{{goHistory}}" style="{{tabHistStyle}}">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7"></path><path d="M3 4v4h4M12 8v4l3 2"></path></svg>
+      Verlauf
+    </button>
+  </nav>
+</sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"versicherer":{"editor":"text","default":"Kranich Versicherung","section":"Demo"},"showHints":{"editor":"boolean","default":true,"section":"Demo"},"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  guides() {
+    var IMG_FEHLER = '/_blob/ce0d408b6d9189b01cddecca3f9e1971';
+    var IMG_PUMPE = '/_blob/63279863ff9eb9c9958cef49ae4cbd7b';
+    return {
+      zulauf: { title: 'Wasserzulauf gestört', code: 'Wasserzulauf', steps: [
+        { t: 'Wasserhahn prüfen', d: 'Ist der Wasserhahn weit genug geöffnet? Dreh ihn ganz auf.' },
+        { t: 'Zulaufschlauch prüfen', d: 'Schau hinter die Maschine: Der Schlauch darf nirgends geknickt sein.' },
+        { t: 'Sieb im Zulaufschlauch reinigen', d: 'Wasserhahn zudrehen, Schlauch am Hahn abschrauben. Gummidichtung herausziehen, Kunststoffsieb am Steg greifen, herausziehen und reinigen. In umgekehrter Reihenfolge wieder einbauen.', tool: 'Spitzzange' },
+        { t: 'Sieb im Einlaufstutzen reinigen', d: 'Gerippte Kunststoffmutter an der Rückseite vorsichtig vom Zulaufstutzen schrauben, Sieb am Steg herausziehen, reinigen und wieder einbauen.', tool: 'Zange und Spitzzange', w: 'Beide Siebe müssen wieder rein. Hahn danach langsam aufdrehen und prüfen, ob die Verschraubungen dicht sind.' },
+        { t: 'Wasserdruck prüfen', d: 'Die Maschine braucht mindestens 1 bar Fließdruck. Kommt an anderen Hähnen im Haus genug Wasser?' }
+      ]},
+      ablauf: { title: 'Wasserablauf gestört', code: 'Wasserablauf', steps: [
+        { t: 'Maschine ausschalten', d: 'Schalte die Maschine mit der Ein/Aus-Taste aus und öffne unten vorne die Klappe für die Laugenpumpe.', img: IMG_FEHLER },
+        { t: 'Behälter unterstellen', d: 'Stell ein flaches Gefäß unter die Klappe, ein Backblech reicht. Bei verstopftem Ablauf kann viel Wasser kommen.', w: 'Verbrühungsgefahr, wenn kurz vorher heiß gewaschen wurde.' },
+        { t: 'Wasser ablassen', d: 'Dreh den Laugenfilter langsam auf, bis Wasser ausläuft. Zum Unterbrechen wieder zudrehen. Noch nicht ganz herausdrehen.' },
+        { t: 'Laugenfilter reinigen', d: 'Läuft kein Wasser mehr, den Laugenfilter ganz herausdrehen und gründlich reinigen.', img: IMG_PUMPE },
+        { t: 'Pumpe freimachen', d: 'Lässt sich der Pumpenflügel leicht drehen? Entferne Fremdkörper wie Knöpfe oder Münzen und reinige den Innenraum.', img: IMG_PUMPE },
+        { t: 'Filter wieder einsetzen', d: 'Laugenfilter einsetzen und fest zudrehen.', w: 'Sitzt der Filter nicht fest, läuft Wasser aus der Maschine.' },
+        { t: 'Ablaufschlauch prüfen', d: 'Der Schlauch muss knickfrei liegen. Die Pumpe schafft maximal 1 m Höhe.' }
+      ]},
+      tuer: { title: 'Tür geht nicht auf', code: 'Tür verriegelt', steps: [
+        { t: 'Programm unterbrechen', d: 'Drück Start/Stop und wähle im Display „Abbrechen“ oder „Wäsche nachlegen“.' },
+        { t: 'Abkühlen lassen', d: 'Steht „Komfortkühlen“ im Display, ist die Lauge über 55 °C. Warte, bis die Anzeige erlischt.' },
+        { t: 'Wasser in der Trommel?', d: 'Pumpt die Maschine nicht ab, reinige zuerst den Laugenfilter. Danach lässt sich die Tür hinter der Pumpenklappe mit einem Schraubendreher notentriegeln.', tool: 'Schraubendreher', w: 'Nie in eine noch drehende Trommel greifen.', img: IMG_PUMPE }
+      ]},
+      wackelt: { title: 'Maschine wackelt', code: 'Unruhiger Lauf', steps: [
+        { t: 'Lot prüfen', d: 'Leg eine Wasserwaage oben auf die Maschine.', tool: 'Wasserwaage' },
+        { t: 'Fuß ausrichten', d: 'Kontermutter im Uhrzeigersinn lösen und den Fuß herausdrehen, bis die Maschine gerade steht.', tool: 'Maulschlüssel (liegt der Maschine bei)' },
+        { t: 'Füße kontern', d: 'Fuß mit der Zange festhalten, Kontermutter fest gegen das Gehäuse drehen. Prüf alle vier Füße.', tool: 'Wasserpumpenzange', w: 'Lose Kontermuttern lassen die Maschine wandern.' },
+        { t: 'Untergrund prüfen', d: 'Kein weicher Bodenbelag. Bei Holzbalkendecke: Sperrholzplatte (mind. 59 × 52 × 3 cm) mit den Balken verschrauben.' }
+      ]},
+      nass: { title: 'Wäsche noch nass', code: 'Schleudern reduziert', steps: [
+        { t: 'Unwucht vermeiden', d: 'Bei großer Unwucht senkt die Maschine die Drehzahl selbst. Misch große und kleine Wäschestücke.' },
+        { t: 'Drehzahl prüfen', d: 'Taste Drehzahl: Steht dort 0 U/min oder Spülstop? Baumwolle schafft bis 1600 U/min.' },
+        { t: 'Nachschleudern', d: 'Programm „Pumpen/Schleudern“ wählen und starten.' }
+      ]},
+      start: { title: 'Maschine startet nicht', code: 'Display dunkel', steps: [
+        { t: 'Strom prüfen', d: 'Steckt der Netzstecker? Ist die Sicherung in Ordnung?' },
+        { t: 'Einschalten', d: 'Ohne Bedienung schaltet sich die Maschine nach 15 Minuten ab. Drück die Ein/Aus-Taste.' },
+        { t: 'PIN-Code', d: 'Fragt das Display nach einem PIN? Der Werkscode ist 125.', img: IMG_FEHLER }
+      ]},
+      verriegelung: { title: 'Türverriegelung', code: 'Kundendienst · Türverriegelung', steps: [
+        { t: 'Tür neu schließen', d: 'Die Verriegelung ist nicht eingerastet. Schließ die Tür mit leichtem Schwung, ohne dass Wäsche im Dichtring klemmt.' },
+        { t: 'Neu starten', d: 'Starte das Programm erneut.' }
+      ]},
+      entriegelung: { title: 'Türschloss blockiert', code: 'Kundendienst · Türentriegelung', noSelf: true, steps: [
+        { t: 'Nicht selbst lösbar', d: 'Das Türschloss ist blockiert. Das muss ein Fachbetrieb oder der Kundendienst beheben.', img: IMG_FEHLER }
+      ]},
+      waterproof: { title: 'Wasserschutz ausgelöst', code: 'Waterproof · Kundendienst', noSelf: true, steps: [
+        { t: 'Wasserhahn schließen', d: 'Das Wasserschutzsystem hat Wasser in der Bodenwanne erkannt und den Zulauf gesperrt. Dreh den Wasserhahn jetzt zu.', w: 'Maschine nicht weiter benutzen. Ein Leck im Gerät braucht einen Fachbetrieb.', img: IMG_FEHLER }
+      ]},
+      fehlerf: { title: 'Defekt gemeldet', code: 'Kundendienst · Fehler F', steps: [
+        { t: 'Einmal neu starten', d: 'Maschine aus- und wieder einschalten, Programm erneut starten. Kommt die Meldung wieder, liegt ein Defekt vor.', img: IMG_FEHLER }
+      ]},
+      dosierung: { title: 'Zu viel Schaum', code: 'Dosierung prüfen', steps: [
+        { t: 'Weniger Waschmittel', d: 'Dosier beim nächsten Mal nach Packungsangabe. Bei halber Beladung etwa ein Drittel weniger.' }
+      ]},
+      hygiene: { title: 'Hygienewäsche', code: 'Hygiene-Info', steps: [
+        { t: 'Maschine reinigen', d: 'Ohne Wäsche: Programm Baumwolle 75 °C mit Maschinenreiniger oder Pulver-Vollwaschmittel starten.' },
+        { t: 'Einspülkasten reinigen', d: 'Kasten bis zum Anschlag ziehen, Entriegelungsknopf drücken, herausnehmen und mit warmem Wasser reinigen. Saugheber im Weichspülerfach mitreinigen.' }
+      ]},
+      einspuel: { title: 'Reste im Einspülkasten', code: 'Waschmittelrückstände', steps: [
+        { t: 'Einspülkasten reinigen', d: 'Kasten bis zum Anschlag ziehen, Entriegelungsknopf drücken, herausnehmen und mit warmem Wasser reinigen.' },
+        { t: 'Saugheber reinigen', d: 'Saugheber aus dem Weichspülerfach ziehen, unter warmem Wasser reinigen, das Rohr darunter auch. Wieder aufstecken.' },
+        { t: 'Zulaufsieb prüfen', d: 'Zu wenig Wasserdruck lässt Pulver kleben. Reinige das Sieb im Wasserzulauf.' },
+        { t: 'Reihenfolge beachten', d: 'Erst Waschmittel, dann Enthärter einfüllen.' }
+      ]}
+    };
+  }
+
+  componentWillUnmount() { (this._timers || []).forEach(function (t) { clearTimeout(t); }); }
+
+  startScan() {
+    (this._timers || []).forEach(function (t) { clearTimeout(t); });
+    this._timers = [];
+    this.setState({ screen: 'analyzing', scanStep: 0 });
+    for (var i = 1; i <= 4; i++) {
+      (function (self, k) {
+        self._timers.push(setTimeout(function () { self.setState({ scanStep: k }); }, k * 650));
+      })(this, i);
+    }
+    var self = this;
+    this._timers.push(setTimeout(function () { self.setState({ screen: 'result' }); }, 5 * 650 + 200));
+  }
+
+  renderVals() {
+    const s = this.state || {};
+    const screen = s.screen || 'home';
+    const vName = (this.props.versicherer || 'Kranich Versicherung');
+    const hintsOn = this.props.showHints !== false;
+    const G = this.guides();
+    const set = (o) => () => this.setState(o);
+    const openGuide = (id, from) => () => this.setState({ screen: 'guide', guideId: id, step: 0, from: from || 'problem' });
+    const log = s.log || [];
+
+    const g = G[s.guideId] || G.ablauf;
+    const idx = s.step || 0;
+    const n = g.steps.length;
+    const cur = g.steps[Math.min(idx, n - 1)];
+    const isLast = idx >= n - 1;
+
+    const addLog = (result, extra) => {
+      const entry = { title: g.title, result: result, steps: (idx + 1) + (idx === 0 ? ' Schritt' : ' Schritte') + ' erledigt' };
+      this.setState(Object.assign({ log: [entry].concat(log) }, extra));
+    };
+
+    const problems = [
+      { label: 'Display zeigt eine Meldung', sub: 'z. B. Wasserablauf, Waterproof, Fehler F', pick: set({ screen: 'codes' }) },
+      { label: 'Wäsche ist noch nass', sub: 'Nicht richtig geschleudert', pick: openGuide('nass') },
+      { label: 'Tür geht nicht auf', sub: 'Nach oder während des Programms', pick: openGuide('tuer') },
+      { label: 'Maschine wackelt oder wandert', sub: 'Beim Schleudern', pick: openGuide('wackelt') },
+      { label: 'Reste im Einspülkasten', sub: 'Waschmittel wird nicht eingespült', pick: openGuide('einspuel') },
+      { label: 'Maschine startet nicht', sub: 'Display bleibt dunkel', pick: openGuide('start') }
+    ];
+    const codes = [
+      { code: 'Wasserzulauf', hint: 'Programm abgebrochen', pick: openGuide('zulauf', 'codes') },
+      { code: 'Wasserablauf', hint: 'Programm abgebrochen', pick: openGuide('ablauf', 'codes') },
+      { code: 'Waterproof', hint: 'Wasserschutz hat ausgelöst', pick: openGuide('waterproof', 'codes') },
+      { code: 'Fehler F', hint: 'Defekt', pick: openGuide('fehlerf', 'codes') },
+      { code: 'Türverriegelung', hint: 'Tür rastet nicht ein', pick: openGuide('verriegelung', 'codes') },
+      { code: 'Türentriegelung', hint: 'Schloss blockiert', pick: openGuide('entriegelung', 'codes') },
+      { code: 'Dosierung prüfen', hint: 'Am Programmende', pick: openGuide('dosierung', 'codes') },
+      { code: 'Hygiene-Info', hint: 'Am Programmende', pick: openGuide('hygiene', 'codes') }
+    ];
+    const maintenance = [
+      { title: 'Hygienewäsche 75 °C', sub: 'Gegen Keime, wenn du oft kalt wäschst', open: openGuide('hygiene', 'home') },
+      { title: 'Zulaufsiebe prüfen', sub: 'Etwa alle sechs Monate', open: openGuide('zulauf', 'home') }
+    ];
+
+    // Kamera-Modi
+    const MODES = {
+      display: { label: 'Display', img: '/_blob/ce0d408b6d9189b01cddecca3f9e1971', alt: 'Display der Waschmaschine', help: 'Halte das Display in den Rahmen. Wir lesen die Meldung.', from: 'vom Display' },
+      typenschild: { label: 'Typenschild', img: '/_blob/210309d13f7c618ff2f3a1fb3635be81', alt: 'Typenschild', help: 'Bei geöffneter Tür oberhalb des Schauglases. Wir erkennen Modell und Baujahr.', from: 'vom Typenschild' },
+      bauteil: { label: 'Bauteil', img: '/_blob/63279863ff9eb9c9958cef49ae4cbd7b', alt: 'Laugenpumpe', help: 'Zeig das Bauteil oder den Schaden. Wir erkennen Teil und sichtbare Schäden.', from: 'vom Bauteil' }
+    };
+    const mode = s.mode || 'display';
+    const M = MODES[mode];
+    const modes = ['display', 'typenschild', 'bauteil'].map((k) => ({
+      label: MODES[k].label,
+      pressed: k === mode ? 'true' : 'false',
+      pick: set({ mode: k }),
+      style: 'min-height: 36px; padding: 0 14px; border-radius: 7px; border: 0; font-size: 14px; font-weight: 500; cursor: pointer; ' + (k === mode ? 'background: #F5F4F0; color: #16181A' : 'background: transparent; color: #D6D5D0')
+    }));
+    const scanStep = s.scanStep || 0;
+    const scanItems = ['Gerät erkannt: Miele WKB 130', 'Meldung gelesen: „Wasserablauf“', 'Bauteile geprüft: Laugenfilter, Laugenpumpe', 'Mit der Herstelleranleitung abgeglichen'].map((l, i) => ({
+      label: l,
+      done: i < scanStep,
+      pending: i >= scanStep,
+      style: 'display: flex; align-items: center; gap: 12px; font-size: 16px; ' + (i < scanStep ? 'color: #F5F4F0' : 'color: #A9A8A3')
+    }));
+    const findings = [
+      { k: 'Gerät', v: 'Miele WKB 130 · 03/2023' },
+      { k: 'Meldung', v: '„Wasserablauf“' },
+      { k: 'Betroffenes Bauteil', v: 'Laugenfilter / Laugenpumpe' },
+      { k: 'Sichtbare Schäden', v: 'keine' },
+      { k: 'Übereinstimmung', v: 'hoch' }
+    ];
+
+    const segments = g.steps.map((x, i) => ({ style: 'flex: 1; height: 4px; border-radius: 2px; background: ' + (i <= idx ? '#16181A' : '#D8D6CF') }));
+
+    // Entscheidung nach Videocall
+    const pathSel = s.path || 'betrieb';
+    const paths = [
+      { id: 'betrieb', title: 'Fachbetrieb tauscht die Pumpe', sub: 'Termin wählen, Teil bringt der Betrieb mit' },
+      { id: 'teil', title: 'Ersatzteil schicken lassen', sub: 'Original-Laugenpumpe von Miele, Einbau mit Fachkraft im Videocall' }
+    ].map((p) => Object.assign({}, p, {
+      pressed: p.id === pathSel ? 'true' : 'false',
+      pick: set({ path: p.id }),
+      style: 'text-align: left; background: #FFFFFF; color: #16181A; border-radius: 12px; padding: 16px; display: flex; flex-direction: column; gap: 2px; cursor: pointer; min-height: 76px; border: ' + (p.id === pathSel ? '2px solid #16181A' : '1px solid #D8D6CF')
+    }));
+
+    const partnerSel = s.partner || 0;
+    const partners = [
+      { name: 'Hausgeräte Brandt', kind: 'Miele-autorisiert', meta: '2,4 km · Abrechnung über ' + vName, img: '/_blob/15d856a885d1bb2979df6bd6a14bb280' },
+      { name: 'Reparaturwerk Neukölln', kind: 'Freie Werkstatt', meta: '3,8 km · Abrechnung über ' + vName, img: '/_blob/56d997e3ad35e494d0a92cfe07e7fcd0' }
+    ].map((p, i) => Object.assign({}, p, {
+      pressed: i === partnerSel ? 'true' : 'false',
+      pick: set({ partner: i }),
+      style: 'text-align: left; background: #FFFFFF; color: #16181A; border-radius: 12px; padding: 12px; display: flex; align-items: center; gap: 16px; cursor: pointer; min-height: 112px; border: ' + (i === partnerSel ? '2px solid #16181A' : '1px solid #D8D6CF')
+    }));
+    const slotSel = s.slot || 0;
+    const slotLabels = ['Mo vormittags', 'Di nachmittags', 'Mi vormittags', 'Do abends'];
+    const slots = slotLabels.map((l, i) => ({
+      label: l,
+      pressed: i === slotSel ? 'true' : 'false',
+      pick: set({ slot: i }),
+      style: 'min-height: 44px; padding: 0 16px; border-radius: 8px; font-size: 16px; font-weight: 500; cursor: pointer; ' + (i === slotSel ? 'background: #16181A; color: #F5F4F0; border: 1px solid #16181A' : 'background: #FFFFFF; color: #16181A; border: 1px solid #D8D6CF')
+    }));
+
+    const titles = { scan: 'Gerät hinzufügen', problem: 'Problem melden', camera: 'Foto machen', result: 'Ergebnis', codes: 'Meldung im Display', guide: g.title, escalate: 'Hilfe holen', decide: 'Reparatur', book: 'Reparatur buchen', done: '' };
+    const backMap = { scan: 'home', problem: 'home', camera: 'problem', result: 'camera', codes: 'problem', guide: s.from || 'problem', escalate: 'guide', decide: 'escalate', book: s.bookFrom || 'escalate', done: 'home' };
+
+    const kind = s.doneKind || 'solved';
+    const doneTitles = { solved: 'Wieder ganz.', repair: 'Termin steht.', part: 'Pumpe ist unterwegs.' };
+    const doneTexts = {
+      solved: 'Du hast es selbst repariert. Die Diagnose liegt im Verlauf, falls das Problem wiederkommt.',
+      repair: partners[partnerSel].name + ' kommt ' + slotLabels[slotSel] + ' und bringt die Laugenpumpe mit. ' + vName + ' hat die Kosten freigegeben.',
+      part: 'Die Original-Laugenpumpe kommt spätestens in 15 Arbeitstagen, so verlangt es die EU für Waschmaschinen-Ersatzteile. Den Einbau machst du mit der Fachkraft im Videocall. ' + vName + ' trägt die Kosten.'
+    };
+    const doneImgs = { solved: '/_blob/0ba1a2933b7cf9308d65805e6d7efbd0', repair: '/_blob/15d856a885d1bb2979df6bd6a14bb280', part: '/_blob/63279863ff9eb9c9958cef49ae4cbd7b' };
+
+    const hints = {
+      home: 'Tippe auf „Was ist kaputt?“',
+      problem: 'Tippe auf „Foto machen“',
+      camera: 'Wähle, was du fotografierst, und tippe auf den Auslöser',
+      analyzing: 'Die intelligente Fehlererkennung wertet das Foto aus',
+      result: 'Starte die Anleitung',
+      codes: 'Wähle eine Meldung, zum Beispiel „Wasserablauf“',
+      guide: isLast ? 'Wähle „Nein“, um zu sehen, wie ganz Hilfe holt' : 'Tippe dich mit „Erledigt“ durch die Schritte',
+      escalate: 'Starte den Videocall mit der Fachkraft',
+      video: 'Tippe auf den roten Knopf, um aufzulegen',
+      decide: 'Wähle einen Weg und tippe auf „Weiter“',
+      book: 'Wähle Betrieb und Termin, dann „Termin buchen“',
+      done: 'Sieh dir jetzt denselben Fall aus Sicht von Versicherer und Hersteller an',
+      scan: 'So kommt ein neues Gerät in die App',
+      history: 'Hier sammelt sich jede Diagnose'
+    };
+
+    const btnPrimary = 'min-height: 50px; padding: 0 24px; border: 1px solid #16181A; border-radius: 8px; background: #16181A; color: #F5F4F0; font-size: 16px; font-weight: 500; cursor: pointer; flex-shrink: 0';
+    const btnPrimaryWide = btnPrimary + '; flex: 1';
+
+    let bar = null;
+    if (screen === 'scan') bar = { meta: 'Miele WKB 130', sub: 'Waschmaschine', label: 'Übernehmen', action: set({ screen: 'home' }) };
+    else if (screen === 'result') bar = { meta: '7 Schritte', sub: 'ca. 15 Minuten', label: 'Anleitung starten', action: openGuide('ablauf', 'result') };
+    else if (screen === 'guide' && !isLast) bar = { meta: 'Schritt ' + (idx + 1) + ' von ' + n, sub: 'aus der Miele-Anleitung', label: 'Erledigt', action: set({ step: idx + 1 }) };
+    else if (screen === 'guide' && isLast && g.noSelf) bar = { meta: 'Nicht selbst lösbar', sub: 'laut Miele-Anleitung', label: 'Hilfe holen', action: set({ screen: 'escalate' }) };
+    else if (screen === 'guide' && isLast) bar = { two: true, label: 'Ja, läuft', action: () => addLog('Selbst behoben', { screen: 'done', doneKind: 'solved' }) };
+    else if (screen === 'escalate') bar = { meta: 'Videocall', sub: 'Fachkraft jetzt verfügbar', label: 'Anrufen', action: set({ screen: 'video' }) };
+    else if (screen === 'decide') bar = { meta: 'Du zahlst 0 €', sub: 'Rest über ' + vName, label: 'Weiter', action: pathSel === 'teil' ? () => addLog('Ersatzteil bestellt · Laugenpumpe', { screen: 'done', doneKind: 'part' }) : set({ screen: 'book', bookFrom: 'decide' }) };
+    else if (screen === 'book') bar = { meta: slotLabels[slotSel], sub: partners[partnerSel].name, label: 'Termin buchen', action: () => addLog('Termin gebucht · ' + partners[partnerSel].name, { screen: 'done', doneKind: 'repair' }) };
+    else if (screen === 'done') bar = { wide: true, label: 'Zu meinen Geräten', action: set({ screen: 'home' }) };
+
+    const tabBase = 'border: 0; background: transparent; font-size: 12px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; cursor: pointer; min-width: 64px; ';
+    const tabOn = tabBase + 'color: #16181A; font-weight: 600';
+    const tabOff = tabBase + 'color: #5C5F63; font-weight: 400';
+
+    const hintH = hintsOn ? 36 : 0;
+    const fullH = 844 - hintH;
+    const darkH = fullH - 60;
+
+    return {
+      vName: vName,
+      showHint: hintsOn, hint: hints[screen] || '',
+      isHome: screen === 'home', isScan: screen === 'scan', isProblem: screen === 'problem', isCodes: screen === 'codes',
+      isCamera: screen === 'camera', isAnalyzing: screen === 'analyzing', isResult: screen === 'result',
+      isGuide: screen === 'guide', isEscalate: screen === 'escalate', isVideo: screen === 'video', isDecide: screen === 'decide',
+      isBook: screen === 'book', isDone: screen === 'done', isHistory: screen === 'history',
+      showHeader: !!backMap[screen],
+      back: set({ screen: backMap[screen] || 'home' }),
+      headerTitle: titles[screen] || '',
+      showTabs: screen === 'home' || screen === 'history',
+      tabHomeStyle: screen === 'home' ? tabOn : tabOff,
+      tabHistStyle: screen === 'history' ? tabOn : tabOff,
+
+      goHome: set({ screen: 'home' }), goScan: set({ screen: 'scan' }), goHistory: set({ screen: 'history' }),
+      startProblem: set({ screen: 'problem' }),
+      goCamera: set({ screen: 'camera' }),
+      goVideo: set({ screen: 'video', guideId: s.guideId || 'ablauf' }),
+      goBook: set({ screen: 'book', bookFrom: 'escalate' }),
+      hangUp: set({ screen: 'decide' }),
+      shoot: () => this.startScan(),
+      problems: problems, codes: codes, maintenance: maintenance,
+
+      modes: modes, modeImg: M.img, modeAlt: M.alt, modeHelp: M.help, modeFrom: M.from,
+      darkStyle: 'background: #16181A; min-height: ' + darkH + 'px; padding-bottom: 24px; box-sizing: border-box',
+      videoStyle: 'position: relative; background: #16181A; height: ' + fullH + 'px; overflow: hidden',
+      scanItems: scanItems, findings: findings,
+
+      segments: segments,
+      guideTitle: g.title, guideCode: g.code,
+      stepTitle: cur.t, stepText: cur.d,
+      hasImg: !!cur.img, stepImg: cur.img || '',
+      hasTool: !!cur.tool, stepTool: cur.tool || '',
+      hasWarn: !!cur.w, stepWarn: cur.w || '',
+      showAsk: screen === 'guide' && isLast && !g.noSelf,
+      goEscalate: set({ screen: 'escalate' }),
+
+      tried: g.steps.slice(0, idx + 1).map((x) => ({ t: x.t })),
+      triedCount: idx + 1,
+      paths: paths, partners: partners, slots: slots,
+
+      doneTitle: doneTitles[kind], doneText: doneTexts[kind], doneImg: doneImgs[kind],
+      log: log, historyEmpty: log.length === 0,
+
+      showBar: !!bar,
+      barHasMeta: !!(bar && bar.meta),
+      barMeta: bar && bar.meta ? bar.meta : '',
+      barSub: bar && bar.sub ? bar.sub : '',
+      barSecondary: !!(bar && bar.two),
+      barLabel: bar ? bar.label : '',
+      barAction: bar ? bar.action : set({}),
+      barBtnStyle: bar && (bar.two || bar.wide) ? btnPrimaryWide : btnPrimary
+    };
+  }
+}
+</script>
+</body>
+</html>

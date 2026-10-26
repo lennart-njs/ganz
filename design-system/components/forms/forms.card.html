@@ -1,0 +1,31 @@
+<!-- @dsCard group="Components" viewport="700x420" name="Forms" -->
+<!doctype html><html><head><meta charset="utf-8"><link rel="stylesheet" href="../../styles.css">
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js"></script>
+<script src="../../_ds_bundle.js" onerror="this.remove()"></script>
+<script src="../../ganz-loader.js"></script>
+</head><body style="margin:0;padding:24px;background:var(--bg-page);font-family:var(--font-sans);color:var(--text-strong)"><div id="r"></div>
+<script type="text/babel">
+ganzReady.then((NS) => {
+const { TextField, Checkbox, ChoiceChip, SegmentedControl } = NS;
+function D() {
+  const [t, setT] = React.useState('Spülmaschine');
+  const [a, setA] = React.useState('Zu Hause');
+  const [c, setC] = React.useState(true);
+  return <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+      <TextField label="Modellnummer" placeholder="Steht auf dem Typenschild" />
+      <TextField label="Was ist passiert?" multiline rows={3} placeholder="Spülmaschine pumpt nicht ab, unten steht Wasser." />
+      <Checkbox checked={c} onChange={setC}>Der Stecker ist gezogen</Checkbox>
+    </div>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+      <SegmentedControl options={['Zu Hause','Hersteller & Handel','Fachbetriebe']} value={a} onChange={setA} style={{ alignSelf: 'flex-start' }} />
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>{['Spülmaschine','Waschmaschine','Trockner','Kühlschrank'].map(x => <ChoiceChip key={x} selected={x === t} onClick={() => setT(x)}>{x}</ChoiceChip>)}</div>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 8 }}><ChoiceChip sub="10–12 Uhr" selected>Do, 16.10.</ChoiceChip><ChoiceChip sub="14–16 Uhr">Do, 16.10.</ChoiceChip><ChoiceChip sub="8–10 Uhr">Fr, 17.10.</ChoiceChip></div>
+    </div>
+  </div>;
+}
+ReactDOM.createRoot(document.getElementById('r')).render(<D />);
+});
+</script></body></html>

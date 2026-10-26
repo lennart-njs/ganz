@@ -1,0 +1,11 @@
+:root {
+  --shadow-float: 0 40px 80px -30px rgba(0,0,0,.55);
+  --shadow-none: none;
+  --scrim-bottom: linear-gradient(0deg, rgba(22,24,26,0.92) 0%, rgba(22,24,26,0.5) 60%, rgba(22,24,26,0.35) 100%);
+  --scrim-left: linear-gradient(90deg, rgba(22,24,26,0.92) 0%, rgba(22,24,26,0.75) 50%, rgba(22,24,26,0.45) 100%);
+  --scrim-video: linear-gradient(180deg, rgba(22,24,26,0.7) 0%, rgba(22,24,26,0.1) 30%, rgba(22,24,26,0.1) 55%, rgba(22,24,26,0.9) 100%);
+  --ease-standard: ease;
+  --duration-fade: 200ms;
+  --focus-ring: 2px solid var(--ink-900);
+  --focus-offset: 2px;
+}

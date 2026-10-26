@@ -1,0 +1,301 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<title>ganz für Versicherer</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#FFFFFF}
+a{color:#16181A}a:hover{color:#3C3F43}
+button{font-family:inherit}
+button:focus-visible,a:focus-visible{outline:2px solid #16181A;outline-offset:2px}
+</style>
+</helmet>
+<div style="min-height: 100vh; background: #FFFFFF; color: #16181A; font-family: 'Schibsted Grotesk', system-ui, sans-serif; font-size: 16px; line-height: 1.45">
+
+  <header style="border-bottom: 1px solid #E6E4DE">
+    <div style="max-width: 1360px; margin: 0 auto; padding: 14px 24px; display: flex; align-items: center; gap: 24px; flex-wrap: wrap">
+      <a href="Start.dc.html" style="text-decoration: none; display: flex; align-items: baseline; gap: 8px">
+        <span style="font-weight: 600; font-size: 24px; letter-spacing: -0.03em">ganz</span>
+        <span style="font-size: 14px; color: #5C5F63">für Versicherer</span>
+      </a>
+      <nav aria-label="Bereiche" style="display: flex; gap: 4px; flex: 1">
+        <sc-for list="{{tabs}}" as="t" hint-placeholder-count="2">
+          <button onClick="{{t.pick}}" aria-pressed="{{t.pressed}}" style="{{t.style}}">{{t.label}}</button>
+        </sc-for>
+      </nav>
+      <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap">
+        <span style="font-size: 13px; border: 1px solid #D8D6CF; border-radius: 999px; padding: 4px 10px; color: #3C3F43">Beispielwerte</span>
+        <span style="font-size: 14px; color: #3C3F43">Mandant: <strong style="font-weight: 600; color: #16181A">{{vName}}</strong> · Geräteschutz</span>
+      </div>
+    </div>
+  </header>
+
+  <main style="max-width: 1360px; margin: 0 auto; padding: 32px 24px 64px">
+
+    <!-- KPI -->
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px">
+      <sc-for list="{{kpis}}" as="k" hint-placeholder-count="4">
+        <div style="border: 1px solid #E6E4DE; border-radius: 12px; padding: 20px; display: flex; flex-direction: column; gap: 4px">
+          <span style="font-size: 14px; color: #5C5F63">{{k.label}}</span>
+          <span style="font-size: 34px; font-weight: 500; letter-spacing: -0.03em; line-height: 1.1">{{k.value}}</span>
+          <span style="font-size: 13px; color: #5C5F63">{{k.sub}}</span>
+        </div>
+      </sc-for>
+    </div>
+
+    <!-- ===== FÄLLE ===== -->
+    <sc-if value="{{isCases}}" hint-placeholder-val="{{ true }}">
+      <div style="margin-top: 32px; display: flex; flex-wrap: wrap; gap: 32px; align-items: flex-start">
+
+        <section aria-label="Fallliste" style="flex: 999 1 520px; min-width: 0">
+          <div style="display: flex; justify-content: space-between; align-items: baseline; gap: 12px; flex-wrap: wrap">
+            <h2 style="margin: 0; font-weight: 500; font-size: 28px; letter-spacing: -0.03em">Schadenfälle</h2>
+            <span style="font-size: 14px; color: #5C5F63">Jeder Fall kommt mit Fotos, Diagnose und Kostenvoranschlag</span>
+          </div>
+          <div style="margin-top: 16px; display: flex; flex-direction: column; border-top: 1px solid #E6E4DE">
+            <sc-for list="{{cases}}" as="c" hint-placeholder-count="5">
+              <button onClick="{{c.pick}}" aria-pressed="{{c.pressed}}" style="{{c.style}}">
+                <span style="width: 64px; height: 64px; border-radius: 10px; overflow: hidden; flex-shrink: 0; background: #D8D6CF; display: block">
+                  <img src="{{c.img}}" alt="" style="width: 100%; height: 100%; object-fit: cover; display: block">
+                </span>
+                <span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px">
+                  <span style="display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap">
+                    <span style="font-size: 16px; font-weight: 600">{{c.device}}</span>
+                    <span style="font-size: 13px; color: #5C5F63">{{c.id}}</span>
+                  </span>
+                  <span style="font-size: 14px; color: #3C3F43">{{c.issue}}</span>
+                  <span style="font-size: 13px; color: #5C5F63">{{c.outcome}}</span>
+                </span>
+                <span style="display: flex; flex-direction: column; align-items: flex-end; gap: 6px; flex-shrink: 0">
+                  <span style="{{c.badgeStyle}}">{{c.status}}</span>
+                  <span style="font-size: 15px; font-weight: 600">{{c.cost}}</span>
+                </span>
+              </button>
+            </sc-for>
+          </div>
+        </section>
+
+        <section aria-label="Falldetails" style="flex: 1 1 420px; min-width: 0; border: 1px solid #D8D6CF; border-radius: 12px; padding: 24px; display: flex; flex-direction: column; gap: 20px">
+          <div>
+            <div style="font-size: 13px; color: #5C5F63">{{sel.id}} · Kundin Lea M. · Vertrag KV-2026-104817</div>
+            <h3 style="margin: 6px 0 0; font-weight: 500; font-size: 26px; line-height: 1.15; letter-spacing: -0.03em">{{sel.device}}: {{sel.issue}}</h3>
+          </div>
+
+          <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px">
+            <sc-for list="{{sel.photos}}" as="ph" hint-placeholder-count="3">
+              <span style="display: block; aspect-ratio: 1 / 1; border-radius: 10px; overflow: hidden; background: #D8D6CF">
+                <img src="{{ph.src}}" alt="{{ph.alt}}" style="width: 100%; height: 100%; object-fit: cover; display: block">
+              </span>
+            </sc-for>
+          </div>
+
+          <div>
+            <div style="font-weight: 600; font-size: 17px">Verlauf</div>
+            <ol style="margin: 10px 0 0; padding: 0; list-style: none; display: flex; flex-direction: column">
+              <sc-for list="{{sel.timeline}}" as="tl" hint-placeholder-count="4">
+                <li style="display: flex; gap: 12px; padding: 8px 0; border-bottom: 1px solid #E6E4DE">
+                  <span style="width: 64px; flex-shrink: 0; font-size: 13px; color: #5C5F63; padding-top: 1px">{{tl.when}}</span>
+                  <span style="font-size: 15px">{{tl.what}}</span>
+                </li>
+              </sc-for>
+            </ol>
+          </div>
+
+          <sc-if value="{{sel.hasCompare}}" hint-placeholder-val="{{ true }}">
+            <div>
+              <div style="font-weight: 600; font-size: 17px">Reparatur statt Ersatz</div>
+              <div style="margin-top: 10px; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px">
+                <div style="background: #F5F4F0; border-radius: 10px; padding: 12px">
+                  <div style="font-size: 13px; color: #5C5F63">Reparatur</div>
+                  <div style="font-size: 22px; font-weight: 600">{{sel.repair}}</div>
+                </div>
+                <div style="background: #F5F4F0; border-radius: 10px; padding: 12px">
+                  <div style="font-size: 13px; color: #5C5F63">Ersatzgerät</div>
+                  <div style="font-size: 22px; font-weight: 600; color: #5C5F63">{{sel.replace}}</div>
+                </div>
+                <div style="background: #16181A; color: #F5F4F0; border-radius: 10px; padding: 12px">
+                  <div style="font-size: 13px; color: #D6D5D0">Ersparnis</div>
+                  <div style="font-size: 22px; font-weight: 600">{{sel.saving}}</div>
+                </div>
+              </div>
+            </div>
+          </sc-if>
+
+          <div>
+            <div style="font-weight: 600; font-size: 17px">Automatische Prüfung</div>
+            <div style="margin-top: 8px; display: flex; flex-direction: column; gap: 6px">
+              <sc-for list="{{checks}}" as="ck" hint-placeholder-count="4">
+                <div style="display: flex; gap: 10px; align-items: flex-start; font-size: 15px">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#16181A" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex-shrink: 0; margin-top: 2px"><path d="M5 12l5 5 9-10"></path></svg>
+                  <span>{{ck.t}}</span>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+
+          <sc-if value="{{sel.needsApproval}}" hint-placeholder-val="{{ true }}">
+            <div style="display: flex; gap: 10px; flex-wrap: wrap">
+              <button onClick="{{approve}}" style="min-height: 50px; padding: 0 24px; border: 1px solid #16181A; border-radius: 8px; background: #16181A; color: #F5F4F0; font-size: 16px; font-weight: 500; cursor: pointer; flex: 1">{{approveLabel}}</button>
+              <button onClick="{{ask}}" style="min-height: 50px; padding: 0 20px; border: 1px solid #BDBBB4; border-radius: 8px; background: #FFFFFF; color: #16181A; font-size: 16px; font-weight: 500; cursor: pointer">Rückfrage</button>
+            </div>
+          </sc-if>
+          <sc-if value="{{sel.showStatusNote}}" hint-placeholder-val="{{ false }}">
+            <div style="background: #F5F4F0; border-radius: 10px; padding: 14px 16px; font-size: 15px">{{sel.statusNote}}</div>
+          </sc-if>
+        </section>
+      </div>
+    </sc-if>
+
+    <!-- ===== AUSWERTUNG ===== -->
+    <sc-if value="{{isStats}}" hint-placeholder-val="{{ false }}">
+      <div style="margin-top: 32px; display: grid; grid-template-columns: repeat(auto-fit, minmax(420px, 1fr)); gap: 32px">
+        <section style="border: 1px solid #E6E4DE; border-radius: 12px; padding: 24px">
+          <h2 style="margin: 0; font-weight: 500; font-size: 24px; letter-spacing: -0.03em">Wie Fälle enden</h2>
+          <div style="margin-top: 4px; font-size: 14px; color: #5C5F63">Anteil der Fälle, letzte 30 Tage</div>
+          <div style="margin-top: 20px; display: flex; flex-direction: column; gap: 14px">
+            <sc-for list="{{outcomes}}" as="o" hint-placeholder-count="5">
+              <div style="display: flex; flex-direction: column; gap: 6px">
+                <div style="display: flex; justify-content: space-between; font-size: 15px"><span>{{o.label}}</span><span style="font-weight: 600">{{o.pct}}</span></div>
+                <div style="height: 10px; background: #E9E7E1; border-radius: 5px; overflow: hidden"><div style="{{o.bar}}"></div></div>
+              </div>
+            </sc-for>
+          </div>
+          <div style="margin-top: 20px; font-size: 14px; color: #5C5F63">Ohne ganz endet ein Großteil dieser Fälle heute mit Ersatzgerät oder Gutschrift.</div>
+        </section>
+
+        <section style="border: 1px solid #E6E4DE; border-radius: 12px; padding: 24px">
+          <h2 style="margin: 0; font-weight: 500; font-size: 24px; letter-spacing: -0.03em">Schadenaufwand je Fall</h2>
+          <div style="margin-top: 4px; font-size: 14px; color: #5C5F63">Durchschnitt, letzte 30 Tage</div>
+          <div style="margin-top: 24px; display: flex; gap: 32px; flex-wrap: wrap; align-items: flex-end">
+            <div>
+              <div style="font-size: 14px; color: #5C5F63">mit ganz</div>
+              <div style="font-size: 56px; font-weight: 500; letter-spacing: -0.045em; line-height: 1">142 €</div>
+            </div>
+            <div>
+              <div style="font-size: 14px; color: #5C5F63">bei Ersatzgerät</div>
+              <div style="font-size: 56px; font-weight: 500; letter-spacing: -0.045em; line-height: 1; color: #8A8C8F">680 €</div>
+            </div>
+          </div>
+          <div style="margin-top: 28px; font-weight: 600; font-size: 17px">Häufigste Fehlerbilder</div>
+          <div style="margin-top: 8px; display: flex; flex-direction: column">
+            <sc-for list="{{topIssues}}" as="ti" hint-placeholder-count="5">
+              <div style="display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #E6E4DE; font-size: 15px">
+                <span>{{ti.label}}</span><span style="color: #5C5F63">{{ti.n}}</span>
+              </div>
+            </sc-for>
+          </div>
+        </section>
+      </div>
+    </sc-if>
+
+    <p style="margin: 40px 0 0; font-size: 13px; color: #5C5F63">Demo. Alle Fälle, Beträge und Kennzahlen sind Beispielwerte. <a href="Start.dc.html">Zur Demo-Übersicht</a> · <a href="Main.dc.html">Zur App</a> · <a href="Hersteller.dc.html">Zum Hersteller-Portal</a></p>
+  </main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"versicherer":{"editor":"text","default":"Kranich Versicherung","section":"Demo"},"$preview":{"width":1440,"height":1560}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const s = this.state || {};
+    const vName = this.props.versicherer || 'Kranich Versicherung';
+    const tab = s.tab || 'cases';
+    const set = (o) => () => this.setState(o);
+    const IMG = {
+      fehler: '/_blob/ce0d408b6d9189b01cddecca3f9e1971',
+      pumpe: '/_blob/63279863ff9eb9c9958cef49ae4cbd7b',
+      self: '/_blob/4390cd4d6468de11ac2697336f7cf2a1',
+      typ: '/_blob/210309d13f7c618ff2f3a1fb3635be81',
+      werk: '/_blob/15d856a885d1bb2979df6bd6a14bb280',
+      abschluss: '/_blob/0ba1a2933b7cf9308d65805e6d7efbd0'
+    };
+    const approved = !!s.approved;
+    const asked = !!s.asked;
+
+    const caseData = [
+      { id: 'GS-24817', device: 'Miele WKB 130', img: IMG.fehler, issue: 'Wasserablauf · Laugenpumpe blockiert', outcome: 'Selbsthilfe versucht · Videocall · Fachbetrieb', status: approved ? 'Freigegeben' : (asked ? 'Rückfrage' : 'Freigabe nötig'), open: !approved, cost: '189 €',
+        compare: true, repair: '189 €', replace: '899 €', saving: '710 €',
+        photos: [{ src: IMG.fehler, alt: 'Display mit Meldung' }, { src: IMG.self, alt: 'Laugenpumpe im Kamerabild' }, { src: IMG.typ, alt: 'Typenschild' }],
+        timeline: [
+          { when: 'Heute 18:02', what: 'Foto vom Display. Erkannt: Miele WKB 130, Meldung „Wasserablauf“, Laugenfilter.' },
+          { when: '18:05', what: 'Anleitung aus der Herstellerdoku: 7 von 7 Schritten erledigt, Problem bleibt.' },
+          { when: '18:21', what: 'Videocall mit Fachkraft von Hausgeräte Brandt, 12 Min.: Pumpenflügel blockiert, Lager defekt.' },
+          { when: '18:34', what: 'Kostenvoranschlag 189 € (Original-Laugenpumpe und Arbeit). Termin Mo vormittags.' }
+        ] },
+      { id: 'GS-24812', device: 'Geschirrspüler · 4 Jahre alt', img: IMG.abschluss, issue: 'Wasser bleibt stehen · Sieb verstopft', outcome: 'Selbst gelöst mit Anleitung', status: 'Erledigt', open: false, cost: '0 €',
+        compare: false, photos: [{ src: IMG.abschluss, alt: 'Geschirrspüler' }, { src: IMG.pumpe, alt: 'Bauteil' }, { src: IMG.typ, alt: 'Typenschild' }],
+        timeline: [ { when: 'Heute 09:14', what: 'Foto vom Sieb. Erkannt: Grobsieb verstopft.' }, { when: '09:16', what: 'Anleitung: 4 von 4 Schritten erledigt. Gerät läuft wieder.' } ] },
+      { id: 'GS-24809', device: 'Trockner · 2 Jahre alt', img: IMG.werk, issue: 'Trocknet nicht · Flusensieb', outcome: 'Selbst gelöst mit Anleitung', status: 'Erledigt', open: false, cost: '0 €',
+        compare: false, photos: [{ src: IMG.werk, alt: 'Gerät' }, { src: IMG.typ, alt: 'Typenschild' }, { src: IMG.self, alt: 'Bauteil' }],
+        timeline: [ { when: 'Gestern', what: 'Symptom gemeldet: trocknet nicht. Flusensieb und Wärmetauscher gereinigt.' }, { when: 'Gestern', what: 'Gerät läuft wieder. Keine Kosten.' } ] },
+      { id: 'GS-24801', device: 'Waschmaschine · 5 Jahre alt', img: IMG.fehler, issue: 'Waterproof · Leck in der Bodenwanne', outcome: 'Fachbetrieb beauftragt', status: 'In Reparatur', open: false, cost: '240 €',
+        compare: true, repair: '240 €', replace: '720 €', saving: '480 €',
+        photos: [{ src: IMG.fehler, alt: 'Display' }, { src: IMG.typ, alt: 'Typenschild' }, { src: IMG.werk, alt: 'Werkstatt' }],
+        timeline: [ { when: 'Mo', what: 'Meldung „Waterproof“. Wasserhahn geschlossen, Folgeschaden vermieden.' }, { when: 'Di', what: 'Fachbetrieb vor Ort: Zulaufschlauch undicht, getauscht.' } ] },
+      { id: 'GS-24795', device: 'Kühlschrank · 6 Jahre alt', img: IMG.pumpe, issue: 'Tür schließt nicht · Dichtung', outcome: 'Ersatzteil versandt, selbst eingebaut', status: 'Erledigt', open: false, cost: '46 €',
+        compare: true, repair: '46 €', replace: '540 €', saving: '494 €',
+        photos: [{ src: IMG.pumpe, alt: 'Bauteil' }, { src: IMG.typ, alt: 'Typenschild' }, { src: IMG.self, alt: 'Kamerabild' }],
+        timeline: [ { when: 'Letzte Woche', what: 'Foto der Dichtung. Erkannt: Riss, passende Original-Dichtung bestimmt.' }, { when: '+2 Tage', what: 'Ersatzteil geliefert, Einbau per Anleitung.' } ] }
+    ];
+    const selIdx = s.sel || 0;
+    const sel0 = caseData[selIdx];
+    const sel = Object.assign({}, sel0, {
+      hasCompare: !!sel0.compare,
+      needsApproval: selIdx === 0 && !approved,
+      showStatusNote: !(selIdx === 0 && !approved),
+      statusNote: selIdx === 0 ? 'Freigegeben. Hausgeräte Brandt ist beauftragt, Abrechnung direkt mit ' + vName + '. Die Kundin wurde in der App informiert.' : 'Abgeschlossen. Status: ' + sel0.status + '.'
+    });
+
+    const badge = (st) => {
+      const strong = st === 'Freigabe nötig' || st === 'Rückfrage';
+      return 'font-size: 12px; font-weight: 600; border-radius: 999px; padding: 3px 10px; ' + (strong ? 'background: #16181A; color: #F5F4F0' : 'background: #F5F4F0; color: #3C3F43');
+    };
+    const cases = caseData.map((c, i) => Object.assign({}, c, {
+      pressed: i === selIdx ? 'true' : 'false',
+      pick: set({ sel: i }),
+      badgeStyle: badge(c.status),
+      style: 'text-align: left; border: 0; border-bottom: 1px solid #E6E4DE; padding: 14px 12px; display: flex; gap: 16px; align-items: center; cursor: pointer; color: #16181A; min-height: 92px; border-radius: 0; ' + (i === selIdx ? 'background: #F5F4F0' : 'background: #FFFFFF')
+    }));
+
+    const tabs = [{ id: 'cases', label: 'Fälle' }, { id: 'stats', label: 'Auswertung' }].map((t) => ({
+      label: t.label,
+      pressed: t.id === tab ? 'true' : 'false',
+      pick: set({ tab: t.id }),
+      style: 'min-height: 40px; padding: 0 14px; border: 0; border-radius: 8px; font-size: 15px; cursor: pointer; ' + (t.id === tab ? 'background: #F5F4F0; color: #16181A; font-weight: 600' : 'background: transparent; color: #3C3F43; font-weight: 500')
+    }));
+
+    const pct = (label, p) => ({ label: label, pct: p + ' %', bar: 'height: 10px; background: #16181A; border-radius: 5px; width: ' + p + '%' });
+
+    return {
+      vName: vName,
+      tabs: tabs,
+      isCases: tab === 'cases', isStats: tab === 'stats',
+      kpis: [
+        { label: 'Offene Fälle', value: approved ? '22' : '23', sub: approved ? '1 Freigabe erledigt' : '1 wartet auf Freigabe' },
+        { label: 'Ohne Kosten gelöst', value: '38 %', sub: 'per Anleitung, Selbsthilfe' },
+        { label: 'Reparatur statt Ersatz', value: '91 %', sub: 'der kostenpflichtigen Fälle' },
+        { label: 'Ø Bearbeitungszeit', value: '1,8 Tage', sub: 'Meldung bis Gerät läuft' }
+      ],
+      cases: cases, sel: sel,
+      checks: [
+        { t: 'Gerät und M.-Nr. passen zum Vertrag (Typenschild-Foto)' },
+        { t: 'Vertrag aktiv, Garantieverlängerung bis 03/2028' },
+        { t: 'Fotos mit Zeitstempel, aufgenommen in der App' },
+        { t: 'Kein Vorschaden an diesem Gerät gemeldet' }
+      ],
+      approve: () => this.setState({ approved: true }),
+      approveLabel: 'Reparatur freigeben · 189 €',
+      ask: () => this.setState({ asked: true }),
+      outcomes: [ pct('Selbst gelöst mit Anleitung', 38), pct('Im Videocall gelöst', 17), pct('Ersatzteil verschickt', 12), pct('Fachbetrieb repariert', 24), pct('Ersatzgerät nötig', 9) ],
+      topIssues: [ { label: 'Waschmaschine · Wasserablauf', n: '31 Fälle' }, { label: 'Geschirrspüler · Sieb verstopft', n: '24 Fälle' }, { label: 'Trockner · Flusensieb', n: '19 Fälle' }, { label: 'Waschmaschine · Wasserzulauf', n: '14 Fälle' }, { label: 'Kühlschrank · Türdichtung', n: '9 Fälle' } ]
+    };
+  }
+}
+</script>
+</body>
+</html>

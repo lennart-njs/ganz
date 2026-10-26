@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<title>ganz – Demo-Start</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#FFFFFF}
+a{color:#16181A}a:hover{color:#3C3F43}
+a:focus-visible{outline:2px solid #16181A;outline-offset:3px}
+</style>
+</helmet>
+<div style="min-height: 100vh; background: #FFFFFF; color: #16181A; font-family: 'Schibsted Grotesk', system-ui, sans-serif; font-size: 16px; line-height: 1.45">
+  <header style="border-bottom: 1px solid #E6E4DE">
+    <div style="max-width: 1280px; margin: 0 auto; padding: 18px 24px; display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap">
+      <div style="font-weight: 600; font-size: 26px; letter-spacing: -0.03em">ganz</div>
+      <div style="font-size: 14px; color: #5C5F63">Demo v1.0 · alle Zahlen sind Beispielwerte</div>
+    </div>
+  </header>
+
+  <main style="max-width: 1280px; margin: 0 auto; padding: 56px 24px 72px">
+    <h1 style="margin: 0; font-weight: 500; font-size: clamp(40px, 5.6vw, 72px); line-height: 1.08; letter-spacing: -0.045em; max-width: 900px">Ein Defekt. Drei Perspektiven.</h1>
+    <p style="margin: 20px 0 0; font-size: 19px; color: #3C3F43; max-width: 720px">Eine Waschmaschine meldet „Wasserablauf“. Klick dich durch, was der Haushalt erlebt, was beim Versicherer ankommt und was der Hersteller daraus lernt.</p>
+
+    <div style="margin-top: 48px; display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 32px">
+      <a href="Main.dc.html" style="text-decoration: none; color: #16181A; display: flex; flex-direction: column; gap: 14px">
+        <span style="display: block; aspect-ratio: 4 / 3; border-radius: 12px; overflow: hidden; background: #D8D6CF">
+          <img src="/_blob/de2450aeb5e74ddecb1398143bdc49f1" alt="Frau an der Waschmaschine im Videocall" style="width: 100%; height: 100%; object-fit: cover; display: block">
+        </span>
+        <span style="font-size: 14px; color: #5C5F63">1 · Haushalt · App</span>
+        <span style="font-weight: 600; font-size: 22px; letter-spacing: -0.02em">Foto machen, Fehler erkennen, reparieren</span>
+        <span style="font-size: 16px; color: #3C3F43">Intelligente Fehlererkennung, Anleitung aus der Herstellerdoku, Videocall mit Fachkraft, Reparatur über den Geräteschutz.</span>
+        <span style="font-weight: 500; text-decoration: underline">App öffnen</span>
+      </a>
+      <a href="Versicherer.dc.html" style="text-decoration: none; color: #16181A; display: flex; flex-direction: column; gap: 14px">
+        <span style="display: block; aspect-ratio: 4 / 3; border-radius: 12px; overflow: hidden; background: #D8D6CF">
+          <img src="/_blob/63279863ff9eb9c9958cef49ae4cbd7b" alt="Ausgebaute Laugenpumpe in der Hand" style="width: 100%; height: 100%; object-fit: cover; display: block">
+        </span>
+        <span style="font-size: 14px; color: #5C5F63">2 · Versicherer · Portal</span>
+        <span style="font-weight: 600; font-size: 22px; letter-spacing: -0.02em">Fall mit Beweisen freigeben</span>
+        <span style="font-size: 16px; color: #3C3F43">Jeder Schaden kommt mit Fotos, Diagnose und Kostenvergleich an. Reparatur statt Ersatzgerät, mit einem Klick freigegeben.</span>
+        <span style="font-weight: 500; text-decoration: underline">Portal öffnen</span>
+      </a>
+      <a href="Hersteller.dc.html" style="text-decoration: none; color: #16181A; display: flex; flex-direction: column; gap: 14px">
+        <span style="display: block; aspect-ratio: 4 / 3; border-radius: 12px; overflow: hidden; background: #D8D6CF">
+          <img src="/_blob/15d856a885d1bb2979df6bd6a14bb280" alt="Techniker repariert eine Waschmaschine in der Werkstatt" style="width: 100%; height: 100%; object-fit: cover; display: block">
+        </span>
+        <span style="font-size: 14px; color: #5C5F63">3 · Hersteller · Portal</span>
+        <span style="font-weight: 600; font-size: 22px; letter-spacing: -0.02em">Aus jedem Defekt lernen</span>
+        <span style="font-size: 16px; color: #3C3F43">Fehlerbilder pro Modell, gelöste Fälle ohne Technikereinsatz, Ersatzteilbedarf und Dokumentation aller Reparaturen.</span>
+        <span style="font-weight: 500; text-decoration: underline">Portal öffnen</span>
+      </a>
+    </div>
+
+    <div style="margin-top: 64px; padding-top: 32px; border-top: 1px solid #E6E4DE; display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 32px">
+      <div>
+        <div style="font-weight: 600; font-size: 20px; letter-spacing: -0.02em">Empfohlener Weg · ca. 5 Minuten</div>
+        <div style="margin-top: 6px; font-size: 16px; color: #5C5F63">Die App zeigt dir unterwegs Tipps, wo du als Nächstes tippst.</div>
+      </div>
+      <ol style="margin: 0; padding-left: 20px; font-size: 16px; color: #3C3F43; display: flex; flex-direction: column; gap: 8px">
+        <li>In der App auf „Was ist kaputt?“ tippen und ein Foto machen. Oder gleich <a href="https://claude.ai/artifact/Sp1N5jR5KKLECPFo8Xwj5F">live mit ganz chatten</a>.</li>
+        <li>Die Anleitung durchgehen und am Ende „Nein“ wählen.</li>
+        <li>Videocall mit der Fachkraft, dann Reparatur buchen.</li>
+        <li>Im Versicherer-Portal den Fall freigeben, im Hersteller-Portal die Fehlerbilder ansehen.</li>
+      </ol>
+    </div>
+
+    <p style="margin: 48px 0 0; font-size: 14px; color: #5C5F63">Gerät und Anleitungsinhalte: Miele WKB 130, Gebrauchsanweisung M.-Nr. 10 162 440. Für jeden Termin lässt sich das Gerät des jeweiligen Herstellers einsetzen. Partner, Preise und Kennzahlen sind Beispielwerte.</p>
+  </main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

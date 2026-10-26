@@ -1,0 +1,219 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<title>ganz für Hersteller</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#FFFFFF}
+a{color:#16181A}a:hover{color:#3C3F43}
+button{font-family:inherit}
+button:focus-visible,a:focus-visible{outline:2px solid #16181A;outline-offset:2px}
+</style>
+</helmet>
+<div style="min-height: 100vh; background: #FFFFFF; color: #16181A; font-family: 'Schibsted Grotesk', system-ui, sans-serif; font-size: 16px; line-height: 1.45">
+
+  <header style="border-bottom: 1px solid #E6E4DE">
+    <div style="max-width: 1360px; margin: 0 auto; padding: 14px 24px; display: flex; align-items: center; gap: 24px; flex-wrap: wrap">
+      <a href="Start.dc.html" style="text-decoration: none; display: flex; align-items: baseline; gap: 8px">
+        <span style="font-weight: 600; font-size: 24px; letter-spacing: -0.03em">ganz</span>
+        <span style="font-size: 14px; color: #5C5F63">für Hersteller</span>
+      </a>
+      <nav aria-label="Bereiche" style="display: flex; gap: 4px; flex: 1; flex-wrap: wrap">
+        <sc-for list="{{tabs}}" as="t" hint-placeholder-count="3">
+          <button onClick="{{t.pick}}" aria-pressed="{{t.pressed}}" style="{{t.style}}">{{t.label}}</button>
+        </sc-for>
+      </nav>
+      <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap">
+        <span style="font-size: 13px; border: 1px solid #D8D6CF; border-radius: 999px; padding: 4px 10px; color: #3C3F43">Beispielwerte</span>
+        <span style="font-size: 14px; color: #3C3F43">Ansicht für: <strong style="font-weight: 600; color: #16181A">{{hName}}</strong></span>
+      </div>
+    </div>
+  </header>
+
+  <main style="max-width: 1360px; margin: 0 auto; padding: 32px 24px 64px">
+    <div style="display: flex; justify-content: space-between; align-items: flex-end; gap: 16px; flex-wrap: wrap">
+      <div>
+        <div style="font-size: 14px; color: #5C5F63">Modell · letzte 30 Tage</div>
+        <h1 style="margin: 4px 0 0; font-weight: 500; font-size: 40px; line-height: 1.08; letter-spacing: -0.045em">WKB 130 · Waschmaschine</h1>
+      </div>
+      <div style="font-size: 14px; color: #5C5F63">Quelle: Fälle in der ganz-App, Händler- und Versicherungskanäle</div>
+    </div>
+
+    <div style="margin-top: 24px; display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px">
+      <sc-for list="{{kpis}}" as="k" hint-placeholder-count="4">
+        <div style="border: 1px solid #E6E4DE; border-radius: 12px; padding: 20px; display: flex; flex-direction: column; gap: 4px">
+          <span style="font-size: 14px; color: #5C5F63">{{k.label}}</span>
+          <span style="font-size: 34px; font-weight: 500; letter-spacing: -0.03em; line-height: 1.1">{{k.value}}</span>
+          <span style="font-size: 13px; color: #5C5F63">{{k.sub}}</span>
+        </div>
+      </sc-for>
+    </div>
+
+    <!-- ===== FEHLERBILDER ===== -->
+    <sc-if value="{{isIssues}}" hint-placeholder-val="{{ true }}">
+      <div style="margin-top: 32px; display: flex; flex-wrap: wrap; gap: 32px; align-items: flex-start">
+        <section style="flex: 999 1 520px; min-width: 0; border: 1px solid #E6E4DE; border-radius: 12px; padding: 24px">
+          <h2 style="margin: 0; font-weight: 500; font-size: 24px; letter-spacing: -0.03em">Fehlerbilder</h2>
+          <div style="margin-top: 4px; font-size: 14px; color: #5C5F63">Anteil der Fälle, erkannt per Foto, Displaymeldung oder Symptom</div>
+          <div style="margin-top: 20px; display: flex; flex-direction: column; gap: 14px">
+            <sc-for list="{{issues}}" as="o" hint-placeholder-count="8">
+              <div style="display: flex; flex-direction: column; gap: 6px">
+                <div style="display: flex; justify-content: space-between; gap: 12px; font-size: 15px"><span>{{o.label}}</span><span style="font-weight: 600">{{o.pct}}</span></div>
+                <div style="height: 10px; background: #E9E7E1; border-radius: 5px; overflow: hidden"><div style="{{o.bar}}"></div></div>
+              </div>
+            </sc-for>
+          </div>
+        </section>
+        <section style="flex: 1 1 380px; min-width: 0; display: flex; flex-direction: column; gap: 16px">
+          <h2 style="margin: 0; font-weight: 500; font-size: 24px; letter-spacing: -0.03em">Auffällig</h2>
+          <sc-for list="{{insights}}" as="ins" hint-placeholder-count="3">
+            <div style="border: 1px solid #D8D6CF; border-radius: 12px; padding: 20px; display: flex; flex-direction: column; gap: 6px">
+              <span style="font-size: 13px; color: #5C5F63">{{ins.tag}}</span>
+              <span style="font-size: 17px; font-weight: 600">{{ins.title}}</span>
+              <span style="font-size: 15px; color: #3C3F43">{{ins.text}}</span>
+            </div>
+          </sc-for>
+        </section>
+      </div>
+    </sc-if>
+
+    <!-- ===== ANLEITUNGEN ===== -->
+    <sc-if value="{{isGuides}}" hint-placeholder-val="{{ false }}">
+      <section style="margin-top: 32px">
+        <h2 style="margin: 0; font-weight: 500; font-size: 24px; letter-spacing: -0.03em">Wie gut Ihre Anleitungen funktionieren</h2>
+        <div style="margin-top: 4px; font-size: 15px; color: #5C5F63; max-width: 760px">ganz übersetzt die Gebrauchsanweisung in geführte Schritte und misst, wo Kundinnen und Kunden abbrechen. Jeder Abbruch ist ein Hinweis für Doku, Service oder Konstruktion.</div>
+        <div style="margin-top: 20px; overflow-x: auto; border: 1px solid #E6E4DE; border-radius: 12px">
+          <div role="table" aria-label="Anleitungen" style="min-width: 760px; font-size: 15px">
+            <div role="row" style="display: grid; grid-template-columns: 1.3fr 0.7fr 0.8fr 1.6fr 1.6fr; color: #5C5F63; font-size: 13px; border-bottom: 1px solid #E6E4DE">
+              <span role="columnheader" style="padding: 14px 16px">Anleitung</span>
+              <span role="columnheader" style="padding: 14px 16px">Gestartet</span>
+              <span role="columnheader" style="padding: 14px 16px">Selbst gelöst</span>
+              <span role="columnheader" style="padding: 14px 16px">Häufigster Abbruch</span>
+              <span role="columnheader" style="padding: 14px 16px">Vorschlag</span>
+            </div>
+            <sc-for list="{{guides}}" as="gd" hint-placeholder-count="5">
+              <div role="row" style="display: grid; grid-template-columns: 1.3fr 0.7fr 0.8fr 1.6fr 1.6fr; border-bottom: 1px solid #E6E4DE">
+                <span role="cell" style="padding: 14px 16px; font-weight: 600">{{gd.name}}</span>
+                <span role="cell" style="padding: 14px 16px">{{gd.started}}</span>
+                <span role="cell" style="padding: 14px 16px">{{gd.solved}}</span>
+                <span role="cell" style="padding: 14px 16px">{{gd.drop}}</span>
+                <span role="cell" style="padding: 14px 16px; color: #3C3F43">{{gd.idea}}</span>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+      </section>
+    </sc-if>
+
+    <!-- ===== ERSATZTEILE & NACHWEISE ===== -->
+    <sc-if value="{{isParts}}" hint-placeholder-val="{{ false }}">
+      <div style="margin-top: 32px; display: grid; grid-template-columns: repeat(auto-fit, minmax(420px, 1fr)); gap: 32px">
+        <section style="border: 1px solid #E6E4DE; border-radius: 12px; padding: 24px">
+          <h2 style="margin: 0; font-weight: 500; font-size: 24px; letter-spacing: -0.03em">Ersatzteilbedarf</h2>
+          <div style="margin-top: 4px; font-size: 14px; color: #5C5F63">Prognose nächste 90 Tage aus erkannten Fehlerbildern</div>
+          <div style="margin-top: 16px; display: flex; flex-direction: column">
+            <sc-for list="{{parts}}" as="pt" hint-placeholder-count="4">
+              <div style="display: flex; justify-content: space-between; gap: 16px; padding: 14px 0; border-bottom: 1px solid #E6E4DE">
+                <span style="display: flex; flex-direction: column">
+                  <span style="font-size: 16px; font-weight: 600">{{pt.name}}</span>
+                  <span style="font-size: 13px; color: #5C5F63">{{pt.nr}}</span>
+                </span>
+                <span style="display: flex; flex-direction: column; align-items: flex-end">
+                  <span style="font-size: 16px; font-weight: 600">{{pt.qty}}</span>
+                  <span style="font-size: 13px; color: #5C5F63">{{pt.via}}</span>
+                </span>
+              </div>
+            </sc-for>
+          </div>
+        </section>
+        <section style="border: 1px solid #E6E4DE; border-radius: 12px; padding: 24px; display: flex; flex-direction: column">
+          <h2 style="margin: 0; font-weight: 500; font-size: 24px; letter-spacing: -0.03em">Reparaturnachweise</h2>
+          <div style="margin-top: 4px; font-size: 14px; color: #5C5F63">Jede Reparatur dokumentiert: Gerät, Fehlerbild, Teil, Betrieb, Ergebnis</div>
+          <div style="margin-top: 16px; display: flex; flex-direction: column">
+            <sc-for list="{{records}}" as="r" hint-placeholder-count="4">
+              <div style="display: flex; justify-content: space-between; gap: 16px; padding: 12px 0; border-bottom: 1px solid #E6E4DE; font-size: 15px">
+                <span style="display: flex; flex-direction: column">
+                  <span style="font-weight: 600">{{r.what}}</span>
+                  <span style="font-size: 13px; color: #5C5F63">{{r.meta}}</span>
+                </span>
+                <span style="color: #3C3F43; text-align: right">{{r.result}}</span>
+              </div>
+            </sc-for>
+          </div>
+          <div style="margin-top: 16px; font-size: 14px; color: #3C3F43">Grundlage, um Reparaturpflichten, Ersatzteilverfügbarkeit und genutzte Reparaturinformationen gegenüber Handel und Behörden zu belegen.</div>
+          <button onClick="{{exportIt}}" style="margin-top: 16px; align-self: flex-start; min-height: 50px; padding: 0 20px; border: 1px solid #16181A; border-radius: 8px; background: #FFFFFF; color: #16181A; font-size: 16px; font-weight: 500; cursor: pointer">{{exportLabel}}</button>
+        </section>
+      </div>
+    </sc-if>
+
+    <p style="margin: 40px 0 0; font-size: 13px; color: #5C5F63">Demo. Alle Kennzahlen sind Beispielwerte. Anleitungsinhalte aus der Gebrauchsanweisung WKB 130, M.-Nr. 10 162 440. <a href="Start.dc.html">Zur Demo-Übersicht</a> · <a href="Main.dc.html">Zur App</a> · <a href="Versicherer.dc.html">Zum Versicherer-Portal</a></p>
+  </main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"hersteller":{"editor":"text","default":"Miele","section":"Demo"},"$preview":{"width":1440,"height":1560}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const s = this.state || {};
+    const hName = this.props.hersteller || 'Miele';
+    const tab = s.tab || 'issues';
+    const set = (o) => () => this.setState(o);
+    const pct = (label, p) => ({ label: label, pct: p + ' %', bar: 'height: 10px; background: #16181A; border-radius: 5px; width: ' + p + '%' });
+    const tabs = [{ id: 'issues', label: 'Fehlerbilder' }, { id: 'guides', label: 'Anleitungen' }, { id: 'parts', label: 'Ersatzteile & Nachweise' }].map((t) => ({
+      label: t.label,
+      pressed: t.id === tab ? 'true' : 'false',
+      pick: set({ tab: t.id }),
+      style: 'min-height: 40px; padding: 0 14px; border: 0; border-radius: 8px; font-size: 15px; cursor: pointer; ' + (t.id === tab ? 'background: #F5F4F0; color: #16181A; font-weight: 600' : 'background: transparent; color: #3C3F43; font-weight: 500')
+    }));
+    return {
+      hName: hName,
+      tabs: tabs,
+      isIssues: tab === 'issues', isGuides: tab === 'guides', isParts: tab === 'parts',
+      kpis: [
+        { label: 'Fälle', value: '1.240', sub: 'Modell WKB 130' },
+        { label: 'Ohne Technikereinsatz gelöst', value: '46 %', sub: 'Anleitung oder Videocall' },
+        { label: 'Kundendienst-Anrufe vermieden', value: '570', sub: 'Fälle vor dem Anruf gelöst' },
+        { label: 'Ersatzteile über ganz', value: '210', sub: 'Original-Teile, direkt zugeordnet' }
+      ],
+      issues: [
+        pct('Wasserablauf', 31), pct('Wasserzulauf', 18), pct('Tür, Verriegelung', 12), pct('Dosierung, Schaum', 9),
+        pct('Unruhiger Lauf', 8), pct('Waterproof', 4), pct('Fehler F', 3), pct('Sonstiges', 15)
+      ],
+      insights: [
+        { tag: 'Wasserablauf · 31 %', title: 'Laugenpumpe ab dem 3. Betriebsjahr', text: 'Die meisten Fälle mit blockiertem Pumpenflügel treten zwischen Jahr 2,5 und 3,5 auf. Häufigste Ursache: Fremdkörper wie Münzen und Knöpfe.' },
+        { tag: 'Anleitung', title: 'Schritt „Pumpe freimachen“ bricht oft ab', text: 'Jeder fünfte bricht hier ab. Ein Foto der Pumpenkammer in der Anleitung würde helfen.' },
+        { tag: 'Waterproof · 4 %', title: 'Leck früh erkannt, Folgeschaden vermieden', text: 'In fast allen Fällen wurde der Wasserhahn innerhalb von Minuten geschlossen. Relevant für Gespräche mit Versicherern.' }
+      ],
+      guides: [
+        { name: 'Wasserablauf', started: '384', solved: '61 %', drop: 'Pumpe freimachen (22 %)', idea: 'Foto der Pumpenkammer ergänzen' },
+        { name: 'Wasserzulauf', started: '223', solved: '74 %', drop: 'Sieb im Einlaufstutzen (15 %)', idea: 'Hinweis auf Zange früher zeigen' },
+        { name: 'Tür geht nicht auf', started: '149', solved: '68 %', drop: 'Notentriegelung (18 %)', idea: 'Kurzvideo zur Notentriegelung' },
+        { name: 'Maschine wackelt', started: '99', solved: '82 %', drop: 'Füße kontern (9 %)', idea: 'Werkzeugliste an den Anfang' },
+        { name: 'Reste im Einspülkasten', started: '87', solved: '88 %', drop: 'Saugheber reinigen (6 %)', idea: 'keine' }
+      ],
+      parts: [
+        { name: 'Laugenpumpe', nr: 'Original-Ersatzteil', qty: '≈ 140', via: '60 % über Betriebe' },
+        { name: 'Türschloss', nr: 'Original-Ersatzteil', qty: '≈ 60', via: 'nur Fachbetrieb' },
+        { name: 'Zulaufschlauch', nr: 'Original-Ersatzteil', qty: '≈ 45', via: '70 % Selbsteinbau' },
+        { name: 'Laugenfilter', nr: 'Original-Ersatzteil', qty: '≈ 30', via: '90 % Selbsteinbau' }
+      ],
+      records: [
+        { what: 'Laugenpumpe getauscht', meta: 'GS-24817 · Hausgeräte Brandt · Original-Teil', result: 'läuft wieder' },
+        { what: 'Laugenfilter gereinigt', meta: 'Selbsthilfe per Anleitung', result: 'läuft wieder' },
+        { what: 'Zulaufschlauch getauscht', meta: 'GS-24801 · Hausgeräte Brandt · Original-Teil', result: 'läuft wieder' },
+        { what: 'Türschloss getauscht', meta: 'Hausgeräte Brandt · Original-Teil', result: 'läuft wieder' }
+      ],
+      exportIt: () => this.setState({ exported: true }),
+      exportLabel: s.exported ? 'Export erstellt (Demo)' : 'Nachweise exportieren'
+    };
+  }
+}
+</script>
+</body>
+</html>

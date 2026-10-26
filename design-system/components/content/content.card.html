@@ -1,0 +1,24 @@
+<!-- @dsCard group="Components" viewport="700x460" name="Content" -->
+<!doctype html><html><head><meta charset="utf-8"><link rel="stylesheet" href="../../styles.css">
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js"></script>
+<script src="../../_ds_bundle.js" onerror="this.remove()"></script>
+<script src="../../ganz-loader.js"></script>
+</head><body style="margin:0;padding:24px;background:var(--bg-page);font-family:var(--font-sans);color:var(--text-strong)"><div id="r"></div>
+<script type="text/babel">
+ganzReady.then((NS) => {
+const { Card, CardTitle, CardText, FactList, Timeline, NavRow } = NS;
+function D() {
+  return <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+    <Card media="../../assets/web/b-flusensieb.jpg" padding="18px 20px 20px"><CardTitle size={18}>Diagnose</CardTitle><CardText>Beschreib das Problem, nenn den Fehlercode, mach ein Foto.</CardText></Card>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+      <Card padding={16}><FactList dense items={[['Gerät','Waschmaschine'],['Fehlerbild','Pumpt nicht ab'],['Teil','Laugenpumpe']]} /></Card>
+      <Card padding={16}><Timeline items={[{ when: 'Mo, 13.10. · 19:42', what: 'Meldung eingegangen' },{ when: 'Mo, 13.10. · 20:12', what: 'Videoberatung: Laugenpumpe defekt' },{ when: 'Do, 16.10. 10–12 Uhr', what: 'Fachbetrieb kommt', pending: true }]} /></Card>
+      <NavRow title="Fachkraft per Video" sub="Jemand schaut per Kamera mit" />
+    </div>
+  </div>;
+}
+ReactDOM.createRoot(document.getElementById('r')).render(<D />);
+});
+</script></body></html>

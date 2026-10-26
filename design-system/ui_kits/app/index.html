@@ -1,0 +1,26 @@
+<!-- @dsCard group="App" viewport="1280x900" name="App · Zu Hause" subtitle="Meldung, Rückfragen, Diagnose, Anleitung, Fallakte" -->
+<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>ganz · App</title>
+<link rel="stylesheet" href="../../styles.css">
+<style>html,body{margin:0;background:var(--bg-page);font-family:var(--font-sans);color:var(--text-strong);-webkit-font-smoothing:antialiased;}a{color:var(--text-strong);}a:hover{color:var(--text-body);}</style>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js"></script>
+<script src="../../_ds_bundle.js" onerror="this.remove()"></script>
+<script src="../../ganz-loader.js"></script>
+</head><body><div id="root"></div>
+<script type="text/babel" src="Phone.jsx"></script>
+<script type="text/babel" src="Screens.jsx"></script>
+<script type="text/babel">
+const ORDER = [['welcome','Willkommen'],['report','Meldung'],['chat','Rückfragen'],['diagnosis','Diagnose'],['guide','Anleitung'],['status','Fallakte']];
+function App() {
+  const [s, setS] = React.useState(localStorage.getItem('ganz-ds-app') || 'welcome');
+  const go = (x) => { setS(x); localStorage.setItem('ganz-ds-app', x); };
+  const C = { welcome: Welcome, report: Report, chat: Chat, diagnosis: Diagnosis, guide: Guide, status: Status }[s] || Welcome;
+  const { ChoiceChip } = window.GANZ;
+  return <div style={{ minHeight: '100vh', background: 'var(--bg-canvas)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 20, padding: '28px 16px' }}>
+    <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', justifyContent: 'center' }}>{ORDER.map(([k, l]) => <ChoiceChip key={k} selected={k === s} onClick={() => go(k)}>{l}</ChoiceChip>)}</div>
+    <Phone><C go={go} /></Phone>
+  </div>;
+}
+ganzReady.then(() => ReactDOM.createRoot(document.getElementById('root')).render(<App />));
+</script></body></html>

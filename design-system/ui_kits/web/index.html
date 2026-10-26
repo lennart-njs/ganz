@@ -1,0 +1,41 @@
+<!-- @dsCard group="Website" viewport="1280x820" name="Landingpage" subtitle="Audience switcher, photo hero, three ways, safety, signup" -->
+<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>ganz · Landingpage</title>
+<link rel="stylesheet" href="../../styles.css">
+<style>html,body{margin:0;background:var(--bg-page);font-family:var(--font-sans);color:var(--text-strong);-webkit-font-smoothing:antialiased;}a{color:var(--text-strong);}a:hover{color:var(--text-body);}</style>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js"></script>
+<script src="../../_ds_bundle.js" onerror="this.remove()"></script>
+<script src="../../ganz-loader.js"></script>
+</head><body><div id="root"></div>
+<script type="text/babel" src="Header.jsx"></script>
+<script type="text/babel" src="Hero.jsx"></script>
+<script type="text/babel" src="Sections.jsx"></script>
+<script type="text/babel">
+let AUD;
+const mkAud = () => { const { Card, FactList, Button } = window.GANZ; return {
+  'Zu Hause': { img: '../../assets/web/b-kueche.jpg', title: 'Reparatur, die mit einem Foto beginnt.', lead: 'ganz erkennt, was deinem Haushaltsgerät fehlt, führt dich durch einfache Reparaturen und holt einen Fachbetrieb, wenn es nicht selbst geht.', primary: 'Gerät melden', secondary: 'So funktioniert’s', cta: 'Gerät melden', links: ['So funktioniert’s', 'Sicherheit', 'Testphase'],
+    panel: <Card padding={22} style={{ flex: '0 1 380px', fontSize: 15 }}><div style={{ fontWeight: 600, fontSize: 16 }}>Deine Meldung</div><p style={{ margin: '6px 0 0', color: 'var(--text-body)' }}>„Spülmaschine pumpt nicht ab, unten steht Wasser.“</p><div style={{ marginTop: 16, paddingTop: 16, borderTop: '1px solid var(--border-subtle)' }}><div style={{ fontSize: 14, color: 'var(--text-muted)' }}>Wahrscheinlich</div><div style={{ fontWeight: 600, fontSize: 17, marginTop: 2 }}>Sieb und Pumpendeckel verstopft</div></div><Button fullWidth style={{ marginTop: 16 }}>Anleitung starten</Button></Card> },
+  'Hersteller & Handel': { img: '../../assets/web/b-lager.jpg', title: 'Sie bleiben verantwortlich. Den Ablauf übernehmen wir.', lead: 'Seit dem 31. Juli 2026. ganz nimmt Reparaturverlangen für Sie entgegen, löst jeden Fall und dokumentiert Preis und Frist.', primary: 'Pilot anfragen', secondary: 'Pflichten im Überblick', cta: 'Pilot anfragen', links: ['Warum jetzt', 'Pflichten', 'Pilot'],
+    panel: <Card padding={24} style={{ flex: '0 1 440px' }}><div style={{ fontWeight: 600, fontSize: 17, marginBottom: 14 }}>Fallakte · Waschmaschine</div><FactList ruled dense labelWidth={120} items={[['Verlangen','03.08.2026'],['Diagnose','Laugenpumpe blockiert'],['Weg','Fachbetrieb vor Ort'],['Preis','[PREIS]'],['Frist','Termin am 06.08.2026']]} /></Card> },
+  'Fachbetriebe': { img: '../../assets/web/b-werkstatt.jpg', title: 'Aufträge, bei denen die Diagnose schon steht.', lead: 'Gerät, Modellnummer, Fehlerbild, Fotos und das wahrscheinlich nötige Teil kennen Sie, bevor Sie losfahren.', primary: 'Als Betrieb eintragen', secondary: 'So läuft ein Auftrag', cta: 'Als Betrieb eintragen', links: ['Ablauf', 'Vorteile', 'Eintragen'],
+    panel: <Card padding={24} style={{ flex: '0 1 400px' }}><div style={{ color: 'var(--text-muted)', fontSize: 14 }}>Neuer Auftrag · 3 km entfernt</div><div style={{ fontWeight: 600, fontSize: 22, margin: '4px 0 14px' }}>Laugenpumpe tauschen</div><FactList ruled dense items={[['Gerät','Waschmaschine'],['Teil','Laugenpumpe · bestellt'],['Termin','Do, 10–12 Uhr']]} /><Button fullWidth style={{ marginTop: 16 }}>Auftrag annehmen</Button></Card> },
+}; };
+function App() {
+  AUD = AUD || mkAud();
+  const [aud, setAud] = React.useState('Zu Hause');
+  const [fade, setFade] = React.useState(1);
+  const a = AUD[aud];
+  const switchTo = (v) => { if (v === aud) return; setFade(0); setTimeout(() => { setAud(v); setFade(1); }, 200); };
+  return <div>
+    <Header audience={aud} setAudience={switchTo} links={a.links} cta={a.cta} />
+    <main style={{ opacity: fade, transition: 'opacity 200ms ease' }}>
+      <Hero {...a} />
+      <Ways /><Safety />
+      <Signup title="Noch in der Testphase." placeholder="E-Mail" cta="Eintragen" />
+    </main>
+    <Footer />
+  </div>;
+}
+ganzReady.then(() => ReactDOM.createRoot(document.getElementById('root')).render(<App />));
+</script></body></html>
