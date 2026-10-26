@@ -356,6 +356,93 @@ export const de = {
     displayIcon: 'Display',
   },
 
+  analysis: {
+    title: 'Intelligente Fehlererkennung',
+    lines: {
+      display: [
+        'Gerät erkennen',
+        'Meldung im Display lesen',
+        'Bauteile prüfen',
+        'Mit der Herstelleranleitung abgleichen',
+      ],
+      typenschild: [
+        'Typenschild finden',
+        'Modell und Baujahr lesen',
+        'Mit den Gerätedaten abgleichen',
+      ],
+      bauteil: [
+        'Gerät erkennen',
+        'Bauteil erkennen',
+        'Sichtbare Schäden prüfen',
+        'Mit der Herstelleranleitung abgleichen',
+      ],
+    },
+    lineDone: (line: string) => `${line}: erledigt`,
+    blurryTitle: 'Das Foto ist unscharf.',
+    blurryText: 'Halte das Telefon ruhig und sorg für gutes Licht. Dann mach bitte ein neues Foto.',
+    newPhoto: 'Neues Foto',
+    photo: 'Dein Foto',
+  },
+
+  question: {
+    title: 'Eine Frage noch',
+    text: 'Das Foto passt zu zwei Ursachen. Deine Antwort hilft uns, die richtige Anleitung zu finden.',
+    wasser: 'Was passiert, wenn das Programm abbricht?',
+    answers: {
+      ablauf: 'Wasser bleibt in der Trommel',
+      zulauf: 'Es kommt kein Wasser in die Maschine',
+      unklar: 'Weiß ich nicht',
+    },
+    next: 'Weiter',
+  },
+
+  result: {
+    from: {
+      display: 'Aus deinem Foto vom Display und den Gerätedaten',
+      bauteil: 'Aus deinem Foto vom Bauteil und den Gerätedaten',
+      typenschild: 'Aus deinem Foto vom Typenschild',
+      meldung: 'Aus der Meldung im Display',
+      symptom: 'Aus deiner Beschreibung',
+    },
+    headline: {
+      wasserablauf: 'Wahrscheinlich ist der Laugenfilter verstopft.',
+      laugenpumpe_blockiert: 'Wahrscheinlich blockiert etwas die Laugenpumpe.',
+      wasserzulauf: 'Wahrscheinlich kommt zu wenig Wasser an.',
+    },
+    selfHelp: 'Das lässt sich meist selbst lösen. Wir führen dich Schritt für Schritt durch.',
+    component: {
+      wasserablauf: 'Laugenfilter / Laugenpumpe',
+      laugenpumpe_blockiert: 'Laugenpumpe',
+      wasserzulauf: 'Zulaufschlauch und Siebe',
+    },
+    noDamage: 'keine',
+    facts: {
+      device: 'Gerät',
+      message: 'Meldung',
+      component: 'Betroffenes Bauteil',
+      damage: 'Sichtbare Schäden',
+      confidence: 'Sicherheit',
+    },
+    quoted: (text: string) => `„${text}“`,
+    beforeTitle: 'Bevor du anfängst',
+    tools: (list: string) => `Du brauchst: ${list}.`,
+    noTools: 'Du brauchst kein Werkzeug.',
+    stepsCount: (n: number) => (n === 1 ? '1 Schritt' : `${n} Schritte`),
+    source: (manufacturer: string) => `aus der Anleitung von ${manufacturer}`,
+    costNote: (insurer: string, deductible: string) =>
+      `Brauchst du Hilfe, prüft ${insurer} die Kosten. Deine Selbstbeteiligung laut Vertrag: ${deductible}.`,
+    costNoteNoContract: 'Brauchst du Hilfe, siehst du den Preis vorher.',
+    startGuide: 'Anleitung starten',
+    doesNotFit: 'Passt nicht',
+    helpInstead: 'Lieber gleich Hilfe holen',
+    deviceTitle: 'Gerät erkannt',
+    deviceText:
+      'Das Typenschild sagt uns, welches Gerät es ist. Für die Fehlersuche brauchen wir ein Foto vom Display oder vom Bauteil.',
+    photoDisplay: 'Display fotografieren',
+    describe: 'Problem beschreiben',
+    missing: 'Noch kein Ergebnis.',
+  },
+
   /** Navigation und Platzhalter bis zum jeweiligen Schritt aus BUILD_PLAN Abschnitt 5 */
   nav: {
     placeholder: (step: number) =>

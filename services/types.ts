@@ -1,5 +1,5 @@
 // Schnittstellen zum späteren Backend. Die App spricht nur mit diesen Interfaces.
-import type { Contract, DeviceCategory } from '@/model/types';
+import type { Confidence, Contract, DeviceCategory } from '@/model/types';
 
 export type LinkVia = Contract['linkedVia'];
 
@@ -24,4 +24,31 @@ export type TypePlateResult =
 
 export interface TypePlateService {
   read(scenario: 'erkannt' | 'nicht_erkannt'): Promise<TypePlateResult>;
+}
+
+export type PhotoMode = 'display' | 'typenschild' | 'bauteil';
+export type ErrorPattern = 'wasserablauf' | 'laugenpumpe_blockiert' | 'wasserzulauf';
+export type DiagnosisScenario = 'standard' | 'unsicher' | 'unscharf';
+export type QuestionAnswer = 'ablauf' | 'zulauf' | 'unklar';
+
+export interface DiagnosisFinding {
+  kind: 'ergebnis';
+  errorPattern: ErrorPattern;
+  displayMessage?: string;
+  confidence: Confidence;
+  /** Nur intern und für Dashboards, nie in der App */
+  confidenceScore: number;
+  guideId: string;
+}
+
+export type DiagnosisResult =
+  | DiagnosisFinding
+  | { kind: 'rueckfrage'; question: 'wasser' }
+  | { kind: 'geraet' }
+  | { kind: 'fehler'; reason: 'unscharf' };
+
+export interface DiagnosisService {
+  analyze(input: { mode: PhotoMode; scenario: DiagnosisScenario }): Promise<DiagnosisResult>;
+  /** Antwort auf die Rückfrage. null: unklar, Hilfe holen. */
+  answer(answer: QuestionAnswer): DiagnosisFinding | null;
 }

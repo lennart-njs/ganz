@@ -75,6 +75,8 @@ describe('Tabs', () => {
 describe('Jeder Screen hat einen Ausweg', () => {
   test.each(caseScreens)('Fall-Screen %s: Zurück und Schließen', async (name) => {
     finishOnboarding();
+    const s = useAppStore.getState();
+    s.createCase({ deviceId: s.devices[0]!.id, entry: 'foto', problemLabel: 'Wasserablauf' });
     await renderRouter(APP, { initialUrl: `/fall/GS-24817/${name}` });
     expect(screen.getByRole('button', { name: de.a11y.back })).toBeTruthy();
     expect(screen.getByRole('button', { name: de.a11y.close })).toBeTruthy();
@@ -130,8 +132,10 @@ describe('Zurück', () => {
       screen.getByRole('button', { name: new RegExp(`^${de.home.searchTitle}`) }),
     );
     await fireEvent.press(screen.getByRole('button', { name: new RegExp(`^${de.problem.photo}`) }));
-    await fireEvent.press(screen.getByRole('button', { name: de.nav.shutter }));
-    expect(r.getPathname()).toBe('/fall/GS-24817/analyse');
+    await fireEvent.press(screen.getByRole('button', { name: de.camera.shutter }));
+    for (let i = 0; i < 10; i++) await act(async () => {});
+    // Die Analyse ersetzt sich selbst durch das Ergebnis.
+    expect(r.getPathname()).toBe('/fall/GS-24817/ergebnis');
     return r;
   }
 

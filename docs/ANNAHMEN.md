@@ -68,3 +68,14 @@ Annahmen, die ich beim Bauen getroffen habe. Jede lässt sich ändern.
 - **Symptom** startet direkt die Anleitung (2 Taps). „Bevor du anfängst“ steht in Schritt 1 (Schritt 8).
 - **„Etwas anderes“** ist ein Sheet mit Freitext. Der Text geht als Antwort auf „Was ist passiert?“ in die Fallakte, dann folgt „Hilfe holen“. Ein Foto lässt sich hier noch nicht anhängen, die Fachkraft sieht das Gerät im Videocall.
 - **Kein Link nach außen:** Ein Test prüft, dass `app/`, `components/`, `i18n/` und `config/` keine Web-Adresse und keinen Chat enthalten.
+
+## Schritt 7: Kamera, Fehlererkennung, Rückfrage, Ergebnis
+
+- **Regel-Mock** in `services/mock/diagnosisService.ts`: Display → Wasserablauf, Sicherheit hoch. Bauteil → Laugenpumpe blockiert, mittel. Typenschild → Gerät erkannt, keine Diagnose. Szenario „unsicher“ → Rückfrage, „unscharf“ → Fehler. Beide Störungs-Ergebnisse führen zur Anleitung „Wasserablauf“, die Rückfrage kann auch „Wasserzulauf“ ergeben.
+- **Rückfrage:** „Was passiert, wenn das Programm abbricht?“ mit drei Antworten. „Weiß ich nicht“ führt zu „Hilfe holen“. Die Sicherheit nach einer Rückfrage ist „mittel“.
+- **Ergebnis als Typenschild:** Das Ergebnis sagt nur, welches Gerät es ist, und bietet „Display fotografieren“ oder „Problem beschreiben“ an.
+- **Analyse-Schritte** sind allgemein formuliert („Meldung im Display lesen“), weil sie vor dem Ergebnis laufen. Die Demo nannte schon während der Analyse das Ergebnis.
+- **Bezeichnung des Falls** ist nach dem Ergebnis der Titel der Anleitung, z. B. „Wasserablauf gestört“.
+- **„Bevor du anfängst“** nennt das Werkzeug aus der Anleitung. Die Anleitung „Wasserablauf“ braucht keins. Die Demo nannte eine Dauer von 15 Minuten. Die steht nicht in der Anleitung, darum zeige ich sie nicht.
+- **Kostenhinweis** im Ergebnis ohne Zusage (B-13). Ein Test prüft alle Texte in `i18n/de.ts` auf Formulierungen wie „übernimmt die Kosten“ oder „kostet dich nichts“.
+- **Sicherheitswert** als Zahl (`confidenceScore`) bleibt intern. Die App zeigt nur „hoch“, „mittel“ oder „unsicher“.

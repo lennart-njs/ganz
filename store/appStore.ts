@@ -104,6 +104,8 @@ export interface AppActions {
   /** Entfernt einen Fall ohne Inhalt (nur angelegt, kein Foto, kein Ergebnis, keine Anleitung) */
   discardIfEmpty: (caseId: Id) => void;
   addDiagnosis: (input: Omit<Diagnosis, 'id' | 'createdAt'>) => Diagnosis;
+  /** Foto aus der App-Kamera: Zeitstempel, Gerät, Zweck und Fall (B-16) */
+  addPhoto: (input: Omit<Photo, 'id' | 'takenAt'>) => Photo;
   /** Startet eine Anleitung. Aus „offen“ wechselt der Fall in die Selbsthilfe. */
   startGuide: (caseId: Id, guideId: string) => GuideRun;
   /** Hilfe holen, wenn der Status es erlaubt. Sonst ohne Wirkung. */
@@ -328,6 +330,44 @@ export function createAppStore(storage: StateStorage = AsyncStorage, env: StoreE
               events: [...s.events, ev],
             }));
             return d;
+          },
+
+          addPhoto: (input) => {
+            const photo: Photo = { ...input, id: env.newId('foto'), takenAt: env.now() };
+            set((s) => {
+              const c = photo.caseId ? s.cases[photo.caseId] : undefined;
+              return {
+                photos: [...s.photos, photo],
+                cases: c
+                  ? {
+                      ...s.cases,
+                      [c.id]: {
+                        ...c,
+                        photoIds: [...c.photoIds, photo.id],
+                        updatedAt: photo.takenAt,
+                      },
+                    }
+                  : s.cases,
+                events: c
+                  ? [
+                      ...s.events,
+                      {
+                        id: env.newId('ev'),
+                        caseId: c.id,
+                        type: 'foto_aufgenommen',
+                        at: photo.takenAt,
+                        actor: householdActor(),
+                        payload: {
+                          photoId: photo.id,
+                          purpose: photo.purpose,
+                          source: photo.source,
+                        },
+                      },
+                    ]
+                  : s.events,
+              };
+            });
+            return photo;
           },
 
           startGuide: (caseId, guideId) => {
