@@ -15,7 +15,7 @@ Quelle für Inhalte: `reference/demo-v1.0/Main.dc.html`. Nur als Spezifikation l
 - Anleitungsinhalte aus `guides()` wörtlich übernehmen. Nicht umformulieren.
 - Alle Texte in `i18n/de.ts`. Alle fiktiven Namen und Preise in `config/demo.config.ts`.
 - Keine Hex-Werte außerhalb von `theme/`. Dark Mode, Dynamic Type bis 200 %, Screenreader-Labels, Trefferflächen ab 44 pt.
-- Keine Links zu Portalen, kein Chat.
+- Keine Links zu Portalen. Einziger Chat ist der Reparatur-Assistent (ENTSCHEIDUNGEN Nr. 6). Der API-Schlüssel nie in die App.
 - Keine Datenweitergabe ohne Bestätigung. Kein Schadenfall ohne aktiven Tap. Keine Kostenzusage vor der Freigabe.
 
 ## Arbeitsweise

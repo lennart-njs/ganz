@@ -74,6 +74,21 @@ function world() {
     selfPay: false,
   });
   for (let i = 0; i < 4; i++) s.simulateNext(c.id);
+  s.grantConsent({
+    purpose: 'chat_assistent',
+    legalBasis: 'einwilligung',
+    recipient: { id: 'anthropic', kind: 'dienstleister', name: 'Anthropic' },
+    dataCategories: [],
+    textVersion: 'test',
+  });
+  s.addChatMessage({ caseId: open.id, role: 'haushalt', text: 'Es kommt kein Wasser.' });
+  s.addChatMessage({
+    caseId: open.id,
+    role: 'assistent',
+    text: 'Ist der Wasserhahn ganz offen?',
+    suggestion: 'anleitung',
+    guideId: 'zulauf',
+  });
   return { device: device.id, done: c.id, open: open.id, video: v.id };
 }
 
@@ -150,6 +165,7 @@ const routes = (w: ReturnType<typeof world>) => [
   `/fall/${w.done}/status`,
   `/fall/${w.done}/abschluss`,
   `/fall/${w.done}/fallakte`,
+  `/fall/${w.open}/chat`,
 ];
 
 describe('Barrierefreiheit: jedes Bedienteil hat Rolle, Label und 44 pt', () => {

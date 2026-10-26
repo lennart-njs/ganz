@@ -74,6 +74,12 @@ export const demoConfig = {
     { id: 'neukoelln', name: 'Reparaturwerk Neukölln', authorized: false, distanceKm: 3.8 },
   ] satisfies PartnerConfig[],
 
+  /** Anbieter hinter dem Reparatur-Assistenten (Auftragsverarbeiter). Das Modell steht in app/api/chat+api.ts. */
+  assistant: {
+    id: 'anthropic',
+    name: 'Anthropic',
+  },
+
   expert: {
     name: 'Jonas K.',
     partnerId: 'brandt',

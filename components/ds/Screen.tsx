@@ -1,6 +1,10 @@
-import { useState, type ReactNode } from 'react';
+import { useState, type ReactNode, type Ref } from 'react';
 import { Platform, StyleSheet, View } from 'react-native';
-import { KeyboardAwareScrollView, KeyboardStickyView } from 'react-native-keyboard-controller';
+import {
+  KeyboardAwareScrollView,
+  KeyboardStickyView,
+  type KeyboardAwareScrollViewRef,
+} from 'react-native-keyboard-controller';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useTheme } from '@/theme';
@@ -13,6 +17,8 @@ interface ScreenProps {
   scroll?: boolean;
   /** Oberen Safe-Area-Abstand setzen (aus, wenn der Navigator ihn schon setzt) */
   safeTop?: boolean;
+  /** Zugriff auf den scrollenden Inhalt, z. B. ans Ende scrollen im Chat */
+  scrollRef?: Ref<KeyboardAwareScrollViewRef>;
 }
 
 /** Abstand zwischen Eingabefeld und Leiste, wenn die Tastatur offen ist */
@@ -23,7 +29,14 @@ const fieldGap = 16;
  * Bei offener Tastatur rückt die Leiste über die Tastatur, und der Inhalt scrollt
  * das aktive Eingabefeld darüber.
  */
-export function Screen({ header, footer, children, scroll = true, safeTop = true }: ScreenProps) {
+export function Screen({
+  header,
+  footer,
+  children,
+  scroll = true,
+  safeTop = true,
+  scrollRef,
+}: ScreenProps) {
   const theme = useTheme();
   const insets = useSafeAreaInsets();
   const [footerHeight, setFooterHeight] = useState(0);
@@ -39,6 +52,7 @@ export function Screen({ header, footer, children, scroll = true, safeTop = true
       {header}
       {scroll ? (
         <KeyboardAwareScrollView
+          ref={scrollRef}
           style={styles.root}
           contentContainerStyle={[
             styles.content,

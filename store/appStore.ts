@@ -26,6 +26,7 @@ import type {
   Case,
   CaseEntry,
   CaseEvent,
+  ChatMessage,
   Consent,
   Contract,
   Device,
@@ -90,6 +91,8 @@ export interface AppData {
   quotes: Quote[];
   bookings: Booking[];
   videoSessions: VideoSession[];
+  /** Gespräche mit dem Reparatur-Assistenten, je Fall */
+  chatMessages: ChatMessage[];
   nextCaseNumber: number;
 }
 
@@ -116,6 +119,8 @@ export interface AppActions {
   updateCase: (caseId: Id, patch: Partial<Pick<Case, 'entry' | 'problemLabel'>>) => void;
   /** Entfernt einen Fall ohne Inhalt (nur angelegt, kein Foto, kein Ergebnis, keine Anleitung) */
   discardIfEmpty: (caseId: Id) => void;
+  /** Nachricht im Chat. Eine Frage des Haushalts kommt als Ereignis in die Fallakte. */
+  addChatMessage: (input: Omit<ChatMessage, 'id' | 'at'>) => ChatMessage;
   addDiagnosis: (input: Omit<Diagnosis, 'id' | 'createdAt'>) => Diagnosis;
   /** Foto aus der App-Kamera: Zeitstempel, Gerät, Zweck und Fall (B-16) */
   addPhoto: (input: Omit<Photo, 'id' | 'takenAt'>) => Photo;
@@ -187,6 +192,7 @@ export const initialData: AppData = {
   quotes: [],
   bookings: [],
   videoSessions: [],
+  chatMessages: [],
   nextCaseNumber: demoConfig.caseNumber.start,
 };
 
@@ -362,11 +368,26 @@ export function createAppStore(storage: StateStorage = AsyncStorage, env: StoreE
                 c.status === 'offen' &&
                 !c.photoIds.length &&
                 !c.diagnosisIds.length &&
-                !c.guideRunIds.length;
+                !c.guideRunIds.length &&
+                !s.chatMessages.some((m) => m.caseId === caseId);
               if (!empty) return {};
               const { [caseId]: _removed, ...cases } = s.cases;
               return { cases, events: s.events.filter((e) => e.caseId !== caseId) };
             }),
+
+          addChatMessage: (input) => {
+            const m: ChatMessage = { ...input, id: env.newId('chat'), at: env.now() };
+            set((s) => ({ chatMessages: [...s.chatMessages, m] }));
+            if (m.role === 'haushalt') {
+              get().addEvent({
+                caseId: m.caseId,
+                type: 'assistent_gefragt',
+                actor: householdActor(),
+                payload: { messageId: m.id },
+              });
+            }
+            return m;
+          },
 
           addDiagnosis: (input) => {
             const d: Diagnosis = { ...input, id: env.newId('ergebnis'), createdAt: env.now() };
@@ -1001,6 +1022,7 @@ export function createAppStore(storage: StateStorage = AsyncStorage, env: StoreE
           quotes: s.quotes,
           bookings: s.bookings,
           videoSessions: s.videoSessions,
+          chatMessages: s.chatMessages,
           nextCaseNumber: s.nextCaseNumber,
         }),
       },

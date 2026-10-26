@@ -29,7 +29,8 @@ export interface Household {
   createdAt: ISODateTime;
 }
 
-export type PartnerKind = 'versicherer' | 'haendler' | 'hersteller' | 'betrieb';
+/** dienstleister: verarbeitet Daten im Auftrag, z. B. der Anbieter des Reparatur-Assistenten */
+export type PartnerKind = 'versicherer' | 'haendler' | 'hersteller' | 'betrieb' | 'dienstleister';
 
 export interface PartnerRef {
   id: Id;
@@ -170,6 +171,7 @@ export type CaseEventType =
   | 'pausiert'
   | 'fortgesetzt'
   | 'abgebrochen'
+  | 'assistent_gefragt'
   | 'status_geaendert';
 
 export type ActorKind = 'haushalt' | 'fachkraft' | 'betrieb' | 'versicherer' | 'system';
@@ -261,7 +263,8 @@ export type ConsentPurpose =
   | 'weitergabe_betrieb'
   | 'screenshots_im_call'
   | 'hersteller_einzelfall'
-  | 'mitteilungen';
+  | 'mitteilungen'
+  | 'chat_assistent';
 
 export interface Consent {
   id: Id;
@@ -275,6 +278,19 @@ export interface Consent {
   textVersion: string; // Version des gezeigten Hinweistexts
   grantedAt: ISODateTime;
   revokedAt?: ISODateTime;
+}
+
+// ---------- Reparatur-Assistent ----------
+
+export interface ChatMessage {
+  id: Id;
+  caseId: Id;
+  role: 'haushalt' | 'assistent';
+  text: string;
+  at: ISODateTime;
+  /** Vorschlag des Assistenten, als Button gezeigt */
+  suggestion?: 'anleitung' | 'hilfe';
+  guideId?: string;
 }
 
 // ---------- Kosten und Buchung ----------

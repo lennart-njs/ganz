@@ -71,6 +71,11 @@ export default function ProblemMelden() {
     router.push(`/fall/${id}/anleitung`);
   };
 
+  const assistant = () => {
+    const id = caseFor('freitext', de.chat.entryLabel);
+    router.push(`/fall/${id}/chat`);
+  };
+
   const submitOther = () => {
     const text = otherText.trim();
     if (text.length < 3) {
@@ -145,6 +150,7 @@ export default function ProblemMelden() {
           <NavRow key={p.id} title={p.label} sub={p.sub} onPress={() => pick(p.id, p.label)} />
         ))}
         <NavRow title={t.other} sub={t.otherSub} onPress={() => setOtherOpen(true)} />
+        <NavRow title={de.chat.entry} sub={de.chat.entrySub} onPress={assistant} />
       </View>
 
       <Sheet visible={otherOpen} onClose={() => setOtherOpen(false)} title={t.otherTitle}>

@@ -110,6 +110,11 @@ export default function Ergebnis() {
             ? de.help.costNote(demoConfig.insurer.shortName, formatEuro(state.demo.deductible))
             : de.help.costNoteNoContract}
         </InfoBox>
+        <Button
+          label={de.chat.entry}
+          variant="link"
+          onPress={() => router.push(`/fall/${caseId}/chat`)}
+        />
       </CaseScreen>
     );
   }

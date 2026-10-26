@@ -27,8 +27,8 @@ Alle P0- und P1-Befunde sind behoben. Die Spalte „Nachweis“ nennt den Test, 
 | B-04 | X im Fall: „Später weitermachen“ oder „Fall abbrechen“ mit Grund | `__tests__/navigation.test.tsx` |
 | B-07 | „Läuft noch nicht“ und „Läuft wieder“ | `__tests__/guide.test.tsx` |
 | B-08 | Anleitungstyp, Pflege endet mit „Fertig“ | `__tests__/guide.test.tsx` |
-| B-09 | „Frag ganz zu diesem Schritt“ entfernt, Notiz im Sheet „Geht nicht“ | `__tests__/problem.test.tsx` (kein Chat im Code) |
-| B-10 | „Mit ganz chatten“ entfernt | `__tests__/problem.test.tsx` |
+| B-09 | Zuerst entfernt. Seit Entscheidung 6: „Frag den Assistenten zu diesem Schritt“ öffnet den Reparatur-Assistenten in der App, nicht nach außen | `__tests__/chat.test.tsx` |
+| B-10 | Kein Chat nach außen. Seit Entscheidung 6: „Reparatur-Assistent fragen“ in der App, mit Einwilligung | `__tests__/chat.test.tsx`, `__tests__/chatApi.test.ts` |
 | B-13 | Kostenhinweis im Ergebnis ohne Zusage | `__tests__/diagnosis.test.tsx` |
 | B-14 | Abbrechen, Fehler „unscharf“, Ansage für den Screenreader | `__tests__/diagnosis.test.tsx`, `app/fall/[id]/analyse.tsx` |
 | B-15 | Erklärung vor dem Systemdialog, Weg in die Einstellungen | `__tests__/devices.test.tsx`, `__tests__/diagnosis.test.tsx` |

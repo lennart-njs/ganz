@@ -22,7 +22,10 @@ Die App erzeugt heute alle Daten lokal (Store `store/appStore.ts`). Ein spätere
 | Versicherer | „Schadenfall melden“ | `weitergabe_versicherer` | lit. b |
 | Betrieb (Auftrag) | „Termin anfragen“ / „Zahlungspflichtig buchen“ | `weitergabe_betrieb` | lit. b |
 | Hersteller (Einzelfall) | Profil: „Einzelfälle an … weitergeben“ | `hersteller_einzelfall` | lit. a |
+| Anbieter des Reparatur-Assistenten (Auftragsverarbeiter) | „Einverstanden“ vor der ersten Nachricht | `chat_assistent` | lit. a |
 | Hersteller (aggregiert) | immer | – | ohne Personenbezug |
+
+Der Reparatur-Assistent bekommt je Nachricht nur Gerät, Modell, Problem, Ergebnis, Stand der Anleitung und das Gespräch, keine Fotos, keine Adresse und keine Vertragsnummer (`lib/chat/context.ts`). Das Gespräch liegt als `ChatMessage` im Fall. Kein Dashboard liest es, die Fallakte zeigt nur die Zahl der Nachrichten.
 
 Der Händler bekommt keine Einzelfälle. Er sieht nur Zahlen zu Verträgen, die über ihn verknüpft wurden (`Contract.linkedVia = 'haendler_code'`, `Contract.soldBy`).
 
@@ -159,5 +162,6 @@ Ereignisse, die ein Dashboard besonders braucht:
 
 - Signatur oder Hash-Kette für Fotos (`Photo.sha256`)
 - Mehrere Personen im Haushalt mit Rolle „mitversichert“ (Entscheidung 2: im Prototyp nicht)
-- Löschfristen je Datenkategorie
+- Löschfristen je Datenkategorie, auch für `ChatMessage`
+- Auftragsverarbeitungsvertrag mit dem Anbieter des Reparatur-Assistenten, Serverstandort, Rate-Limit und Anmeldung für die Route `/api/chat`
 - Mandantentrennung für Versicherer und Händler im Backend

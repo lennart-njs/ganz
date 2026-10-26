@@ -1,6 +1,6 @@
 # ganz – Haushalts-App (Prototyp)
 
-Expo SDK 58, React Native 0.88, TypeScript strict, Expo Router. Stand: Schritte 1 bis 14 aus `docs/BUILD_PLAN.md`.
+Expo SDK 58, React Native 0.88, TypeScript strict, Expo Router. Stand: Schritte 1 bis 14 aus `docs/BUILD_PLAN.md`, dazu das Review nach dem Gerätetest (Layout, Tastatur, Texte je Hausgerät, Reparatur-Assistent).
 
 ## Start in 3 Befehlen
 
@@ -11,6 +11,18 @@ npx expo start
 ```
 
 Voraussetzungen: Node 20 oder neuer, Expo Go (SDK 58) auf dem Handy, Handy und Rechner im selben WLAN. Auf dem iPhone müssen Expo Go und der Rechner mit demselben Expo-Konto angemeldet sein (`npx expo login`). Klappt das WLAN nicht: `npx expo start --tunnel`.
+
+## Reparatur-Assistent (Chat mit Claude)
+
+Der Chat läuft über den Expo-Dev-Server auf deinem Rechner. Der Schlüssel bleibt dort und kommt nie in die App.
+
+```bash
+cp .env.example .env
+# In .env den Schlüssel eintragen: ANTHROPIC_API_KEY=sk-ant-...
+npx expo start   # neu starten, damit .env gelesen wird
+```
+
+Den Schlüssel bekommst du unter console.anthropic.com (API Keys). Ohne Schlüssel zeigt der Chat „noch nicht eingerichtet“ und verweist auf die Fachkraft. Der Chat funktioniert nur, solange `npx expo start` läuft. Modell und Einstellungen stehen in `app/api/chat+api.ts`, der Systemprompt in `lib/chat/prompt.ts`.
 
 ## Demo-Modus
 
@@ -55,7 +67,7 @@ Lint-Regeln: keine Hex-Farben außerhalb von `theme/`, kein Text außerhalb von 
 - `components/app/` – App-Bausteine (Kamera, Fallakte, Kostenvergleich, Videocall)
 - `model/` – Datenmodell und Status-Maschine
 - `store/` – Zustand mit Speicherung auf dem Gerät, Simulation für Freigabe und Betrieb
-- `services/` – Schnittstellen zum späteren Backend, heute Mock-Services
+- `services/` – Schnittstellen zum späteren Backend, heute Mock-Services. Der Chat spricht mit `app/api/chat+api.ts`
 - `config/demo.config.ts` – Beispielwerte für den Pitch
 - `data/guides.ts` – Anleitungen, wörtlich aus der Demo
 - `i18n/de.ts` – alle Texte

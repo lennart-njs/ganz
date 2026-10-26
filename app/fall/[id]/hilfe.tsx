@@ -121,6 +121,11 @@ export default function Hilfe() {
         {t.others}
       </Text>
       <NavRow title={t.onSite} sub={t.onSiteSub} onPress={onSite} />
+      <NavRow
+        title={de.chat.entry}
+        sub={de.chat.entrySub}
+        onPress={() => router.push(`/fall/${caseId}/chat`)}
+      />
       {service ? (
         <NavRow
           title={service.label}

@@ -109,6 +109,7 @@ export const de = {
     pausiert: 'Später weitermachen',
     fortgesetzt: 'Fortgesetzt',
     abgebrochen: 'Fall abgebrochen',
+    assistent_gefragt: 'Reparatur-Assistent gefragt',
     status_geaendert: 'Status geändert',
   },
 
@@ -116,6 +117,7 @@ export const de = {
   consentData: {
     versicherer: ['Gerät', 'Fotos', 'Ergebnis', 'Schritte', 'Befund', 'Kosten'],
     betrieb: ['Gerät', 'Typenschild', 'Fotos', 'Befund', 'Schritte', 'Adresse'],
+    assistent: ['Deine Nachrichten', 'Gerät und Modell', 'Problem', 'Erledigte Schritte'],
   },
 
   consentPurpose: {
@@ -125,6 +127,7 @@ export const de = {
     screenshots_im_call: 'Screenshots im Videocall',
     hersteller_einzelfall: 'Einzelfall an den Hersteller',
     mitteilungen: 'Mitteilungen',
+    chat_assistent: 'Reparatur-Assistent',
   },
 
   deviceCategory: {
@@ -898,6 +901,50 @@ export const de = {
       reason: (reason: string) => `Grund: ${reason}`,
       detail: (title: string, detail: string) => `${title} · ${detail}`,
     },
+  },
+
+  chat: {
+    title: 'Reparatur-Assistent',
+    intro:
+      'Beschreib, was passiert. Der Assistent fragt nach und sagt dir, ob eine Anleitung passt oder ob besser eine Fachkraft hilft.',
+    who: 'Ein Computerprogramm, kein Mensch. Es kann sich irren. Bei Gefahr: Stecker ziehen und Hilfe holen.',
+    consentTitle: 'Bevor du schreibst',
+    consentText: (provider: string) =>
+      `Deine Nachrichten gehen zur Auswertung an ${provider}. Mit dabei sind Gerät, Modell, Problem und deine erledigten Schritte. Nicht dabei sind Fotos, Adresse und Vertragsnummer.`,
+    consentBasis:
+      'Freiwillig, mit deiner Einwilligung (Art. 6 Abs. 1 lit. a DSGVO). Du kannst sie im Profil widerrufen. Ohne Einwilligung hilft dir eine Fachkraft im Videocall.',
+    consentAccept: 'Einverstanden',
+    consentDecline: 'Lieber eine Fachkraft',
+    inputLabel: 'Deine Nachricht',
+    send: 'Senden',
+    typing: 'Der Assistent schreibt',
+    you: 'Du',
+    assistant: 'Assistent',
+    message: (who: string, text: string) => `${who}: ${text}`,
+    startGuide: (title: string) => `Anleitung starten: ${title}`,
+    backToGuide: (title: string) => `Zurück zur Anleitung: ${title}`,
+    getHelp: 'Hilfe holen',
+    tooLong: (max: number) => `Bitte kürzer, höchstens ${max} Zeichen.`,
+    full: 'Das Gespräch ist lang geworden. Eine Fachkraft hilft dir jetzt schneller weiter.',
+    retry: 'Noch einmal senden',
+    errors: {
+      kein_schluessel:
+        'Der Assistent ist auf diesem Rechner noch nicht eingerichtet. Eine Fachkraft hilft dir weiter.',
+      schluessel:
+        'Der Assistent ist auf diesem Rechner nicht richtig eingerichtet. Eine Fachkraft hilft dir weiter.',
+      abgelehnt: 'Dazu kann der Assistent nichts sagen. Eine Fachkraft hilft dir weiter.',
+      ausgelastet: 'Der Assistent ist gerade ausgelastet. Versuch es gleich noch einmal.',
+      netz: 'Keine Verbindung zum Assistenten. Prüf dein Netz und versuch es noch einmal.',
+      dienst:
+        'Der Assistent ist gerade nicht erreichbar. Versuch es noch einmal oder hol dir Hilfe.',
+    },
+    entry: 'Reparatur-Assistent fragen',
+    entrySub: 'Beschreib es, der Assistent fragt nach',
+    entryLabel: 'Frage an den Reparatur-Assistenten',
+    askStep: 'Frag den Assistenten zu diesem Schritt',
+    stepDraft: (step: number, title: string) => `Ich hänge bei Schritt ${step}: ${title}. `,
+    fileTitle: 'Reparatur-Assistent',
+    fileCount: (n: number) => (n === 1 ? '1 Nachricht' : `${n} Nachrichten`),
   },
 
   profile: {

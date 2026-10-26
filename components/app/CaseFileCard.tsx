@@ -46,6 +46,8 @@ export function CaseFileCard({ caseId, detail = 'kurz' }: CaseFileCardProps) {
               ),
     ]);
   }
+  const chatCount = state.chatMessages.filter((m) => m.caseId === caseId).length;
+  if (chatCount) facts.push([de.chat.fileTitle, de.chat.fileCount(chatCount)]);
   facts.push([
     t.steps,
     summary ? de.help.stepsDone(summary.done, summary.total) : de.help.notStarted,

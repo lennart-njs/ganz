@@ -169,3 +169,15 @@ Annahmen, die ich beim Bauen getroffen habe. Jede lässt sich ändern.
 - **Anleitungen nur für die Waschmaschine:** Die Anleitungen stammen wörtlich aus der Demo und damit aus der Gebrauchsanweisung einer Waschmaschine. Für andere Geräte erfinden wir keine. Dort zeigt „Problem melden“ eigene Symptome, ein Tap führt zu „Hilfe holen“. Die Fehlererkennung sagt ehrlich „Dafür gibt es noch keine Anleitung“ und bietet Hilfe an. Pflege-Anleitungen und „Display zeigt eine Meldung“ gibt es nur bei der Waschmaschine.
 - **Beispielbefund je Gerät:** Geschirrspüler Laugenpumpe, Trockner Kondensatpumpe, Kühlschrank Temperaturfühler. Preise bleiben die Beispielwerte aus `demo.config.ts`. Das Teil im Kostenvoranschlag kommt aus dem Gerätetyp, nicht mehr aus der Konfiguration.
 - **Teile nie an den Haushalt:** Die Sperre für den Versand gilt für jedes Teil aus einem Beispielbefund.
+
+### Reparatur-Assistent (Chat mit Claude)
+
+- **Aufbau:** Die App ruft `/api/chat` auf, eine Expo-Router-API-Route (`app/api/chat+api.ts`) auf dem Dev-Server. Nur dort liegt `ANTHROPIC_API_KEY` (aus `.env`, ohne `EXPO_PUBLIC_`). Dafür steht `web.output` in `app.json` auf `server`. Ein Test prüft, dass Systemprompt und SDK nicht im App-Bundle landen.
+- **Modell und Einstellungen:** `claude-opus-5-5`, Aufwand `low` (kurze Chat-Antworten), Thinking adaptiv. Lehnt ein Sicherheitsfilter ab, versucht die API es mit dem empfohlenen Ersatzmodell (`fallbacks: "default"`). Wenn das zu teuer oder zu langsam ist, lässt sich das Modell in der Route tauschen.
+- **Antwortformat:** Strukturierte Ausgabe mit `reply`, `suggestion` (keine, anleitung, hilfe) und `guideId`. Die App zeigt den Vorschlag als Button „Anleitung starten: …“ oder „Hilfe holen“. Anleitungen schlägt der Server nur für die Waschmaschine und nur aus dem Katalog vor, auch wenn das Modell etwas anderes liefert.
+- **Systemprompt:** Du-Form, kurz, kein Ausrufezeichen, keine Emojis, keine Links, keine Kostenzusage, Sicherheit zuerst, nennt sich nicht „KI“. Alle Anleitungen stehen wörtlich im festen Teil, der gecacht wird. Der Fall steht in einem zweiten Block dahinter.
+- **Datenschutz:** Vor der ersten Nachricht eine Einwilligung (`chat_assistent`, lit. a), Empfänger aus `demo.config.ts`. Mitgeschickt werden Gerät, Modell, Problem, Ergebnis, Stand der Anleitung und das Gespräch. Keine Fotos, keine Adresse, keine Vertragsnummer. Ablehnen führt zur Fachkraft.
+- **Einstiege:** „Problem melden“ (Reparatur-Assistent fragen), jeder Schritt der Anleitung („Frag den Assistenten zu diesem Schritt“ mit Entwurf), „Hilfe holen“ unter „Andere Wege“, Ergebnis ohne Anleitung.
+- **Ohne Schlüssel oder Netz:** ehrliche Meldung, „Hilfe holen“ bleibt immer möglich. Kein vorgetäuschter Chat.
+- **Grenzen:** höchstens 40 Nachrichten je Gespräch und 1200 Zeichen je Nachricht. Danach verweist der Assistent auf die Fachkraft.
+- **Für den Pitch ohne WLAN-Rechner** braucht es später einen eigenen Server (z. B. EAS Hosting) mit Anmeldung und Rate-Limit. Heute läuft die Route nur, solange `npx expo start` läuft.

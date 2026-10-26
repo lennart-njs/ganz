@@ -212,6 +212,17 @@ export default function Anleitung() {
 
       <Text variant="caption">{t.sourceDocument(guide.sourceDocument)}</Text>
 
+      <Button
+        label={de.chat.askStep}
+        variant="link"
+        onPress={() =>
+          router.push({
+            pathname: '/fall/[id]/chat',
+            params: { id: caseId, entwurf: de.chat.stepDraft(step + 1, current.t) },
+          })
+        }
+      />
+
       <Sheet visible={notWorking} onClose={() => setNotWorking(false)} title={t.notWorkingTitle}>
         <Text variant="body">{t.notWorkingText}</Text>
         <TextField

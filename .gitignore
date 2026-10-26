@@ -7,6 +7,7 @@ expo-env.d.ts
 *.tsbuildinfo
 .metro-health-check*
 npm-debug.*
+.env
 .env*.local
 coverage/
 

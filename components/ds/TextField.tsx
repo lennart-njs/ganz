@@ -12,6 +12,8 @@ interface TextFieldProps extends Omit<TextInputProps, 'style' | 'placeholderText
   error?: string;
   multiline?: boolean;
   rows?: number;
+  /** Beschriftung nur für den Screenreader, z. B. im Chat-Eingabefeld */
+  labelHidden?: boolean;
 }
 
 export function TextField({
@@ -20,6 +22,7 @@ export function TextField({
   error,
   multiline,
   rows = 4,
+  labelHidden,
   onFocus,
   onBlur,
   ...rest
@@ -31,13 +34,15 @@ export function TextField({
   const borderColor = focus || error ? theme.colors.textStrong : theme.colors.borderControl;
   return (
     <View style={styles.wrap}>
-      <Text variant="meta" tone="muted" nativeID={`${label}-label`}>
-        {label}
-      </Text>
+      {labelHidden ? null : (
+        <Text variant="meta" tone="muted" nativeID={`${label}-label`}>
+          {label}
+        </Text>
+      )}
       <TextInput
         accessibilityLabel={label}
         accessibilityHint={error ?? hint}
-        accessibilityLabelledBy={`${label}-label`}
+        accessibilityLabelledBy={labelHidden ? undefined : `${label}-label`}
         allowFontScaling={theme.previewFontScale === undefined}
         maxFontSizeMultiplier={maxFontScale}
         placeholderTextColor={theme.colors.textPlaceholder}

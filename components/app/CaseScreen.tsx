@@ -1,5 +1,5 @@
 import { router, useLocalSearchParams } from 'expo-router';
-import { useState, type ReactNode } from 'react';
+import { useState, type ComponentProps, type ReactNode } from 'react';
 
 import { AppHeader, Screen } from '@/components/ds';
 import { CloseCaseSheet } from '@/components/nav/CloseCaseSheet';
@@ -13,15 +13,25 @@ interface CaseScreenProps {
   onBack?: () => void;
   /** Kein Zurück, z. B. im Videocall */
   noBack?: boolean;
+  scrollRef?: ComponentProps<typeof Screen>['scrollRef'];
 }
 
 /** Gerüst für Screens im Fall: Zurück wie Wischgeste und Android-Zurück, X öffnet das Schließen-Sheet. */
-export function CaseScreen({ title, children, footer, scroll, onBack, noBack }: CaseScreenProps) {
+export function CaseScreen({
+  title,
+  children,
+  footer,
+  scroll,
+  onBack,
+  noBack,
+  scrollRef,
+}: CaseScreenProps) {
   const { id } = useLocalSearchParams<{ id: string }>();
   const [closing, setClosing] = useState(false);
   return (
     <Screen
       scroll={scroll}
+      scrollRef={scrollRef}
       header={
         <AppHeader
           title={title}

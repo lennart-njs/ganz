@@ -114,7 +114,8 @@ describe('Kein Link verlässt die App', () => {
     expect(spy).not.toHaveBeenCalled();
   });
 
-  test('der Code enthält keine Web-Adressen und keinen Chat', () => {
+  // Der Chat ist seit dem Review nach Schritt 14 gewollt (docs/ENTSCHEIDUNGEN.md), Links bleiben verboten.
+  test('der Code enthält keine Web-Adressen', () => {
     const root = path.resolve(__dirname, '..');
     const files: string[] = [];
     const walk = (dir: string) => {
@@ -125,9 +126,7 @@ describe('Kein Link verlässt die App', () => {
       }
     };
     ['app', 'components', 'i18n', 'config'].forEach((d) => walk(path.join(root, d)));
-    const hits = files.filter((f) =>
-      /https?:\/\/|claude\.ai|chatten/i.test(fs.readFileSync(f, 'utf8')),
-    );
+    const hits = files.filter((f) => /https?:\/\/|claude\.ai/i.test(fs.readFileSync(f, 'utf8')));
     expect(hits).toEqual([]);
   });
 });
