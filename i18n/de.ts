@@ -468,6 +468,120 @@ export const de = {
     sourceDocument: (doc: string) => `Quelle: ${doc}`,
   },
 
+  help: {
+    photo: 'Fachkraft im Videocall',
+    title: 'Kein Problem. Wir holen Hilfe.',
+    text: 'Am schnellsten geht es im Videocall. Die Fachkraft sieht deine Fallakte und muss nichts doppelt fragen.',
+    costNote: (insurer: string, deductible: string) =>
+      `Die Kosten prüft ${insurer} nach dem Befund. Selbstbeteiligung laut Vertrag: ${deductible}.`,
+    costNoteNoContract: 'Ohne Schutz zahlst du selbst. Den Preis siehst du vor jeder Buchung.',
+    fileTitle: 'Deine Fallakte',
+    facts: {
+      device: 'Gerät',
+      problem: 'Problem',
+      result: 'Ergebnis',
+      steps: 'Anleitung',
+      note: 'Notiz',
+    },
+    stepsDone: (done: number, total: number) => `${done} von ${total} Schritten erledigt`,
+    abortedAt: (step: number, title: string) => `Ging nicht bei Schritt ${step}: ${title}`,
+    notStarted: 'Anleitung nicht gestartet',
+    shareTitle: (expert: string, company: string) => `Das sieht ${expert} (${company})`,
+    shareItems: [
+      'Gerät und Modell',
+      'Fotos aus diesem Fall',
+      'Ergebnis und erledigte Schritte',
+      'Deine Notiz',
+    ],
+    noRecording: 'Keine Aufnahme. Ton und Bild werden nicht gespeichert.',
+    legalBasis:
+      'Grundlage ist deine Anfrage (Art. 6 Abs. 1 lit. b DSGVO). Ohne deinen Tap geht nichts weiter.',
+    screenshots: 'Screenshots als Nachweis erlauben',
+    screenshotsSub:
+      'Freiwillig. Die Fachkraft darf Standbilder für die Fallakte speichern. Du kannst das im Profil widerrufen.',
+    others: 'Andere Wege',
+    onSite: 'Vor-Ort-Diagnose',
+    onSiteSub: 'Ein Fachbetrieb kommt und schaut es sich an',
+    callMeta: 'Videocall',
+    callSub: 'Wartezeit ca. 1 Minute',
+    startCall: 'Videocall starten',
+    item: (text: string) => `· ${text}`,
+  },
+
+  waiting: {
+    title: (expert: string) => `Wir verbinden dich mit ${expert}${expert.endsWith('.') ? '' : '.'}`,
+    text: 'Bleib in der Nähe des Geräts. Die Fachkraft sieht deine Fallakte schon.',
+    estimate: 'Geschätzte Wartezeit: 1 Minute',
+    skip: 'Wartezeit überspringen (Demo)',
+    noExpertTitle: 'Gerade ist keine Fachkraft frei.',
+    noExpertText: 'Wir rufen dich zurück. Wähl, wann es dir passt. Oder ein Betrieb kommt vorbei.',
+    callbackSlots: ['In 30 Minuten', 'Heute Abend', 'Morgen vormittags'],
+    callbackLabel: 'Wann passt der Rückruf?',
+    requestCallback: 'Rückruf anfragen',
+    onSiteInstead: 'Lieber Vor-Ort-Diagnose',
+  },
+
+  call: {
+    expertLine: (expert: string) => `${expert} · Fachkraft`,
+    companyLine: (company: string, time: string) => `${company} · ${time}`,
+    noRecording: 'Keine Aufnahme',
+    subtitle: 'Dreh bitte den Pumpenflügel mit dem Finger. Klemmt er?',
+    sees: (problem: string, steps: string) => `Sieht deine Fallakte: ${problem} · ${steps}`,
+    stepsShort: (n: number) => (n === 1 ? '1 Schritt erledigt' : `${n} Schritte erledigt`),
+    mic: 'Mikrofon',
+    micOn: 'an',
+    micOff: 'aus',
+    camera: 'Kamera',
+    hangUp: 'Auflegen',
+    expertVideo: (expert: string) => `Videobild von ${expert}`,
+    selfVideo: 'Dein Kamerabild',
+  },
+
+  finding: {
+    from: (expert: string) => `Befund von ${expert}`,
+    title: 'Die Laugenpumpe ist defekt.',
+    text: 'Der Pumpenflügel blockiert. Die Pumpe wird getauscht, der Rest der Maschine ist in Ordnung.',
+    question: 'Wie geht es weiter?',
+    options: {
+      geloest: 'Im Call gelöst',
+      reparatur: 'Reparatur durch einen Fachbetrieb',
+      ersatzgeraet: 'Ersatzgerät nötig',
+    },
+    optionSubs: {
+      geloest: 'Die Maschine läuft wieder',
+      reparatur: 'Der Betrieb bestellt die Original-Laugenpumpe und baut sie ein',
+      ersatzgeraet: 'Eine Reparatur lohnt sich nicht',
+    },
+    recommended: (label: string) => `Empfehlung der Fachkraft: ${label}`,
+    next: 'Weiter',
+    component: 'Laugenpumpe',
+    partName: 'Original-Laugenpumpe',
+    replacementNote: 'vergleichbares Modell',
+  },
+
+  caseFile: {
+    resultLine: (component: string, confidence: string) =>
+      `${component} · Sicherheit: ${confidence}`,
+    messageLine: (message: string) => `Meldung „${message}“`,
+    photos: 'Fotos',
+    photoLine: (purpose: string, time: string) => `${purpose} · ${time}`,
+    photoPurpose: {
+      display: 'Display',
+      typenschild: 'Typenschild',
+      bauteil: 'Bauteil',
+      schritt: 'Schritt',
+      kaufbeleg: 'Kaufbeleg',
+      abschluss: 'Abschluss',
+    },
+    finding: 'Befund',
+    findingLine: (what: string, by: string) => `${what} · ${by}`,
+    by: { fachkraft: 'Fachkraft im Videocall', betrieb: 'Fachbetrieb vor Ort' },
+    costs: 'Kosten',
+    costsLine: (repair: string, replacement: string) =>
+      `Reparatur ${repair} · Ersatzgerät ${replacement}`,
+    noPhotos: 'Keine Fotos',
+  },
+
   /** Navigation und Platzhalter bis zum jeweiligen Schritt aus BUILD_PLAN Abschnitt 5 */
   nav: {
     placeholder: (step: number) =>

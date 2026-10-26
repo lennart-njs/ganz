@@ -1,15 +1,66 @@
-import { CasePlaceholder } from '@/components/nav/CasePlaceholder';
-import { de } from '@/i18n/de';
+import { router } from 'expo-router';
+import { useState } from 'react';
+import { StyleSheet, View } from 'react-native';
 
+import { CaseScreen, useCaseId } from '@/components/app/CaseScreen';
+import { ActionBar, Button, SelectCard, Text } from '@/components/ds';
+import { demoConfig } from '@/config/demo.config';
+import { de } from '@/i18n/de';
+import { services, type FindingOption } from '@/services';
+import { useAppStore } from '@/store/appStore';
+
+const t = de.finding;
+const options: FindingOption[] = ['geloest', 'reparatur', 'ersatzgeraet'];
+
+/**
+ * Befund nach dem Videocall (B-26). Die Laugenpumpe bestellt und baut immer der Betrieb ein (B-28).
+ * „Ersatzteil an dich“ gibt es nur bei Teilen für Endnutzer und nicht im Golden Path.
+ */
 export default function Befund() {
+  const caseId = useCaseId();
+  const recommended = services.video.finding();
+  const [choice, setChoice] = useState<FindingOption>(recommended);
+
+  const next = () => {
+    useAppStore.getState().setFinding(caseId, choice, 'fachkraft');
+    if (choice === 'geloest') router.replace(`/fall/${caseId}/abschluss`);
+    else router.push(`/fall/${caseId}/kosten`);
+  };
+
   return (
-    <CasePlaceholder
+    <CaseScreen
       title={de.screens.befund}
-      step={9}
-      links={[
-        { label: de.nav.solvedInCall, to: 'abschluss' },
-        { label: de.nav.repair, to: 'kosten' },
-      ]}
-    />
+      footer={
+        <ActionBar>
+          <Button label={t.next} size="lg" fullWidth onPress={next} />
+        </ActionBar>
+      }
+    >
+      <Text variant="meta">{t.from(demoConfig.expert.name)}</Text>
+      <Text variant="h1" accessibilityRole="header">
+        {t.title}
+      </Text>
+      <Text variant="bodyLg">{t.text}</Text>
+      <Text variant="title" accessibilityRole="header" style={styles.question}>
+        {t.question}
+      </Text>
+      <Text variant="meta">{t.recommended(t.options[recommended])}</Text>
+      <View style={styles.cards} accessibilityRole="radiogroup" accessibilityLabel={t.question}>
+        {options.map((o) => (
+          <SelectCard
+            key={o}
+            title={t.options[o]}
+            sub={t.optionSubs[o]}
+            selected={choice === o}
+            onPress={() => setChoice(o)}
+          />
+        ))}
+      </View>
+    </CaseScreen>
   );
 }
+
+const styles = StyleSheet.create({
+  question: { marginTop: 8 },
+  cards: { gap: 12 },
+});

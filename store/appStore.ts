@@ -4,9 +4,13 @@ import { create } from 'zustand';
 import { createJSONStorage, persist, type StateStorage } from 'zustand/middleware';
 
 import { demoConfig } from '@/config/demo.config';
+import { de } from '@/i18n/de';
 import {
   applyCommand,
+  canStartVideoCall,
   canTransition,
+  ConsentRequiredError,
+  createQuote,
   isClosed,
   pauseCase as pause,
   resumeCase as resume,
@@ -110,6 +114,20 @@ export interface AppActions {
   startGuide: (caseId: Id, guideId: string) => GuideRun;
   /** Hilfe holen, wenn der Status es erlaubt. Sonst ohne Wirkung. */
   escalate: (caseId: Id) => void;
+  /** Fragt einen Videocall an. Nur mit bestätigter Weitergabe an die Fachkraft (B-19). */
+  requestVideoCall: (caseId: Id, screenshotsConsentId?: Id) => VideoSession;
+  /** Ergebnis des Warteraums oder Ende des Calls */
+  updateVideoCall: (
+    sessionId: Id,
+    change: 'verbunden' | 'keine_fachkraft' | 'abgebrochen' | 'beendet',
+  ) => void;
+  requestCallback: (caseId: Id, slot: string) => void;
+  /** Befund der Fachkraft oder des Betriebs, bei Reparatur mit Kostenvoranschlag */
+  setFinding: (
+    caseId: Id,
+    option: 'geloest' | 'reparatur' | 'ersatzgeraet',
+    by: 'fachkraft' | 'betrieb',
+  ) => void;
   /** Schritt erledigt oder Schritt zurück. Der Fortschritt bleibt gespeichert (B-05). */
   moveGuideStep: (runId: Id, direction: 'next' | 'back') => void;
   /** Sicherheitshinweis bestätigt, z. B. „Der Wasserhahn ist zu“ (Q-13) */
@@ -507,6 +525,136 @@ export function createAppStore(storage: StateStorage = AsyncStorage, env: StoreE
             } else {
               get().escalate(c.id);
             }
+          },
+
+          requestVideoCall: (caseId, screenshotsConsentId) => {
+            const c = getCase(caseId);
+            if (!canStartVideoCall(get().consents, c.reportedBy, caseId)) {
+              throw new ConsentRequiredError('weitergabe_fachkraft');
+            }
+            const cfg = demoConfig;
+            const partner = cfg.partners.find((p) => p.id === cfg.expert.partnerId)!;
+            const now = env.now();
+            const session: VideoSession = {
+              id: env.newId('video'),
+              caseId,
+              expert: {
+                name: cfg.expert.name,
+                provider: { id: partner.id, kind: 'betrieb', name: partner.name },
+              },
+              requestedAt: now,
+              recording: false,
+              screenshotsConsentId,
+            };
+            set((s) => ({ videoSessions: [...s.videoSessions, session] }));
+            get().addEvent({
+              caseId,
+              type: 'videocall_angefragt',
+              actor: householdActor(),
+              payload: { sessionId: session.id, expert: session.expert.name },
+            });
+            return session;
+          },
+
+          updateVideoCall: (sessionId, change) => {
+            const session = get().videoSessions.find((v) => v.id === sessionId);
+            if (!session) return;
+            const now = env.now();
+            let next: VideoSession = session;
+            if (change === 'verbunden') {
+              // Auch beim Verbinden gilt: nur mit gültiger Bestätigung
+              const c = getCase(session.caseId);
+              if (!canStartVideoCall(get().consents, c.reportedBy, c.id)) {
+                throw new ConsentRequiredError('weitergabe_fachkraft');
+              }
+              next = { ...session, startedAt: now, outcome: 'verbunden' };
+            } else if (change === 'beendet') {
+              next = { ...session, endedAt: now };
+            } else {
+              next = { ...session, endedAt: now, outcome: change };
+            }
+            set((s) => ({
+              videoSessions: s.videoSessions.map((v) => (v.id === sessionId ? next : v)),
+            }));
+            get().addEvent({
+              caseId: session.caseId,
+              type: change === 'verbunden' ? 'videocall_gestartet' : 'videocall_beendet',
+              actor:
+                change === 'verbunden'
+                  ? { kind: 'fachkraft', name: session.expert.name }
+                  : householdActor(),
+              payload: { sessionId, outcome: next.outcome, change },
+            });
+          },
+
+          requestCallback: (caseId, slot) =>
+            void get().addEvent({
+              caseId,
+              type: 'videocall_angefragt',
+              actor: householdActor(),
+              payload: { art: 'rueckruf', slot },
+            }),
+
+          setFinding: (caseId, option, by) => {
+            const cfg = demoConfig;
+            const c = getCase(caseId);
+            const actorName = by === 'fachkraft' ? cfg.expert.name : cfg.partners[0]!.name;
+            const d = get().addDiagnosis({
+              caseId,
+              photoIds: [],
+              mode: 'bauteil',
+              errorPattern: option === 'geloest' ? 'im_call_geloest' : 'laugenpumpe_defekt',
+              component: option === 'geloest' ? undefined : de.finding.component,
+              confidence: 'hoch',
+              confidenceScore: 1,
+              source: by,
+            });
+            get().addEvent({
+              caseId,
+              type: 'befund_erstellt',
+              actor: { kind: by, name: actorName },
+              payload: { diagnosisId: d.id, option },
+            });
+            if (option === 'geloest') {
+              if (canTransition(c.status, 'im_call_geloest'))
+                get().runCommand(caseId, 'im_call_geloest');
+              return;
+            }
+            const device = get().devices.find((x) => x.id === c.deviceId);
+            const contract = get().contracts.find((k) => k.id === device?.contractId);
+            const quote = createQuote({
+              id: env.newId('angebot'),
+              caseId,
+              createdBy: { kind: by, name: actorName },
+              repair: {
+                partName: cfg.prices.repair.partName,
+                originalPart: true,
+                parts: cfg.prices.repair.parts,
+                labor: cfg.prices.repair.labor,
+              },
+              replacement: { total: cfg.prices.replacement, note: de.finding.replacementNote },
+              payer: contract
+                ? { kind: 'versicherer', name: contract.provider.name }
+                : { kind: 'haushalt', name: get().persons[0]?.displayName ?? '' },
+              deductible: contract ? get().demo.deductible : 0,
+              isExample: cfg.isExample,
+              createdAt: env.now(),
+            });
+            set((s) => ({
+              quotes: [...s.quotes, quote],
+              cases: { ...s.cases, [caseId]: { ...getCase(caseId), quoteId: quote.id } },
+            }));
+            get().addEvent({
+              caseId,
+              type: 'angebot_erstellt',
+              actor: { kind: by, name: actorName },
+              payload: {
+                quoteId: quote.id,
+                repair: quote.repair.total,
+                replacement: quote.replacement.total,
+                saving: quote.saving,
+              },
+            });
           },
 
           escalate: (caseId) => {

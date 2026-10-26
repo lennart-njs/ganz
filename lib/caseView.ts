@@ -4,7 +4,7 @@ import type { Href } from 'expo-router';
 import { demoConfig } from '@/config/demo.config';
 import { guides, type GuideId } from '@/data/guides';
 import { de } from '@/i18n/de';
-import type { Case, CaseStatus, GuideRun } from '@/model/types';
+import type { Case, CaseStatus, Diagnosis, GuideRun } from '@/model/types';
 import { selectOpenCaseForDevice, type AppData } from '@/store/appStore';
 
 export function latestGuideRun(s: AppData, c: Case): GuideRun | undefined {
@@ -51,4 +51,42 @@ export function resumeHref(s: AppData, c: Case): Href {
     default:
       return `${base}/status` as Href;
   }
+}
+
+export interface GuideSummary {
+  title: string;
+  total: number;
+  done: number;
+  completedTitles: string[];
+  aborted?: { step: number; title: string; note?: string };
+}
+
+/** Was die Fachkraft und der Versicherer über die Anleitung sehen (B-22): echte Schritte, auch 0 */
+export function guideSummary(s: AppData, c: Case): GuideSummary | undefined {
+  const run = latestGuideRun(s, c);
+  if (!run) return undefined;
+  const guide = guides[run.guideId as GuideId];
+  if (!guide) return undefined;
+  const completed = [...run.completedSteps].sort((a, b) => a - b);
+  return {
+    title: guide.title,
+    total: guide.steps.length,
+    done: completed.length,
+    completedTitles: completed.map((i) => guide.steps[i]?.t ?? ''),
+    aborted:
+      run.abortedAtStep !== undefined
+        ? {
+            step: run.abortedAtStep + 1,
+            title: guide.steps[run.abortedAtStep]?.t ?? '',
+            note: run.abortNote,
+          }
+        : undefined,
+  };
+}
+
+export function latestDiagnosis(s: AppData, c: Case, source?: Diagnosis['source']) {
+  return [...c.diagnosisIds]
+    .reverse()
+    .map((id) => s.diagnoses.find((d) => d.id === id))
+    .find((d) => d && (!source || d.source === source));
 }

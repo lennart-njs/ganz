@@ -52,3 +52,12 @@ export interface DiagnosisService {
   /** Antwort auf die Rückfrage. null: unklar, Hilfe holen. */
   answer(answer: QuestionAnswer): DiagnosisFinding | null;
 }
+
+export type FindingOption = 'geloest' | 'reparatur' | 'ersatzgeraet';
+
+export interface VideoService {
+  /** Wartet auf eine Fachkraft. Demo kann die Wartezeit überspringen, indem sie nicht wartet. */
+  connect(scenario: 'verbunden' | 'keine_fachkraft'): Promise<'verbunden' | 'keine_fachkraft'>;
+  /** Empfehlung der Fachkraft nach dem Call */
+  finding(): FindingOption;
+}

@@ -91,3 +91,14 @@ Annahmen, die ich beim Bauen getroffen habe. Jede lässt sich ändern.
 - **Schrittfotos** sind beschriftete Platzhalter („Display mit Meldung“, „Laugenfilter hinter der Klappe“).
 - **Haptik** bei „Erledigt“ und „Läuft wieder“ (Q-8).
 - **Quelle** jeder Anleitung steht klein unter dem Schritt (B-56).
+
+## Schritt 9: Hilfe holen, Warteraum, Videocall, Befund
+
+- **Bestätigung vor dem Call (B-19):** „Videocall starten“ ist die aktive Bestätigung. Sie speichert eine Einwilligung `weitergabe_fachkraft` mit Rechtsgrundlage `vertrag` (lit. b), Empfänger ist der Betrieb der Fachkraft. Der Store verweigert Anfrage und Verbindung ohne gültige Bestätigung, Warteraum und Videocall leiten dann zu „Hilfe holen“ um.
+- **Screenshots im Call** sind eine eigene, freiwillige Einwilligung (lit. a), Standard aus.
+- **Keine Aufnahme** steht vor dem Call und im Call. `VideoSession.recording` ist im Datenmodell immer `false`.
+- **Warteraum:** 3 bis 8 Sekunden, dann verbunden. Im Demo-Modus mit Hinweisen gibt es „Wartezeit überspringen“. Szenario „keine Fachkraft frei“: Rückruf mit Zeitfenster oder Vor-Ort-Diagnose.
+- **Im Call** gibt es keinen Zurück-Button. Zurück, Wischen und Android-Zurück legen auf wie der rote Knopf. Mikrofon und Kamera sind Umschalter mit Zustand für den Screenreader. Bild und Ton sind Platzhalter.
+- **Protokoll:** Die Fallakte zeigt die echten erledigten Schritte und den Abbruchschritt, ohne Anleitung „Anleitung nicht gestartet“ (B-22).
+- **Befund:** Die Fachkraft empfiehlt im Mock immer „Reparatur durch einen Fachbetrieb“. Die Nutzerin bestätigt oder wählt „Im Call gelöst“ oder „Ersatzgerät nötig“. Bei Reparatur und Ersatzgerät entsteht ein Kostenvoranschlag mit den Preisen aus der Konfiguration. „Ersatzteil an dich“ gibt es nicht (Entscheidung 3).
+- **Kostenhinweis** in „Hilfe holen“ ohne Zusage (B-18). Ein Schadenfall entsteht hier nicht (B-17).
