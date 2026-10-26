@@ -136,7 +136,9 @@ describe('Betrieb und Termin', () => {
 
   test('die Pumpe geht nie an den Haushalt', async () => {
     const { id } = await bookAfterClaim();
-    expect(screen.getByText(de.appointment.ecoDesign(de.finding.partName, 15))).toBeTruthy();
+    expect(
+      screen.getByText(de.appointment.ecoDesign(de.appliance.waschmaschine.finding.partAcc, 15)),
+    ).toBeTruthy();
     expect(() =>
       useAppStore.getState().requestBooking({
         caseId: id,
@@ -144,7 +146,7 @@ describe('Betrieb und Termin', () => {
         partnerId: 'brandt',
         slotLabel: 'Mo vormittags',
         selfPay: false,
-        partName: demoConfig.prices.repair.partName,
+        partName: de.appliance.waschmaschine.finding.component,
       }),
     ).toThrow();
     expect(useAppStore.getState().bookings.some((b) => b.kind === 'ersatzteil_versand')).toBe(

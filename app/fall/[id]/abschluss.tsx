@@ -5,6 +5,7 @@ import { StyleSheet, View } from 'react-native';
 import { CaseScreen, useCaseId } from '@/components/app/CaseScreen';
 import { ActionBar, Button, PhotoFrame, StarRating, Text } from '@/components/ds';
 import { de } from '@/i18n/de';
+import { caseAppliance } from '@/lib/appliance';
 import { activeBooking, useAppStore } from '@/store/appStore';
 
 const t = de.finish;
@@ -15,6 +16,7 @@ export default function Abschluss() {
   const state = useAppStore();
   const c = state.cases[caseId];
   const booking = activeBooking(state, caseId);
+  const a = caseAppliance(state, caseId);
   const [stars, setStars] = useState(booking?.rating?.stars ?? 0);
 
   if (!c) return <Redirect href="/(tabs)" />;
@@ -51,21 +53,21 @@ export default function Abschluss() {
 
   const title = repaired ? t.repairedTitle : t.solvedTitle;
   const text = repaired
-    ? t.repairedText(booking!.provider.name)
+    ? a.finding.repaired(booking!.provider.name)
     : c.resolution === 'im_call_geloest'
       ? t.solvedCallText
       : t.solvedText;
 
   return (
     <CaseScreen title={de.screens.abschluss} footer={footer}>
-      <PhotoFrame label={repaired ? t.photo : t.photoSelf} ratio={4 / 3} />
+      <PhotoFrame label={repaired ? t.photo : a.photoSelf} ratio={4 / 3} />
       <Text variant="display" accessibilityRole="header">
         {title}
       </Text>
       <Text variant="bodyLg">{text}</Text>
       {awaitingConfirm ? (
         <Text variant="title" accessibilityRole="header">
-          {t.question}
+          {a.runsAgain}
         </Text>
       ) : null}
       {repaired && done && booking ? (

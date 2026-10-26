@@ -81,7 +81,7 @@ export const demoConfig = {
 
   prices: {
     /** Reparatur 189 € (Original-Laugenpumpe und Arbeit). Aufteilung ist eine Annahme. */
-    repair: { partName: 'Laugenpumpe', parts: 11900 as Cents, labor: 7000 as Cents },
+    repair: { parts: 11900 as Cents, labor: 7000 as Cents },
     replacement: 89900 as Cents,
   },
 

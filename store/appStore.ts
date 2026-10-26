@@ -5,6 +5,7 @@ import { createJSONStorage, persist, type StateStorage } from 'zustand/middlewar
 
 import { demoConfig } from '@/config/demo.config';
 import { de } from '@/i18n/de';
+import { caseAppliance, caseCategory, findingPattern } from '@/lib/appliance';
 import { notifications } from '@/services/notifications';
 import {
   applyCommand,
@@ -649,8 +650,9 @@ export function createAppStore(storage: StateStorage = AsyncStorage, env: StoreE
                   ? 'im_call_geloest'
                   : option === 'ersatzgeraet'
                     ? 'ersatzgeraet_noetig'
-                    : 'laugenpumpe_defekt',
-              component: option === 'geloest' ? undefined : de.finding.component,
+                    : findingPattern(caseCategory(get(), caseId)),
+              component:
+                option === 'geloest' ? undefined : caseAppliance(get(), caseId).finding.component,
               confidence: 'hoch',
               confidenceScore: 1,
               source: by,
@@ -673,7 +675,7 @@ export function createAppStore(storage: StateStorage = AsyncStorage, env: StoreE
               caseId,
               createdBy: { kind: by, name: actorName },
               repair: {
-                partName: cfg.prices.repair.partName,
+                partName: caseAppliance(get(), caseId).finding.component,
                 originalPart: true,
                 parts: cfg.prices.repair.parts,
                 labor: cfg.prices.repair.labor,
@@ -721,8 +723,11 @@ export function createAppStore(storage: StateStorage = AsyncStorage, env: StoreE
 
           requestBooking: ({ caseId, kind, partnerId, slotLabel, selfPay, partName }) => {
             // Ökodesign: Pumpen sind Teile für fachlich kompetente Reparateure, nicht für Endnutzer
-            if (kind === 'ersatzteil_versand' && partName === demoConfig.prices.repair.partName) {
-              throw new Error('Die Laugenpumpe bestellt und baut immer der Betrieb ein');
+            const pumpOrSensor = Object.values(de.appliance).some(
+              (a) => a.finding.component === partName,
+            );
+            if (kind === 'ersatzteil_versand' && pumpOrSensor) {
+              throw new Error(`${partName} bestellt und baut immer der Betrieb ein`);
             }
             const partner = demoConfig.partners.find((p) => p.id === partnerId);
             if (!partner) throw new Error(`Betrieb nicht gefunden: ${partnerId}`);
@@ -841,7 +846,7 @@ export function createAppStore(storage: StateStorage = AsyncStorage, env: StoreE
               if (booking.kind === 'vor_ort_diagnose') {
                 setBooking({ status: 'erledigt' });
                 get().setFinding(caseId, 'reparatur', 'betrieb');
-                notify(de.notify.diagnose(partner));
+                notify(de.notify.diagnose(caseAppliance(get(), caseId).examined(partner)));
                 return true;
               }
               const photo = get().addPhoto({
@@ -858,7 +863,7 @@ export function createAppStore(storage: StateStorage = AsyncStorage, env: StoreE
                 actor: betrieb,
                 payload: { bookingId: booking.id, photoId: photo.id },
               });
-              notify(de.notify.repariert(partner));
+              notify(de.notify.repariert(partner, caseAppliance(get(), caseId).runsAgain));
               return true;
             }
             return false;

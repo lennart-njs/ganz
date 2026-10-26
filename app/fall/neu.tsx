@@ -6,6 +6,7 @@ import { DemoHint } from '@/components/app/DemoHint';
 import { AppHeader, Button, Icon, NavRow, Screen, Sheet, Text, TextField } from '@/components/ds';
 import { guides, type GuideId } from '@/data/guides';
 import { de } from '@/i18n/de';
+import { appliance, hasGuides } from '@/lib/appliance';
 import { deviceTitle } from '@/lib/devices';
 import type { CaseEntry, Id } from '@/model/types';
 import { useAppStore } from '@/store/appStore';
@@ -52,6 +53,13 @@ export default function ProblemMelden() {
   };
 
   const pick = (problemId: string, label: string) => {
+    // Ohne Anleitung (alle Geräte außer der Waschmaschine): gleich Hilfe holen
+    if (!hasGuides(device?.category)) {
+      const id = caseFor('symptom', label);
+      store.getState().escalate(id);
+      router.push(`/fall/${id}/hilfe`);
+      return;
+    }
     if (problemId === 'meldung') {
       const id = caseFor('meldung', label);
       router.push(`/fall/${id}/meldungen`);
@@ -93,9 +101,12 @@ export default function ProblemMelden() {
     );
   }
 
+  const a = appliance(device.category);
+  const entries = hasGuides(device.category) ? de.problems : a.symptoms;
+
   return (
     <Screen header={header}>
-      <DemoHint id="problem" />
+      {hasGuides(device.category) ? <DemoHint id="problem" /> : null}
       <Text variant="meta">{t.forDevice(deviceTitle(device))}</Text>
       <Text variant="h1" accessibilityRole="header">
         {t.title}
@@ -130,7 +141,7 @@ export default function ProblemMelden() {
         {t.describe}
       </Text>
       <View style={styles.list}>
-        {de.problems.map((p) => (
+        {entries.map((p) => (
           <NavRow key={p.id} title={p.label} sub={p.sub} onPress={() => pick(p.id, p.label)} />
         ))}
         <NavRow title={t.other} sub={t.otherSub} onPress={() => setOtherOpen(true)} />
@@ -139,7 +150,7 @@ export default function ProblemMelden() {
       <Sheet visible={otherOpen} onClose={() => setOtherOpen(false)} title={t.otherTitle}>
         <TextField
           label={t.otherLabel}
-          placeholder={t.otherPlaceholder}
+          placeholder={a.otherPlaceholder}
           hint={t.otherHint}
           error={otherError}
           multiline

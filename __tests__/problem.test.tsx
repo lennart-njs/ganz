@@ -67,7 +67,7 @@ describe('Etwas anderes (B-54)', () => {
     await tap(de.problem.getHelp);
     expect(screen.getByText(de.problem.otherTooShort)).toBeTruthy();
     await fireEvent.changeText(
-      screen.getByPlaceholderText(de.problem.otherPlaceholder),
+      screen.getByPlaceholderText(de.appliance.waschmaschine.otherPlaceholder),
       'Die Maschine riecht verbrannt.',
     );
     await tap(de.problem.getHelp);

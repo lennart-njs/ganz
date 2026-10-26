@@ -3,6 +3,7 @@ import type { TimelineItem } from '@/components/ds';
 import { demoConfig } from '@/config/demo.config';
 import { de } from '@/i18n/de';
 import { formatDateTime } from '@/i18n/format';
+import { caseAppliance } from '@/lib/appliance';
 import type { Case } from '@/model/types';
 import { activeBooking, selectCaseEvents, type AppData } from '@/store/appStore';
 
@@ -19,6 +20,7 @@ export function statusView(s: AppData, c: Case): StatusView {
   const t = de.status;
   const insurer = demoConfig.insurer.shortName;
   const booking = activeBooking(s, c.id);
+  const a = caseAppliance(s, c.id);
   const events = selectCaseEvents(s, c.id);
   const at = (type: string) => events.filter((e) => e.type === type).at(-1);
   const when = (type: string) => {
@@ -99,14 +101,14 @@ export function statusView(s: AppData, c: Case): StatusView {
     next = 'kosten';
   } else if (booking?.status === 'erledigt') {
     headline = t.headline.repariert;
-    text = t.text.repariert;
+    text = a.runsAgainAsk;
     next = 'abschluss';
   } else if (booking?.status === 'unterwegs') {
     headline = t.headline.unterwegs(partner);
-    text = t.text.unterwegs;
+    text = a.reachable;
   } else if (booking?.status === 'bestaetigt') {
     headline = t.headline.bestaetigt(booking.slotLabel);
-    text = booking.kind === 'reparatur' ? t.text.bestaetigt(partner) : undefined;
+    text = booking.kind === 'reparatur' ? t.text.bestaetigt(partner, a.finding.partAcc) : undefined;
   } else if (booking?.status === 'angefragt') {
     headline = c.status === 'freigegeben' ? t.headline.freigegeben(insurer) : t.headline.angefragt;
     text = t.text.angefragt(partner);

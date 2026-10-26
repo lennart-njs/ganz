@@ -132,7 +132,7 @@ describe('Abschluss', () => {
 
   test('„Läuft wieder“ schließt den Fall, dann Bewertung', async () => {
     const { id } = await repaired();
-    expect(screen.getByText(de.finish.question)).toBeTruthy();
+    expect(screen.getByText(de.appliance.waschmaschine.runsAgain)).toBeTruthy();
     await tap(de.finish.runsAgain);
     expect(caseOf(id)).toMatchObject({ status: 'erledigt', resolution: 'repariert' });
     await fireEvent.press(screen.getByRole('radio', { name: de.a11y.starsOf(5) }));

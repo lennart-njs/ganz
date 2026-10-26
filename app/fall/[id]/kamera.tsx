@@ -6,6 +6,7 @@ import { CameraCapture, type CapturedPhoto } from '@/components/app/CameraCaptur
 import { CaseScreen, useCaseId } from '@/components/app/CaseScreen';
 import { SegmentedControl } from '@/components/ds';
 import { de } from '@/i18n/de';
+import { caseAppliance } from '@/lib/appliance';
 import type { PhotoMode } from '@/services';
 import { useAppStore } from '@/store/appStore';
 
@@ -15,6 +16,7 @@ const modes: PhotoMode[] = ['display', 'typenschild', 'bauteil'];
 export default function Kamera() {
   const caseId = useCaseId();
   const [mode, setMode] = useState<PhotoMode>('display');
+  const typePlate = useAppStore((s) => caseAppliance(s, caseId).typePlate);
 
   const capture = (pic: CapturedPhoto) => {
     const s = useAppStore.getState();
@@ -36,7 +38,7 @@ export default function Kamera() {
     <CaseScreen title={de.screens.kamera} scroll={false}>
       <DemoHint id="kamera" />
       <CameraCapture
-        help={de.camera.help[mode]}
+        help={mode === 'typenschild' ? typePlate : de.camera.help[mode]}
         onCapture={capture}
         top={
           <SegmentedControl

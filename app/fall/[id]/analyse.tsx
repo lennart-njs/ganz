@@ -6,6 +6,7 @@ import { CaseScreen, useCaseId } from '@/components/app/CaseScreen';
 import { ActionBar, Button, Icon, Text } from '@/components/ds';
 import { guides, type GuideId } from '@/data/guides';
 import { de } from '@/i18n/de';
+import { caseCategory } from '@/lib/appliance';
 import { isPhotoMode, toDiagnosis } from '@/lib/diagnosis';
 import { services } from '@/services';
 import { delay } from '@/services/mock/timing';
@@ -34,7 +35,8 @@ export default function Analyse() {
         AccessibilityInfo.announceForAccessibility(de.analysis.lineDone(lines[i]!));
       }
       const scenario = useAppStore.getState().demo.diagnosisScenario;
-      const result = await services.diagnosis.analyze({ mode, scenario });
+      const category = caseCategory(useAppStore.getState(), caseId);
+      const result = await services.diagnosis.analyze({ mode, scenario, category });
       if (cancelled || !useAppStore.getState().cases[caseId]) return;
       const s = useAppStore.getState();
       const photoIds = params.foto ? [params.foto] : [];
@@ -54,6 +56,18 @@ export default function Analyse() {
             errorPattern: 'geraet_erkannt',
             confidence: 'hoch',
             confidenceScore: 0.95,
+            source: 'fehlererkennung',
+          });
+          router.replace(`/fall/${caseId}/ergebnis`);
+          return;
+        case 'ohne_anleitung':
+          s.addDiagnosis({
+            caseId,
+            photoIds,
+            mode,
+            errorPattern: 'ohne_anleitung',
+            confidence: 'unsicher',
+            confidenceScore: 0,
             source: 'fehlererkennung',
           });
           router.replace(`/fall/${caseId}/ergebnis`);

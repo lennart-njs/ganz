@@ -162,3 +162,10 @@ Annahmen, die ich beim Bauen getroffen habe. Jede lässt sich ändern.
 - **Aktionsleiste:** Info links und Aktion rechts nur noch ab 428 pt Breite und mit genau einer Aktion. Auf kleineren iPhones steht die Info als eine Zeile über den Aktionen, zwei Aktionen teilen sich die Breite. Vorher brach „Schritt 1 von 7“ in drei Zeilen.
 - **Fotos auf kleinen Screens:** Unter 760 pt Höhe (iPhone SE, mini) sind große Fotos mindestens 2 : 1, damit Titel und Schritttext ohne Scrollen sichtbar sind.
 - **Tastatur:** `react-native-keyboard-controller` (in Expo Go enthalten). Der Inhalt scrollt das aktive Feld über die Tastatur, die Leiste unten wandert mit. Bottom Sheets weichen auf dem iPhone mit `KeyboardAvoidingView` aus, auf Android passt das System das Fenster an.
+
+### Texte je Hausgerät
+
+- **Gerätetyp bestimmt die Texte:** `de.appliance` hat je Gerätetyp (Waschmaschine, Geschirrspüler, Trockner, Kühlschrank) eigene Sätze für „Läuft … wieder?“, Typenschild-Ort, Symptome, Befund der Fachkraft, Teil, Videocall-Satz, Status („gut erreichbar“), Mitteilungen und Abschlussfoto. `lib/appliance.ts` liefert die Texte zum Gerät eines Falls.
+- **Anleitungen nur für die Waschmaschine:** Die Anleitungen stammen wörtlich aus der Demo und damit aus der Gebrauchsanweisung einer Waschmaschine. Für andere Geräte erfinden wir keine. Dort zeigt „Problem melden“ eigene Symptome, ein Tap führt zu „Hilfe holen“. Die Fehlererkennung sagt ehrlich „Dafür gibt es noch keine Anleitung“ und bietet Hilfe an. Pflege-Anleitungen und „Display zeigt eine Meldung“ gibt es nur bei der Waschmaschine.
+- **Beispielbefund je Gerät:** Geschirrspüler Laugenpumpe, Trockner Kondensatpumpe, Kühlschrank Temperaturfühler. Preise bleiben die Beispielwerte aus `demo.config.ts`. Das Teil im Kostenvoranschlag kommt aus dem Gerätetyp, nicht mehr aus der Konfiguration.
+- **Teile nie an den Haushalt:** Die Sperre für den Versand gilt für jedes Teil aus einem Beispielbefund.

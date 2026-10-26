@@ -20,6 +20,7 @@ import { de } from '@/i18n/de';
 import { formatDecimal, formatEuro } from '@/i18n/format';
 import { getManufacturer } from '@/lib/devices';
 import { notifications } from '@/services/notifications';
+import { caseAppliance } from '@/lib/appliance';
 import { useAppStore } from '@/store/appStore';
 
 const t = de.appointment;
@@ -164,7 +165,10 @@ export default function Termin() {
       {claimPending ? <InfoBox>{t.pending}</InfoBox> : null}
       {!diagnosis && quote?.repair.partName ? (
         <Text variant="body">
-          {t.ecoDesign(de.finding.partName, demoConfig.ecoDesignDeliveryDays)}
+          {t.ecoDesign(
+            caseAppliance(state, caseId).finding.partAcc,
+            demoConfig.ecoDesignDeliveryDays,
+          )}
         </Text>
       ) : null}
       <Text variant="meta">{t.shares}</Text>

@@ -8,6 +8,7 @@ import { Text } from '@/components/ds';
 import { de } from '@/i18n/de';
 import { guideSummary } from '@/lib/caseView';
 import { canStartVideoCall } from '@/model/caseMachine';
+import { caseAppliance } from '@/lib/appliance';
 import { useAppStore } from '@/store/appStore';
 import { useTheme } from '@/theme';
 
@@ -102,7 +103,7 @@ export default function Videocall() {
           accessibilityLiveRegion="polite"
         >
           <Text variant="body" tone="photoInk">
-            {t.subtitle}
+            {caseAppliance(state, caseId).finding.callLine}
           </Text>
         </View>
         <View style={[styles.pill, { borderColor: theme.colors.onPhoto }]}>

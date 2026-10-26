@@ -34,9 +34,16 @@ export function CaseFileCard({ caseId, detail = 'kurz' }: CaseFileCardProps) {
   if (result) {
     facts.push([
       t.result,
-      result.source === 'nutzerangabe' && result.displayMessage
-        ? de.caseFile.messageLine(result.displayMessage)
-        : de.caseFile.resultLine(result.component ?? '', de.ds.confidenceLevel[result.confidence]),
+      result.errorPattern === 'ohne_anleitung'
+        ? de.caseFile.noGuide
+        : result.errorPattern === 'geraet_erkannt'
+          ? de.result.deviceTitle
+          : result.source === 'nutzerangabe' && result.displayMessage
+            ? de.caseFile.messageLine(result.displayMessage)
+            : de.caseFile.resultLine(
+                result.component ?? '',
+                de.ds.confidenceLevel[result.confidence],
+              ),
     ]);
   }
   facts.push([

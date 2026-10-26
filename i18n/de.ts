@@ -134,6 +134,121 @@ export const de = {
     kuehlschrank: 'Kühlschrank',
   },
 
+  /**
+   * Texte je Gerätetyp. Die Anleitungen aus der Demo gibt es nur für die Waschmaschine.
+   * Andere Geräte bekommen eigene Symptome und einen eigenen Beispielbefund, aber keine erfundene Anleitung.
+   */
+  appliance: {
+    waschmaschine: {
+      runsAgain: 'Läuft die Maschine wieder?',
+      runsAgainAsk: 'Sag uns, ob die Maschine wieder läuft.',
+      reachable: 'Bitte sorg dafür, dass die Maschine gut erreichbar ist.',
+      examined: (partner: string) => `${partner} hat die Maschine geprüft.`,
+      typePlate: 'Bei geöffneter Tür oberhalb des Schauglases. Wir erkennen Modell und Baujahr.',
+      otherPlaceholder: 'z. B. Die Maschine riecht verbrannt.',
+      photoSelf: 'Waschmaschine läuft wieder',
+      /** Waschmaschine: die Einstiege aus de.problems, jeweils mit Anleitung */
+      symptoms: [] as { id: string; label: string; sub: string }[],
+      finding: {
+        component: 'Laugenpumpe',
+        part: 'Original-Laugenpumpe',
+        partAcc: 'die Original-Laugenpumpe',
+        title: 'Die Laugenpumpe ist defekt.',
+        text: 'Der Pumpenflügel blockiert. Die Pumpe wird getauscht, der Rest der Maschine ist in Ordnung.',
+        callLine: 'Dreh bitte den Pumpenflügel mit dem Finger. Klemmt er?',
+        solved: 'Die Maschine läuft wieder',
+        repairSub: 'Der Betrieb bestellt die Original-Laugenpumpe und baut sie ein',
+        repaired: (partner: string) => `${partner} hat die Laugenpumpe getauscht.`,
+      },
+    },
+    geschirrspueler: {
+      runsAgain: 'Läuft der Geschirrspüler wieder?',
+      runsAgainAsk: 'Sag uns, ob der Geschirrspüler wieder läuft.',
+      reachable: 'Bitte räum den Geschirrspüler aus, damit der Betrieb gut herankommt.',
+      examined: (partner: string) => `${partner} hat den Geschirrspüler geprüft.`,
+      typePlate: 'Am Rand der geöffneten Tür, meist oben rechts. Wir erkennen Modell und Baujahr.',
+      otherPlaceholder: 'z. B. Der Geschirrspüler pumpt nicht ab.',
+      photoSelf: 'Geschirrspüler läuft wieder',
+      symptoms: [
+        {
+          id: 'gs_wasser',
+          label: 'Wasser bleibt stehen',
+          sub: 'Unten im Gerät, nach dem Programm',
+        },
+        { id: 'gs_sauber', label: 'Geschirr wird nicht sauber', sub: 'Reste oder Beläge' },
+        { id: 'gs_nass', label: 'Geschirr bleibt nass', sub: 'Am Programmende' },
+        { id: 'gs_leck', label: 'Wasser läuft aus', sub: 'Pfütze vor dem Gerät' },
+        { id: 'gs_start', label: 'Geschirrspüler startet nicht', sub: 'Display bleibt dunkel' },
+      ],
+      finding: {
+        component: 'Laugenpumpe',
+        part: 'Original-Laugenpumpe',
+        partAcc: 'die Original-Laugenpumpe',
+        title: 'Die Laugenpumpe ist defekt.',
+        text: 'Das Flügelrad ist gebrochen, deshalb bleibt Wasser stehen. Die Pumpe wird getauscht, der Rest des Geschirrspülers ist in Ordnung.',
+        callLine: 'Nimm bitte die Siebe unten heraus. Siehst du Glassplitter?',
+        solved: 'Der Geschirrspüler läuft wieder',
+        repairSub: 'Der Betrieb bestellt die Original-Laugenpumpe und baut sie ein',
+        repaired: (partner: string) => `${partner} hat die Laugenpumpe getauscht.`,
+      },
+    },
+    trockner: {
+      runsAgain: 'Läuft der Trockner wieder?',
+      runsAgainAsk: 'Sag uns, ob der Trockner wieder läuft.',
+      reachable: 'Bitte sorg dafür, dass der Trockner gut erreichbar ist.',
+      examined: (partner: string) => `${partner} hat den Trockner geprüft.`,
+      typePlate: 'Bei geöffneter Tür am Türrahmen. Wir erkennen Modell und Baujahr.',
+      otherPlaceholder: 'z. B. Der Trockner riecht verbrannt.',
+      photoSelf: 'Trockner läuft wieder',
+      symptoms: [
+        { id: 'tr_feucht', label: 'Wäsche bleibt feucht', sub: 'Auch nach langem Programm' },
+        { id: 'tr_abbruch', label: 'Programm bricht ab', sub: 'Mitten im Trocknen' },
+        { id: 'tr_kalt', label: 'Trockner wird nicht warm', sub: 'Trommel dreht sich' },
+        { id: 'tr_trommel', label: 'Trommel dreht sich nicht', sub: 'Gerät brummt' },
+        { id: 'tr_start', label: 'Trockner startet nicht', sub: 'Display bleibt dunkel' },
+      ],
+      finding: {
+        component: 'Kondensatpumpe',
+        part: 'Original-Kondensatpumpe',
+        partAcc: 'die Original-Kondensatpumpe',
+        title: 'Die Kondensatpumpe ist defekt.',
+        text: 'Das Wasser wird nicht mehr abgepumpt, deshalb bricht das Programm ab. Die Pumpe wird getauscht, der Rest des Trockners ist in Ordnung.',
+        callLine: 'Zieh bitte den Wasserbehälter heraus. Ist er voll?',
+        solved: 'Der Trockner läuft wieder',
+        repairSub: 'Der Betrieb bestellt die Original-Kondensatpumpe und baut sie ein',
+        repaired: (partner: string) => `${partner} hat die Kondensatpumpe getauscht.`,
+      },
+    },
+    kuehlschrank: {
+      runsAgain: 'Kühlt der Kühlschrank wieder?',
+      runsAgainAsk: 'Sag uns, ob der Kühlschrank wieder kühlt.',
+      reachable: 'Bitte räum Lebensmittel, die schnell verderben, vorher in eine Kühltasche.',
+      examined: (partner: string) => `${partner} hat den Kühlschrank geprüft.`,
+      typePlate:
+        'Innen an der Seitenwand, meist unten neben dem Gemüsefach. Wir erkennen Modell und Baujahr.',
+      otherPlaceholder: 'z. B. Der Kühlschrank brummt sehr laut.',
+      photoSelf: 'Kühlschrank kühlt wieder',
+      symptoms: [
+        { id: 'ks_kalt', label: 'Kühlt nicht mehr richtig', sub: 'Lebensmittel werden warm' },
+        { id: 'ks_wasser', label: 'Wasser im Kühlteil', sub: 'Unten oder an der Rückwand' },
+        { id: 'ks_eis', label: 'Eis an der Rückwand', sub: 'Dicke Schicht' },
+        { id: 'ks_laut', label: 'Brummt oder klackt laut', sub: 'Immer wieder' },
+        { id: 'ks_aus', label: 'Licht und Display aus', sub: 'Gerät ist still' },
+      ],
+      finding: {
+        component: 'Temperaturfühler',
+        part: 'Original-Temperaturfühler',
+        partAcc: 'den Original-Temperaturfühler',
+        title: 'Der Temperaturfühler ist defekt.',
+        text: 'Der Kühlschrank misst falsch und kühlt deshalb zu wenig. Der Fühler wird getauscht, der Rest des Geräts ist in Ordnung.',
+        callLine: 'Zeig mir bitte die Rückwand innen. Ist sie vereist?',
+        solved: 'Der Kühlschrank kühlt wieder',
+        repairSub: 'Der Betrieb bestellt den Original-Temperaturfühler und baut ihn ein',
+        repaired: (partner: string) => `${partner} hat den Temperaturfühler getauscht.`,
+      },
+    },
+  },
+
   partner: {
     authorized: (manufacturer: string) => `${manufacturer}-autorisiert`,
     independent: 'Freie Werkstatt',
@@ -285,6 +400,8 @@ export const de = {
       purchased: 'Gekauft',
     },
     guideSource: (source: string) => `Aus der ${source}`,
+    noGuides:
+      'Für dieses Gerät gibt es noch keine Anleitungen. Bei einem Problem hilft dir der Reparatur-Assistent oder eine Fachkraft.',
     noCases: 'Noch keine Fälle zu diesem Gerät.',
     serviceSub: (phone: string, free: boolean) => (free ? `${phone} · kostenfrei` : phone),
     notFound: 'Dieses Gerät gibt es nicht mehr.',
@@ -292,7 +409,8 @@ export const de = {
 
   scan: {
     title: 'Fotografier das Typenschild.',
-    where: 'Bei Waschmaschinen sitzt es meist bei geöffneter Tür oberhalb des Schauglases.',
+    where:
+      'Meist innen an der Tür oder am Türrahmen, bei Waschmaschinen oberhalb des Schauglases. Beim Kühlschrank innen an der Seitenwand.',
     takePhoto: 'Typenschild fotografieren',
     manual: 'Manuell eingeben',
     reading: 'Typenschild wird gelesen',
@@ -332,7 +450,7 @@ export const de = {
     modes: { display: 'Display', typenschild: 'Typenschild', bauteil: 'Bauteil' },
     help: {
       display: 'Halte das Display in den Rahmen. Wir lesen die Meldung.',
-      typenschild: 'Bei geöffneter Tür oberhalb des Schauglases. Wir erkennen Modell und Baujahr.',
+      typenschild: 'Halte das Typenschild ganz in den Rahmen. Wir erkennen Modell und Baujahr.',
       bauteil: 'Zeig das Bauteil oder den Schaden. Wir erkennen Teil und sichtbare Schäden.',
     },
     preview: 'Kamerabild',
@@ -348,7 +466,6 @@ export const de = {
     otherSub: 'Beschreib es in eigenen Worten',
     otherTitle: 'Was ist passiert?',
     otherLabel: 'Deine Beschreibung',
-    otherPlaceholder: 'z. B. Die Maschine riecht verbrannt.',
     otherHint: 'Die Fachkraft liest das vor dem Videocall.',
     otherTooShort: 'Schreib bitte ein paar Worte dazu.',
     getHelp: 'Hilfe holen',
@@ -447,6 +564,10 @@ export const de = {
     photoDisplay: 'Display fotografieren',
     describe: 'Problem beschreiben',
     missing: 'Noch kein Ergebnis.',
+    noGuideTitle: 'Dafür gibt es noch keine Anleitung zum Selbermachen.',
+    noGuideText:
+      'Dein Foto liegt in der Fallakte. Eine Fachkraft schaut es sich im Videocall an und muss nichts doppelt fragen.',
+    getHelp: 'Hilfe holen',
   },
 
   guide: {
@@ -461,7 +582,6 @@ export const de = {
     stillBroken: 'Läuft noch nicht',
     finished: 'Fertig',
     getHelp: 'Hilfe holen',
-    question: 'Läuft die Maschine wieder?',
     images: { fehler: 'Display mit Meldung', pumpe: 'Laugenfilter hinter der Klappe' },
     confirm: { waterproof: 'Der Wasserhahn ist zu' },
     confirmFirst: (what: string) => `Bitte bestätige zuerst: ${what}.`,
@@ -531,7 +651,6 @@ export const de = {
     expertLine: (expert: string) => `${expert} · Fachkraft`,
     companyLine: (company: string, time: string) => `${company} · ${time}`,
     noRecording: 'Keine Aufnahme',
-    subtitle: 'Dreh bitte den Pumpenflügel mit dem Finger. Klemmt er?',
     sees: (problem: string, steps: string) => `Sieht deine Fallakte: ${problem} · ${steps}`,
     stepsShort: (n: number) => (n === 1 ? '1 Schritt erledigt' : `${n} Schritte erledigt`),
     mic: 'Mikrofon',
@@ -545,8 +664,6 @@ export const de = {
 
   finding: {
     from: (expert: string) => `Befund von ${expert}`,
-    title: 'Die Laugenpumpe ist defekt.',
-    text: 'Der Pumpenflügel blockiert. Die Pumpe wird getauscht, der Rest der Maschine ist in Ordnung.',
     question: 'Wie geht es weiter?',
     options: {
       geloest: 'Im Call gelöst',
@@ -554,14 +671,10 @@ export const de = {
       ersatzgeraet: 'Ersatzgerät nötig',
     },
     optionSubs: {
-      geloest: 'Die Maschine läuft wieder',
-      reparatur: 'Der Betrieb bestellt die Original-Laugenpumpe und baut sie ein',
       ersatzgeraet: 'Eine Reparatur lohnt sich nicht',
     },
     recommended: (label: string) => `Empfehlung der Fachkraft: ${label}`,
     next: 'Weiter',
-    component: 'Laugenpumpe',
-    partName: 'Original-Laugenpumpe',
     replacementNote: 'vergleichbares Modell',
   },
 
@@ -569,6 +682,7 @@ export const de = {
     resultLine: (component: string, confidence: string) =>
       `${component} · Sicherheit: ${confidence}`,
     messageLine: (message: string) => `Meldung „${message}“`,
+    noGuide: 'Foto erfasst, keine Anleitung für dieses Gerät',
     photos: 'Fotos',
     photoLine: (purpose: string, time: string) => `${purpose} · ${time}`,
     photoPurpose: {
@@ -646,7 +760,7 @@ export const de = {
     costsDiagnosis: 'Den Kostenvoranschlag siehst du vor der Reparatur.',
     pending: 'Der Termin ist vorbehaltlich Freigabe. Gibt es keine Freigabe, entscheidest du neu.',
     ecoDesign: (part: string, days: number) =>
-      `Der Betrieb bekommt die ${part} innerhalb von ${days} Arbeitstagen. So verlangt es das EU-Ökodesign-Recht.`,
+      `Der Betrieb bekommt ${part} innerhalb von ${days} Arbeitstagen. So verlangt es das EU-Ökodesign-Recht.`,
     shares:
       'Der Betrieb bekommt Modell, Typenschild-Nummern, Fotos, Befund, deine erledigten Schritte und deine Adresse.',
     addressLine: (street: string, zip: string, city: string) => `${street}, ${zip} ${city}`,
@@ -678,9 +792,7 @@ export const de = {
       pruefung: 'Du bekommst eine Mitteilung, sobald die Entscheidung da ist.',
       angefragt: (partner: string) =>
         `${partner} bestätigt den Termin. Danach bekommst du eine Mitteilung.`,
-      bestaetigt: (partner: string) => `${partner} bringt die Original-Laugenpumpe mit.`,
-      unterwegs: 'Bitte sorg dafür, dass die Maschine gut erreichbar ist.',
-      repariert: 'Sag uns, ob die Maschine wieder läuft.',
+      bestaetigt: (partner: string, part: string) => `${partner} bringt ${part} mit.`,
       diagnoseFertig: 'Sieh dir die Kosten an und entscheide, wie es weitergeht.',
       rueckruf: 'Die Fachkraft ruft dich an. Deine Fallakte hat sie schon.',
     },
@@ -724,27 +836,22 @@ export const de = {
       title: 'Betrieb unterwegs',
       body: `${partner} ist auf dem Weg zu dir.`,
     }),
-    repariert: (partner: string) => ({
+    repariert: (partner: string, question: string) => ({
       title: 'Repariert',
-      body: `${partner} ist fertig. Läuft die Maschine wieder?`,
+      body: `${partner} ist fertig. ${question}`,
     }),
-    diagnose: (partner: string) => ({
-      title: 'Kostenvoranschlag da',
-      body: `${partner} hat die Maschine geprüft.`,
-    }),
+    /** body: Satz aus de.appliance, z. B. „… hat die Maschine geprüft.“ */
+    diagnose: (body: string) => ({ title: 'Kostenvoranschlag da', body }),
   },
 
   finish: {
     photo: 'Abschlussfoto vom Betrieb',
-    photoSelf: 'Waschmaschine läuft wieder',
     solvedTitle: 'Wieder ganz.',
     solvedText:
       'Du hast es selbst repariert. Der Fall liegt in deinen Fällen, falls das Problem wiederkommt.',
     solvedCallText:
       'Im Videocall gelöst. Der Fall liegt in deinen Fällen, falls das Problem wiederkommt.',
     repairedTitle: 'Repariert.',
-    repairedText: (partner: string) => `${partner} hat die Laugenpumpe getauscht.`,
-    question: 'Läuft die Maschine wieder?',
     runsAgain: 'Läuft wieder',
     stillBroken: 'Problem besteht weiter',
     rate: 'Wie zufrieden bist du mit dem Betrieb?',

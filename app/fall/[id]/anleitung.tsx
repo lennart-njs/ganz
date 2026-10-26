@@ -21,6 +21,7 @@ import {
 } from '@/components/ds';
 import { guides, type GuideId } from '@/data/guides';
 import { de } from '@/i18n/de';
+import { appliance } from '@/lib/appliance';
 import { latestGuideRun } from '@/lib/caseView';
 import { getManufacturer } from '@/lib/devices';
 import { guideEnding, guideTools, SAFETY_CONFIRM } from '@/lib/guideMeta';
@@ -205,7 +206,7 @@ export default function Anleitung() {
 
       {isLast && ending === 'stoerung' ? (
         <Text variant="title" accessibilityRole="header" style={styles.question}>
-          {t.question}
+          {appliance(device?.category).runsAgain}
         </Text>
       ) : null}
 

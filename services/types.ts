@@ -45,10 +45,17 @@ export type DiagnosisResult =
   | DiagnosisFinding
   | { kind: 'rueckfrage'; question: 'wasser' }
   | { kind: 'geraet' }
+  /** Gerät ohne Anleitung (Prototyp: alles außer der Waschmaschine). Weiter mit Hilfe. */
+  | { kind: 'ohne_anleitung' }
   | { kind: 'fehler'; reason: 'unscharf' };
 
 export interface DiagnosisService {
-  analyze(input: { mode: PhotoMode; scenario: DiagnosisScenario }): Promise<DiagnosisResult>;
+  analyze(input: {
+    mode: PhotoMode;
+    scenario: DiagnosisScenario;
+    /** Ohne Angabe: Waschmaschine */
+    category?: DeviceCategory;
+  }): Promise<DiagnosisResult>;
   /** Antwort auf die Rückfrage. null: unklar, Hilfe holen. */
   answer(answer: QuestionAnswer): DiagnosisFinding | null;
 }

@@ -74,6 +74,46 @@ export default function Ergebnis() {
     );
   }
 
+  const help = () => {
+    useAppStore.getState().escalate(caseId);
+    router.push(`/fall/${caseId}/hilfe`);
+  };
+
+  if (diagnosis.errorPattern === 'ohne_anleitung') {
+    return (
+      <CaseScreen
+        title={de.screens.ergebnis}
+        footer={
+          <ActionBar>
+            <Button label={t.getHelp} size="lg" fullWidth onPress={help} />
+            <Button label={t.describe} variant="secondary" fullWidth onPress={backToProblem} />
+          </ActionBar>
+        }
+      >
+        <Text variant="meta">
+          {t.from[diagnosis.mode as keyof typeof t.from] ?? t.from.display}
+        </Text>
+        <Text variant="h1" accessibilityRole="header">
+          {t.noGuideTitle}
+        </Text>
+        <Text variant="bodyLg">{t.noGuideText}</Text>
+        <Card>
+          <FactList
+            items={[
+              [t.facts.device, deviceTitle(device)],
+              [de.device.deviceFacts.category, de.deviceCategory[device.category]],
+            ]}
+          />
+        </Card>
+        <InfoBox>
+          {contract
+            ? de.help.costNote(demoConfig.insurer.shortName, formatEuro(state.demo.deductible))
+            : de.help.costNoteNoContract}
+        </InfoBox>
+      </CaseScreen>
+    );
+  }
+
   const pattern = diagnosis.errorPattern as ErrorPattern;
   const guide = guides[diagnosis.guideId as GuideId];
   if (!guide) {
@@ -98,11 +138,6 @@ export default function Ergebnis() {
   const startGuide = () => {
     useAppStore.getState().startGuide(caseId, guide.id);
     router.push(`/fall/${caseId}/anleitung`);
-  };
-
-  const help = () => {
-    useAppStore.getState().escalate(caseId);
-    router.push(`/fall/${caseId}/hilfe`);
   };
 
   return (

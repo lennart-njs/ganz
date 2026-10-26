@@ -126,7 +126,7 @@ describe('Anleitung', () => {
   test('Störung endet mit „Läuft wieder“ oder „Läuft noch nicht“', async () => {
     const r = await openGuide();
     for (let i = 0; i < ablauf.steps.length - 1; i++) await tap(de.guide.done);
-    expect(screen.getByText(de.guide.question)).toBeTruthy();
+    expect(screen.getByText(de.appliance.waschmaschine.runsAgain)).toBeTruthy();
     expect(screen.queryByRole('button', { name: de.guide.finished })).toBeNull();
     await tap(de.guide.runsAgain);
     expect(r.getPathname()).toBe('/fall/GS-24817/abschluss');
@@ -141,7 +141,7 @@ describe('Anleitung', () => {
     const r = await renderRouter(APP, { initialUrl: `/geraet/${device.id}` });
     await tap(new RegExp(`^${de.maintenance[0]!.title}`));
     await tap(de.guide.done);
-    expect(screen.queryByText(de.guide.question)).toBeNull();
+    expect(screen.queryByText(de.appliance.waschmaschine.runsAgain)).toBeNull();
     expect(screen.queryByRole('button', { name: de.guide.runsAgain })).toBeNull();
     await tap(de.guide.finished);
     expect(r.getPathname()).toBe('/');

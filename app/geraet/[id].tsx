@@ -17,6 +17,7 @@ import {
 import { GUIDE_SOURCE } from '@/data/guides';
 import { de } from '@/i18n/de';
 import { formatDateTime, formatEuro, formatMonthYear } from '@/i18n/format';
+import { hasGuides } from '@/lib/appliance';
 import { caseProgressLabel, caseStatusLabel, deviceStatusLabel, resumeHref } from '@/lib/caseView';
 import { deviceTitle, getManufacturer } from '@/lib/devices';
 import { selectDevice, selectOpenCaseForDevice, useAppStore } from '@/store/appStore';
@@ -120,28 +121,34 @@ export default function GeraetDetail() {
         )}
       </Section>
 
-      <Section title={t.sections.maintenance}>
-        {de.maintenance.map((m) => (
-          <NavRow
-            key={m.guideId}
-            title={m.title}
-            sub={m.sub}
-            onPress={() => {
-              const st = useAppStore.getState();
-              const c = st.createCase({
-                deviceId: device.id,
-                entry: 'pflege',
-                problemLabel: m.title,
-              });
-              st.startGuide(c.id, m.guideId);
-              router.push(`/fall/${c.id}/anleitung`);
-            }}
-          />
-        ))}
-      </Section>
+      {hasGuides(device.category) ? (
+        <Section title={t.sections.maintenance}>
+          {de.maintenance.map((m) => (
+            <NavRow
+              key={m.guideId}
+              title={m.title}
+              sub={m.sub}
+              onPress={() => {
+                const st = useAppStore.getState();
+                const c = st.createCase({
+                  deviceId: device.id,
+                  entry: 'pflege',
+                  problemLabel: m.title,
+                });
+                st.startGuide(c.id, m.guideId);
+                router.push(`/fall/${c.id}/anleitung`);
+              }}
+            />
+          ))}
+        </Section>
+      ) : null}
 
       <Section title={t.sections.guides}>
-        <Text variant="meta">{t.guideSource(GUIDE_SOURCE)}</Text>
+        {hasGuides(device.category) ? (
+          <Text variant="meta">{t.guideSource(GUIDE_SOURCE)}</Text>
+        ) : (
+          <Text variant="meta">{t.noGuides}</Text>
+        )}
         <NavRow title={t.reportProblem} sub={de.home.searchSub} onPress={report} />
       </Section>
 
