@@ -137,7 +137,7 @@ describe('Gerätedetail', () => {
     });
     const original = demoConfig.manufacturer.serviceContact.phone;
     (demoConfig.manufacturer.serviceContact as { phone: string }).phone = '0800 11 22 333';
-    const spy = jest.spyOn(Linking, 'openURL').mockResolvedValue(true);
+    const spy = jest.spyOn(Linking, 'openURL').mockResolvedValue(undefined);
     await renderRouter(APP, { initialUrl: `/geraet/${device.id}` });
     const row = screen.getByRole('button', {
       name: new RegExp(demoConfig.manufacturer.serviceContact.label),
