@@ -11,10 +11,12 @@ interface PhotoFrameProps {
   source?: ImageSourcePropType;
   /** Breite durch Höhe, Standard 16 : 10 */
   ratio?: number;
+  /** Kleine Vorschaubilder zeigen im Platzhalter keinen Text */
+  compact?: boolean;
 }
 
 /** Foto mit 12 px Radius. Ohne Foto: beschrifteter Platzhalter. */
-export function PhotoFrame({ label, source, ratio = 16 / 10 }: PhotoFrameProps) {
+export function PhotoFrame({ label, source, ratio = 16 / 10, compact }: PhotoFrameProps) {
   const theme = useTheme();
   return (
     <View
@@ -32,7 +34,7 @@ export function PhotoFrame({ label, source, ratio = 16 / 10 }: PhotoFrameProps) 
     >
       {source ? (
         <Image source={source} style={StyleSheet.absoluteFill} resizeMode="cover" />
-      ) : (
+      ) : compact ? null : (
         <Text variant="meta" tone="muted" align="center" style={styles.placeholder}>
           {de.ds.photoPlaceholder(label)}
         </Text>

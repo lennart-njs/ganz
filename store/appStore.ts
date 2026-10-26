@@ -122,6 +122,17 @@ export interface AppActions {
     change: 'verbunden' | 'keine_fachkraft' | 'abgebrochen' | 'beendet',
   ) => void;
   requestCallback: (caseId: Id, slot: string) => void;
+  /** Meldet den Schadenfall: speichert die Bestätigung und wechselt auf „freigabe_noetig“ (B-17) */
+  reportClaim: (caseId: Id, textVersion: string) => Case;
+  /** Termin anfragen. Die Pumpe geht nie an den Haushalt (B-28). */
+  requestBooking: (input: {
+    caseId: Id;
+    kind: Booking['kind'];
+    partnerId: string;
+    slotLabel: string;
+    selfPay: boolean;
+    partName?: string;
+  }) => Booking;
   /** Befund der Fachkraft oder des Betriebs, bei Reparatur mit Kostenvoranschlag */
   setFinding: (
     caseId: Id,
@@ -603,7 +614,12 @@ export function createAppStore(storage: StateStorage = AsyncStorage, env: StoreE
               caseId,
               photoIds: [],
               mode: 'bauteil',
-              errorPattern: option === 'geloest' ? 'im_call_geloest' : 'laugenpumpe_defekt',
+              errorPattern:
+                option === 'geloest'
+                  ? 'im_call_geloest'
+                  : option === 'ersatzgeraet'
+                    ? 'ersatzgeraet_noetig'
+                    : 'laugenpumpe_defekt',
               component: option === 'geloest' ? undefined : de.finding.component,
               confidence: 'hoch',
               confidenceScore: 1,
@@ -655,6 +671,79 @@ export function createAppStore(storage: StateStorage = AsyncStorage, env: StoreE
                 saving: quote.saving,
               },
             });
+          },
+
+          reportClaim: (caseId, textVersion) => {
+            const c = getCase(caseId);
+            const device = get().devices.find((d) => d.id === c.deviceId);
+            const contract = get().contracts.find((k) => k.id === device?.contractId);
+            if (!contract) throw new Error('Kein Vertrag für dieses Gerät');
+            get().grantConsent({
+              caseId,
+              purpose: 'weitergabe_versicherer',
+              legalBasis: 'vertrag',
+              recipient: contract.provider,
+              dataCategories: [...de.consentData.versicherer],
+              textVersion,
+            });
+            return get().runCommand(caseId, 'schaden_melden', { contractId: contract.id });
+          },
+
+          requestBooking: ({ caseId, kind, partnerId, slotLabel, selfPay, partName }) => {
+            // Ökodesign: Pumpen sind Teile für fachlich kompetente Reparateure, nicht für Endnutzer
+            if (kind === 'ersatzteil_versand' && partName === demoConfig.prices.repair.partName) {
+              throw new Error('Die Laugenpumpe bestellt und baut immer der Betrieb ein');
+            }
+            const partner = demoConfig.partners.find((p) => p.id === partnerId);
+            if (!partner) throw new Error(`Betrieb nicht gefunden: ${partnerId}`);
+            let c = getCase(caseId);
+            if (selfPay && canTransition(c.status, 'selbst_zahlen')) {
+              c = get().runCommand(caseId, 'selbst_zahlen');
+            }
+            const provider = { id: partner.id, kind: 'betrieb' as const, name: partner.name };
+            get().grantConsent({
+              caseId,
+              purpose: 'weitergabe_betrieb',
+              legalBasis: 'vertrag',
+              recipient: provider,
+              dataCategories: [...de.consentData.betrieb],
+              textVersion: '2026-10-1',
+            });
+            const booking: Booking = {
+              id: env.newId('termin'),
+              caseId,
+              kind,
+              provider: { ...provider, authorized: partner.authorized },
+              slotLabel,
+              status: 'angefragt',
+              subjectToApproval: c.status === 'freigabe_noetig',
+              address: get().household?.address,
+              createdAt: env.now(),
+            };
+            set((s) => ({
+              bookings: [
+                ...s.bookings.map((b) =>
+                  b.caseId === caseId && b.status === 'angefragt'
+                    ? { ...b, status: 'storniert' as const }
+                    : b,
+                ),
+                booking,
+              ],
+              cases: { ...s.cases, [caseId]: { ...getCase(caseId), bookingId: booking.id } },
+            }));
+            get().addEvent({
+              caseId,
+              type: 'termin_angefragt',
+              actor: householdActor(),
+              payload: {
+                bookingId: booking.id,
+                kind,
+                partner: partner.name,
+                slot: slotLabel,
+                subjectToApproval: booking.subjectToApproval,
+              },
+            });
+            return booking;
           },
 
           escalate: (caseId) => {

@@ -112,6 +112,12 @@ export const de = {
     status_geaendert: 'Status geändert',
   },
 
+  /** Datenumfang je Weitergabe, so gespeichert und im Profil gezeigt */
+  consentData: {
+    versicherer: ['Gerät', 'Fotos', 'Ergebnis', 'Schritte', 'Befund', 'Kosten'],
+    betrieb: ['Gerät', 'Typenschild', 'Fotos', 'Befund', 'Schritte', 'Adresse'],
+  },
+
   consentPurpose: {
     weitergabe_fachkraft: 'Weitergabe an die Fachkraft',
     weitergabe_versicherer: 'Weitergabe an den Versicherer',
@@ -580,6 +586,75 @@ export const de = {
     costsLine: (repair: string, replacement: string) =>
       `Reparatur ${repair} · Ersatzgerät ${replacement}`,
     noPhotos: 'Keine Fotos',
+  },
+
+  costs: {
+    findingMeta: (finding: string) => `Befund: ${finding}`,
+    title: 'Reparieren lohnt sich.',
+    titleReplacement: 'Ein Ersatzgerät ist nötig.',
+    repair: 'Reparatur',
+    repairSub: 'Teil und Arbeit',
+    replacement: 'Ersatzgerät',
+    replacementSub: 'vergleichbares Modell',
+    saving: (amount: string) => `Ersparnis in diesem Fall: ${amount}`,
+    payer: 'Das zahlt',
+    payerValue: (insurer: string) => `${insurer}, vorbehaltlich Freigabe`,
+    payerSelf: 'Du selbst',
+    deductible: 'Deine Selbstbeteiligung',
+    ifRejected: (insurer: string) => `Wenn ${insurer} ablehnt`,
+    ifRejectedValue:
+      'Dann entscheidest du: Reparatur selbst zahlen, Kostenvoranschlag behalten oder Fall schließen.',
+    preview: (insurer: string) => `Das geht an ${insurer}`,
+    previewContract: (number: string) => `Vertrag ${number}`,
+    legal: (insurer: string) =>
+      `Mit dem Tap meldest du den Schadenfall an ${insurer}. Grundlage ist dein Versicherungsvertrag (Art. 6 Abs. 1 lit. b DSGVO).`,
+    report: 'Schadenfall melden',
+    barMeta: (deductible: string) => `Selbstbeteiligung ${deductible}`,
+    barSub: 'vorbehaltlich Freigabe',
+    selfPay: 'Ohne Versicherung selbst zahlen',
+    noContractText: 'Für dieses Gerät ist kein Schutz verknüpft. Du zahlst die Reparatur selbst.',
+    toAppointment: 'Weiter zum Termin',
+    rejectedTitle: (insurer: string) => `${insurer} übernimmt die Kosten nicht.`,
+    rejectedText:
+      'Du entscheidest, wie es weitergeht. Der Kostenvoranschlag bleibt in deiner Fallakte.',
+    rejectedSelfPay: (amount: string) => `Reparatur selbst zahlen (${amount})`,
+    keepQuote: 'Kostenvoranschlag behalten',
+    closeCase: 'Fall schließen',
+    closeReason: 'Abgelehnt, nicht repariert',
+    replacementNext: (insurer: string) =>
+      `${insurer} meldet sich zum Ersatzgerät, sobald die Prüfung fertig ist.`,
+  },
+
+  appointment: {
+    titleRepair: 'Wer soll kommen?',
+    titleDiagnosis: 'Wer schaut es sich an?',
+    when: 'Wann passt es dir?',
+    address: 'Adresse',
+    summary: 'Zusammenfassung',
+    facts: {
+      partner: 'Betrieb',
+      slot: 'Zeitfenster',
+      address: 'Adresse',
+      job: 'Auftrag',
+      costs: 'Kosten',
+    },
+    jobRepair: (part: string) => `${part} tauschen, Original-Teil`,
+    jobDiagnosis: 'Vor-Ort-Diagnose mit Kostenvoranschlag',
+    costsClaim: (insurer: string, deductible: string) =>
+      `${insurer}, vorbehaltlich Freigabe · Selbstbeteiligung ${deductible}`,
+    costsSelf: (amount: string) => `Du zahlst ${amount}`,
+    costsDiagnosis: 'Den Kostenvoranschlag siehst du vor der Reparatur.',
+    pending: 'Der Termin ist vorbehaltlich Freigabe. Gibt es keine Freigabe, entscheidest du neu.',
+    ecoDesign: (part: string, days: number) =>
+      `Der Betrieb bekommt die ${part} innerhalb von ${days} Arbeitstagen. So verlangt es das EU-Ökodesign-Recht.`,
+    shares:
+      'Der Betrieb bekommt Modell, Typenschild-Nummern, Fotos, Befund, deine erledigten Schritte und deine Adresse.',
+    addressLine: (street: string, zip: string, city: string) => `${street}, ${zip} ${city}`,
+    request: 'Termin anfragen',
+    requestPaid: 'Zahlungspflichtig buchen',
+    pickSlot: 'Wähl bitte ein Zeitfenster.',
+    noPartner:
+      'Gerade hat kein Betrieb in deiner Nähe Zeit. Wir melden uns, sobald einer frei ist.',
   },
 
   /** Navigation und Platzhalter bis zum jeweiligen Schritt aus BUILD_PLAN Abschnitt 5 */

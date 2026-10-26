@@ -102,3 +102,17 @@ Annahmen, die ich beim Bauen getroffen habe. Jede lässt sich ändern.
 - **Protokoll:** Die Fallakte zeigt die echten erledigten Schritte und den Abbruchschritt, ohne Anleitung „Anleitung nicht gestartet“ (B-22).
 - **Befund:** Die Fachkraft empfiehlt im Mock immer „Reparatur durch einen Fachbetrieb“. Die Nutzerin bestätigt oder wählt „Im Call gelöst“ oder „Ersatzgerät nötig“. Bei Reparatur und Ersatzgerät entsteht ein Kostenvoranschlag mit den Preisen aus der Konfiguration. „Ersatzteil an dich“ gibt es nicht (Entscheidung 3).
 - **Kostenhinweis** in „Hilfe holen“ ohne Zusage (B-18). Ein Schadenfall entsteht hier nicht (B-17).
+
+## Schritt 10: Kosten und Schadenmeldung, Betrieb und Termin
+
+- **Schadenmeldung:** Der Tap auf „Schadenfall melden“ speichert die Bestätigung `weitergabe_versicherer` (lit. b, Empfänger Versicherer) und wechselt auf `freigabe_noetig`. Vorher stehen Kostenträger, Selbstbeteiligung und „Wenn Kranich ablehnt“ auf dem Screen.
+- **Vorschau „Das geht an Kranich“** ist eingeklappt (B-53, Q-9). Sie zeigt die Fallakte mit Vertrag, Fotos mit Uhrzeit, Ergebnis, Schritten mit Abbruchschritt, Befund und Kosten.
+- **Ersparnis** wird berechnet und als „in diesem Fall“ beschriftet (B-48). „Beispielwerte“ steht darunter, solange die Demo-Hinweise an sind.
+- **Termin vorbehaltlich Freigabe** (Entscheidung 5): Man kann den Termin direkt nach der Meldung anfragen. Der Screen sagt das.
+- **Button-Lösung:** Zahlt die Nutzerin etwas (Selbstbeteiligung über 0 € oder Reparatur selbst), heißt der Button „Zahlungspflichtig buchen“. Die Selbstbeteiligung kommt aus den Demo-Einstellungen, Standard 0 €.
+- **Ohne Schutz** gibt es keinen Schadenfall. „Weiter zum Termin“ führt zur zahlungspflichtigen Buchung, der Fall wechselt dabei auf `in_reparatur`.
+- **Abgelehnt:** Der Kosten-Screen bietet „Reparatur selbst zahlen“, „Kostenvoranschlag behalten“ und „Fall schließen“.
+- **Ersatzgerät:** Nach der Meldung geht es direkt zum Status. Kranich meldet sich zum Ersatzgerät. Einen eigenen Ablauf dafür gibt es im Prototyp nicht.
+- **Laugenpumpe:** Der Betrieb bestellt und baut ein (Entscheidung 3). Der Store lehnt einen Versand der Pumpe an den Haushalt ab. Der Ökodesign-Text sagt, dass die 15 Arbeitstage für den Betrieb gelten (Review 4.1).
+- **Vor-Ort-Diagnose** aus „Hilfe holen“ bucht einen Termin ohne Kostenvoranschlag. Den Voranschlag macht der Betrieb vor Ort (Schritt 11).
+- **Weitergabe an den Betrieb** wird mit „Termin anfragen“ bestätigt und als Einwilligung `weitergabe_betrieb` gespeichert.

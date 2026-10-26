@@ -154,7 +154,7 @@ describe('Foto → Ergebnis', () => {
 
 describe('Kein Text sagt Kosten zu', () => {
   const forbidden =
-    /übernimmt die Kosten|kostet dich (das )?nichts|trägt alles|fallen keine Kosten|keine Kosten an|kostenlos repariert/i;
+    /übernimmt die Kosten(?! nicht)|kostet dich (das )?nichts|trägt alles|fallen keine Kosten|keine Kosten an|kostenlos repariert/i;
 
   function strings(value: unknown): string[] {
     if (typeof value === 'string') return [value];
