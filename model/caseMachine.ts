@@ -158,7 +158,6 @@ const commandEvents: Partial<Record<CaseCommand, CaseEventType>> = {
   freigabe_erteilt: 'freigabe_entschieden',
   freigabe_abgelehnt: 'freigabe_entschieden',
   termin_bestaetigt: 'termin_bestaetigt',
-  repariert: 'reparatur_abgeschlossen',
   problem_besteht_weiter: 'problem_besteht_weiter',
   abbrechen: 'abgebrochen',
 };

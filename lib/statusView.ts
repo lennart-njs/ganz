@@ -23,10 +23,6 @@ export function statusView(s: AppData, c: Case): StatusView {
   const a = caseAppliance(s, c.id);
   const events = selectCaseEvents(s, c.id);
   const at = (type: string) => events.filter((e) => e.type === type).at(-1);
-  const when = (type: string) => {
-    const e = at(type);
-    return e ? formatDateTime(e.at) : t.timeline.next;
-  };
   const callback = events
     .filter((e) => e.type === 'videocall_angefragt' && e.payload.art === 'rueckruf')
     .at(-1);
@@ -34,52 +30,57 @@ export function statusView(s: AppData, c: Case): StatusView {
     (d) => d.caseId === c.id && d.errorPattern === 'ersatzgeraet_noetig',
   );
 
-  const timeline: TimelineItem[] = [
-    { when: formatDateTime(c.createdAt), what: t.timeline.gemeldet },
+  // Jeder Eintrag mit Zeitpunkt. Erledigtes steht in zeitlicher Folge oben, was aussteht, darunter.
+  const entries: { at?: string; item: TimelineItem }[] = [
+    { at: c.createdAt, item: { when: formatDateTime(c.createdAt), what: t.timeline.gemeldet } },
   ];
+  const done = (what: string, iso: string) =>
+    entries.push({ at: iso, item: { when: formatDateTime(iso), what } });
+  const pending = (what: string) =>
+    entries.push({ item: { when: t.timeline.next, what, pending: true } });
+  /** Erledigt, wenn das Ereignis da ist, sonst ausstehend */
+  const byEvent = (type: string, what: string, isDone: boolean) => {
+    const e = at(type);
+    if (isDone && e) done(what, e.at);
+    else pending(what);
+  };
+
   if (c.claim) {
-    timeline.push({ when: formatDateTime(c.claim.reportedAt), what: t.timeline.schaden });
+    done(t.timeline.schaden, c.claim.reportedAt);
     const d = c.claim.decision;
-    timeline.push(
-      d
-        ? {
-            when: formatDateTime(d.at),
-            what:
-              d.result === 'freigegeben'
-                ? t.timeline.freigegeben(insurer)
-                : t.timeline.abgelehnt(insurer),
-          }
-        : { when: t.timeline.next, what: t.timeline.freigabe(insurer), pending: true },
-    );
+    if (d) {
+      done(
+        d.result === 'freigegeben'
+          ? t.timeline.freigegeben(insurer)
+          : t.timeline.abgelehnt(insurer),
+        d.at,
+      );
+    } else pending(t.timeline.freigabe(insurer));
   }
-  if (callback) timeline.push({ when: formatDateTime(callback.at), what: t.timeline.rueckruf });
-  if (booking) {
-    const done = (st: string[]) => st.includes(booking.status);
-    timeline.push({ when: when('termin_angefragt'), what: t.timeline.angefragt });
-    timeline.push({
-      when: when('termin_bestaetigt'),
-      what: t.timeline.bestaetigt,
-      pending: !done(['bestaetigt', 'unterwegs', 'erledigt']),
-    });
-    timeline.push({
-      when: when('betrieb_unterwegs'),
-      what: t.timeline.unterwegs,
-      pending: !done(['unterwegs', 'erledigt']),
-    });
-    timeline.push(
-      booking.kind === 'vor_ort_diagnose'
-        ? {
-            when: when('angebot_erstellt'),
-            what: t.timeline.diagnose,
-            pending: !done(['erledigt']),
-          }
-        : {
-            when: when('reparatur_abgeschlossen'),
-            what: t.timeline.repariert,
-            pending: !done(['erledigt']),
-          },
+  if (callback) done(t.timeline.rueckruf, callback.at);
+  // Nach einer Ablehnung kommt kein Termin mehr. Er erscheint nur, wenn neu gebucht wird.
+  if (booking && c.status !== 'abgelehnt') {
+    const reached = (st: string[]) => st.includes(booking.status);
+    byEvent('termin_angefragt', t.timeline.angefragt, true);
+    byEvent(
+      'termin_bestaetigt',
+      t.timeline.bestaetigt,
+      reached(['bestaetigt', 'unterwegs', 'erledigt']),
     );
+    byEvent('betrieb_unterwegs', t.timeline.unterwegs, reached(['unterwegs', 'erledigt']));
+    if (booking.kind === 'vor_ort_diagnose') {
+      byEvent('angebot_erstellt', t.timeline.diagnose, reached(['erledigt']));
+    } else {
+      byEvent('reparatur_abgeschlossen', t.timeline.repariert, reached(['erledigt']));
+    }
   }
+  const timeline: TimelineItem[] = [
+    ...entries
+      .filter((e) => e.at)
+      .sort((x, y) => x.at!.localeCompare(y.at!))
+      .map((e) => e.item),
+    ...entries.filter((e) => !e.at).map((e) => e.item),
+  ];
 
   const partner = booking?.provider.name ?? '';
   let headline: string = t.headline.hilfe;

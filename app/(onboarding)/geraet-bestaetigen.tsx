@@ -30,7 +30,12 @@ export default function GeraetBestaetigen() {
     completeOnboarding();
   };
 
-  const header = <AppHeader title={de.screens.geraetBestaetigen} onBack={() => router.back()} />;
+  const header = (
+    <AppHeader
+      title={contract ? de.screens.geraetBestaetigen : de.screens.geraetNeu}
+      onBack={() => router.back()}
+    />
+  );
   const scan = () => router.push('/typenschild');
 
   if (!contract) {

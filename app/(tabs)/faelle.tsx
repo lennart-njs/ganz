@@ -57,9 +57,7 @@ export default function Faelle() {
             label={t.report}
             variant="secondary"
             style={styles.gap}
-            onPress={() =>
-              router.push(firstDevice ? `/fall/neu?geraet=${firstDevice.id}` : '/geraet/neu')
-            }
+            onPress={() => router.push(firstDevice ? '/fall/neu' : '/geraet/neu')}
           />
         </Card>
       ) : null}

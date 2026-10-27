@@ -16,10 +16,13 @@ export default function Geraete() {
   const state = useAppStore();
   const devices = state.devices;
   const openCases = selectOpenCases(state);
-  const first = devices[0];
-
+  // Bei mehreren Geräten fragt „Problem melden“ zuerst, um welches es geht
   const report = () =>
-    first ? router.push(`/fall/neu?geraet=${first.id}`) : router.push('/geraet/neu');
+    devices.length === 0
+      ? router.push('/geraet/neu')
+      : devices.length === 1
+        ? router.push(`/fall/neu?geraet=${devices[0]!.id}`)
+        : router.push('/fall/neu');
 
   return (
     <Screen>
