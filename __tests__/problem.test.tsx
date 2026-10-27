@@ -64,13 +64,18 @@ describe('Etwas anderes (B-54)', () => {
   test('Freitext führt zu „Hilfe holen“', async () => {
     const r = await renderRouter(APP, { initialUrl: '/fall/neu' });
     await tap(new RegExp(`^${de.problem.other}`));
-    await tap(de.problem.getHelp);
+    expect(screen.getByText(de.talk.problem.describe)).toBeTruthy();
+    await tap(de.talk.problem.send);
     expect(screen.getByText(de.problem.otherTooShort)).toBeTruthy();
     await fireEvent.changeText(
       screen.getByPlaceholderText(de.appliance.waschmaschine.otherPlaceholder),
       'Die Maschine riecht verbrannt.',
     );
-    await tap(de.problem.getHelp);
+    await tap(de.talk.problem.send);
+    expect(screen.getByText('Die Maschine riecht verbrannt.')).toBeTruthy();
+    // Noch kein Fall, bevor du entscheidest, wie es weitergeht
+    expect(Object.keys(useAppStore.getState().cases)).toHaveLength(0);
+    await tap(new RegExp(`^${de.talk.problem.help}`));
     expect(r.getPathname()).toBe('/fall/GS-24817/hilfe');
     expect(useAppStore.getState().cases['GS-24817']).toMatchObject({
       entry: 'freitext',
@@ -84,7 +89,7 @@ describe('Entwürfe', () => {
   test('wer „Problem melden“ ohne Inhalt verlässt, hinterlässt keinen Fall', async () => {
     const r = await renderRouter(APP, { initialUrl: '/' });
     await tap(pill);
-    await tap(new RegExp(`^${de.problems[0]!.label}`));
+    await tap(new RegExp(`^${de.problem.photo}`));
     expect(Object.keys(useAppStore.getState().cases)).toHaveLength(1);
     await tap(de.a11y.back);
     await tap(de.a11y.back);
@@ -95,7 +100,7 @@ describe('Entwürfe', () => {
   test('ein zweiter Versuch nutzt denselben Entwurf', async () => {
     await renderRouter(APP, { initialUrl: '/' });
     await tap(pill);
-    await tap(new RegExp(`^${de.problems[0]!.label}`));
+    await tap(new RegExp(`^${de.problem.photo}`));
     await tap(de.a11y.back);
     await tap(new RegExp(`^${de.problems[2]!.label}`));
     const cases = Object.values(useAppStore.getState().cases);
@@ -138,4 +143,55 @@ test('Pflege aus dem Gerätedetail startet einen Pflege-Fall', async () => {
   await tap(new RegExp(`^${de.maintenance[0]!.title}`));
   expect(r.getPathname()).toBe('/fall/GS-24817/anleitung');
   expect(useAppStore.getState().cases['GS-24817']).toMatchObject({ entry: 'pflege' });
+});
+
+describe('Problem melden als Gespräch', () => {
+  test('bei mehreren Geräten fragt ganz zuerst nach dem Gerät, der Stift ändert die Antwort', async () => {
+    const s = useAppStore.getState();
+    s.addDevice({
+      manufacturerId: 'miele',
+      category: 'kuehlschrank',
+      model: 'K 7000',
+      identifiedBy: 'manuell',
+    });
+    await renderRouter(APP, { initialUrl: '/fall/neu' });
+    expect(screen.getByText(de.talk.problem.whichDevice)).toBeTruthy();
+    await tap(/^Miele K 7000/);
+    // Kühlschrank: eigene Symptome, keine Display-Meldungen
+    expect(
+      screen.getByRole('button', {
+        name: new RegExp(`^${de.appliance.kuehlschrank.symptoms[0]!.label}`),
+      }),
+    ).toBeTruthy();
+    expect(
+      screen.queryByRole('button', { name: new RegExp(`^${de.problems[0]!.label}`) }),
+    ).toBeNull();
+    await tap(de.talk.edit('Miele K 7000'));
+    await tap(/^Miele WKB 130/);
+    expect(
+      screen.getByRole('button', { name: new RegExp(`^${de.problems[0]!.label}`) }),
+    ).toBeTruthy();
+  });
+
+  test('Meldung im Display: Antwort steht im Gespräch und lässt sich ändern', async () => {
+    await renderRouter(APP, { initialUrl: '/fall/neu' });
+    await tap(new RegExp(`^${de.problems[0]!.label}`));
+    expect(screen.getByText(de.talk.problem.whichMessage)).toBeTruthy();
+    await tap(de.talk.edit(de.problems[0]!.label));
+    expect(screen.queryByText(de.talk.problem.whichMessage)).toBeNull();
+    expect(screen.getByRole('button', { name: new RegExp(`^${de.problem.photo}`) })).toBeTruthy();
+  });
+
+  test('eigene Worte lassen sich an den Reparatur-Assistenten geben', async () => {
+    const r = await renderRouter(APP, { initialUrl: '/fall/neu' });
+    await tap(new RegExp(`^${de.problem.other}`));
+    await fireEvent.changeText(
+      screen.getByPlaceholderText(de.appliance.waschmaschine.otherPlaceholder),
+      'Die Tür klemmt seit gestern.',
+    );
+    await tap(de.talk.problem.send);
+    await tap(new RegExp(`^${de.talk.problem.assistant}`));
+    expect(r.getPathname()).toBe('/fall/GS-24817/chat');
+    expect(r.getSearchParams()).toMatchObject({ entwurf: 'Die Tür klemmt seit gestern.' });
+  });
 });

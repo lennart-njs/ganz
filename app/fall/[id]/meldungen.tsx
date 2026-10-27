@@ -1,11 +1,10 @@
-import { router } from 'expo-router';
 import { Pressable, StyleSheet, View } from 'react-native';
 
 import { CaseScreen, useCaseId } from '@/components/app/CaseScreen';
 import { Icon, Text } from '@/components/ds';
-import { guides, type GuideId } from '@/data/guides';
+import type { GuideId } from '@/data/guides';
 import { de } from '@/i18n/de';
-import { useAppStore } from '@/store/appStore';
+import { reportDisplayMessage } from '@/lib/problem';
 import { useTheme } from '@/theme';
 
 /** Meldung im Display: 8 Meldungen aus der Demo. Ein Tap startet die passende Anleitung. */
@@ -13,23 +12,7 @@ export default function Meldungen() {
   const theme = useTheme();
   const caseId = useCaseId();
 
-  const pick = (guideId: GuideId, code: string) => {
-    const s = useAppStore.getState();
-    s.updateCase(caseId, { entry: 'meldung', problemLabel: code });
-    s.addDiagnosis({
-      caseId,
-      photoIds: [],
-      mode: 'meldung',
-      errorPattern: guideId,
-      displayMessage: code,
-      confidence: 'hoch',
-      confidenceScore: 1,
-      source: 'nutzerangabe',
-      guideId,
-    });
-    s.startGuide(caseId, guides[guideId].id);
-    router.push(`/fall/${caseId}/anleitung`);
-  };
+  const pick = (guideId: GuideId, code: string) => reportDisplayMessage(caseId, guideId, code);
 
   return (
     <CaseScreen title={de.screens.meldungen}>

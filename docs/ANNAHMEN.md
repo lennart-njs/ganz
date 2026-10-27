@@ -185,3 +185,9 @@ Annahmen, die ich beim Bauen getroffen habe. Jede lässt sich ändern.
 ### Darstellung (27.10.2026)
 
 - **Hell oder dunkel:** Im Profil unter „Darstellung“: Wie System, Hell, Dunkel. Standard ist „Wie System“. Die Wahl wird gespeichert und bleibt auch nach „Alles zurücksetzen“. `Appearance.setColorScheme` sorgt dafür, dass auch Tastatur und Systemdialoge folgen.
+
+### Gesprächsstil (27.10.2026)
+
+- **Bausteine** in `components/app/Conversation.tsx`: Nachricht von ganz (großer Text ohne Blase, Absender „ganz“ darüber), Antwort des Haushalts (Tintenblase rechts, Stift zum Ändern), Antwort-Buttons als Liste am unteren Rand. Lange Listen scrollen in sich, höchstens halbe Bildschirmhöhe.
+- **Problem melden:** Bei mehreren Geräten fragt ganz zuerst nach dem Gerät, sonst sagt es, um welches Gerät es geht. Dann „Was ist los?“ mit Foto, Meldung im Display, Symptomen, „Etwas anderes“ und dem Reparatur-Assistenten. Ein Symptom startet sofort die Anleitung: Es bleibt bei zwei Taps bis zum ersten Schritt (Review 5.1). Erst wenn das Gespräch den Screen verlässt, entsteht ein Fall.
+- **Etwas anderes:** Die eigene Beschreibung steht als Antwort im Gespräch. Danach „Hilfe holen“ oder „Reparatur-Assistent fragen“. Der Assistent bekommt die Beschreibung als Entwurf und schickt sie erst nach deiner Einwilligung.

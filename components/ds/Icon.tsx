@@ -9,6 +9,7 @@ import {
   House,
   Mic,
   MicOff,
+  Pencil,
   PhoneOff,
   Plus,
   Search,
@@ -41,6 +42,7 @@ const icons = {
   hangUp: PhoneOff,
   search: Search,
   add: Plus,
+  edit: Pencil,
 } as const;
 
 export type IconName = keyof typeof icons;

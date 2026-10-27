@@ -903,6 +903,29 @@ export const de = {
     },
   },
 
+  /** Gespräche: ganz fragt, Antworten stehen unten */
+  talk: {
+    replies: 'Antworten',
+    edit: (answer: string) => `Antwort ändern: ${answer}`,
+    problem: {
+      whichDevice: 'Hallo. Für welches Gerät meldest du ein Problem?',
+      forDevice: (name: string) => `Es geht um deine ${name}.`,
+      addDevice: 'Anderes Gerät hinzufügen',
+      whatsUp: 'Was ist los?',
+      whatsUpHint: 'Wähl unten, was passt. Am schnellsten geht es mit einem Foto.',
+      whatsUpNoGuides:
+        'Wähl unten, was passt. Für dieses Gerät holen wir dir gleich eine Fachkraft dazu.',
+      whichMessage: 'Was steht im Display?',
+      describe: 'Beschreib es so, wie du es am Telefon erzählen würdest.',
+      next: 'Danke. Wie soll es weitergehen?',
+      help: 'Hilfe holen',
+      helpSub: 'Eine Fachkraft liest deine Beschreibung vor dem Videocall.',
+      assistant: 'Reparatur-Assistent fragen',
+      assistantSub: 'Er fragt nach und sucht eine passende Anleitung.',
+      send: 'Weiter',
+    },
+  },
+
   chat: {
     title: 'Reparatur-Assistent',
     intro:

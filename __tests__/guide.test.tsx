@@ -82,7 +82,9 @@ describe('Anleitung', () => {
     await tap(de.a11y.back);
     expect(screen.getByText(ablauf.steps[0]!.t)).toBeTruthy();
     await tap(de.a11y.back);
-    expect(r.getPathname()).toBe('/fall/GS-24817/meldungen');
+    // Zurück ins Gespräch „Problem melden“, die Frage nach der Meldung steht noch da
+    expect(r.getPathname()).toBe('/fall/neu');
+    expect(screen.getByText(de.talk.problem.whichMessage)).toBeTruthy();
     const types = useAppStore.getState().events.map((e) => e.type);
     expect(types.filter((x) => x === 'schritt_zurueck')).toHaveLength(2);
   });
