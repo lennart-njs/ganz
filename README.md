@@ -34,6 +34,9 @@ Der Demo-Modus ist in `config/demo.config.ts` eingeschaltet (`demo.enabled`).
 - **Offene Fälle einen Schritt weiter:** schaltet Freigabe, Termin, unterwegs, repariert. Ohne Tap läuft das per Timer (Freigabe 10 s, danach je 5 s).
 - **Alles zurücksetzen:** löscht Geräte, Fälle und Einwilligungen und startet das Onboarding neu.
 
+- **Hell oder dunkel:** Profil → „Darstellung“: Wie System, Hell, Dunkel.
+- **Gespräch oder Formular:** „Problem melden“ läuft als Gespräch. Die Schadenmeldung geht als Formular oder über „Lieber Schritt für Schritt im Gespräch“.
+
 ### Golden Path für den Pitch (ca. 3 Minuten)
 
 1. Onboarding: „Los geht’s“ → Vertragsnummer `KV-2023-0471` → „Ja, das ist es“.
