@@ -14,13 +14,14 @@ import {
   FactList,
   NavRow,
   Screen,
+  SegmentedControl,
   Text,
 } from '@/components/ds';
 import { demoConfig } from '@/config/demo.config';
 import { de } from '@/i18n/de';
 import { formatDateTime, formatEuro, formatMonthYear } from '@/i18n/format';
 import { notifications } from '@/services/notifications';
-import { selectContract, useAppStore } from '@/store/appStore';
+import { selectContract, useAppStore, type Appearance } from '@/store/appStore';
 
 const t = de.profile;
 
@@ -171,6 +172,18 @@ export default function Profil() {
           sub={state.notifications === 'abgelehnt' ? t.notificationsDenied : t.notificationsSub}
           checked={state.notifications === 'erlaubt'}
           onChange={toggleNotifications}
+        />
+      </Section>
+
+      <Section title={t.appearance}>
+        <SegmentedControl
+          accessibilityLabel={t.appearance}
+          options={(['system', 'hell', 'dunkel'] as Appearance[]).map((value) => ({
+            value,
+            label: t.appearanceOptions[value],
+          }))}
+          value={state.appearance}
+          onChange={(v) => useAppStore.getState().setAppearance(v)}
         />
       </Section>
 

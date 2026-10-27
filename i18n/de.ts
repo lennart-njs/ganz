@@ -970,6 +970,8 @@ export const de = {
     notifications: 'Mitteilungen zum Fall-Status',
     notificationsSub: 'Wenn sich bei Freigabe oder Termin etwas ändert.',
     notificationsDenied: 'In den Einstellungen deines Telefons ausgeschaltet.',
+    appearance: 'Darstellung',
+    appearanceOptions: { system: 'Wie System', hell: 'Hell', dunkel: 'Dunkel' },
     privacy: 'Datenschutz',
     privacyText:
       'Verantwortlich ist ganz. Wir speichern Fotos, Gerätedaten, Schritte und Befunde zu deinen Fällen. Weitergegeben wird nur, was du vorher bestätigst. Du hast das Recht auf Auskunft, Berichtigung, Löschung und Widerspruch.',

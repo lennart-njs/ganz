@@ -73,8 +73,12 @@ export type NewDevice = Omit<Device, 'id' | 'householdId' | 'createdAt'>;
 
 export type NotificationSetting = 'offen' | 'erlaubt' | 'abgelehnt';
 
+/** Darstellung: folgt dem System oder ist fest hell oder dunkel */
+export type Appearance = 'system' | 'hell' | 'dunkel';
+
 export interface AppData {
   onboardingDone: boolean;
+  appearance: Appearance;
   demo: DemoSettings;
   /** Lokale Mitteilungen: erst nach dem Systemdialog, der nach „Termin anfragen“ kommt */
   notifications: NotificationSetting;
@@ -119,6 +123,7 @@ export interface AppActions {
   updateCase: (caseId: Id, patch: Partial<Pick<Case, 'entry' | 'problemLabel'>>) => void;
   /** Entfernt einen Fall ohne Inhalt (nur angelegt, kein Foto, kein Ergebnis, keine Anleitung) */
   discardIfEmpty: (caseId: Id) => void;
+  setAppearance: (appearance: Appearance) => void;
   /** Nachricht im Chat. Eine Frage des Haushalts kommt als Ereignis in die Fallakte. */
   addChatMessage: (input: Omit<ChatMessage, 'id' | 'at'>) => ChatMessage;
   addDiagnosis: (input: Omit<Diagnosis, 'id' | 'createdAt'>) => Diagnosis;
@@ -178,6 +183,7 @@ export type AppState = AppData & AppActions;
 
 export const initialData: AppData = {
   onboardingDone: false,
+  appearance: 'system',
   demo: defaultDemoSettings,
   notifications: 'offen',
   persons: [],
@@ -359,6 +365,8 @@ export function createAppStore(storage: StateStorage = AsyncStorage, env: StoreE
               if (!c || c.status !== 'offen') return {};
               return { cases: { ...s.cases, [caseId]: { ...c, ...patch, updatedAt: env.now() } } };
             }),
+
+          setAppearance: (appearance) => set({ appearance }),
 
           discardIfEmpty: (caseId) =>
             set((s) => {
@@ -993,7 +1001,8 @@ export function createAppStore(storage: StateStorage = AsyncStorage, env: StoreE
             return ev;
           },
 
-          reset: () => set({ ...initialData }),
+          // Die Darstellung ist eine Einstellung des Telefons, kein Demo-Stand
+          reset: () => set({ ...initialData, appearance: get().appearance }),
         };
       },
       {
@@ -1007,6 +1016,7 @@ export function createAppStore(storage: StateStorage = AsyncStorage, env: StoreE
         },
         partialize: (s): AppData => ({
           onboardingDone: s.onboardingDone,
+          appearance: s.appearance,
           demo: s.demo,
           notifications: s.notifications,
           household: s.household,

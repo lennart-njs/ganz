@@ -9,6 +9,7 @@ import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
+import { Appearance } from 'react-native';
 import { KeyboardProvider } from 'react-native-keyboard-controller';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
@@ -64,6 +65,13 @@ export default function RootLayout() {
   });
 
   const hydrated = useHydrated();
+  const appearance = useAppStore((s) => s.appearance);
+  const scheme = appearance === 'hell' ? 'light' : appearance === 'dunkel' ? 'dark' : undefined;
+
+  // Auch Tastatur, Systemdialoge und Statusleiste folgen der Wahl im Profil
+  useEffect(() => {
+    Appearance.setColorScheme?.(scheme ?? 'unspecified');
+  }, [scheme]);
   const ready = (loaded || !!error) && hydrated;
 
   useEffect(() => {
@@ -76,7 +84,7 @@ export default function RootLayout() {
   return (
     <SafeAreaProvider>
       <KeyboardProvider>
-        <ThemeProvider>
+        <ThemeProvider scheme={scheme}>
           <RootStack />
         </ThemeProvider>
       </KeyboardProvider>

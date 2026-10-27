@@ -181,3 +181,7 @@ Annahmen, die ich beim Bauen getroffen habe. Jede lässt sich ändern.
 - **Ohne Schlüssel oder Netz:** ehrliche Meldung, „Hilfe holen“ bleibt immer möglich. Kein vorgetäuschter Chat.
 - **Grenzen:** höchstens 40 Nachrichten je Gespräch und 1200 Zeichen je Nachricht. Danach verweist der Assistent auf die Fachkraft.
 - **Für den Pitch ohne WLAN-Rechner** braucht es später einen eigenen Server (z. B. EAS Hosting) mit Anmeldung und Rate-Limit. Heute läuft die Route nur, solange `npx expo start` läuft.
+
+### Darstellung (27.10.2026)
+
+- **Hell oder dunkel:** Im Profil unter „Darstellung“: Wie System, Hell, Dunkel. Standard ist „Wie System“. Die Wahl wird gespeichert und bleibt auch nach „Alles zurücksetzen“. `Appearance.setColorScheme` sorgt dafür, dass auch Tastatur und Systemdialoge folgen.
