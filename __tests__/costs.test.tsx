@@ -99,7 +99,7 @@ describe('Betrieb und Termin', () => {
     expect(screen.getByRole('button', { name: de.appointment.request })).toBeDisabled();
     await fireEvent.press(screen.getByRole('radio', { name: demoConfig.slots[0] }));
     await tap(de.appointment.request);
-    expect(r.getPathname()).toBe(`/fall/${id}/status`);
+    expect(r.getPathname()).toBe(`/fall/${id}`);
     const booking = useAppStore.getState().bookings[0]!;
     expect(booking).toMatchObject({
       kind: 'reparatur',
@@ -130,7 +130,7 @@ describe('Betrieb und Termin', () => {
     expect(screen.getByText(de.appointment.costsSelf('189 €'))).toBeTruthy();
     await fireEvent.press(screen.getByRole('radio', { name: demoConfig.slots[1] }));
     await tap(de.appointment.requestPaid);
-    expect(r.getPathname()).toBe(`/fall/${id}/status`);
+    expect(r.getPathname()).toBe(`/fall/${id}`);
     expect(useAppStore.getState().cases[id]?.status).toBe('in_reparatur');
   });
 
@@ -169,11 +169,13 @@ describe('Betrieb und Termin', () => {
       entry: 'symptom',
       problemLabel: 'Tür geht nicht auf',
     });
-    const r = await renderRouter(APP, { initialUrl: `/fall/${c.id}/hilfe` });
-    await tap(new RegExp(`^${de.help.onSite}`));
-    expect(r.getPathname()).toBe(`/fall/${c.id}/termin`);
+    s.escalate(c.id);
+    await renderRouter(APP, { initialUrl: `/fall/${c.id}` });
+    await tap(new RegExp(`^${de.thread.onSite}`));
+    expect(screen.getByText(de.thread.diagnosisAsk)).toBeTruthy();
+    await tap(new RegExp(`^${demoConfig.partners[0]!.name}`));
+    await tap(demoConfig.slots[2]!);
     expect(screen.getByText(de.appointment.costsDiagnosis)).toBeTruthy();
-    await fireEvent.press(screen.getByRole('radio', { name: demoConfig.slots[2] }));
     await tap(de.appointment.request);
     expect(useAppStore.getState().bookings[0]?.kind).toBe('vor_ort_diagnose');
     expect(useAppStore.getState().cases[c.id]?.status).toBe('eskaliert');

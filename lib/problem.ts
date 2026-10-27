@@ -1,11 +1,9 @@
 // Gemeinsame Schritte beim Melden eines Problems, genutzt im Gespräch und in der Liste der Meldungen.
-import { router } from 'expo-router';
-
 import { guides, type GuideId } from '@/data/guides';
 import type { Id } from '@/model/types';
 import { useAppStore } from '@/store/appStore';
 
-/** Meldung im Display: Angabe des Haushalts speichern und die passende Anleitung starten */
+/** Meldung im Display: Angabe des Haushalts speichern und die passende Anleitung starten. Öffnen tut der Aufrufer. */
 export function reportDisplayMessage(caseId: Id, guideId: GuideId, code: string) {
   const s = useAppStore.getState();
   s.updateCase(caseId, { entry: 'meldung', problemLabel: code });
@@ -21,5 +19,4 @@ export function reportDisplayMessage(caseId: Id, guideId: GuideId, code: string)
     guideId,
   });
   s.startGuide(caseId, guides[guideId].id);
-  router.push(`/fall/${caseId}/anleitung`);
 }

@@ -49,7 +49,7 @@ describe('Texte je Gerätetyp', () => {
     expect(screen.queryByText(de.problems[1]!.label)).toBeNull();
     await tap(new RegExp(`^${symptom.label}`));
     const id = Object.keys(useAppStore.getState().cases)[0]!;
-    expect(r.getPathname()).toBe(`/fall/${id}/hilfe`);
+    expect(r.getPathname()).toBe(`/fall/${id}`);
     expect(useAppStore.getState().cases[id]).toMatchObject({
       entry: 'symptom',
       problemLabel: symptom.label,
@@ -94,11 +94,14 @@ describe('Texte je Gerätetyp', () => {
       confidenceScore: 0,
       source: 'fehlererkennung',
     });
-    const r = await renderRouter(APP, { initialUrl: `/fall/${c.id}/ergebnis` });
+    const r = await renderRouter(APP, { initialUrl: `/fall/${c.id}` });
     expect(screen.getByText(de.result.noGuideTitle)).toBeTruthy();
-    expect(screen.queryByRole('button', { name: de.result.startGuide })).toBeNull();
+    expect(
+      screen.queryByRole('button', { name: new RegExp(`^${de.result.startGuide}`) }),
+    ).toBeNull();
     await tap(de.result.getHelp);
-    expect(r.getPathname()).toBe(`/fall/${c.id}/hilfe`);
+    expect(r.getPathname()).toBe(`/fall/${c.id}`);
+    expect(useAppStore.getState().cases[c.id]?.status).toBe('eskaliert');
   });
 
   test('Befund, Kostenvoranschlag und Status sprechen vom Kühlschrank', async () => {
@@ -107,12 +110,11 @@ describe('Texte je Gerätetyp', () => {
     const c = s.createCase({ deviceId: device.id, entry: 'symptom', problemLabel: 'Kühlt nicht' });
     s.escalate(c.id);
     const k = de.appliance.kuehlschrank;
-    await renderRouter(APP, { initialUrl: `/fall/${c.id}/befund` });
-    expect(screen.getByText(k.finding.title)).toBeTruthy();
-    expect(screen.getByText(k.finding.repairSub)).toBeTruthy();
-    expect(screen.queryByText(/Laugenpumpe/)).toBeNull();
-
     useAppStore.getState().setFinding(c.id, 'reparatur', 'fachkraft');
+    await renderRouter(APP, { initialUrl: `/fall/${c.id}` });
+    expect(screen.getByText(k.finding.title)).toBeTruthy();
+    expect(screen.getByText(k.finding.text)).toBeTruthy();
+    expect(screen.queryByText(/Laugenpumpe/)).toBeNull();
     const st = useAppStore.getState();
     expect(st.quotes.find((q) => q.caseId === c.id)?.repair.partName).toBe(k.finding.component);
     expect(st.diagnoses.at(-1)).toMatchObject({
@@ -138,7 +140,7 @@ describe('Texte je Gerätetyp', () => {
   });
 
   test('Screens nutzen keine festen Waschmaschinen-Texte', () => {
-    const files = ['befund', 'videocall', 'abschluss', 'termin', 'anleitung', 'kamera'].map((f) =>
+    const files = ['index', 'videocall', 'termin', 'anleitung', 'kamera'].map((f) =>
       fs.readFileSync(path.join(__dirname, '..', 'app', 'fall', '[id]', `${f}.tsx`), 'utf8'),
     );
     for (const src of files) expect(src).not.toMatch(/Laugenpumpe|Maschine/);

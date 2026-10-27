@@ -1,8 +1,9 @@
-import { router, useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
 import { CaseScreen, useCaseId } from '@/components/app/CaseScreen';
+import { backToThread } from '@/components/nav/leaveCase';
 import {
   ActionBar,
   Button,
@@ -55,7 +56,7 @@ export default function Termin() {
       return;
     }
     requestAppointment({ caseId, partnerId, slot, selfPay, diagnosis });
-    router.replace(`/fall/${caseId}/status`);
+    backToThread(caseId);
   };
 
   const summary: [string, string][] = [

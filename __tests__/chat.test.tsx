@@ -29,11 +29,16 @@ function setup(category: DeviceCategory = 'waschmaschine') {
   return device;
 }
 
-async function write(text: string) {
-  await fireEvent.changeText(screen.getByLabelText(t.inputLabel), text);
+/** Eigene Worte in „Problem melden“: Sie gehen an den Assistenten im Gespräch des Falls */
+async function ask(text: string) {
+  await fireEvent.changeText(screen.getByLabelText(de.thread.inputLabel), text);
   await tap(t.send);
   await act(async () => {});
 }
+
+const flush = async () => {
+  for (let i = 0; i < 4; i++) await act(async () => {});
+};
 
 beforeEach(() => {
   fetchMock.mockReset();
@@ -41,26 +46,31 @@ beforeEach(() => {
 });
 
 describe('Reparatur-Assistent', () => {
-  test('erst die Einwilligung, dann das Eingabefeld', async () => {
+  test('erst die Einwilligung, dann geht die Frage von selbst los', async () => {
     setup();
-    await renderRouter(APP, { initialUrl: '/fall/neu' });
-    await tap(new RegExp(`^${t.entry}`));
+    const r = await renderRouter(APP, { initialUrl: '/fall/neu' });
+    fetchMock.mockReturnValueOnce(
+      reply({ reply: 'Steht das Wasser in der Trommel?', suggestion: 'keine', guideId: '' }),
+    );
+    await ask('Es pumpt nicht ab.');
+    expect(r.getPathname()).toBe('/fall/GS-24817');
     expect(screen.getByText(t.consentText(demoConfig.assistant.name))).toBeTruthy();
-    expect(screen.queryByLabelText(t.inputLabel)).toBeNull();
+    expect(fetchMock).not.toHaveBeenCalled();
     await tap(t.consentAccept);
+    await flush();
     const consent = useAppStore.getState().consents.find((k) => k.purpose === 'chat_assistent');
     expect(consent).toMatchObject({
       legalBasis: 'einwilligung',
       recipient: { kind: 'dienstleister', name: demoConfig.assistant.name },
     });
-    expect(screen.getByLabelText(t.inputLabel)).toBeTruthy();
+    // Kein zweites Absenden nötig
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(screen.getByText('Steht das Wasser in der Trommel?')).toBeTruthy();
   });
 
   test('Frage, Antwort und Vorschlag „Anleitung starten“', async () => {
     setup();
     const r = await renderRouter(APP, { initialUrl: '/fall/neu' });
-    await tap(new RegExp(`^${t.entry}`));
-    await tap(t.consentAccept);
     fetchMock.mockReturnValueOnce(
       reply({
         reply: 'Das klingt nach dem Laugenfilter.',
@@ -68,9 +78,10 @@ describe('Reparatur-Assistent', () => {
         guideId: 'ablauf',
       }),
     );
-    await write('Nach dem Waschen steht Wasser in der Trommel.');
+    await ask('Nach dem Waschen steht Wasser in der Trommel.');
+    await tap(t.consentAccept);
+    await flush();
 
-    expect(fetchMock).toHaveBeenCalledTimes(1);
     const [url, init] = fetchMock.mock.calls[0];
     expect(url).toBe('/api/chat');
     const body = JSON.parse(init.body);
@@ -98,27 +109,38 @@ describe('Reparatur-Assistent', () => {
   test('Vorschlag „Hilfe holen“ führt zur Fachkraft', async () => {
     setup('kuehlschrank');
     const r = await renderRouter(APP, { initialUrl: '/fall/neu' });
-    await tap(new RegExp(`^${t.entry}`));
-    await tap(t.consentAccept);
     fetchMock.mockReturnValueOnce(
       reply({ reply: 'Das sollte sich eine Fachkraft ansehen.', suggestion: 'hilfe', guideId: '' }),
     );
-    await write('Der Kühlschrank riecht verbrannt.');
+    await ask('Der Kühlschrank riecht verbrannt.');
+    await tap(t.consentAccept);
+    await flush();
     expect(JSON.parse(fetchMock.mock.calls[0][1].body).context.category).toBe('kuehlschrank');
     await tap(t.getHelp);
     const id = Object.keys(useAppStore.getState().cases)[0]!;
-    expect(r.getPathname()).toBe(`/fall/${id}/hilfe`);
+    expect(r.getPathname()).toBe(`/fall/${id}`);
     expect(useAppStore.getState().cases[id]?.status).toBe('eskaliert');
+    expect(
+      screen.getByRole('button', { name: new RegExp(`^${de.thread.callStart}`) }),
+    ).toBeTruthy();
   });
 
-  test('ohne Schlüssel auf dem Rechner: ehrlicher Hinweis und Hilfe', async () => {
+  test('ohne Schlüssel auf dem Rechner: Notiz an die Fachkraft und Hilfe', async () => {
     setup();
     await renderRouter(APP, { initialUrl: '/fall/neu' });
-    await tap(new RegExp(`^${t.entry}`));
-    await tap(t.consentAccept);
     fetchMock.mockReturnValueOnce(reply({ error: 'kein_schluessel' }, 503));
-    await write('Die Tür geht nicht auf.');
-    expect(screen.getByText(t.errors.kein_schluessel)).toBeTruthy();
+    await ask('Die Tür geht nicht auf.');
+    await tap(t.consentAccept);
+    await flush();
+    expect(screen.getByText(de.thread.noteFallback)).toBeTruthy();
+    expect(
+      useAppStore
+        .getState()
+        .events.some(
+          (e) =>
+            e.type === 'rueckfrage_beantwortet' && e.payload.answer === 'Die Tür geht nicht auf.',
+        ),
+    ).toBe(true);
     expect(screen.queryByRole('button', { name: t.retry })).toBeNull();
     expect(screen.getByRole('button', { name: t.getHelp })).toBeTruthy();
   });
@@ -126,16 +148,16 @@ describe('Reparatur-Assistent', () => {
   test('Netzfehler: noch einmal senden', async () => {
     setup();
     await renderRouter(APP, { initialUrl: '/fall/neu' });
-    await tap(new RegExp(`^${t.entry}`));
-    await tap(t.consentAccept);
     fetchMock.mockRejectedValueOnce(new TypeError('Network request failed'));
-    await write('Die Tür geht nicht auf.');
+    await ask('Die Tür geht nicht auf.');
+    await tap(t.consentAccept);
+    await flush();
     expect(screen.getByText(t.errors.netz)).toBeTruthy();
     fetchMock.mockReturnValueOnce(
       reply({ reply: 'Ist das Programm zu Ende?', suggestion: 'keine', guideId: '' }),
     );
     await tap(t.retry);
-    await act(async () => {});
+    await flush();
     expect(screen.getByText('Ist das Programm zu Ende?')).toBeTruthy();
     // Die Frage wurde nicht doppelt gespeichert
     expect(useAppStore.getState().chatMessages.filter((m) => m.role === 'haushalt')).toHaveLength(
@@ -143,7 +165,7 @@ describe('Reparatur-Assistent', () => {
     );
   });
 
-  test('aus der Anleitung: Entwurf mit dem Schritt', async () => {
+  test('aus der Anleitung: Entwurf mit dem Schritt im Gespräch', async () => {
     setup();
     const s = useAppStore.getState();
     const device = s.devices[0]!;
@@ -153,17 +175,14 @@ describe('Reparatur-Assistent', () => {
       problemLabel: 'Wasserablauf gestört',
     });
     s.startGuide(c.id, 'ablauf');
-    s.grantConsent({
-      purpose: 'chat_assistent',
-      legalBasis: 'einwilligung',
-      recipient: { id: 'anthropic', kind: 'dienstleister', name: 'Anthropic' },
-      dataCategories: [],
-      textVersion: 'test',
+    const r = await renderRouter(APP, { initialUrl: `/fall/${c.id}?weiter=anleitung` });
+    await act(async () => {
+      jest.runOnlyPendingTimers();
     });
-    const r = await renderRouter(APP, { initialUrl: `/fall/${c.id}/anleitung` });
+    expect(r.getPathname()).toBe(`/fall/${c.id}/anleitung`);
     await tap(t.askStep);
-    expect(r.getPathname()).toBe(`/fall/${c.id}/chat`);
-    expect(screen.getByLabelText(t.inputLabel).props.value).toBe(
+    expect(r.getPathname()).toBe(`/fall/${c.id}`);
+    expect(screen.getByLabelText(de.thread.inputLabel).props.value).toBe(
       t.stepDraft(1, guides.ablauf.steps[0]!.t),
     );
   });

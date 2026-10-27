@@ -362,7 +362,8 @@ export function createAppStore(storage: StateStorage = AsyncStorage, env: StoreE
           updateCase: (caseId, patch) =>
             set((s) => {
               const c = s.cases[caseId];
-              if (!c || c.status !== 'offen') return {};
+              // Nur solange der Fall noch am Anfang steht: gemeldet oder in der Selbsthilfe
+              if (!c || (c.status !== 'offen' && c.status !== 'selbsthilfe')) return {};
               return { cases: { ...s.cases, [caseId]: { ...c, ...patch, updatedAt: env.now() } } };
             }),
 
@@ -374,6 +375,8 @@ export function createAppStore(storage: StateStorage = AsyncStorage, env: StoreE
               const empty =
                 c &&
                 c.status === 'offen' &&
+                // „Später weitermachen“ behält den Fall bewusst
+                !c.pausedAt &&
                 !c.photoIds.length &&
                 !c.diagnosisIds.length &&
                 !c.guideRunIds.length &&

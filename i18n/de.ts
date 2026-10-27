@@ -83,6 +83,7 @@ export const de = {
     fall_angelegt: 'Problem gemeldet',
     foto_aufgenommen: 'Foto aufgenommen',
     ergebnis_erkannt: 'Ergebnis der Intelligenten Fehlererkennung',
+    rueckfrage_gestellt: 'Rückfrage gestellt',
     rueckfrage_beantwortet: 'Rückfrage beantwortet',
     anleitung_gestartet: 'Anleitung gestartet',
     schritt_erledigt: 'Schritt erledigt',
@@ -298,6 +299,7 @@ export const de = {
     example: (value: string) => `z. B. ${value}`,
     /** Mittelpunkt als Trenner wie im Designsystem */
     dot: (...parts: string[]) => parts.filter(Boolean).join(' · '),
+    sentences: (...parts: string[]) => parts.filter(Boolean).join(' '),
     exampleValues: 'Beispielwerte',
     later: 'Später',
     cancel: 'Abbrechen',
@@ -943,6 +945,70 @@ export const de = {
     },
   },
 
+  /** Der Fall als ein Gespräch (Entscheidung 11) */
+  thread: {
+    title: (id: string) => `Fall ${id}`,
+    details: 'Details',
+    toThread: 'Zurück zum Gespräch',
+    caseFile: 'Fallakte ansehen',
+    photo: (purpose: string) => `Foto: ${purpose}`,
+    analysing: 'Ich schaue mir dein Foto an.',
+    guideOffer: (title: string, steps: string, source: string) =>
+      `Anleitung „${title}“: ${steps} ${source}.`,
+    guideRunning: (step: number, total: number) => `Du bist bei Schritt ${step} von ${total}.`,
+    continueGuide: 'Anleitung weitermachen',
+    outcome: {
+      laeuft_wieder: 'Läuft wieder',
+      laeuft_nicht: 'Läuft noch nicht',
+      geht_nicht: (step: number, title: string) => `Geht nicht bei Schritt ${step}: ${title}`,
+      fertig: 'Fertig',
+    },
+    helpIntro: 'Kein Problem. Wir holen Hilfe.',
+    helpText:
+      'Am schnellsten geht es im Videocall. Die Fachkraft sieht deine Fallakte und muss nichts doppelt fragen.',
+    callStart: 'Videocall starten',
+    callSub: 'Wartezeit ca. 1 Minute',
+    onSite: 'Vor-Ort-Diagnose',
+    onSiteSub: 'Ein Fachbetrieb kommt und schaut es sich an',
+    callEnded: (expert: string) => `Videocall mit ${expert} beendet.`,
+    callAborted: 'Videocall abgebrochen.',
+    callbackAsk: 'Wann passt der Rückruf?',
+    callbackDone: (slot: string) => `Rückruf angefragt: ${slot}. Die Fachkraft ruft dich an.`,
+    findingFrom: (expert: string) => `${expert} · Fachkraft`,
+    findingRecommended: (label: string) => `Empfehlung: ${label}.`,
+    findingOk: 'Passt, weiter',
+    findingWrong: 'Stimmt nicht',
+    findingWrongAnswer: 'Der Befund stimmt nicht',
+    findingWrongText:
+      'Danke, dass du es sagst. Wir holen noch einmal Hilfe. Die Fachkraft sieht, was du gesagt hast.',
+    findingQuestion: 'Befund',
+    solvedInCall: 'Im Call gelöst. Der Fall liegt in deinen Fällen, falls das Problem wiederkommt.',
+    replacementNext: (insurer: string) =>
+      `${insurer} meldet sich zum Ersatzgerät, sobald die Prüfung fertig ist.`,
+    bookingAnswer: (slot: string, partner: string) => `Termin anfragen: ${slot} · ${partner}`,
+    diagnosisAsk: 'Wer schaut es sich an?',
+    rejectedChoice: {
+      selfPay: (amount: string) => `Reparatur selbst zahlen (${amount})`,
+      keep: 'Kostenvoranschlag behalten',
+      close: 'Fall schließen',
+    },
+    demoNext: 'Nächster Schritt (Demo)',
+    done: 'Fertig',
+    stillBroken: 'Problem besteht weiter',
+    rate: 'Wie zufrieden bist du mit dem Betrieb?',
+    cancelled: 'Fall abgebrochen.',
+    runningCase: (title: string) => `Für dieses Gerät läuft schon ein Fall: ${title}.`,
+    runningCaseAsk: 'Willst du dort weitermachen oder ein neues Problem melden?',
+    continueCase: 'Weitermachen',
+    newProblem: 'Neues Problem melden',
+    newProblemReason: 'Neues Problem gemeldet',
+    inputLabel: 'Schreib dem Reparatur-Assistenten',
+    inputHint: 'Frag etwas oder beschreib dein Problem in eigenen Worten.',
+    noteFallback:
+      'Der Assistent ist gerade nicht erreichbar. Deine Nachricht geht als Notiz an die Fachkraft.',
+    noteQuestion: 'Notiz an die Fachkraft',
+  },
+
   chat: {
     title: 'Reparatur-Assistent',
     intro:
@@ -1033,6 +1099,8 @@ export const de = {
     kosten: 'Klapp „Das geht an …“ auf: So kommt der Fall beim Versicherer an.',
     status: 'Mit „Nächster Schritt (Demo)“ springst du durch Freigabe und Termin.',
     profil: 'Tippe 7-mal auf die Versionsnummer für die Demo-Steuerung.',
+    thread:
+      'Antworte unten. „Details“ zeigt alles auf einen Blick. Eigene Fragen beantwortet der Reparatur-Assistent.',
   },
 
   demoControl: {

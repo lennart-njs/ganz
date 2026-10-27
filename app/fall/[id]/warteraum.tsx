@@ -1,9 +1,9 @@
 import { Redirect, router, useLocalSearchParams } from 'expo-router';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef } from 'react';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
 
 import { CaseScreen, useCaseId } from '@/components/app/CaseScreen';
-import { ActionBar, Button, ChoiceChip, Text } from '@/components/ds';
+import { Button, Text } from '@/components/ds';
 import { demoConfig } from '@/config/demo.config';
 import { de } from '@/i18n/de';
 import { canStartVideoCall } from '@/model/caseMachine';
@@ -13,7 +13,7 @@ import { useTheme } from '@/theme';
 
 const t = de.waiting;
 
-/** Verbindung: Wartezeit, Abbrechen, „keine Fachkraft frei“ → Rückruf (B-23) */
+/** Verbindung: Wartezeit und Abbrechen. Ist keine Fachkraft frei, geht es im Gespräch weiter (B-23). */
 export default function Warteraum() {
   const theme = useTheme();
   const caseId = useCaseId();
@@ -24,8 +24,6 @@ export default function Warteraum() {
     return !!c && canStartVideoCall(s.consents, c.reportedBy, caseId);
   });
   const hints = useAppStore((s) => s.demo.hints);
-  const [noExpert, setNoExpert] = useState(false);
-  const [slot, setSlot] = useState<string>();
   const skip = useRef<() => void>(undefined);
   const resolved = useRef(false);
 
@@ -41,7 +39,8 @@ export default function Warteraum() {
       resolved.current = true;
       useAppStore.getState().updateVideoCall(session.id, outcome);
       if (outcome === 'verbunden') router.replace(`/fall/${caseId}/videocall?video=${session.id}`);
-      else setNoExpert(true);
+      // Keine Fachkraft frei: Das Gespräch bietet Rückruf oder Vor-Ort-Diagnose an (B-23)
+      else router.back();
     });
     return () => {
       cancelled = true;
@@ -53,52 +52,7 @@ export default function Warteraum() {
   }, [session?.id, allowed]);
 
   // Ohne bestätigte Weitergabe startet kein Call
-  if (!session || !allowed) return <Redirect href={`/fall/${caseId}/hilfe`} />;
-
-  if (noExpert) {
-    return (
-      <CaseScreen
-        title={de.screens.warteraum}
-        footer={
-          <ActionBar>
-            <Button
-              label={t.requestCallback}
-              size="lg"
-              fullWidth
-              disabled={!slot}
-              onPress={() => {
-                useAppStore.getState().requestCallback(caseId, slot!);
-                router.replace(`/fall/${caseId}/status`);
-              }}
-            />
-            <Button
-              label={t.onSiteInstead}
-              variant="secondary"
-              fullWidth
-              onPress={() => router.replace(`/fall/${caseId}/termin?art=diagnose`)}
-            />
-          </ActionBar>
-        }
-      >
-        <Text variant="h1" accessibilityRole="header" accessibilityLiveRegion="polite">
-          {t.noExpertTitle}
-        </Text>
-        <Text variant="bodyLg">{t.noExpertText}</Text>
-        <Text variant="meta" tone="muted">
-          {t.callbackLabel}
-        </Text>
-        <View
-          style={styles.chips}
-          accessibilityRole="radiogroup"
-          accessibilityLabel={t.callbackLabel}
-        >
-          {t.callbackSlots.map((s) => (
-            <ChoiceChip key={s} label={s} selected={slot === s} onPress={() => setSlot(s)} />
-          ))}
-        </View>
-      </CaseScreen>
-    );
-  }
+  if (!session || !allowed) return <Redirect href={`/fall/${caseId}`} />;
 
   return (
     <CaseScreen title={de.screens.warteraum}>
@@ -129,5 +83,4 @@ export default function Warteraum() {
 
 const styles = StyleSheet.create({
   center: { alignItems: 'center', gap: 14, paddingVertical: 32 },
-  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
 });

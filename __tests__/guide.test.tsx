@@ -82,9 +82,9 @@ describe('Anleitung', () => {
     await tap(de.a11y.back);
     expect(screen.getByText(ablauf.steps[0]!.t)).toBeTruthy();
     await tap(de.a11y.back);
-    // Zurück ins Gespräch „Problem melden“, die Frage nach der Meldung steht noch da
-    expect(r.getPathname()).toBe('/fall/neu');
-    expect(screen.getByText(de.talk.problem.whichMessage)).toBeTruthy();
+    // Zurück ins Gespräch des Falls, die Anleitung lässt sich dort fortsetzen
+    expect(r.getPathname()).toBe('/fall/GS-24817');
+    expect(screen.getByRole('button', { name: de.thread.continueGuide })).toBeTruthy();
     const types = useAppStore.getState().events.map((e) => e.type);
     expect(types.filter((x) => x === 'schritt_zurueck')).toHaveLength(2);
   });
@@ -115,7 +115,8 @@ describe('Anleitung', () => {
       'Pumpenflügel klemmt',
     );
     await tap(de.guide.getHelp);
-    expect(r.getPathname()).toBe('/fall/GS-24817/hilfe');
+    expect(r.getPathname()).toBe('/fall/GS-24817');
+    expect(screen.getByText(de.thread.outcome.geht_nicht(5, ablauf.steps[4]!.t))).toBeTruthy();
     expect(run()).toMatchObject({
       outcome: 'geht_nicht',
       abortedAtStep: 4,
@@ -131,7 +132,8 @@ describe('Anleitung', () => {
     expect(screen.getByText(de.appliance.waschmaschine.runsAgain)).toBeTruthy();
     expect(screen.queryByRole('button', { name: de.guide.finished })).toBeNull();
     await tap(de.guide.runsAgain);
-    expect(r.getPathname()).toBe('/fall/GS-24817/abschluss');
+    expect(r.getPathname()).toBe('/fall/GS-24817');
+    expect(screen.getByText(de.finish.solvedTitle)).toBeTruthy();
     expect(useAppStore.getState().cases['GS-24817']).toMatchObject({
       status: 'erledigt',
       resolution: 'selbst_geloest',
@@ -146,7 +148,7 @@ describe('Anleitung', () => {
     expect(screen.queryByText(de.appliance.waschmaschine.runsAgain)).toBeNull();
     expect(screen.queryByRole('button', { name: de.guide.runsAgain })).toBeNull();
     await tap(de.guide.finished);
-    expect(r.getPathname()).toBe('/');
+    expect(r.getPathname()).toBe('/fall/GS-24817');
     expect(useAppStore.getState().cases['GS-24817']).toMatchObject({
       status: 'erledigt',
       resolution: 'pflege_erledigt',
@@ -172,7 +174,7 @@ describe('Anleitung', () => {
     expect(r.getPathname()).toBe('/fall/GS-24817/anleitung');
     await fireEvent.press(screen.getByRole('checkbox', { name: de.guide.confirm.waterproof }));
     await tap(de.guide.getHelp);
-    expect(r.getPathname()).toBe('/fall/GS-24817/hilfe');
+    expect(r.getPathname()).toBe('/fall/GS-24817');
     expect(useAppStore.getState().events.map((e) => e.type)).toContain('sicherheit_bestaetigt');
   });
 

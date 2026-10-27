@@ -38,7 +38,7 @@ Alle P0- und P1-Befunde sind behoben. Die Spalte „Nachweis“ nennt den Test, 
 | B-23 | Warteraum, Wartezeit, „keine Fachkraft frei“ mit Rückruf | `__tests__/help.test.tsx` |
 | B-24 | Mikrofon und Kamera als Umschalter mit Zustand | `__tests__/help.test.tsx` |
 | B-25 | „Keine Aufnahme“ vor und im Call, Screenshots nur mit Einwilligung | `__tests__/help.test.tsx` |
-| B-26 | Befund mit „Im Call gelöst“, Reparatur, Ersatzgerät | `__tests__/help.test.tsx` |
+| B-26 | Befund der Fachkraft im Gespräch: „Im Call gelöst“, Reparatur oder Ersatzgerät. Seit Entscheidung 14 bestätigst du ihn oder sagst „Stimmt nicht“ | `__tests__/help.test.tsx` |
 | B-28 | Pumpe bestellt und baut der Betrieb ein, Store sperrt den Versand an den Haushalt | `__tests__/costs.test.tsx` |
 | B-31 | Direktweg heißt „Vor-Ort-Diagnose“, Texte aus dem Fall | `__tests__/costs.test.tsx` |
 | B-32 | „Termin anfragen“, Bestätigung durch den Betrieb im Status | `__tests__/costs.test.tsx`, `__tests__/status.test.tsx` |
@@ -57,7 +57,7 @@ Alle P0- und P1-Befunde sind behoben. Die Spalte „Nachweis“ nennt den Test, 
 | B-50 | Fall als modaler Stack, X öffnet das Schließen-Sheet | `__tests__/navigation.test.tsx` |
 | B-51 | „Achtung“-Block vor dem Schritttext, „Wasserhahn ist zu“ bestätigen | `__tests__/guide.test.tsx` |
 | B-53 | Vorschau „Das geht an …“ vor der Schadenmeldung | `__tests__/costs.test.tsx` |
-| B-54 | „Etwas anderes“ mit Freitext, dann „Hilfe holen“ | `__tests__/problem.test.tsx` |
+| B-54 | Eigene Worte gehen an den Reparatur-Assistenten, ohne Einwilligung als Notiz an die Fachkraft (Entscheidung 12) | `__tests__/problem.test.tsx`, `__tests__/chat.test.tsx` |
 
 ## P2
 

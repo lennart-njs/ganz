@@ -3,6 +3,7 @@ import { Image, StyleSheet, View } from 'react-native';
 
 import { DemoHint } from '@/components/app/DemoHint';
 import { CaseScreen, useCaseId } from '@/components/app/CaseScreen';
+import { backToThread } from '@/components/nav/leaveCase';
 import { ActionBar, Button, Card, ConfidenceLabel, FactList, InfoBox, Text } from '@/components/ds';
 import { demoConfig } from '@/config/demo.config';
 import { guides, type GuideId } from '@/data/guides';
@@ -76,7 +77,7 @@ export default function Ergebnis() {
 
   const help = () => {
     useAppStore.getState().escalate(caseId);
-    router.push(`/fall/${caseId}/hilfe`);
+    backToThread(caseId);
   };
 
   if (diagnosis.errorPattern === 'ohne_anleitung') {
@@ -110,11 +111,7 @@ export default function Ergebnis() {
             ? de.help.costNote(demoConfig.insurer.shortName, formatEuro(state.demo.deductible))
             : de.help.costNoteNoContract}
         </InfoBox>
-        <Button
-          label={de.chat.entry}
-          variant="link"
-          onPress={() => router.push(`/fall/${caseId}/chat`)}
-        />
+        <Button label={de.chat.entry} variant="link" onPress={() => backToThread(caseId)} />
       </CaseScreen>
     );
   }

@@ -193,3 +193,29 @@ Annahmen, die ich beim Bauen getroffen habe. Jede lässt sich ändern.
 - **Etwas anderes:** Die eigene Beschreibung steht als Antwort im Gespräch. Danach „Hilfe holen“ oder „Reparatur-Assistent fragen“. Der Assistent bekommt die Beschreibung als Entwurf und schickt sie erst nach deiner Einwilligung.
 - **Reparatur-Assistent im Gesprächsstil:** Antworten des Assistenten stehen als großer Text mit Absender „Reparatur-Assistent“, deine Fragen als Tintenblasen. Einwilligung, Vorschläge („Anleitung starten: …“, „Hilfe holen“) und Auswege bei Fehlern („Noch einmal senden“) stehen als Antwort-Buttons über dem Eingabefeld. Nachrichten im Chat haben keinen Stift: Eine geänderte Frage würde das Gespräch mit dem Assistenten verfälschen.
 - **Schadenmeldung als Gespräch** (`app/fall/[id]/schaden.tsx`): zweiter Weg neben dem Formular, erreichbar über „Lieber Schritt für Schritt im Gespräch“ im Screen Kosten. Gleiche Regeln wie im Formular: Kostenvergleich, Vorschau „Das geht an …“, Rechtsgrundlage, Schadenfall erst durch den Tap auf „Schadenfall melden“, „Zahlungspflichtig buchen“, wenn etwas zu zahlen ist. Die gemeldete Schadenfall-Antwort hat keinen Stift, weil eine Meldung nicht zurückgenommen wird. Betrieb und Zeitfenster lassen sich mit dem Stift ändern. Ablehnung, Ersatzgerät und schon gebuchte Termine zeigt weiter das Formular.
+
+## Ein Gespräch pro Fall (27.10.2026)
+
+### Gefunden beim Durchklicken und behoben
+
+- Zeitstrahl im Status: Ausstehendes stand zwischen Erledigtem. Nach einer Ablehnung standen noch Termin-Schritte als nächste Schritte da.
+- Fallakte: „Reparatur abgeschlossen“ stand doppelt.
+- „Was ist kaputt?“ fragte bei mehreren Geräten nicht nach dem Gerät, sondern nahm immer das erste.
+- Onboarding ohne Schutz: Kopfzeile „Gerät bestätigen“ über „Füg dein erstes Gerät hinzu“.
+- Wer eine Anleitung startete, zurückging und ein anderes Problem wählte, hatte zwei offene Fälle am selben Gerät.
+- Nach der Einwilligung musste man die Frage an den Assistenten noch einmal absenden.
+- Der Befund ließ dich wählen, was die Fachkraft entscheidet.
+- Der Weg zur Schadenmeldung als Gespräch war hinter einem Link versteckt, Formular und Gespräch liefen nebeneinander her.
+- Ein Fall in der Selbsthilfe ließ sich nicht umbenennen, wenn man ein anderes Problem wählte.
+
+### Aufbau
+
+- **`app/fall/[id]/index.tsx`** ist das Gespräch des Falls. Es entsteht vollständig aus dem gespeicherten Fall (Ereignisse, Ergebnisse, Anleitungen, Calls, Kostenvoranschlag, Termine, Chat). Darum übersteht es jeden Neustart und zeigt in App und Fallakte denselben Stand.
+- **Was jetzt dran ist** steht unten als Antwort-Buttons, darunter immer das Eingabefeld für den Reparatur-Assistenten (außer im abgeschlossenen Fall). Ein Vorschlag des Assistenten steht über den anderen Antworten.
+- **Vollbild-Schritte:** Kamera und Analyse, Anleitung, Warteraum und Videocall. Danach geht es zurück ins Gespräch. Ist keine Fachkraft frei, bietet das Gespräch Rückruf oder Vor-Ort-Diagnose an.
+- **Formulare als Details:** Ergebnis, Kosten, Termin, Status und Fallakte bleiben als Ansichten. Sie funktionieren weiter für sich und führen zurück ins Gespräch.
+- **Entfallen:** eigene Screens für Hilfe holen, Befund, Abschluss, Rückfrage, Meldungen, Reparatur-Assistent und Schaden-Gespräch. Alles davon steht jetzt im Gespräch.
+- **Rückfrage** der Fehlererkennung ist ein Ereignis (`rueckfrage_gestellt`), die Antwort steht im Gespräch.
+- **Befund:** Die Empfehlung der Fachkraft kommt aus `services.video.finding()`. „Passt, weiter“ speichert sie. „Stimmt nicht“ speichert deinen Widerspruch und bietet Hilfe neu an.
+- **Stift:** an der ersten Antwort, solange der Fall noch keinen Fortschritt hat. Er führt zurück zu „Problem melden“ mit demselben Fall. An der Schadenmeldung nie.
+- **Ein Fall ohne Inhalt** verschwindet, wenn man das Gespräch verlässt. Mit „Später weitermachen“ bleibt er.

@@ -35,18 +35,22 @@ Der Demo-Modus ist in `config/demo.config.ts` eingeschaltet (`demo.enabled`).
 - **Alles zurücksetzen:** löscht Geräte, Fälle und Einwilligungen und startet das Onboarding neu.
 
 - **Hell oder dunkel:** Profil → „Darstellung“: Wie System, Hell, Dunkel.
-- **Gespräch oder Formular:** „Problem melden“ läuft als Gespräch. Die Schadenmeldung geht als Formular oder über „Lieber Schritt für Schritt im Gespräch“.
+- **Gespräch und Formular:** Jeder Fall ist ein Gespräch. „Details“ an Ergebnis, Kosten und Termin öffnet die Formular-Ansicht.
 
 ### Golden Path für den Pitch (ca. 3 Minuten)
 
+Der ganze Fall ist ein Gespräch. Die Antworten stehen unten, „Details“ zeigt das Formular.
+
 1. Onboarding: „Los geht’s“ → Vertragsnummer `KV-2023-0471` → „Ja, das ist es“.
 2. „Was ist kaputt?“ → „Foto machen“ → Auslöser (im Browser: „Beispielfoto nehmen“).
-3. Ergebnis „Laugenfilter verstopft“, Sicherheit hoch → „Anleitung starten“.
-4. Vier Schritte „Erledigt“, in Schritt 5 „Geht nicht“ → „Hilfe holen“.
-5. „Videocall starten“ (Hinweis, wer welche Daten sieht) → Auflegen → Befund „Reparatur“.
+3. Im Gespräch: Ergebnis „Laugenfilter verstopft“, Sicherheit hoch → „Anleitung starten“.
+4. Vier Schritte „Erledigt“, in Schritt 5 „Geht nicht“ → „Hilfe holen“. Zurück im Gespräch.
+5. „Videocall starten“ (vorher steht, wer welche Daten sieht) → Auflegen → Befund der Fachkraft → „Passt, weiter“.
 6. Kosten: „Das geht an Kranich“ aufklappen → „Schadenfall melden“.
-7. Betrieb und Zeitfenster wählen → „Termin anfragen“ → Status mit „Nächster Schritt (Demo)“ bis „Repariert“.
-8. Abschluss: „Läuft wieder“ → Bewertung → Fallakte im Tab „Fälle“.
+7. Betrieb und Zeitfenster wählen → „Termin anfragen“ → „Nächster Schritt (Demo)“ bis „Repariert“.
+8. „Läuft wieder“ → Sterne → „Fertig“ → Fall im Tab „Fälle“.
+
+Eigene Worte: Unten ins Feld schreiben. Der Reparatur-Assistent antwortet im selben Gespräch.
 
 ### Whitelabel
 

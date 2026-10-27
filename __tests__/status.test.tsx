@@ -55,7 +55,8 @@ beforeEach(() => {
 describe('Fall-Status', () => {
   test('der Mock-Timer schaltet Freigabe, Bestätigung, unterwegs und repariert', async () => {
     const { id, r } = await bookedCase();
-    expect(r.getPathname()).toBe(`/fall/${id}/status`);
+    // Nach der Terminanfrage geht es im Gespräch des Falls weiter
+    expect(r.getPathname()).toBe(`/fall/${id}`);
     expect(screen.getByText(de.status.headline.pruefung('Kranich'))).toBeTruthy();
     expect(screen.getByText(de.status.caseNumber(id), { exact: false })).toBeTruthy();
 
@@ -115,9 +116,14 @@ describe('Fall-Status', () => {
     await tap(de.status.demoNext);
     expect(caseOf(id).status).toBe('abgelehnt');
     expect(screen.getByText(de.status.headline.abgelehnt('Kranich'))).toBeTruthy();
-    await tap(de.status.whatNext);
-    expect(r.getPathname()).toBe(`/fall/${id}/kosten`);
-    expect(screen.getByText(de.costs.rejectedTitle('Kranich'))).toBeTruthy();
+    expect(r.getPathname()).toBe(`/fall/${id}`);
+    // Du entscheidest neu: selbst zahlen, Kostenvoranschlag behalten oder Fall schließen
+    expect(
+      screen.getByRole('button', { name: de.thread.rejectedChoice.selfPay('189 €') }),
+    ).toBeTruthy();
+    expect(screen.getByRole('button', { name: de.thread.rejectedChoice.keep })).toBeTruthy();
+    await tap(de.thread.rejectedChoice.close);
+    expect(caseOf(id).status).toBe('abgebrochen');
   });
 });
 
@@ -125,8 +131,7 @@ describe('Abschluss', () => {
   async function repaired() {
     const res = await bookedCase();
     for (let i = 0; i < 4; i++) await tap(de.status.demoNext);
-    await tap(de.status.toFinish);
-    expect(res.r.getPathname()).toBe(`/fall/${res.id}/abschluss`);
+    expect(res.r.getPathname()).toBe(`/fall/${res.id}`);
     return res;
   }
 
@@ -144,7 +149,10 @@ describe('Abschluss', () => {
     const { id, r } = await repaired();
     await tap(de.finish.stillBroken);
     expect(caseOf(id).status).toBe('eskaliert');
-    expect(r.getPathname()).toBe(`/fall/${id}/hilfe`);
+    expect(r.getPathname()).toBe(`/fall/${id}`);
+    expect(
+      screen.getByRole('button', { name: new RegExp(`^${de.thread.callStart}`) }),
+    ).toBeTruthy();
   });
 
   test('auch nach „Läuft wieder“ lässt sich ein erledigter Fall wieder öffnen', async () => {
@@ -153,6 +161,6 @@ describe('Abschluss', () => {
     await tap(de.finish.stillBroken);
     expect(caseOf(id).status).toBe('eskaliert');
     expect(caseOf(id).closedAt).toBeUndefined();
-    expect(r.getPathname()).toBe(`/fall/${id}/hilfe`);
+    expect(r.getPathname()).toBe(`/fall/${id}`);
   });
 });

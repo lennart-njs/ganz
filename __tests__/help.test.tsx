@@ -3,6 +3,7 @@ import { act, fireEvent, renderRouter, screen } from 'expo-router/testing-librar
 import { demoConfig } from '@/config/demo.config';
 import { de } from '@/i18n/de';
 import { ConsentRequiredError } from '@/model/caseMachine';
+import { services } from '@/services';
 import { useAppStore } from '@/store/appStore';
 
 const APP = './app';
@@ -52,7 +53,7 @@ describe('Ohne bestätigte Weitergabe startet kein Call', () => {
     const id = setup();
     useAppStore.getState().escalate(id);
     const r = await renderRouter(APP, { initialUrl: `/fall/${id}/videocall?video=x` });
-    expect(r.getPathname()).toBe(`/fall/${id}/hilfe`);
+    expect(r.getPathname()).toBe(`/fall/${id}`);
     expect(useAppStore.getState().videoSessions).toHaveLength(0);
   });
 
@@ -77,7 +78,7 @@ describe('Ohne bestätigte Weitergabe startet kein Call', () => {
 describe('Hilfe holen', () => {
   test('zeigt, wer welche Daten sieht, und das echte Protokoll', async () => {
     const id = caseWithAbort();
-    await renderRouter(APP, { initialUrl: `/fall/${id}/hilfe` });
+    await renderRouter(APP, { initialUrl: `/fall/${id}` });
     const partner = demoConfig.partners[0]!.name;
     expect(screen.getByText(de.help.shareTitle(demoConfig.expert.name, partner))).toBeTruthy();
     expect(screen.getByText(de.help.noRecording)).toBeTruthy();
@@ -90,14 +91,15 @@ describe('Hilfe holen', () => {
 
   test('ohne Anleitung steht „Anleitung nicht gestartet“, nicht „1 Schritt“ (B-22)', async () => {
     const id = setup();
-    await renderRouter(APP, { initialUrl: `/fall/${id}/hilfe` });
+    useAppStore.getState().escalate(id);
+    await renderRouter(APP, { initialUrl: `/fall/${id}` });
     expect(screen.getByText(de.help.notStarted)).toBeTruthy();
   });
 
   test('„Videocall starten“ bestätigt die Weitergabe, verbindet und zeigt „Keine Aufnahme“', async () => {
     const id = caseWithAbort();
-    const r = await renderRouter(APP, { initialUrl: `/fall/${id}/hilfe` });
-    await tap(de.help.startCall);
+    const r = await renderRouter(APP, { initialUrl: `/fall/${id}` });
+    await tap(new RegExp(`^${de.thread.callStart}`));
     await flush();
     expect(r.getPathname()).toBe(`/fall/${id}/videocall`);
     const s = useAppStore.getState();
@@ -124,9 +126,9 @@ describe('Hilfe holen', () => {
 
   test('Screenshots nur mit eigener Einwilligung (lit. a)', async () => {
     const id = caseWithAbort();
-    await renderRouter(APP, { initialUrl: `/fall/${id}/hilfe` });
+    await renderRouter(APP, { initialUrl: `/fall/${id}` });
     await fireEvent.press(screen.getByRole('checkbox', { name: de.help.screenshots }));
-    await tap(de.help.startCall);
+    await tap(new RegExp(`^${de.thread.callStart}`));
     await flush();
     const s = useAppStore.getState();
     const shot = s.consents.find((c) => c.purpose === 'screenshots_im_call');
@@ -136,8 +138,8 @@ describe('Hilfe holen', () => {
 
   test('Mikrofon und Kamera sind Umschalter mit Zustand (B-24)', async () => {
     const id = caseWithAbort();
-    await renderRouter(APP, { initialUrl: `/fall/${id}/hilfe` });
-    await tap(de.help.startCall);
+    await renderRouter(APP, { initialUrl: `/fall/${id}` });
+    await tap(new RegExp(`^${de.thread.callStart}`));
     await flush();
     const mic = screen.getByRole('switch', { name: de.call.mic });
     expect(mic).toBeChecked();
@@ -150,13 +152,14 @@ describe('Keine Fachkraft frei', () => {
   test('Demo-Szenario zeigt den Rückruf, der Rückruf landet im Fall', async () => {
     const id = caseWithAbort();
     useAppStore.getState().setDemo({ videoScenario: 'keine_fachkraft' });
-    const r = await renderRouter(APP, { initialUrl: `/fall/${id}/hilfe` });
-    await tap(de.help.startCall);
+    const r = await renderRouter(APP, { initialUrl: `/fall/${id}` });
+    await tap(new RegExp(`^${de.thread.callStart}`));
     await flush();
+    // Zurück im Gespräch: Rückruf oder Vor-Ort-Diagnose
+    expect(r.getPathname()).toBe(`/fall/${id}`);
     expect(screen.getByText(de.waiting.noExpertTitle)).toBeTruthy();
-    await fireEvent.press(screen.getByRole('radio', { name: de.waiting.callbackSlots[1] }));
-    await tap(de.waiting.requestCallback);
-    expect(r.getPathname()).toBe(`/fall/${id}/status`);
+    await tap(de.waiting.callbackSlots[1]!);
+    expect(screen.getByText(de.thread.callbackDone(de.waiting.callbackSlots[1]!))).toBeTruthy();
     const s = useAppStore.getState();
     expect(s.videoSessions[0]?.outcome).toBe('keine_fachkraft');
     expect(s.events.at(-1)).toMatchObject({
@@ -169,25 +172,30 @@ describe('Keine Fachkraft frei', () => {
 describe('Befund', () => {
   async function toFinding() {
     const id = caseWithAbort();
-    const r = await renderRouter(APP, { initialUrl: `/fall/${id}/hilfe` });
-    await tap(de.help.startCall);
+    const r = await renderRouter(APP, { initialUrl: `/fall/${id}` });
+    await tap(new RegExp(`^${de.thread.callStart}`));
     await flush();
     await tap(de.call.hangUp);
     await act(async () => {
       jest.runOnlyPendingTimers();
     });
-    expect(r.getPathname()).toBe(`/fall/${id}/befund`);
+    // Der Befund der Fachkraft steht im Gespräch
+    expect(r.getPathname()).toBe(`/fall/${id}`);
     expect(useAppStore.getState().videoSessions[0]?.endedAt).toBeDefined();
     return { id, r };
   }
 
-  test('Reparatur: Kostenvoranschlag mit berechneter Ersparnis, weiter zu den Kosten', async () => {
-    const { id, r } = await toFinding();
+  test('Reparatur: die Fachkraft entscheidet, du bestätigst, dann die Kosten', async () => {
+    const { id } = await toFinding();
+    expect(screen.getByText(de.thread.findingFrom(demoConfig.expert.name))).toBeTruthy();
+    expect(screen.getByText(de.appliance.waschmaschine.finding.title)).toBeTruthy();
+    // Keine Auswahl für dich, nur bestätigen oder widersprechen
     expect(
-      screen.getByRole('radio', { name: new RegExp(de.finding.options.reparatur) }),
-    ).toBeChecked();
-    await tap(de.finding.next);
-    expect(r.getPathname()).toBe(`/fall/${id}/kosten`);
+      screen.queryByRole('radio', { name: new RegExp(de.finding.options.geloest) }),
+    ).toBeNull();
+    expect(useAppStore.getState().quotes).toHaveLength(0);
+    await tap(de.thread.findingOk);
+    expect(screen.getByText(de.costs.title)).toBeTruthy();
     const quote = useAppStore.getState().quotes[0]!;
     expect(quote.repair.total).toBe(18900);
     expect(quote.saving).toBe(89900 - 18900);
@@ -195,13 +203,23 @@ describe('Befund', () => {
     expect(useAppStore.getState().cases[id]?.status).toBe('eskaliert');
   });
 
-  test('Im Call gelöst: Fall erledigt, weiter zum Abschluss', async () => {
-    const { id, r } = await toFinding();
-    await fireEvent.press(
-      screen.getByRole('radio', { name: new RegExp(de.finding.options.geloest) }),
-    );
-    await tap(de.finding.next);
-    expect(r.getPathname()).toBe(`/fall/${id}/abschluss`);
+  test('„Stimmt nicht“: kein Befund, Hilfe wird neu angeboten', async () => {
+    const { id } = await toFinding();
+    await tap(de.thread.findingWrong);
+    expect(screen.getByText(de.thread.findingWrongText)).toBeTruthy();
+    expect(useAppStore.getState().quotes).toHaveLength(0);
+    expect(
+      screen.getByRole('button', { name: new RegExp(`^${de.thread.callStart}`) }),
+    ).toBeTruthy();
+    expect(useAppStore.getState().cases[id]?.status).toBe('eskaliert');
+  });
+
+  test('Im Call gelöst: Fall erledigt', async () => {
+    const spy = jest.spyOn(services.video, 'finding').mockReturnValue('geloest');
+    const { id } = await toFinding();
+    await tap(de.thread.findingOk);
+    spy.mockRestore();
+    expect(screen.getByText(de.thread.solvedInCall)).toBeTruthy();
     expect(useAppStore.getState().cases[id]).toMatchObject({
       status: 'erledigt',
       resolution: 'im_call_geloest',

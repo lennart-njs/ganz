@@ -1,4 +1,4 @@
-import { Redirect, router, useLocalSearchParams, usePreventRemove } from 'expo-router';
+import { Redirect, useLocalSearchParams, usePreventRemove } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -9,6 +9,7 @@ import { de } from '@/i18n/de';
 import { guideSummary } from '@/lib/caseView';
 import { canStartVideoCall } from '@/model/caseMachine';
 import { caseAppliance } from '@/lib/appliance';
+import { backToThread } from '@/components/nav/leaveCase';
 import { useAppStore } from '@/store/appStore';
 import { useTheme } from '@/theme';
 
@@ -51,11 +52,12 @@ export default function Videocall() {
 
   useEffect(() => {
     if (!ended) return;
-    const timer = setTimeout(() => router.replace(`/fall/${caseId}/befund`), 0);
+    // Zurück ins Gespräch: Dort steht der Befund der Fachkraft
+    const timer = setTimeout(() => backToThread(caseId), 0);
     return () => clearTimeout(timer);
   }, [ended, caseId]);
 
-  if (!c || !session || !allowed) return <Redirect href={`/fall/${caseId}/hilfe`} />;
+  if (!c || !session || !allowed) return <Redirect href={`/fall/${caseId}`} />;
 
   const summary = guideSummary(state, c);
   const steps = summary ? t.stepsShort(summary.done) : de.help.notStarted;

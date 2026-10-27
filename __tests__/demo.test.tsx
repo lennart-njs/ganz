@@ -86,7 +86,7 @@ describe('Whitelabel', () => {
 
     test('Hilfe holen', async () => {
       const { caseId } = goldenCase();
-      await renderRouter(APP, { initialUrl: `/fall/${caseId}/hilfe` });
+      await renderRouter(APP, { initialUrl: `/fall/${caseId}` });
       expect(clean()).toContain('Möwe');
     });
 
@@ -99,7 +99,7 @@ describe('Whitelabel', () => {
       expect(clean()).toContain('Möwe');
       await fireEvent.press(screen.getByRole('radio', { name: demoConfig.slots[0] }));
       await tap(de.appointment.request);
-      expect(r.getPathname()).toBe(`/fall/${caseId}/status`);
+      expect(r.getPathname()).toBe(`/fall/${caseId}`);
       expect(clean()).toContain(de.status.headline.pruefung('Möwe'));
     });
 

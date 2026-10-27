@@ -163,5 +163,6 @@ Ereignisse, die ein Dashboard besonders braucht:
 - Signatur oder Hash-Kette für Fotos (`Photo.sha256`)
 - Mehrere Personen im Haushalt mit Rolle „mitversichert“ (Entscheidung 2: im Prototyp nicht)
 - Löschfristen je Datenkategorie, auch für `ChatMessage`
+- Das Gespräch des Falls ist eine Ansicht auf `CaseEvent` und `ChatMessage`, kein eigener Speicher. Neu ist das Ereignis `rueckfrage_gestellt` (Rückfrage der Fehlererkennung mit Foto und Modus).
 - Auftragsverarbeitungsvertrag mit dem Anbieter des Reparatur-Assistenten, Serverstandort, Rate-Limit und Anmeldung für die Route `/api/chat`
 - Mandantentrennung für Versicherer und Händler im Backend

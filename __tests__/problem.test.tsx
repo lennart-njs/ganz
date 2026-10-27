@@ -60,33 +60,45 @@ describe('Taps bis zur ersten Hilfe (Review 5.1)', () => {
   });
 });
 
-describe('Etwas anderes (B-54)', () => {
-  test('Freitext führt zu „Hilfe holen“', async () => {
+describe('Eigene Worte (B-54)', () => {
+  test('gehen an den Reparatur-Assistenten, ohne Einwilligung als Notiz an die Fachkraft', async () => {
     const r = await renderRouter(APP, { initialUrl: '/fall/neu' });
-    await tap(new RegExp(`^${de.problem.other}`));
-    expect(screen.getByText(de.talk.problem.describe)).toBeTruthy();
-    await tap(de.talk.problem.send);
+    await fireEvent.changeText(
+      screen.getByPlaceholderText(de.appliance.waschmaschine.otherPlaceholder),
+      'Ja',
+    );
+    await tap(de.chat.send);
     expect(screen.getByText(de.problem.otherTooShort)).toBeTruthy();
     await fireEvent.changeText(
       screen.getByPlaceholderText(de.appliance.waschmaschine.otherPlaceholder),
       'Die Maschine riecht verbrannt.',
     );
-    await tap(de.talk.problem.send);
-    expect(screen.getByText('Die Maschine riecht verbrannt.')).toBeTruthy();
-    // Noch kein Fall, bevor du entscheidest, wie es weitergeht
-    expect(Object.keys(useAppStore.getState().cases)).toHaveLength(0);
-    await tap(new RegExp(`^${de.talk.problem.help}`));
-    expect(r.getPathname()).toBe('/fall/GS-24817/hilfe');
+    await tap(de.chat.send);
+    // Weiter im Gespräch des Falls, der Assistent fragt zuerst nach der Einwilligung
+    expect(r.getPathname()).toBe('/fall/GS-24817');
+    expect(screen.getByText(de.chat.consentTitle)).toBeTruthy();
+    await tap(de.chat.consentDecline);
     expect(useAppStore.getState().cases['GS-24817']).toMatchObject({
       entry: 'freitext',
       status: 'eskaliert',
       problemLabel: 'Die Maschine riecht verbrannt.',
     });
+    expect(useAppStore.getState().events.at(-1)?.type).not.toBe('assistent_gefragt');
+    expect(
+      useAppStore
+        .getState()
+        .events.some(
+          (e) =>
+            e.type === 'rueckfrage_beantwortet' &&
+            e.payload.answer === 'Die Maschine riecht verbrannt.',
+        ),
+    ).toBe(true);
+    expect(useAppStore.getState().chatMessages).toHaveLength(0);
   });
 });
 
 describe('Entwürfe', () => {
-  test('wer „Problem melden“ ohne Inhalt verlässt, hinterlässt keinen Fall', async () => {
+  test('wer den Fall ohne Inhalt verlässt, hinterlässt keinen Fall', async () => {
     const r = await renderRouter(APP, { initialUrl: '/' });
     await tap(pill);
     await tap(new RegExp(`^${de.problem.photo}`));
@@ -97,15 +109,47 @@ describe('Entwürfe', () => {
     expect(Object.keys(useAppStore.getState().cases)).toHaveLength(0);
   });
 
-  test('ein zweiter Versuch nutzt denselben Entwurf', async () => {
-    await renderRouter(APP, { initialUrl: '/' });
+  test('ein neuer Versuch ohne Fortschritt ersetzt den Fall (ein offener Fall pro Gerät)', async () => {
+    const r = await renderRouter(APP, { initialUrl: '/' });
     await tap(pill);
-    await tap(new RegExp(`^${de.problem.photo}`));
+    await tap(new RegExp(`^${de.problems[1]!.label}`));
+    expect(r.getPathname()).toBe('/fall/GS-24817/anleitung');
     await tap(de.a11y.back);
+    await tap(de.a11y.back);
+    expect(r.getPathname()).toBe('/');
+    await tap(pill);
     await tap(new RegExp(`^${de.problems[2]!.label}`));
-    const cases = Object.values(useAppStore.getState().cases);
-    expect(cases).toHaveLength(1);
-    expect(cases[0]).toMatchObject({ entry: 'symptom', status: 'selbsthilfe' });
+    const open = Object.values(useAppStore.getState().cases).filter(
+      (c) => c.status !== 'abgebrochen',
+    );
+    expect(open).toHaveLength(1);
+    expect(open[0]).toMatchObject({ entry: 'symptom', problemLabel: 'Tür geht nicht auf' });
+  });
+
+  test('mit Fortschritt fragt ganz: weitermachen oder neues Problem', async () => {
+    const r = await renderRouter(APP, { initialUrl: '/' });
+    await tap(pill);
+    await tap(new RegExp(`^${de.problems[1]!.label}`));
+    await tap(de.guide.done);
+    await tap(de.a11y.close);
+    await tap(de.closeCase.later);
+    await act(async () => {
+      jest.runOnlyPendingTimers();
+    });
+    await tap(pill);
+    expect(screen.getByText(de.thread.runningCase('Wäsche noch nass'))).toBeTruthy();
+    await tap(de.thread.continueCase);
+    expect(r.getPathname()).toBe('/fall/GS-24817');
+    await tap(de.a11y.back);
+    await tap(pill);
+    await tap(de.thread.newProblem);
+    await tap(new RegExp(`^${de.problems[2]!.label}`));
+    const s = useAppStore.getState();
+    expect(s.cases['GS-24817']).toMatchObject({
+      status: 'abgebrochen',
+      cancelReason: de.thread.newProblemReason,
+    });
+    expect(s.cases['GS-24818']).toMatchObject({ status: 'selbsthilfe' });
   });
 });
 
@@ -180,18 +224,5 @@ describe('Problem melden als Gespräch', () => {
     await tap(de.talk.edit(de.problems[0]!.label));
     expect(screen.queryByText(de.talk.problem.whichMessage)).toBeNull();
     expect(screen.getByRole('button', { name: new RegExp(`^${de.problem.photo}`) })).toBeTruthy();
-  });
-
-  test('eigene Worte lassen sich an den Reparatur-Assistenten geben', async () => {
-    const r = await renderRouter(APP, { initialUrl: '/fall/neu' });
-    await tap(new RegExp(`^${de.problem.other}`));
-    await fireEvent.changeText(
-      screen.getByPlaceholderText(de.appliance.waschmaschine.otherPlaceholder),
-      'Die Tür klemmt seit gestern.',
-    );
-    await tap(de.talk.problem.send);
-    await tap(new RegExp(`^${de.talk.problem.assistant}`));
-    expect(r.getPathname()).toBe('/fall/GS-24817/chat');
-    expect(r.getSearchParams()).toMatchObject({ entwurf: 'Die Tür klemmt seit gestern.' });
   });
 });

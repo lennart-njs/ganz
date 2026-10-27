@@ -6,21 +6,18 @@ import { useAppStore } from '@/store/appStore';
 
 const APP = './app';
 
+// '' ist das Gespräch des Falls, die anderen sind Vollbild-Schritte und Details
 const caseScreens = [
-  'meldungen',
+  '',
   'kamera',
   'analyse',
-  'rueckfrage',
   'ergebnis',
   'anleitung',
-  'hilfe',
   'warteraum',
   'videocall',
-  'befund',
   'kosten',
   'termin',
   'status',
-  'abschluss',
   'fallakte',
 ];
 
@@ -77,7 +74,7 @@ describe('Jeder Screen hat einen Ausweg', () => {
     finishOnboarding();
     const s = useAppStore.getState();
     s.createCase({ deviceId: s.devices[0]!.id, entry: 'foto', problemLabel: 'Wasserablauf' });
-    await renderRouter(APP, { initialUrl: `/fall/GS-24817/${name}` });
+    await renderRouter(APP, { initialUrl: `/fall/GS-24817${name ? `/${name}` : ''}` });
     expect(screen.getByRole('button', { name: de.a11y.back })).toBeTruthy();
     expect(screen.getByRole('button', { name: de.a11y.close })).toBeTruthy();
   });
@@ -98,9 +95,9 @@ describe('Jeder Screen hat einen Ausweg', () => {
       .createCase({ deviceId: 'd', entry: 'foto', problemLabel: 'Wasserablauf' });
     const r = await renderRouter(APP, { initialUrl: '/' });
     await act(async () => {
-      require('expo-router').router.push(`/fall/${c.id}/hilfe`);
+      require('expo-router').router.push(`/fall/${c.id}`);
     });
-    expect(r.getPathname()).toBe(`/fall/${c.id}/hilfe`);
+    expect(r.getPathname()).toBe(`/fall/${c.id}`);
     await fireEvent.press(screen.getByRole('button', { name: de.a11y.close }));
     await fireEvent.press(screen.getByRole('button', { name: de.closeCase.later }));
     expect(r.getPathname()).toBe('/');
@@ -112,7 +109,7 @@ describe('Jeder Screen hat einen Ausweg', () => {
     const c = useAppStore
       .getState()
       .createCase({ deviceId: 'd', entry: 'foto', problemLabel: 'Wasserablauf' });
-    await renderRouter(APP, { initialUrl: `/fall/${c.id}/hilfe` });
+    await renderRouter(APP, { initialUrl: `/fall/${c.id}` });
     await fireEvent.press(screen.getByRole('button', { name: de.a11y.close }));
     await fireEvent.press(screen.getByRole('button', { name: de.closeCase.cancel }));
     const confirm = screen.getByRole('button', { name: de.closeCase.confirmCancel });
@@ -134,17 +131,20 @@ describe('Zurück', () => {
     await fireEvent.press(screen.getByRole('button', { name: new RegExp(`^${de.problem.photo}`) }));
     await fireEvent.press(screen.getByRole('button', { name: de.camera.shutter }));
     for (let i = 0; i < 10; i++) await act(async () => {});
-    // Die Analyse ersetzt sich selbst durch das Ergebnis.
-    expect(r.getPathname()).toBe('/fall/GS-24817/ergebnis');
+    // Nach der Analyse geht es im Gespräch des Falls weiter
+    expect(r.getPathname()).toBe('/fall/GS-24817');
+    expect(screen.getByText(de.result.headline.wasserablauf)).toBeTruthy();
     return r;
   }
 
-  test('der Zurück-Button geht einen Screen zurück, am Anfang aus dem Fall heraus', async () => {
+  test('Zurück aus der Anleitung führt ins Gespräch, aus dem Gespräch aus dem Fall heraus', async () => {
     const r = await openFlow();
+    await fireEvent.press(
+      screen.getByRole('button', { name: new RegExp(`^${de.result.startGuide}`) }),
+    );
+    expect(r.getPathname()).toBe('/fall/GS-24817/anleitung');
     await fireEvent.press(screen.getByRole('button', { name: de.a11y.back }));
-    expect(r.getPathname()).toBe('/fall/GS-24817/kamera');
-    await fireEvent.press(screen.getByRole('button', { name: de.a11y.back }));
-    expect(r.getPathname()).toBe('/fall/neu');
+    expect(r.getPathname()).toBe('/fall/GS-24817');
     await fireEvent.press(screen.getByRole('button', { name: de.a11y.back }));
     expect(r.getPathname()).toBe('/');
   });
@@ -162,10 +162,12 @@ describe('Zurück', () => {
       });
 
     const r = await openFlow();
+    await fireEvent.press(
+      screen.getByRole('button', { name: new RegExp(`^${de.result.startGuide}`) }),
+    );
+    expect(r.getPathname()).toBe('/fall/GS-24817/anleitung');
     await pressBack();
-    expect(r.getPathname()).toBe('/fall/GS-24817/kamera');
-    await pressBack();
-    expect(r.getPathname()).toBe('/fall/neu');
+    expect(r.getPathname()).toBe('/fall/GS-24817');
     await pressBack();
     expect(r.getPathname()).toBe('/');
     spy.mockRestore();

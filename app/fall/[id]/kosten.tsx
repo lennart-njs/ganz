@@ -5,7 +5,7 @@ import { DemoHint } from '@/components/app/DemoHint';
 import { CaseFileCard } from '@/components/app/CaseFileCard';
 import { CaseScreen, useCaseId } from '@/components/app/CaseScreen';
 import { CostCompare } from '@/components/app/CostCompare';
-import { leaveCase } from '@/components/nav/leaveCase';
+import { backToThread, leaveCase } from '@/components/nav/leaveCase';
 import { ActionBar, Button, Card, Disclosure, FactList, Text } from '@/components/ds';
 import { demoConfig } from '@/config/demo.config';
 import { de } from '@/i18n/de';
@@ -83,7 +83,7 @@ export default function Kosten() {
 
   const report = () => {
     useAppStore.getState().reportClaim(caseId, CLAIM_TEXT_VERSION);
-    if (replacement) router.replace(`/fall/${caseId}/status`);
+    if (replacement) backToThread(caseId);
     else toAppointment(false);
   };
 
@@ -125,13 +125,6 @@ export default function Kosten() {
         <FactList items={facts} ruled />
       </Card>
       {!contract ? <Text variant="body">{t.noContractText}</Text> : null}
-      {!replacement ? (
-        <Button
-          label={de.talk.claim.entry}
-          variant="link"
-          onPress={() => router.push(`/fall/${caseId}/schaden`)}
-        />
-      ) : null}
       {replacement && contract ? <Text variant="body">{t.replacementNext(insurer)}</Text> : null}
 
       {contract ? (

@@ -145,6 +145,7 @@ export type CaseEventType =
   | 'fall_angelegt'
   | 'foto_aufgenommen'
   | 'ergebnis_erkannt'
+  | 'rueckfrage_gestellt'
   | 'rueckfrage_beantwortet'
   | 'anleitung_gestartet'
   | 'schritt_erledigt'

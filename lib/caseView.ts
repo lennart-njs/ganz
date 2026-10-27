@@ -38,19 +38,27 @@ export function caseStatusLabel(status: CaseStatus): string {
   return de.caseStatus[status];
 }
 
+/**
+ * Hat der Fall schon Inhalt, den ein neuer Versuch nicht einfach ersetzen darf?
+ * Ohne Fortschritt ersetzt ein neues Problem den Fall (Entscheidung 13).
+ */
+export function hasProgress(s: AppData, c: Case): boolean {
+  if (c.status !== 'offen' && c.status !== 'selbsthilfe') return true;
+  if (c.photoIds.length || c.claim || c.quoteId) return true;
+  if (s.chatMessages.some((m) => m.caseId === c.id)) return true;
+  if (s.videoSessions.some((v) => v.caseId === c.id)) return true;
+  return c.guideRunIds.some((id) => {
+    const run = s.guideRuns[id];
+    return !!run && (run.completedSteps.length > 0 || !!run.endedAt);
+  });
+}
+
 /** Wohin „Weitermachen“ führt */
 export function resumeHref(s: AppData, c: Case): Href {
-  const base = `/fall/${c.id}`;
-  switch (c.status) {
-    case 'offen':
-      return (c.diagnosisIds.length ? `${base}/ergebnis` : `/fall/neu?fall=${c.id}`) as Href;
-    case 'selbsthilfe':
-      return `${base}/anleitung` as Href;
-    case 'eskaliert':
-      return `${base}/hilfe` as Href;
-    default:
-      return `${base}/status` as Href;
-  }
+  // Jeder Fall ist ein Gespräch. Eine laufende Anleitung öffnet sich darüber.
+  const run = latestGuideRun(s, c);
+  const guideOpen = c.status === 'selbsthilfe' && run && !run.endedAt;
+  return (guideOpen ? `/fall/${c.id}?weiter=anleitung` : `/fall/${c.id}`) as Href;
 }
 
 export interface GuideSummary {

@@ -71,10 +71,11 @@ describe('Mock der Fehlererkennung', () => {
 describe('Foto → Ergebnis', () => {
   test('Display: Laugenfilter, Sicherheit hoch, 4 Taps bis zum ersten Schritt', async () => {
     const r = await photoFlow('display');
-    expect(r.getPathname()).toBe('/fall/GS-24817/ergebnis');
+    // Das Ergebnis steht im Gespräch des Falls
+    expect(r.getPathname()).toBe('/fall/GS-24817');
     expect(screen.getByText(de.result.headline.wasserablauf)).toBeTruthy();
     expect(screen.getByText(de.ds.confidenceLabel('hoch'))).toBeTruthy();
-    await tap(de.result.startGuide);
+    await tap(new RegExp(`^${de.result.startGuide}`));
     expect(taps).toBe(4);
     expect(r.getPathname()).toBe('/fall/GS-24817/anleitung');
   });
@@ -109,10 +110,10 @@ describe('Foto → Ergebnis', () => {
   test('„unsicher“ zeigt die Rückfrage, die Antwort wählt die Anleitung', async () => {
     useAppStore.getState().setDemo({ diagnosisScenario: 'unsicher' });
     const r = await photoFlow('display');
-    expect(r.getPathname()).toBe('/fall/GS-24817/rueckfrage');
-    await fireEvent.press(screen.getByRole('radio', { name: de.question.answers.zulauf }));
-    await tap(de.question.next);
-    expect(r.getPathname()).toBe('/fall/GS-24817/ergebnis');
+    // ganz fragt im Gespräch nach
+    expect(r.getPathname()).toBe('/fall/GS-24817');
+    expect(screen.getByText(de.question.wasser)).toBeTruthy();
+    await tap(de.question.answers.zulauf);
     expect(screen.getByText(de.result.headline.wasserzulauf)).toBeTruthy();
     expect(useAppStore.getState().diagnoses.at(-1)?.guideId).toBe('zulauf');
   });
@@ -120,9 +121,9 @@ describe('Foto → Ergebnis', () => {
   test('„Weiß ich nicht“ führt zu „Hilfe holen“', async () => {
     useAppStore.getState().setDemo({ diagnosisScenario: 'unsicher' });
     const r = await photoFlow('display');
-    await fireEvent.press(screen.getByRole('radio', { name: de.question.answers.unklar }));
-    await tap(de.question.next);
-    expect(r.getPathname()).toBe('/fall/GS-24817/hilfe');
+    await tap(de.question.answers.unklar);
+    expect(r.getPathname()).toBe('/fall/GS-24817');
+    expect(screen.getByText(de.thread.helpIntro)).toBeTruthy();
     expect(useAppStore.getState().cases['GS-24817']?.status).toBe('eskaliert');
   });
 

@@ -1,11 +1,11 @@
 import * as Haptics from 'expo-haptics';
-import { router, usePreventRemove } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { usePreventRemove } from 'expo-router';
+import { useEffect, useRef, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
 import { DemoHint } from '@/components/app/DemoHint';
 import { CaseScreen, useCaseId } from '@/components/app/CaseScreen';
-import { leaveCase } from '@/components/nav/leaveCase';
+import { backToThread, leaveCase } from '@/components/nav/leaveCase';
 import {
   ActionBar,
   Button,
@@ -51,22 +51,37 @@ export default function Anleitung() {
   const active = !!run && !run.endedAt;
 
   // Zurück aus Schritt 2 und später geht einen Schritt zurück. Andere Wege (Schließen) bleiben frei.
-  const [leaving, setLeaving] = useState(false);
+  // Wohin es geht, wenn die Anleitung bewusst verlassen wird: Fall schließen oder ins Gespräch
+  const [leaving, setLeaving] = useState<'fall' | { entwurf: string }>();
+  const toThread = useRef<string | undefined>(undefined);
   usePreventRemove(active && step > 0 && !leaving, ({ data }) => {
     const type = data.action.type;
+    if (toThread.current !== undefined) {
+      setLeaving({ entwurf: toThread.current });
+      return;
+    }
     if ((type === 'GO_BACK' || type === 'POP') && run) {
       useAppStore.getState().moveGuideStep(run.id, 'back');
       return;
     }
-    // Der einzige andere Weg aus der Anleitung ist das Verlassen des Falls (Schließen, Fertig)
-    setLeaving(true);
+    // Der andere Weg aus der Anleitung ist das Verlassen des Falls (Schließen)
+    setLeaving('fall');
   });
   useEffect(() => {
     if (!leaving) return;
     // Einen Tick warten, bis der Navigator die gelöste Sperre kennt, dann neu navigieren
-    const timer = setTimeout(leaveCase, 0);
+    const timer = setTimeout(() => {
+      if (leaving === 'fall') leaveCase();
+      else backToThread(caseId, leaving.entwurf);
+    }, 0);
     return () => clearTimeout(timer);
-  }, [leaving]);
+  }, [leaving, caseId]);
+
+  /** Frage zum Schritt: ins Gespräch, der Schritt bleibt gespeichert */
+  const askAssistant = (draft: string) => {
+    toThread.current = draft;
+    backToThread(caseId, draft);
+  };
 
   useEffect(() => {
     if (!toast) return;
@@ -100,19 +115,20 @@ export default function Anleitung() {
 
   const help = (outcome: 'geht_nicht' | 'laeuft_nicht', text?: string) => {
     s().finishGuide(run.id, outcome, text);
+    s().escalate(caseId);
     setNotWorking(false);
-    router.push(`/fall/${caseId}/hilfe`);
+    backToThread(caseId);
   };
 
   const solved = () => {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => undefined);
     s().finishGuide(run.id, 'laeuft_wieder');
-    router.push(`/fall/${caseId}/abschluss`);
+    backToThread(caseId);
   };
 
   const finished = () => {
     s().finishGuide(run.id, 'fertig');
-    leaveCase();
+    backToThread(caseId);
   };
 
   let actions;
@@ -215,12 +231,7 @@ export default function Anleitung() {
       <Button
         label={de.chat.askStep}
         variant="link"
-        onPress={() =>
-          router.push({
-            pathname: '/fall/[id]/chat',
-            params: { id: caseId, entwurf: de.chat.stepDraft(step + 1, current.t) },
-          })
-        }
+        onPress={() => askAssistant(de.chat.stepDraft(step + 1, current.t))}
       />
 
       <Sheet visible={notWorking} onClose={() => setNotWorking(false)} title={t.notWorkingTitle}>

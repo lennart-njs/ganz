@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { AccessibilityInfo, Image, StyleSheet, View } from 'react-native';
 
 import { CaseScreen, useCaseId } from '@/components/app/CaseScreen';
+import { backToThread } from '@/components/nav/leaveCase';
 import { ActionBar, Button, Icon, Text } from '@/components/ds';
 import { guides, type GuideId } from '@/data/guides';
 import { de } from '@/i18n/de';
@@ -46,7 +47,14 @@ export default function Analyse() {
           AccessibilityInfo.announceForAccessibility(de.analysis.blurryTitle);
           return;
         case 'rueckfrage':
-          router.replace(`/fall/${caseId}/rueckfrage?foto=${params.foto ?? ''}&modus=${mode}`);
+          // Die Rückfrage stellt ganz im Gespräch (B-12)
+          s.addEvent({
+            caseId,
+            type: 'rueckfrage_gestellt',
+            actor: { kind: 'system' },
+            payload: { question: result.question, photoId: params.foto, mode },
+          });
+          backToThread(caseId);
           return;
         case 'geraet':
           s.addDiagnosis({
@@ -58,7 +66,7 @@ export default function Analyse() {
             confidenceScore: 0.95,
             source: 'fehlererkennung',
           });
-          router.replace(`/fall/${caseId}/ergebnis`);
+          backToThread(caseId);
           return;
         case 'ohne_anleitung':
           s.addDiagnosis({
@@ -70,12 +78,12 @@ export default function Analyse() {
             confidenceScore: 0,
             source: 'fehlererkennung',
           });
-          router.replace(`/fall/${caseId}/ergebnis`);
+          backToThread(caseId);
           return;
         case 'ergebnis':
           s.updateCase(caseId, { problemLabel: guides[result.guideId as GuideId].title });
           s.addDiagnosis(toDiagnosis(caseId, photoIds, mode, result));
-          router.replace(`/fall/${caseId}/ergebnis`);
+          backToThread(caseId);
       }
     })();
     return () => {

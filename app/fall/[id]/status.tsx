@@ -2,7 +2,7 @@ import { router } from 'expo-router';
 
 import { DemoHint } from '@/components/app/DemoHint';
 import { CaseScreen, useCaseId } from '@/components/app/CaseScreen';
-import { leaveCase } from '@/components/nav/leaveCase';
+import { backToThread } from '@/components/nav/leaveCase';
 import { ActionBar, Button, Card, FactList, Text, Timeline } from '@/components/ds';
 import { demoConfig } from '@/config/demo.config';
 import { de } from '@/i18n/de';
@@ -28,24 +28,10 @@ export default function Status() {
   const canAdvance = nextSimulationDue(state, caseId) !== undefined;
   const demoTap = demoConfig.demo.enabled && state.demo.hints && canAdvance;
 
-  const primary =
-    view.next === 'abschluss' ? (
-      <Button
-        label={t.toFinish}
-        size="lg"
-        fullWidth
-        onPress={() => router.push(`/fall/${caseId}/abschluss`)}
-      />
-    ) : view.next === 'kosten' ? (
-      <Button
-        label={c.status === 'abgelehnt' ? t.whatNext : t.seeCosts}
-        size="lg"
-        fullWidth
-        onPress={() => router.push(`/fall/${caseId}/kosten`)}
-      />
-    ) : (
-      <Button label={t.toDevices} size="lg" fullWidth onPress={leaveCase} />
-    );
+  // Der Status ist die Übersicht. Weiter geht es im Gespräch des Falls.
+  const primary = (
+    <Button label={de.thread.toThread} size="lg" fullWidth onPress={() => backToThread(caseId)} />
+  );
 
   return (
     <CaseScreen

@@ -136,7 +136,7 @@ export default function GeraetDetail() {
                   problemLabel: m.title,
                 });
                 st.startGuide(c.id, m.guideId);
-                router.push(`/fall/${c.id}/anleitung`);
+                router.push(`/fall/${c.id}?weiter=anleitung`);
               }}
             />
           ))}
