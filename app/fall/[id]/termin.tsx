@@ -17,10 +17,10 @@ import {
 } from '@/components/ds';
 import { demoConfig } from '@/config/demo.config';
 import { de } from '@/i18n/de';
-import { formatDecimal, formatEuro } from '@/i18n/format';
+import { formatDecimal } from '@/i18n/format';
 import { getManufacturer } from '@/lib/devices';
-import { notifications } from '@/services/notifications';
 import { caseAppliance } from '@/lib/appliance';
+import { amountToPay, costsLine, requestAppointment } from '@/lib/booking';
 import { useAppStore } from '@/store/appStore';
 
 const t = de.appointment;
@@ -43,48 +43,19 @@ export default function Termin() {
   const [partnerId, setPartnerId] = useState(partners[0]?.id);
   const [slot, setSlot] = useState<string>();
   const [toast, setToast] = useState<string>();
-  const insurer = demoConfig.insurer.shortName;
   const manufacturer = device ? getManufacturer(device.manufacturerId).name : '';
   const partner = partners.find((p) => p.id === partnerId);
   const claimPending = c?.status === 'freigabe_noetig';
 
-  // Was die Nutzerin selbst zahlt: Selbstbeteiligung oder die ganze Reparatur
-  const toPay = diagnosis
-    ? 0
-    : selfPay
-      ? (quote?.repair.total ?? 0)
-      : claimPending || c?.claim
-        ? state.demo.deductible
-        : 0;
-  const paid = toPay > 0;
-
-  const costs = diagnosis
-    ? t.costsDiagnosis
-    : selfPay
-      ? t.costsSelf(formatEuro(toPay))
-      : t.costsClaim(insurer, formatEuro(state.demo.deductible));
+  const paid = amountToPay(state, caseId, selfPay, diagnosis) > 0;
 
   const request = () => {
     if (!slot || !partnerId) {
       setToast(t.pickSlot);
       return;
     }
-    useAppStore.getState().requestBooking({
-      caseId,
-      kind: diagnosis ? 'vor_ort_diagnose' : 'reparatur',
-      partnerId,
-      slotLabel: slot,
-      selfPay,
-      partName: quote?.repair.partName,
-    });
+    requestAppointment({ caseId, partnerId, slot, selfPay, diagnosis });
     router.replace(`/fall/${caseId}/status`);
-    // Systemdialog für Mitteilungen erst jetzt, beim ersten Bedarf (Review 4.1)
-    if (useAppStore.getState().notifications === 'offen') {
-      notifications
-        .requestPermission()
-        .then((ok) => useAppStore.getState().setNotifications(ok ? 'erlaubt' : 'abgelehnt'))
-        .catch(() => undefined);
-    }
   };
 
   const summary: [string, string][] = [
@@ -92,7 +63,7 @@ export default function Termin() {
     [t.facts.slot, slot ?? '–'],
     [t.facts.address, address ? t.addressLine(address.street, address.zip, address.city) : '–'],
     [t.facts.job, diagnosis ? t.jobDiagnosis : t.jobRepair(quote?.repair.partName ?? '')],
-    [t.facts.costs, costs],
+    [t.facts.costs, costsLine(state, caseId, selfPay, diagnosis)],
   ];
 
   return (

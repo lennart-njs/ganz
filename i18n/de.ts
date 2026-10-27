@@ -924,6 +924,23 @@ export const de = {
       assistantSub: 'Er fragt nach und sucht eine passende Anleitung.',
       send: 'Weiter',
     },
+    claim: {
+      entry: 'Lieber Schritt für Schritt im Gespräch',
+      form: 'Lieber das Formular',
+      intro: (finding: string) => `Die Fachkraft hat den Befund aufgenommen: ${finding}.`,
+      costs: (repair: string, replacement: string) =>
+        `Die Reparatur kostet ${repair}. Ein vergleichbares Ersatzgerät kostet ${replacement}.`,
+      payer: (insurer: string, deductible: string) =>
+        `Die Kosten prüft ${insurer}. Gibt ${insurer} frei, zahlst du nur deine Selbstbeteiligung von ${deductible}.`,
+      rejected: (insurer: string) =>
+        `Lehnt ${insurer} ab, entscheidest du neu. Der Kostenvoranschlag bleibt in deiner Fallakte.`,
+      ask: (insurer: string) => `Willst du den Schadenfall an ${insurer} melden?`,
+      askNoContract: 'Sollen wir einen Fachbetrieb für die Reparatur suchen?',
+      reported: (insurer: string) =>
+        `Gemeldet. ${insurer} prüft die Kosten. Den Termin kannst du schon anfragen.`,
+      selfPay: (amount: string) => `Gut. Du zahlst die Reparatur selbst: ${amount}.`,
+      summary: 'So fragen wir den Termin an. Passt alles?',
+    },
   },
 
   chat: {

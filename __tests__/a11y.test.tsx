@@ -89,7 +89,10 @@ function world() {
     suggestion: 'anleitung',
     guideId: 'zulauf',
   });
-  return { device: device.id, done: c.id, open: open.id, video: v.id };
+  const claim = s.createCase({ deviceId: device.id, entry: 'foto', problemLabel: 'Wasserablauf' });
+  s.escalate(claim.id);
+  s.setFinding(claim.id, 'reparatur', 'fachkraft');
+  return { device: device.id, done: c.id, open: open.id, video: v.id, claim: claim.id };
 }
 
 function textOf(node: TestInstance): string {
@@ -166,6 +169,7 @@ const routes = (w: ReturnType<typeof world>) => [
   `/fall/${w.done}/abschluss`,
   `/fall/${w.done}/fallakte`,
   `/fall/${w.open}/chat`,
+  `/fall/${w.claim}/schaden`,
 ];
 
 describe('Barrierefreiheit: jedes Bedienteil hat Rolle, Label und 44 pt', () => {

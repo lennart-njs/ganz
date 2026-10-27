@@ -125,6 +125,13 @@ export default function Kosten() {
         <FactList items={facts} ruled />
       </Card>
       {!contract ? <Text variant="body">{t.noContractText}</Text> : null}
+      {!replacement ? (
+        <Button
+          label={de.talk.claim.entry}
+          variant="link"
+          onPress={() => router.push(`/fall/${caseId}/schaden`)}
+        />
+      ) : null}
       {replacement && contract ? <Text variant="body">{t.replacementNext(insurer)}</Text> : null}
 
       {contract ? (
