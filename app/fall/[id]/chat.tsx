@@ -1,11 +1,12 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Keyboard, StyleSheet, View } from 'react-native';
+import { Keyboard, StyleSheet, View } from 'react-native';
 import type { KeyboardAwareScrollViewRef } from 'react-native-keyboard-controller';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { CaseScreen, useCaseId } from '@/components/app/CaseScreen';
-import { Button, Card, InfoBox, Text, TextField } from '@/components/ds';
+import { BotSays, QuickReplies, Typing, UserSaid, type Reply } from '@/components/app/Conversation';
+import { Button, InfoBox, Text, TextField } from '@/components/ds';
 import { demoConfig } from '@/config/demo.config';
 import { guides, type GuideId } from '@/data/guides';
 import { de } from '@/i18n/de';
@@ -13,7 +14,6 @@ import { caseAppliance } from '@/lib/appliance';
 import { latestGuideRun } from '@/lib/caseView';
 import { chatContext, hasChatConsent } from '@/lib/chat/context';
 import { chatLimits } from '@/lib/chat/limits';
-import type { ChatMessage } from '@/model/types';
 import { services, type ChatError } from '@/services';
 import { useAppStore } from '@/store/appStore';
 import { useTheme } from '@/theme';
@@ -142,25 +142,37 @@ export default function Chat() {
 
   const canGuide = c.status === 'offen' || c.status === 'selbsthilfe';
   const canHelp = canGuide || c.status === 'eskaliert';
-  const action = (m: ChatMessage) => {
-    if (m !== last) return null;
-    if (m.suggestion === 'anleitung' && canGuide && m.guideId && m.guideId in guides) {
-      const guide = guides[m.guideId as GuideId];
+
+  // Vorschläge des Assistenten und Auswege bei Fehlern stehen als Antwort-Buttons unten
+  const replies: Reply[] = [];
+  if (!consent) {
+    replies.push({ key: 'einverstanden', label: t.consentAccept });
+    replies.push({ key: 'hilfe', label: t.consentDecline });
+  } else if (error) {
+    if (last?.role === 'haushalt' && retryable.includes(error)) {
+      replies.push({ key: 'nochmal', label: t.retry });
+    }
+    if (canHelp) replies.push({ key: 'hilfe', label: t.getHelp });
+  } else if (!pending && last?.role === 'assistent') {
+    if (last.suggestion === 'anleitung' && canGuide && last.guideId && last.guideId in guides) {
+      const guide = guides[last.guideId as GuideId];
       const back = guideActive && run.guideId === guide.id;
-      return (
-        <Button
-          label={back ? t.backToGuide(guide.title) : t.startGuide(guide.title)}
-          onPress={() => openGuide(guide.id as GuideId)}
-        />
-      );
+      replies.push({
+        key: `anleitung:${guide.id}`,
+        label: back ? t.backToGuide(guide.title) : t.startGuide(guide.title),
+      });
     }
-    if (m.suggestion === 'hilfe' && canHelp) {
-      return <Button label={t.getHelp} icon="video" onPress={help} />;
-    }
-    return null;
+    if (last.suggestion === 'hilfe' && canHelp) replies.push({ key: 'hilfe', label: t.getHelp });
+  }
+
+  const pick = (key: string) => {
+    if (key === 'einverstanden') accept();
+    else if (key === 'hilfe') help();
+    else if (key === 'nochmal') void ask();
+    else if (key.startsWith('anleitung:')) openGuide(key.slice('anleitung:'.length) as GuideId);
   };
 
-  const footer = consent ? (
+  const inputBar = consent ? (
     <View
       style={[
         styles.inputBar,
@@ -192,79 +204,44 @@ export default function Chat() {
     </View>
   ) : undefined;
 
+  const footer = replies.length ? (
+    <QuickReplies replies={replies} onPick={pick} footer={inputBar} />
+  ) : (
+    inputBar
+  );
+
   return (
     <CaseScreen title={t.title} footer={footer} scrollRef={scrollRef}>
-      <Text variant="body">{t.intro}</Text>
-      <Text variant="meta">{t.who}</Text>
+      <BotSays name={t.title} lines={[t.intro]} hint={t.who} />
 
       {consent ? null : (
-        <Card>
-          <View style={styles.consent}>
-            <Text variant="title" accessibilityRole="header">
-              {t.consentTitle}
-            </Text>
-            <Text variant="body">{t.consentText(demoConfig.assistant.name)}</Text>
-            <Text variant="meta">{t.consentBasis}</Text>
-            <Button label={t.consentAccept} fullWidth onPress={accept} />
-            <Button label={t.consentDecline} variant="secondary" fullWidth onPress={help} />
-          </View>
-        </Card>
+        <BotSays sender={false} lines={[t.consentTitle]}>
+          <Text variant="bodyLg">{t.consentText(demoConfig.assistant.name)}</Text>
+          <Text variant="meta">{t.consentBasis}</Text>
+        </BotSays>
       )}
 
-      {messages.map((m) => {
-        const mine = m.role === 'haushalt';
-        return (
-          <View key={m.id} style={[styles.row, mine ? styles.mine : styles.theirs]}>
-            <View
-              accessible
-              accessibilityLabel={t.message(mine ? t.you : t.assistant, m.text)}
-              style={[
-                styles.bubble,
-                {
-                  borderRadius: theme.radius.lg,
-                  backgroundColor: mine ? theme.colors.surfaceInverse : theme.colors.surfaceCard,
-                },
-              ]}
-            >
-              <Text variant="body" tone={mine ? 'onInverse' : 'body'}>
-                {m.text}
-              </Text>
-            </View>
-            {action(m)}
-          </View>
-        );
-      })}
+      {messages.map((m, i) =>
+        m.role === 'haushalt' ? (
+          <UserSaid key={m.id} text={m.text} />
+        ) : (
+          <BotSays
+            key={m.id}
+            name={t.title}
+            sender={messages[i - 1]?.role !== 'assistent'}
+            lines={[m.text]}
+          />
+        ),
+      )}
 
-      {pending ? (
-        <View style={styles.typing} accessibilityLiveRegion="polite" accessible>
-          <ActivityIndicator color={theme.colors.textMuted} />
-          <Text variant="meta">{t.typing}</Text>
-        </View>
-      ) : null}
-
-      {error ? (
-        <View style={styles.error}>
-          <InfoBox>{t.errors[error]}</InfoBox>
-          {last?.role === 'haushalt' && retryable.includes(error) ? (
-            <Button label={t.retry} variant="secondary" onPress={() => void ask()} />
-          ) : null}
-          {canHelp ? <Button label={t.getHelp} icon="video" onPress={help} /> : null}
-        </View>
-      ) : null}
-
+      {pending ? <Typing label={t.typing} /> : null}
+      {error ? <InfoBox>{t.errors[error]}</InfoBox> : null}
       {full ? <InfoBox>{t.full}</InfoBox> : null}
     </CaseScreen>
   );
 }
 
 const styles = StyleSheet.create({
-  consent: { gap: 12 },
-  row: { gap: 8 },
-  mine: { alignItems: 'flex-end' },
-  theirs: { alignItems: 'flex-start' },
-  bubble: { maxWidth: '88%', paddingHorizontal: 14, paddingVertical: 10 },
-  typing: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  error: { gap: 10 },
   inputBar: {
     flexDirection: 'row',
     alignItems: 'flex-end',

@@ -21,6 +21,7 @@ const t = de.talk;
 export function BotSays({
   lines,
   sender = true,
+  name = de.app.name,
   hint,
   children,
 }: {
@@ -29,6 +30,7 @@ export function BotSays({
   hint?: string;
   /** Absender nur über der ersten Nachricht einer Folge */
   sender?: boolean;
+  name?: string;
   children?: ReactNode;
 }) {
   const theme = useTheme();
@@ -36,7 +38,7 @@ export function BotSays({
     <View style={styles.bot}>
       {sender ? (
         <Text variant="meta" style={{ fontFamily: theme.fontFamily.semibold }}>
-          {de.app.name}
+          {name}
         </Text>
       ) : null}
       {lines.map((line, i) => (
