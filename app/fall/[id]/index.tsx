@@ -1,17 +1,30 @@
 import { router, useLocalSearchParams } from 'expo-router';
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import {
+  cloneElement,
+  useEffect,
+  useRef,
+  useState,
+  type ReactElement,
+  type ReactNode,
+} from 'react';
 import { Linking, StyleSheet, View } from 'react-native';
 import type { KeyboardAwareScrollViewRef } from 'react-native-keyboard-controller';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { CaseFileCard } from '@/components/app/CaseFileCard';
 import { CaseScreen, useCaseId } from '@/components/app/CaseScreen';
-import { BotSays, QuickReplies, Typing, UserSaid, type Reply } from '@/components/app/Conversation';
+import {
+  BotSays,
+  ChatInput,
+  QuickReplies,
+  Thread,
+  Typing,
+  UserSaid,
+  type Reply,
+} from '@/components/app/Conversation';
 import { CostCompare } from '@/components/app/CostCompare';
 import { DemoHint } from '@/components/app/DemoHint';
 import { leaveCase } from '@/components/nav/leaveCase';
 import {
-  Button,
   Card,
   Checkbox,
   ConfidenceLabel,
@@ -21,7 +34,7 @@ import {
   PhotoFrame,
   StarRating,
   Text,
-  TextField,
+  Timeline,
 } from '@/components/ds';
 import { demoConfig } from '@/config/demo.config';
 import { guides, type GuideId } from '@/data/guides';
@@ -32,13 +45,13 @@ import { amountToPay, costsLine, requestAppointment } from '@/lib/booking';
 import { chatLimits } from '@/lib/chat/limits';
 import { retryableChatErrors, useAssistant } from '@/lib/chat/useAssistant';
 import { hasProgress } from '@/lib/caseView';
+import { statusView } from '@/lib/statusView';
 import { deviceTitle, getManufacturer } from '@/lib/devices';
 import { guideTools } from '@/lib/guideMeta';
 import { toDiagnosis } from '@/lib/diagnosis';
 import type { CaseEvent, Diagnosis } from '@/model/types';
 import { services, type FindingOption, type PhotoMode, type QuestionAnswer } from '@/services';
 import { activeBooking, nextSimulationDue, selectCaseEvents, useAppStore } from '@/store/appStore';
-import { useTheme } from '@/theme';
 
 const t = de.thread;
 const CONSENT_TEXT_VERSION = '2026-10-1';
@@ -47,7 +60,7 @@ const CLAIM_TEXT_VERSION = '2026-10-1';
 interface Item {
   at: string;
   key: string;
-  node: ReactNode;
+  node: ReactElement;
 }
 
 const answers: QuestionAnswer[] = ['ablauf', 'zulauf', 'unklar'];
@@ -59,8 +72,6 @@ const answers: QuestionAnswer[] = ['ablauf', 'zulauf', 'unklar'];
  * Der Verlauf entsteht aus dem gespeicherten Fall, er übersteht also jeden Neustart.
  */
 export default function FallGespraech() {
-  const theme = useTheme();
-  const insets = useSafeAreaInsets();
   const caseId = useCaseId();
   const params = useLocalSearchParams<{ weiter?: string; frage?: string; entwurf?: string }>();
   const state = useAppStore();
@@ -274,14 +285,7 @@ export default function FallGespraech() {
   // ---------- Verlauf ----------
 
   const items: Item[] = [];
-  const add = (at: string, key: string, node: ReactNode) => items.push({ at, key, node });
-  const details = (path: string) => (
-    <Button
-      label={t.details}
-      variant="link"
-      onPress={() => router.push(`/fall/${caseId}/${path}`)}
-    />
-  );
+  const add = (at: string, key: string, node: ReactElement) => items.push({ at, key, node });
 
   // Gerät und Problem
   add(
@@ -379,7 +383,6 @@ export default function FallGespraech() {
               : de.result.costNoteNoContract}
           </InfoBox>
         ) : null}
-        {details('ergebnis')}
       </BotSays>,
     );
   }
@@ -499,7 +502,6 @@ export default function FallGespraech() {
         <View style={styles.full}>
           <CostCompare quote={quote} focus={replacement ? 'replacement' : 'repair'} />
         </View>
-        {details('kosten')}
       </BotSays>,
     );
     if (c.claim) {
@@ -525,9 +527,7 @@ export default function FallGespraech() {
       <BotSays
         lines={[de.status.headline.angefragt]}
         hint={de.status.text.angefragt(b.provider.name)}
-      >
-        {details('status')}
-      </BotSays>,
+      />,
     );
   }
   for (const e of of('freigabe_entschieden')) {
@@ -585,7 +585,7 @@ export default function FallGespraech() {
         <View style={styles.full}>
           <PhotoFrame label={de.finish.photo} />
         </View>
-        <Text variant="title">{a.runsAgain}</Text>
+        <Text variant="say">{a.runsAgain}</Text>
       </BotSays>,
     );
   }
@@ -598,14 +598,14 @@ export default function FallGespraech() {
       <BotSays lines={[de.finish.solvedTitle]}>
         {repairBooking?.status === 'erledigt' ? (
           <>
-            <Text variant="title">{t.rate}</Text>
+            <Text variant="say">{t.rate}</Text>
             <StarRating
               value={rated ?? 0}
               onChange={(n) =>
                 useAppStore.getState().rateBooking(repairBooking.id, n as 1 | 2 | 3 | 4 | 5)
               }
             />
-            {rated ? <Text variant="body">{de.finish.thanks}</Text> : null}
+            {rated ? <Text variant="hint">{de.finish.thanks}</Text> : null}
           </>
         ) : null}
       </BotSays>,
@@ -734,13 +734,15 @@ export default function FallGespraech() {
   if (assistant.waiting) {
     // Einwilligung vor der ersten Nachricht an den Assistenten
     tail.push(
-      <View key="consent" style={styles.stack}>
-        <UserSaid text={assistant.waiting} />
-        <BotSays name={de.chat.title} lines={[de.chat.consentTitle]}>
-          <Text variant="bodyLg">{de.chat.consentText(demoConfig.assistant.name)}</Text>
-          <Text variant="meta">{de.chat.consentBasis}</Text>
-        </BotSays>
-      </View>,
+      <UserSaid key="consent-q" text={assistant.waiting} />,
+      <BotSays
+        key="consent"
+        name={de.chat.title}
+        lines={[de.chat.consentTitle]}
+        hint={de.chat.consentText(demoConfig.assistant.name)}
+      >
+        <Text variant="meta">{de.chat.consentBasis}</Text>
+      </BotSays>,
     );
     reply('einverstanden', de.chat.consentAccept, assistant.accept);
     reply('ablehnen', de.chat.consentDecline, () => {
@@ -799,11 +801,11 @@ export default function FallGespraech() {
   } else if (costsOpen) {
     if (contract) {
       tail.push(
-        <BotSays key="kosten" sender={false} lines={[]}>
-          <Text variant="bodyLg">
-            {de.talk.claim.payer(insurer, formatEuro(state.demo.deductible))}
-          </Text>
-          <Text variant="bodyLg">{de.talk.claim.rejected(insurer)}</Text>
+        <BotSays
+          key="kosten"
+          lines={[de.talk.claim.payer(insurer, formatEuro(state.demo.deductible))]}
+          hint={de.talk.claim.rejected(insurer)}
+        >
           {/* Was beim Versicherer ankommt (B-53) */}
           <View style={styles.full}>
             <Disclosure title={de.costs.preview(insurer)}>
@@ -814,7 +816,7 @@ export default function FallGespraech() {
             </Disclosure>
           </View>
           <Text variant="meta">{de.costs.legal(insurer)}</Text>
-          <Text variant="title">{de.talk.claim.ask(insurer)}</Text>
+          <Text variant="say">{de.talk.claim.ask(insurer)}</Text>
         </BotSays>,
       );
       // Der Schadenfall entsteht genau hier, durch den Tap (B-17)
@@ -822,10 +824,7 @@ export default function FallGespraech() {
       reply('selbst', de.costs.selfPay, () => setPayment('selbst'));
     } else {
       tail.push(
-        <BotSays key="kosten" sender={false} lines={[]}>
-          <Text variant="bodyLg">{de.costs.noContractText}</Text>
-          <Text variant="title">{de.talk.claim.askNoContract}</Text>
-        </BotSays>,
+        <BotSays key="kosten" lines={[de.costs.noContractText, de.talk.claim.askNoContract]} />,
       );
       reply('selbst', de.costs.toAppointment, () => setPayment('selbst'));
     }
@@ -834,19 +833,18 @@ export default function FallGespraech() {
   } else if (needsAppointment) {
     if (payment === 'selbst' && quote) {
       tail.push(
-        <View key="zahlung" style={styles.stack}>
-          <UserSaid
-            text={
-              c.status === 'abgelehnt'
-                ? t.rejectedChoice.selfPay(formatEuro(quote.repair.total))
-                : contract
-                  ? de.costs.selfPay
-                  : de.costs.toAppointment
-            }
-            onEdit={() => setPayment(undefined)}
-          />
-          <BotSays lines={[de.talk.claim.selfPay(formatEuro(quote.repair.total))]} />
-        </View>,
+        <UserSaid
+          key="zahlung"
+          text={
+            c.status === 'abgelehnt'
+              ? t.rejectedChoice.selfPay(formatEuro(quote.repair.total))
+              : contract
+                ? de.costs.selfPay
+                : de.costs.toAppointment
+          }
+          onEdit={() => setPayment(undefined)}
+        />,
+        <BotSays key="zahlung-a" lines={[de.talk.claim.selfPay(formatEuro(quote.repair.total))]} />,
       );
     }
     if (onSite)
@@ -911,7 +909,7 @@ export default function FallGespraech() {
             </View>
             {c.status === 'freigabe_noetig' ? <InfoBox>{de.appointment.pending}</InfoBox> : null}
             {!onSite ? (
-              <Text variant="body">
+              <Text variant="hint">
                 {de.appointment.ecoDesign(a.finding.partAcc, demoConfig.ecoDesignDeliveryDays)}
               </Text>
             ) : null}
@@ -927,14 +925,26 @@ export default function FallGespraech() {
     reply('vor-ort', de.waiting.onSiteInstead, () => setOnSite(true));
     reply('fallakte', t.caseFile, () => router.push(`/fall/${caseId}/fallakte`));
   } else if (booking && booking.status !== 'erledigt') {
-    if (c.status === 'freigabe_noetig')
-      tail.push(
-        <BotSays
-          key="pruefung"
-          lines={[de.status.headline.pruefung(insurer)]}
-          hint={de.status.text.pruefung}
-        />,
-      );
+    // Wo der Fall steht und was noch kommt, als Karte im Gespräch
+    const view = statusView(state, c);
+    tail.push(
+      <BotSays
+        key="stand"
+        lines={c.status === 'freigabe_noetig' ? [de.status.headline.pruefung(insurer)] : []}
+        hint={c.status === 'freigabe_noetig' ? de.status.text.pruefung : undefined}
+      >
+        <View style={styles.full}>
+          <Card>
+            <Text variant="labelStrong" accessibilityRole="header">
+              {t.timelineTitle}
+            </Text>
+            <View style={styles.gapTop}>
+              <Timeline items={view.timeline} />
+            </View>
+          </Card>
+        </View>
+      </BotSays>,
+    );
     if (demoTap) reply('demo', t.demoNext, () => useAppStore.getState().simulateNext(caseId));
     reply('status', de.status.caseFile, () => router.push(`/fall/${caseId}/fallakte`));
   } else if (
@@ -944,7 +954,7 @@ export default function FallGespraech() {
   ) {
     // Hilfe holen: wer welche Daten sieht, steht vor dem Call (B-19)
     tail.push(
-      <BotSays key="hilfe" sender={false} lines={[]}>
+      <BotSays key="hilfe" lines={[]}>
         {/* Was die Fachkraft vorab sieht: das echte Protokoll (B-22) */}
         <View style={styles.full}>
           <CaseFileCard caseId={caseId} />
@@ -956,7 +966,7 @@ export default function FallGespraech() {
             </Text>
             <View style={styles.items}>
               {de.help.shareItems.map((item) => (
-                <Text key={item} variant="body">
+                <Text key={item} variant="hint" tone="body">
                   {de.help.item(item)}
                 </Text>
               ))}
@@ -1047,53 +1057,32 @@ export default function FallGespraech() {
 
   const closed = c.status === 'erledigt' || c.status === 'abgebrochen';
   const inputBar = closed ? undefined : (
-    <View
-      style={[
-        styles.inputBar,
-        {
-          paddingBottom: Math.max(insets.bottom, 12) + 8,
-          paddingHorizontal: theme.gutter,
-          borderTopColor: theme.colors.borderSubtle,
-          backgroundColor: theme.colors.bgPage,
-        },
-      ]}
-    >
-      <View style={styles.inputField}>
-        <TextField
-          label={t.inputLabel}
-          labelHidden
-          placeholder={a.otherPlaceholder}
-          multiline
-          rows={1}
-          value={input}
-          error={inputError}
-          onChangeText={(v) => {
-            setInput(v);
-            setInputError(undefined);
-          }}
-        />
-      </View>
-      <Button
-        label={de.chat.send}
-        disabled={!input.trim() || assistant.pending}
-        onPress={sendInput}
-      />
-    </View>
+    <ChatInput
+      label={t.inputLabel}
+      placeholder={a.otherPlaceholder}
+      value={input}
+      error={inputError}
+      disabled={assistant.pending}
+      onChangeText={(v) => {
+        setInput(v);
+        setInputError(undefined);
+      }}
+      onSend={sendInput}
+    />
   );
 
-  const footer = replies.length ? (
-    <QuickReplies replies={replies} onPick={(key) => handlers[key]?.()} footer={inputBar} />
-  ) : (
-    inputBar
-  );
+  const footer =
+    replies.length || inputBar ? (
+      <QuickReplies replies={replies} onPick={(key) => handlers[key]?.()} footer={inputBar} />
+    ) : undefined;
 
   return (
     <CaseScreen title={t.title(c.id)} footer={footer} scrollRef={scrollRef} onBack={leaveCase}>
       <DemoHint id="thread" />
-      {ordered.map((x) => (
-        <View key={x.key}>{x.node}</View>
-      ))}
-      {tail}
+      <Thread>
+        {ordered.map((x) => cloneElement(x.node, { key: x.key }))}
+        {tail}
+      </Thread>
     </CaseScreen>
   );
 }
@@ -1103,12 +1092,4 @@ const styles = StyleSheet.create({
   stack: { gap: 8 },
   items: { marginTop: 8, gap: 2 },
   gapTop: { marginTop: 8 },
-  inputBar: {
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-    gap: 8,
-    paddingTop: 10,
-    borderTopWidth: StyleSheet.hairlineWidth,
-  },
-  inputField: { flex: 1 },
 });

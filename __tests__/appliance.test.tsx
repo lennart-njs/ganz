@@ -140,7 +140,7 @@ describe('Texte je Gerätetyp', () => {
   });
 
   test('Screens nutzen keine festen Waschmaschinen-Texte', () => {
-    const files = ['index', 'videocall', 'termin', 'anleitung', 'kamera'].map((f) =>
+    const files = ['index', 'videocall', 'anleitung', 'kamera'].map((f) =>
       fs.readFileSync(path.join(__dirname, '..', 'app', 'fall', '[id]', `${f}.tsx`), 'utf8'),
     );
     for (const src of files) expect(src).not.toMatch(/Laugenpumpe|Maschine/);

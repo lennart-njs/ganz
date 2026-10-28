@@ -35,11 +35,11 @@ Der Demo-Modus ist in `config/demo.config.ts` eingeschaltet (`demo.enabled`).
 - **Alles zurücksetzen:** löscht Geräte, Fälle und Einwilligungen und startet das Onboarding neu.
 
 - **Hell oder dunkel:** Profil → „Darstellung“: Wie System, Hell, Dunkel.
-- **Gespräch und Formular:** Jeder Fall ist ein Gespräch. „Details“ an Ergebnis, Kosten und Termin öffnet die Formular-Ansicht.
+- **Alles im Gespräch:** Jeder Fall ist ein Gespräch. Ergebnis, Kosten, Schadenmeldung, Termin und Status stehen darin, es gibt keine Formulare daneben. Die Fallakte bleibt als Dokument.
 
 ### Golden Path für den Pitch (ca. 3 Minuten)
 
-Der ganze Fall ist ein Gespräch. Die Antworten stehen unten, „Details“ zeigt das Formular.
+Der ganze Fall ist ein Gespräch. Die Antworten stehen unten, Karten mit Ergebnis, Kosten und Stand stehen im Verlauf.
 
 1. Onboarding: „Los geht’s“ → Vertragsnummer `KV-2023-0471` → „Ja, das ist es“.
 2. „Was ist kaputt?“ → „Foto machen“ → Auslöser (im Browser: „Beispielfoto nehmen“).

@@ -39,10 +39,16 @@ function caseAfterFinding({ contract = true } = {}) {
   return c.id;
 }
 
-describe('Kosten und Schadenmeldung', () => {
+/** Im Gespräch: Betrieb und Zeitfenster wählen */
+async function pickPartnerAndSlot(slot: string = demoConfig.slots[0]!) {
+  await tap(new RegExp(`^${demoConfig.partners[0]!.name}`));
+  await tap(slot);
+}
+
+describe('Kosten und Schadenmeldung im Gespräch', () => {
   test('„freigabe_noetig“ entsteht erst durch den Tap auf „Schadenfall melden“', async () => {
     const id = caseAfterFinding();
-    const r = await renderRouter(APP, { initialUrl: `/fall/${id}/kosten` });
+    const r = await renderRouter(APP, { initialUrl: `/fall/${id}` });
     let c = useAppStore.getState().cases[id]!;
     expect(c.status).toBe('eskaliert');
     expect(c.claim).toBeUndefined();
@@ -61,43 +67,46 @@ describe('Kosten und Schadenmeldung', () => {
       recipient: { name: demoConfig.insurer.name },
     });
     expect(c.claim?.confirmationId).toBe(consent.id);
-    expect(r.getPathname()).toBe(`/fall/${id}/termin`);
+    // Weiter im selben Gespräch: Wer repariert?
+    expect(r.getPathname()).toBe(`/fall/${id}`);
+    expect(screen.getByText(de.talk.claim.reported('Kranich'))).toBeTruthy();
+    expect(screen.getByText(de.appointment.titleRepair)).toBeTruthy();
   });
 
   test('Kostenträger, Selbstbeteiligung und was bei Ablehnung passiert stehen vor dem Tap', async () => {
     const id = caseAfterFinding();
-    await renderRouter(APP, { initialUrl: `/fall/${id}/kosten` });
-    expect(screen.getByText(de.costs.payerValue('Kranich'))).toBeTruthy();
-    expect(screen.getByText(de.costs.ifRejectedValue)).toBeTruthy();
+    await renderRouter(APP, { initialUrl: `/fall/${id}` });
+    expect(screen.getByText(de.talk.claim.payer('Kranich', '0 €'))).toBeTruthy();
+    expect(screen.getByText(de.talk.claim.rejected('Kranich'))).toBeTruthy();
     expect(screen.getByText(de.costs.saving('710 €'))).toBeTruthy();
   });
 
   test('die Fallakte-Vorschau zeigt, was an den Versicherer geht', async () => {
     const id = caseAfterFinding();
-    await renderRouter(APP, { initialUrl: `/fall/${id}/kosten` });
-    expect(screen.queryByText(de.help.stepsDone(4, 7))).toBeNull();
+    await renderRouter(APP, { initialUrl: `/fall/${id}` });
+    expect(screen.queryByText(de.costs.previewContract(demoConfig.contract.number))).toBeNull();
     await tap(de.costs.preview('Kranich'));
     expect(screen.getByText(de.costs.previewContract(demoConfig.contract.number))).toBeTruthy();
-    expect(screen.getByText(de.help.stepsDone(4, 7))).toBeTruthy();
-    expect(screen.getByText(de.help.abortedAt(5, 'Pumpe freimachen'))).toBeTruthy();
-    expect(screen.getByText(new RegExp(de.caseFile.photoPurpose.display))).toBeTruthy();
+    expect(screen.getAllByText(de.help.stepsDone(4, 7)).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(de.help.abortedAt(5, 'Pumpe freimachen')).length).toBeGreaterThan(0);
     expect(screen.getByText(de.caseFile.costsLine('189 €', '899 €'))).toBeTruthy();
   });
 });
 
-describe('Betrieb und Termin', () => {
+describe('Betrieb und Termin im Gespräch', () => {
   async function bookAfterClaim() {
     const id = caseAfterFinding();
-    const r = await renderRouter(APP, { initialUrl: `/fall/${id}/kosten` });
+    const r = await renderRouter(APP, { initialUrl: `/fall/${id}` });
     await tap(de.costs.report);
     return { id, r };
   }
 
   test('bei Selbstbeteiligung 0 € heißt der Button „Termin anfragen“, vorbehaltlich Freigabe', async () => {
     const { id, r } = await bookAfterClaim();
+    // Ohne Betrieb und Zeitfenster gibt es noch nichts anzufragen
+    expect(screen.queryByRole('button', { name: de.appointment.request })).toBeNull();
+    await pickPartnerAndSlot();
     expect(screen.getByText(de.appointment.pending)).toBeTruthy();
-    expect(screen.getByRole('button', { name: de.appointment.request })).toBeDisabled();
-    await fireEvent.press(screen.getByRole('radio', { name: demoConfig.slots[0] }));
     await tap(de.appointment.request);
     expect(r.getPathname()).toBe(`/fall/${id}`);
     const booking = useAppStore.getState().bookings[0]!;
@@ -115,27 +124,28 @@ describe('Betrieb und Termin', () => {
   test('bei Selbstbeteiligung über 0 € heißt der Button „Zahlungspflichtig buchen“', async () => {
     const id = caseAfterFinding();
     useAppStore.getState().setDemo({ deductible: 5000 });
-    await renderRouter(APP, { initialUrl: `/fall/${id}/kosten` });
-    expect(screen.getByText(de.costs.barMeta('50 €'))).toBeTruthy();
+    await renderRouter(APP, { initialUrl: `/fall/${id}` });
+    expect(screen.getByText(de.talk.claim.payer('Kranich', '50 €'))).toBeTruthy();
     await tap(de.costs.report);
+    await pickPartnerAndSlot();
     expect(screen.getByRole('button', { name: de.appointment.requestPaid })).toBeTruthy();
     expect(screen.queryByRole('button', { name: de.appointment.request })).toBeNull();
   });
 
   test('ohne Schutz zahlt die Nutzerin selbst und bucht zahlungspflichtig', async () => {
     const id = caseAfterFinding({ contract: false });
-    const r = await renderRouter(APP, { initialUrl: `/fall/${id}/kosten` });
+    await renderRouter(APP, { initialUrl: `/fall/${id}` });
     expect(screen.queryByRole('button', { name: de.costs.report })).toBeNull();
     await tap(de.costs.toAppointment);
+    await pickPartnerAndSlot(demoConfig.slots[1]!);
     expect(screen.getByText(de.appointment.costsSelf('189 €'))).toBeTruthy();
-    await fireEvent.press(screen.getByRole('radio', { name: demoConfig.slots[1] }));
     await tap(de.appointment.requestPaid);
-    expect(r.getPathname()).toBe(`/fall/${id}`);
     expect(useAppStore.getState().cases[id]?.status).toBe('in_reparatur');
   });
 
   test('die Pumpe geht nie an den Haushalt', async () => {
     const { id } = await bookAfterClaim();
+    await pickPartnerAndSlot();
     expect(
       screen.getByText(de.appointment.ecoDesign(de.appliance.waschmaschine.finding.partAcc, 15)),
     ).toBeTruthy();

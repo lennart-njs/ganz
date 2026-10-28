@@ -31,6 +31,14 @@ Lennart: „Die Formular/Chat logik macht noch nicht richtig sinn. Das muss ein 
 13. **Ein offener Fall pro Gerät:** Ein neuer Versuch ohne Fortschritt ersetzt den alten Fall. Mit Fortschritt fragt ganz: „Weitermachen“ oder „Neues Problem melden“ (der alte Fall wird dann abgebrochen).
 14. **Befund:** Die Fachkraft entscheidet. Du bestätigst mit „Passt, weiter“ oder sagst „Stimmt nicht“.
 
+## Nach dem dritten Gerätetest (28.10.2026)
+
+Lennart: „Die Schriftgrößen sind unlogisch. Der Senden-Button im Chat ist viel zu riesig. Das Formular sollte wie bei Lemonade im Chat integriert sein. Nicht mehr nebeneinander.“
+
+15. **Keine Formulare neben dem Gespräch:** Ergebnis, Kosten mit Schadenmeldung, Betrieb und Termin sowie der Status laufen nur noch im Gespräch des Falls. Die Screens dafür entfallen, „Details“ auch. Ersetzt den Teil von Entscheidung 11, nach dem „Details“ die Formulare zeigt. Die Fallakte bleibt als Dokument.
+16. **Typo im Gespräch:** Was ganz sagt und was du antwortest, steht gleich groß (17 pt). Erklärungen 15 pt, Absender 13 pt. Antwort-Buttons 17 pt.
+17. **Eingabefeld:** Pille mit kleinem runden Senden-Pfeil darin (34 pt, Trefferfläche 44 pt) statt eines Buttons daneben.
+
 ## Offene Fragen aus REVIEW Abschnitt 9
 
 1. **Rechtsgrundlage je Datenfluss:** Vorschlag übernehmen. Angefragte Leistungen (Videocall, Termin, Schadenmeldung) = Art. 6 Abs. 1 lit. b DSGVO mit Bestätigung vor jeder Weitergabe. Einwilligung (lit. a) nur für Screenshots im Call, Einzelfall-Daten an Hersteller und Mitteilungen.

@@ -1,4 +1,4 @@
-// Termin anfragen: gemeinsam für das Formular (termin.tsx) und das Gespräch (schaden.tsx).
+// Termin anfragen aus dem Gespräch des Falls (app/fall/[id]/index.tsx).
 import { demoConfig } from '@/config/demo.config';
 import { de } from '@/i18n/de';
 import { formatEuro } from '@/i18n/format';

@@ -6,20 +6,8 @@ import { useAppStore } from '@/store/appStore';
 
 const APP = './app';
 
-// '' ist das Gespräch des Falls, die anderen sind Vollbild-Schritte und Details
-const caseScreens = [
-  '',
-  'kamera',
-  'analyse',
-  'ergebnis',
-  'anleitung',
-  'warteraum',
-  'videocall',
-  'kosten',
-  'termin',
-  'status',
-  'fallakte',
-];
+// '' ist das Gespräch des Falls, die anderen sind Vollbild-Schritte und die Fallakte
+const caseScreens = ['', 'kamera', 'analyse', 'anleitung', 'warteraum', 'videocall', 'fallakte'];
 
 // Vor renderRouter ohne act(): Der Store wird direkt gesetzt.
 function finishOnboarding() {
@@ -50,7 +38,7 @@ describe('Onboarding', () => {
   });
 
   test('ohne Onboarding sind Fall-Screens gesperrt', async () => {
-    const r = await renderRouter(APP, { initialUrl: '/fall/GS-24817/status' });
+    const r = await renderRouter(APP, { initialUrl: '/fall/GS-24817/fallakte' });
     expect(r.getPathname()).toBe('/willkommen');
   });
 });

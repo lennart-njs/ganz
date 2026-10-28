@@ -219,3 +219,13 @@ Annahmen, die ich beim Bauen getroffen habe. Jede lässt sich ändern.
 - **Befund:** Die Empfehlung der Fachkraft kommt aus `services.video.finding()`. „Passt, weiter“ speichert sie. „Stimmt nicht“ speichert deinen Widerspruch und bietet Hilfe neu an.
 - **Stift:** an der ersten Antwort, solange der Fall noch keinen Fortschritt hat. Er führt zurück zu „Problem melden“ mit demselben Fall. An der Schadenmeldung nie.
 - **Ein Fall ohne Inhalt** verschwindet, wenn man das Gespräch verlässt. Mit „Später weitermachen“ bleibt er.
+
+## Alles im Gespräch (28.10.2026)
+
+- **Entfallen:** `ergebnis.tsx`, `kosten.tsx`, `termin.tsx`, `status.tsx`. Alles davon stand schon im Gespräch. Was nur dort stand, ist jetzt eine Karte im Verlauf: Der Zeitstrahl aus dem Status heißt „So geht es weiter“ und steht unten im Gespräch, solange ein Termin läuft.
+- **Typo:** Neue Rollen `say` (17, medium), `bubble` (17, regular) und `hint` (15) in `theme/tokens.ts`. Alle Werte liegen auf der Skala des Designsystems (13, 15, 17). Überschriften (`title`, 20) gibt es im Gespräch nicht mehr.
+- **Absender:** `Thread` setzt den Absender nur über die erste Nachricht einer Folge. Gleicher Absender steht dicht (12 pt), zwischen den Sprechern 24 pt.
+- **Bewegung:** Neue Nachrichten blenden in 220 ms ein und rücken 8 pt nach oben, ohne Federn. Was beim Öffnen schon da ist, steht sofort. Bei „Bewegung reduzieren“ keine Animation. Der Assistent zeigt drei pulsierende Punkte statt eines Spinners.
+- **Antwort-Buttons:** ohne Weiter-Pfeil, wie Antworten in einem Gespräch. Höchstens 45 % der Bildschirmhöhe, darüber scrollen sie in sich.
+- **Icon:** Senden-Pfeil (Lucide `ArrowUp`) im Set, vermerkt im Designsystem.
+

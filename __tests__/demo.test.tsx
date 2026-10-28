@@ -10,6 +10,14 @@ const APP = './app';
 const tap = (name: string | RegExp) => fireEvent.press(screen.getByRole('button', { name }));
 const tree = () => JSON.stringify(screen.toJSON());
 
+/** Im Gespräch: Schaden melden, Betrieb und Zeitfenster wählen, Termin anfragen */
+async function reportAndBook() {
+  await tap(de.costs.report);
+  await tap(new RegExp(`^${demoConfig.partners[0]!.name}`));
+  await tap(demoConfig.slots[0]!);
+  await tap(de.appointment.request);
+}
+
 /** Golden Path bis zum Termin, mit Diagnose, Anleitung, Befund und Meldung */
 function goldenCase() {
   const s = useAppStore.getState();
@@ -90,15 +98,12 @@ describe('Whitelabel', () => {
       expect(clean()).toContain('Möwe');
     });
 
-    test('Kosten, Vorschau, Termin und Status', async () => {
+    test('Kosten, Vorschau, Termin und Status im Gespräch', async () => {
       const { caseId } = goldenCase();
-      const r = await renderRouter(APP, { initialUrl: `/fall/${caseId}/kosten` });
+      const r = await renderRouter(APP, { initialUrl: `/fall/${caseId}` });
       await tap(de.costs.preview('Möwe'));
-      expect(clean()).toContain(de.costs.payerValue('Möwe'));
-      await tap(de.costs.report);
-      expect(clean()).toContain('Möwe');
-      await fireEvent.press(screen.getByRole('radio', { name: demoConfig.slots[0] }));
-      await tap(de.appointment.request);
+      expect(clean()).toContain(de.talk.claim.ask('Möwe'));
+      await reportAndBook();
       expect(r.getPathname()).toBe(`/fall/${caseId}`);
       expect(clean()).toContain(de.status.headline.pruefung('Möwe'));
     });
@@ -114,12 +119,12 @@ describe('Whitelabel', () => {
 describe('Demo-Modus', () => {
   test('mit Hinweisen: Tipps, Demo-Knöpfe und Beispielwerte', async () => {
     const { caseId } = goldenCase();
-    await renderRouter(APP, { initialUrl: `/fall/${caseId}/kosten` });
-    expect(screen.getByText(de.demoHints.kosten)).toBeTruthy();
+    await renderRouter(APP, { initialUrl: `/fall/${caseId}` });
+    expect(screen.getByText(de.demoHints.thread)).toBeTruthy();
     expect(screen.getByText(de.common.exampleValues)).toBeTruthy();
     await tap(de.demoHints.dismiss);
-    expect(screen.queryByText(de.demoHints.kosten)).toBeNull();
-    expect(useAppStore.getState().demo.dismissedHints).toContain('kosten');
+    expect(screen.queryByText(de.demoHints.thread)).toBeNull();
+    expect(useAppStore.getState().demo.dismissedHints).toContain('thread');
   });
 
   describe('Hinweise aus: keine Demo-Spur in der App', () => {
@@ -136,12 +141,10 @@ describe('Demo-Modus', () => {
       assertClean();
     });
 
-    test('Kosten, Termin und Status', async () => {
-      await renderRouter(APP, { initialUrl: `/fall/${caseId}/kosten` });
+    test('Kosten, Termin und Status im Gespräch', async () => {
+      await renderRouter(APP, { initialUrl: `/fall/${caseId}` });
       assertClean();
-      await tap(de.costs.report);
-      await fireEvent.press(screen.getByRole('radio', { name: demoConfig.slots[0] }));
-      await tap(de.appointment.request);
+      await reportAndBook();
       assertClean();
     });
 

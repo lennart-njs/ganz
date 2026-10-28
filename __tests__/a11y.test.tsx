@@ -156,12 +156,8 @@ const routes = (w: ReturnType<typeof world>) => [
   '/galerie',
   `/fall/neu?geraet=${w.device}`,
   `/fall/${w.open}/kamera`,
-  `/fall/${w.done}/ergebnis`,
   `/fall/${w.open}/anleitung`,
   `/fall/${w.done}/videocall?video=${w.video}`,
-  `/fall/${w.done}/kosten`,
-  `/fall/${w.done}/termin?art=reparatur`,
-  `/fall/${w.done}/status`,
   `/fall/${w.done}/fallakte`,
   // Das Gespräch des Falls in drei Lagen: Anleitung mit Assistent, Kosten, abgeschlossen
   `/fall/${w.open}`,

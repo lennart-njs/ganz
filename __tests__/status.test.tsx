@@ -33,9 +33,10 @@ async function bookedCase(scenario: 'freigeben' | 'ablehnen' = 'freigeben') {
   });
   s.escalate(c.id);
   s.setFinding(c.id, 'reparatur', 'fachkraft');
-  const r = await renderRouter(APP, { initialUrl: `/fall/${c.id}/kosten` });
+  const r = await renderRouter(APP, { initialUrl: `/fall/${c.id}` });
   await tap(de.costs.report);
-  await fireEvent.press(screen.getByRole('radio', { name: demoConfig.slots[0] }));
+  await tap(new RegExp(`^${demoConfig.partners[0]!.name}`));
+  await tap(demoConfig.slots[0]!);
   await tap(de.appointment.request);
   await act(async () => {});
   return { id: c.id, r };
@@ -58,7 +59,9 @@ describe('Fall-Status', () => {
     // Nach der Terminanfrage geht es im Gespräch des Falls weiter
     expect(r.getPathname()).toBe(`/fall/${id}`);
     expect(screen.getByText(de.status.headline.pruefung('Kranich'))).toBeTruthy();
-    expect(screen.getByText(de.status.caseNumber(id), { exact: false })).toBeTruthy();
+    expect(screen.getByText(de.thread.title(id))).toBeTruthy();
+    // Wo der Fall steht, zeigt eine Karte im Gespräch
+    expect(screen.getByText(de.thread.timelineTitle)).toBeTruthy();
 
     await advance(demoConfig.timers.claimMs + 1000);
     expect(caseOf(id).claim?.decision).toMatchObject({ result: 'freigegeben', actor: 'mensch' });

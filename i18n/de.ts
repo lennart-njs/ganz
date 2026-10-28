@@ -52,14 +52,11 @@ export const de = {
     kamera: 'Foto machen',
     analyse: 'Intelligente Fehlererkennung',
     rueckfrage: 'Rückfrage',
-    ergebnis: 'Ergebnis',
     anleitung: 'Anleitung',
     hilfe: 'Hilfe holen',
     warteraum: 'Verbindung',
     videocall: 'Videocall',
     befund: 'Befund',
-    kosten: 'Kosten und Schadenmeldung',
-    termin: 'Betrieb und Termin',
     status: 'Fall-Status',
     abschluss: 'Abschluss',
     fallakte: 'Fallakte',
@@ -552,7 +549,6 @@ export const de = {
       confidence: 'Sicherheit',
     },
     quoted: (text: string) => `„${text}“`,
-    beforeTitle: 'Bevor du anfängst',
     tools: (list: string) => `Du brauchst: ${list}.`,
     noTools: 'Du brauchst kein Werkzeug.',
     stepsCount: (n: number) => (n === 1 ? '1 Schritt' : `${n} Schritte`),
@@ -567,7 +563,6 @@ export const de = {
     deviceText:
       'Das Typenschild sagt uns, welches Gerät es ist. Für die Fehlersuche brauchen wir ein Foto vom Display oder vom Bauteil.',
     photoDisplay: 'Display fotografieren',
-    describe: 'Problem beschreiben',
     missing: 'Noch kein Ergebnis.',
     noGuideTitle: 'Dafür gibt es noch keine Anleitung zum Selbermachen.',
     noGuideText:
@@ -708,7 +703,6 @@ export const de = {
   },
 
   costs: {
-    findingMeta: (finding: string) => `Befund: ${finding}`,
     title: 'Reparieren lohnt sich.',
     titleReplacement: 'Ein Ersatzgerät ist nötig.',
     repair: 'Reparatur',
@@ -717,28 +711,17 @@ export const de = {
     replacementSub: 'vergleichbares Modell',
     saving: (amount: string) => `Ersparnis in diesem Fall: ${amount}`,
     payer: 'Das zahlt',
-    payerValue: (insurer: string) => `${insurer}, vorbehaltlich Freigabe`,
-    payerSelf: 'Du selbst',
     deductible: 'Deine Selbstbeteiligung',
-    ifRejected: (insurer: string) => `Wenn ${insurer} ablehnt`,
-    ifRejectedValue:
-      'Dann entscheidest du: Reparatur selbst zahlen, Kostenvoranschlag behalten oder Fall schließen.',
     preview: (insurer: string) => `Das geht an ${insurer}`,
     previewContract: (number: string) => `Vertrag ${number}`,
     legal: (insurer: string) =>
       `Mit dem Tap meldest du den Schadenfall an ${insurer}. Grundlage ist dein Versicherungsvertrag (Art. 6 Abs. 1 lit. b DSGVO).`,
     report: 'Schadenfall melden',
-    barMeta: (deductible: string) => `Selbstbeteiligung ${deductible}`,
-    barSub: 'vorbehaltlich Freigabe',
     selfPay: 'Ohne Versicherung selbst zahlen',
     noContractText: 'Für dieses Gerät ist kein Schutz verknüpft. Du zahlst die Reparatur selbst.',
     toAppointment: 'Weiter zum Termin',
-    rejectedTitle: (insurer: string) => `${insurer} übernimmt die Kosten nicht.`,
     rejectedText:
       'Du entscheidest, wie es weitergeht. Der Kostenvoranschlag bleibt in deiner Fallakte.',
-    rejectedSelfPay: (amount: string) => `Reparatur selbst zahlen (${amount})`,
-    keepQuote: 'Kostenvoranschlag behalten',
-    closeCase: 'Fall schließen',
     closeReason: 'Abgelehnt, nicht repariert',
     replacementNext: (insurer: string) =>
       `${insurer} meldet sich zum Ersatzgerät, sobald die Prüfung fertig ist.`,
@@ -746,7 +729,6 @@ export const de = {
 
   appointment: {
     titleRepair: 'Wer soll kommen?',
-    titleDiagnosis: 'Wer schaut es sich an?',
     when: 'Wann passt es dir?',
     address: 'Adresse',
     summary: 'Zusammenfassung',
@@ -771,9 +753,6 @@ export const de = {
     addressLine: (street: string, zip: string, city: string) => `${street}, ${zip} ${city}`,
     request: 'Termin anfragen',
     requestPaid: 'Zahlungspflichtig buchen',
-    pickSlot: 'Wähl bitte ein Zeitfenster.',
-    noPartner:
-      'Gerade hat kein Betrieb in deiner Nähe Zeit. Wir melden uns, sobald einer frei ist.',
   },
 
   status: {
@@ -948,9 +927,8 @@ export const de = {
   /** Der Fall als ein Gespräch (Entscheidung 11) */
   thread: {
     title: (id: string) => `Fall ${id}`,
-    details: 'Details',
-    toThread: 'Zurück zum Gespräch',
     caseFile: 'Fallakte ansehen',
+    timelineTitle: 'So geht es weiter',
     photo: (purpose: string) => `Foto: ${purpose}`,
     analysing: 'Ich schaue mir dein Foto an.',
     guideOffer: (title: string, steps: string, source: string) =>
@@ -1092,15 +1070,11 @@ export const de = {
     home: 'Tippe auf „Was ist kaputt?“.',
     problem: 'Tippe auf „Foto machen“ oder wähle „Display zeigt eine Meldung“.',
     kamera: 'Wähle, was du fotografierst, und tippe auf den Auslöser.',
-    ergebnis: 'Starte die Anleitung. „Passt nicht“ führt zurück.',
     anleitung:
       'Tippe dich mit „Erledigt“ durch. In Schritt 5 zeigt „Geht nicht“, wie ganz Hilfe holt.',
     hilfe: 'Starte den Videocall. Vorher steht, wer welche Daten sieht.',
-    kosten: 'Klapp „Das geht an …“ auf: So kommt der Fall beim Versicherer an.',
-    status: 'Mit „Nächster Schritt (Demo)“ springst du durch Freigabe und Termin.',
     profil: 'Tippe 7-mal auf die Versionsnummer für die Demo-Steuerung.',
-    thread:
-      'Antworte unten. „Details“ zeigt alles auf einen Blick. Eigene Fragen beantwortet der Reparatur-Assistent.',
+    thread: 'Antworte unten. Eigene Fragen beantwortet der Reparatur-Assistent.',
   },
 
   demoControl: {
