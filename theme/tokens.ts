@@ -62,6 +62,12 @@ export const typeRoles = {
   display: { fontSize: 34, lineHeight: 1.08, weight: 'medium', tracking: -0.03 },
   h1: { fontSize: 28, lineHeight: 1.12, weight: 'medium', tracking: -0.02 },
   title: { fontSize: 20, lineHeight: 1.3, weight: 'semibold' },
+  /** Gespräch: was ganz sagt, Antwort-Buttons. Gleiche Größe wie die Antwort des Haushalts. */
+  say: { fontSize: 17, lineHeight: 1.4, weight: 'medium', tracking: -0.005 },
+  /** Gespräch: Antwort des Haushalts in der Tintenblase */
+  bubble: { fontSize: 17, lineHeight: 1.4, weight: 'regular' },
+  /** Gespräch: Erklärung unter einer Nachricht */
+  hint: { fontSize: 15, lineHeight: 1.45, weight: 'regular' },
   bodyLg: { fontSize: 17, lineHeight: 1.45, weight: 'regular' },
   body: { fontSize: 16, lineHeight: 1.45, weight: 'regular' },
   label: { fontSize: 16, lineHeight: 1.25, weight: 'medium' },
@@ -78,4 +84,6 @@ export const maxFontScale = 2;
 
 export const motion = {
   fade: 200,
+  /** Neue Nachricht im Gespräch: einblenden und 8 pt nach oben */
+  message: 220,
 } as const;

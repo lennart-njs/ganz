@@ -1,12 +1,17 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
-import { StyleSheet, View } from 'react-native';
 import type { KeyboardAwareScrollViewRef } from 'react-native-keyboard-controller';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { BotSays, QuickReplies, UserSaid, type Reply } from '@/components/app/Conversation';
+import {
+  BotSays,
+  ChatInput,
+  QuickReplies,
+  Thread,
+  UserSaid,
+  type Reply,
+} from '@/components/app/Conversation';
 import { DemoHint } from '@/components/app/DemoHint';
-import { AppHeader, Button, Screen, Text, TextField } from '@/components/ds';
+import { AppHeader, Button, Screen, Text } from '@/components/ds';
 import { guides, type GuideId } from '@/data/guides';
 import { de } from '@/i18n/de';
 import { appliance, hasGuides } from '@/lib/appliance';
@@ -16,7 +21,6 @@ import { deviceTitle } from '@/lib/devices';
 import { reportDisplayMessage } from '@/lib/problem';
 import type { CaseEntry, Id } from '@/model/types';
 import { selectOpenCaseForDevice, useAppStore } from '@/store/appStore';
-import { useTheme } from '@/theme';
 
 const t = de.problem;
 const g = de.talk.problem;
@@ -34,8 +38,6 @@ const ADD_DEVICE = 'neues-geraet';
  * offenen Fall (Entscheidung 13). Kein Link nach außen.
  */
 export default function ProblemMelden() {
-  const theme = useTheme();
-  const insets = useSafeAreaInsets();
   const params = useLocalSearchParams<{ geraet?: string; fall?: string }>();
   const store = useAppStore;
   const state = useAppStore();
@@ -223,34 +225,17 @@ export default function ProblemMelden() {
 
   const inputBar =
     step === 'geraet' || runningWithProgress ? undefined : (
-      <View
-        style={[
-          styles.inputBar,
-          {
-            paddingHorizontal: theme.gutter,
-            paddingBottom: Math.max(insets.bottom, 12) + 8,
-            borderTopColor: theme.colors.borderSubtle,
-            backgroundColor: theme.colors.bgPage,
-          },
-        ]}
-      >
-        <View style={styles.input}>
-          <TextField
-            label={de.thread.inputLabel}
-            labelHidden
-            placeholder={a.otherPlaceholder}
-            error={textError}
-            multiline
-            rows={1}
-            value={text}
-            onChangeText={(v) => {
-              setText(v);
-              setTextError(undefined);
-            }}
-          />
-        </View>
-        <Button label={de.chat.send} disabled={!text.trim()} onPress={submitText} />
-      </View>
+      <ChatInput
+        label={de.thread.inputLabel}
+        placeholder={a.otherPlaceholder}
+        error={textError}
+        value={text}
+        onChangeText={(v) => {
+          setText(v);
+          setTextError(undefined);
+        }}
+        onSend={submitText}
+      />
     );
 
   return (
@@ -261,45 +246,35 @@ export default function ProblemMelden() {
     >
       {guided ? <DemoHint id="problem" /> : null}
 
-      {askDevice ? (
-        <>
-          <BotSays lines={[g.whichDevice]} />
-          {device ? <UserSaid text={deviceTitle(device)} onEdit={editDevice} /> : null}
-        </>
-      ) : device ? (
-        <BotSays lines={[g.forDevice(deviceTitle(device))]} />
-      ) : null}
+      <Thread>
+        {askDevice ? <BotSays key="geraet" lines={[g.whichDevice]} /> : null}
+        {askDevice && device ? (
+          <UserSaid key="geraet-a" text={deviceTitle(device)} onEdit={editDevice} />
+        ) : null}
+        {!askDevice && device ? (
+          <BotSays key="geraet" lines={[g.forDevice(deviceTitle(device))]} />
+        ) : null}
 
-      {runningWithProgress ? (
-        <BotSays
-          sender={askDevice}
-          lines={[de.thread.runningCase(runningWithProgress.problemLabel)]}
-          hint={de.thread.runningCaseAsk}
-        />
-      ) : step !== 'geraet' ? (
-        <BotSays
-          sender={askDevice}
-          lines={[g.whatsUp]}
-          hint={de.common.sentences(
-            guided ? g.whatsUpHint : g.whatsUpNoGuides,
-            de.thread.inputHint,
-          )}
-        />
-      ) : null}
+        {runningWithProgress ? (
+          <BotSays
+            key="laeuft"
+            lines={[de.thread.runningCase(runningWithProgress.problemLabel)]}
+            hint={de.thread.runningCaseAsk}
+          />
+        ) : step !== 'geraet' ? (
+          <BotSays
+            key="was"
+            lines={[g.whatsUp]}
+            hint={de.common.sentences(
+              guided ? g.whatsUpHint : g.whatsUpNoGuides,
+              de.thread.inputHint,
+            )}
+          />
+        ) : null}
 
-      {answer ? <UserSaid text={answer} onEdit={editProblem} /> : null}
-      {step === 'meldung' ? <BotSays lines={[g.whichMessage]} /> : null}
+        {answer ? <UserSaid key="antwort" text={answer} onEdit={editProblem} /> : null}
+        {step === 'meldung' ? <BotSays key="meldung" lines={[g.whichMessage]} /> : null}
+      </Thread>
     </Screen>
   );
 }
-
-const styles = StyleSheet.create({
-  inputBar: {
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-    gap: 8,
-    paddingTop: 10,
-    borderTopWidth: StyleSheet.hairlineWidth,
-  },
-  input: { flex: 1 },
-});

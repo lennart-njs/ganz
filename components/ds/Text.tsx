@@ -37,7 +37,7 @@ export interface TextProps extends RNTextProps {
 }
 
 function defaultTone(variant: TypeRoleName): TextTone {
-  if (variant === 'meta' || variant === 'caption') return 'muted';
+  if (variant === 'meta' || variant === 'caption' || variant === 'hint') return 'muted';
   if (variant === 'body' || variant === 'bodyLg') return 'body';
   return 'strong';
 }

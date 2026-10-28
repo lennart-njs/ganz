@@ -1,4 +1,5 @@
 import {
+  ArrowUp,
   Camera,
   Check,
   ChevronDown,
@@ -43,6 +44,7 @@ const icons = {
   search: Search,
   add: Plus,
   edit: Pencil,
+  send: ArrowUp,
 } as const;
 
 export type IconName = keyof typeof icons;
