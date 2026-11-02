@@ -44,7 +44,7 @@ Der ganze Fall ist ein Gespräch. Die Antworten stehen unten, „Details“ zeig
 1. Onboarding: „Los geht’s“ → Vertragsnummer `KV-2023-0471` → „Ja, das ist es“.
 2. „Was ist kaputt?“ → „Foto machen“ → Auslöser (im Browser: „Beispielfoto nehmen“).
 3. Im Gespräch: Ergebnis „Laugenfilter verstopft“, Sicherheit hoch → „Anleitung starten“.
-4. Vier Schritte „Erledigt“, in Schritt 5 „Geht nicht“ → „Hilfe holen“. Zurück im Gespräch.
+4. Die Schritte stehen im Gespräch: viermal „Erledigt“, in Schritt 5 „Geht nicht“ → „Hilfe holen“. Der Stift am letzten „Erledigt“ geht einen Schritt zurück, „Details“ am Schritt zeigt die Großansicht.
 5. „Videocall starten“ (vorher steht, wer welche Daten sieht) → Auflegen → Befund der Fachkraft → „Passt, weiter“.
 6. Kosten: „Das geht an Kranich“ aufklappen → „Schadenfall melden“.
 7. Betrieb und Zeitfenster wählen → „Termin anfragen“ → „Nächster Schritt (Demo)“ bis „Repariert“.

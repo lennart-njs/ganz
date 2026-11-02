@@ -139,7 +139,7 @@ export default function Ergebnis() {
 
   const startGuide = () => {
     useAppStore.getState().startGuide(caseId, guide.id);
-    router.push(`/fall/${caseId}/anleitung`);
+    backToThread(caseId);
   };
 
   return (

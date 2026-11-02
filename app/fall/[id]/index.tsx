@@ -1,3 +1,4 @@
+import * as Haptics from 'expo-haptics';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { Linking, StyleSheet, View } from 'react-native';
@@ -9,6 +10,7 @@ import { CaseScreen, useCaseId } from '@/components/app/CaseScreen';
 import { BotSays, QuickReplies, Typing, UserSaid, type Reply } from '@/components/app/Conversation';
 import { CostCompare } from '@/components/app/CostCompare';
 import { DemoHint } from '@/components/app/DemoHint';
+import { GuideStepCard } from '@/components/app/GuideStepCard';
 import { leaveCase } from '@/components/nav/leaveCase';
 import {
   Button,
@@ -19,6 +21,7 @@ import {
   FactList,
   InfoBox,
   PhotoFrame,
+  Sheet,
   StarRating,
   Text,
   TextField,
@@ -33,7 +36,8 @@ import { chatLimits } from '@/lib/chat/limits';
 import { retryableChatErrors, useAssistant } from '@/lib/chat/useAssistant';
 import { hasProgress } from '@/lib/caseView';
 import { deviceTitle, getManufacturer } from '@/lib/devices';
-import { guideTools } from '@/lib/guideMeta';
+import { guideEnding, guideTools, SAFETY_CONFIRM } from '@/lib/guideMeta';
+import { guideThread, safetyConfirmed } from '@/lib/guideThread';
 import { toDiagnosis } from '@/lib/diagnosis';
 import type { CaseEvent, Diagnosis } from '@/model/types';
 import { services, type FindingOption, type PhotoMode, type QuestionAnswer } from '@/services';
@@ -76,6 +80,9 @@ export default function FallGespraech() {
   const [slot, setSlot] = useState<string>();
   const [input, setInput] = useState('');
   const [inputError, setInputError] = useState<string>();
+  // „Geht nicht“ in der Anleitung: Notiz für die Fachkraft
+  const [notWorking, setNotWorking] = useState(false);
+  const [note, setNote] = useState('');
 
   // Ein Fall ohne Inhalt bleibt nicht liegen, wenn man das Gespräch verlässt
   useEffect(() => () => useAppStore.getState().discardIfEmpty(caseId), [caseId]);
@@ -90,8 +97,8 @@ export default function FallGespraech() {
     if (frage) assistant.send(frage);
     const go = () => {
       if (weiter || frage) router.setParams({ weiter: undefined, frage: undefined });
-      if (weiter === 'anleitung') router.push(`/fall/${caseId}/anleitung`);
-      else if (weiter === 'kamera') router.push(`/fall/${caseId}/kamera`);
+      // Die Anleitung läuft im Gespräch (Entscheidung 16), nur die Kamera öffnet sich als Vollbild
+      if (weiter === 'kamera') router.push(`/fall/${caseId}/kamera`);
     };
     // Beim Kaltstart direkt in den Fall ist der Router erst nach dem ersten Rendern bereit
     try {
@@ -204,7 +211,29 @@ export default function FallGespraech() {
       }
       s.startGuide(caseId, guideId);
     }
-    router.push(`/fall/${caseId}/anleitung`);
+  };
+
+  // Anleitung im Gespräch: Erledigt, Geht nicht, Ende
+  const guideStep = (direction: 'next' | 'back') => {
+    if (!run || run.endedAt) return;
+    if (direction === 'next') {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => undefined);
+    }
+    useAppStore.getState().moveGuideStep(run.id, direction);
+  };
+  const finishGuide = (
+    outcome: 'laeuft_wieder' | 'laeuft_nicht' | 'geht_nicht' | 'fertig',
+    text?: string,
+  ) => {
+    if (!run || run.endedAt) return;
+    const s = useAppStore.getState();
+    if (outcome === 'laeuft_wieder') {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => undefined);
+    }
+    s.finishGuide(run.id, outcome, text);
+    if (outcome === 'geht_nicht' || outcome === 'laeuft_nicht') s.escalate(caseId);
+    setNotWorking(false);
+    setNote('');
   };
 
   const answerQuestion = (answer: QuestionAnswer, question: CaseEvent) => {
@@ -403,6 +432,54 @@ export default function FallGespraech() {
         hint={tools.length ? de.result.tools(tools.join(', ')) : de.result.noTools}
       />,
     );
+    // Die Schritte als Nachrichten. Aktiv ist nur der letzte gezeigte Schritt einer laufenden Anleitung.
+    const flow = guideThread(r, events, guide.steps.length);
+    const lastShown = flow.findLast((x) => x.kind === 'schritt');
+    const lastDone = flow.at(-1)?.kind === 'schritt' ? flow.at(-2) : undefined;
+    const ending = guideEnding(guide, c);
+    for (const x of flow) {
+      const active = !r.endedAt && x === lastShown;
+      if (x.kind === 'schritt') {
+        const isLast = x.step >= guide.steps.length - 1;
+        add(
+          x.at,
+          x.key,
+          <BotSays sender={false} lines={[]}>
+            <View style={styles.full}>
+              <GuideStepCard
+                guide={guide}
+                step={x.step}
+                current={active}
+                question={isLast && ending === 'stoerung' ? a.runsAgain : undefined}
+              />
+            </View>
+            {active ? (
+              <View style={styles.links}>
+                <Button
+                  label={de.chat.askStep}
+                  variant="link"
+                  onPress={() => setInput(de.chat.stepDraft(x.step + 1, guide.steps[x.step]!.t))}
+                />
+                {details('anleitung')}
+              </View>
+            ) : null}
+          </BotSays>,
+        );
+      } else if (x.kind === 'erledigt') {
+        // Der Stift am letzten „Erledigt“ geht einen Schritt zurück (B-05)
+        const editable = !r.endedAt && x === lastDone;
+        add(
+          x.at,
+          x.key,
+          <UserSaid text={de.guide.done} onEdit={editable ? () => guideStep('back') : undefined} />,
+        );
+      } else if (x.kind === 'zurueck') {
+        add(x.at, x.key, <UserSaid text={de.guide.stepBack} />);
+      } else {
+        const confirmKey = SAFETY_CONFIRM[guide.id as GuideId]?.[x.step];
+        if (confirmKey) add(x.at, x.key, <UserSaid text={de.guide.confirm[confirmKey]} />);
+      }
+    }
     if (!r.endedAt) continue;
     const step = (r.abortedAtStep ?? r.currentStep) + 1;
     const outcome =
@@ -996,12 +1073,43 @@ export default function FallGespraech() {
     }
   } else if (c.status === 'selbsthilfe' && run && !run.endedAt) {
     const g = guides[run.guideId as GuideId];
-    if (g)
-      tail.push(
-        <BotSays key="laeuft" lines={[t.guideRunning(run.currentStep + 1, g.steps.length)]} />,
-      );
-    reply('anleitung', t.continueGuide, () => router.push(`/fall/${caseId}/anleitung`));
-    reply('hilfe', de.result.helpInstead, escalate);
+    if (g) {
+      const step = Math.min(run.currentStep, g.steps.length - 1);
+      const isLast = step >= g.steps.length - 1;
+      const ending = guideEnding(g, c);
+      const confirmKey = SAFETY_CONFIRM[g.id as GuideId]?.[step];
+      // Nach Fragen an den Assistenten steht der Schritt weiter oben: kurz daran erinnern
+      const shownAt = guideThread(run, events, g.steps.length).findLast(
+        (x) => x.kind === 'schritt',
+      )?.at;
+      if (shownAt && msgs.some((m) => m.at > shownAt)) {
+        tail.push(
+          <BotSays
+            key="laeuft"
+            lines={[t.guideRunning(step + 1, g.steps.length)]}
+            hint={g.steps[step]!.t}
+          />,
+        );
+      }
+      if (confirmKey && !safetyConfirmed(run, events, step)) {
+        // Erst bestätigen, dann geht es weiter (Q-13)
+        reply('sicherheit', de.guide.confirm[confirmKey], () =>
+          useAppStore.getState().confirmSafety(run.id, step),
+        );
+      } else if (isLast && ending === 'noSelf') {
+        reply('hilfe', de.guide.getHelp, () => finishGuide('laeuft_nicht'));
+      } else if (isLast && ending === 'stoerung') {
+        reply('laeuft', de.guide.runsAgain, () => finishGuide('laeuft_wieder'));
+        reply('laeuft-nicht', de.guide.stillBroken, () => finishGuide('laeuft_nicht'));
+      } else {
+        reply('erledigt', isLast ? de.guide.finished : de.guide.done, () =>
+          isLast ? finishGuide('fertig') : guideStep('next'),
+        );
+        reply('geht-nicht', de.guide.notWorking, () => setNotWorking(true));
+      }
+    } else {
+      reply('hilfe', de.result.helpInstead, escalate);
+    }
   } else if (c.status === 'offen' || c.status === 'selbsthilfe') {
     const d = diagnoses.findLast((x) => x.source === 'fehlererkennung');
     const guide = d?.guideId ? guides[d.guideId as GuideId] : undefined;
@@ -1094,6 +1202,27 @@ export default function FallGespraech() {
         <View key={x.key}>{x.node}</View>
       ))}
       {tail}
+      <Sheet
+        visible={notWorking}
+        onClose={() => setNotWorking(false)}
+        title={de.guide.notWorkingTitle}
+      >
+        <Text variant="body">{de.guide.notWorkingText}</Text>
+        <TextField
+          label={de.guide.noteLabel}
+          placeholder={de.guide.notePlaceholder}
+          multiline
+          rows={3}
+          value={note}
+          onChangeText={setNote}
+        />
+        <Button
+          label={de.guide.getHelp}
+          size="lg"
+          fullWidth
+          onPress={() => finishGuide('geht_nicht', note)}
+        />
+      </Sheet>
     </CaseScreen>
   );
 }
@@ -1111,4 +1240,5 @@ const styles = StyleSheet.create({
     borderTopWidth: StyleSheet.hairlineWidth,
   },
   inputField: { flex: 1 },
+  links: { flexDirection: 'row', flexWrap: 'wrap', columnGap: 16 },
 });

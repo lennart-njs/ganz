@@ -219,3 +219,13 @@ Annahmen, die ich beim Bauen getroffen habe. Jede lässt sich ändern.
 - **Befund:** Die Empfehlung der Fachkraft kommt aus `services.video.finding()`. „Passt, weiter“ speichert sie. „Stimmt nicht“ speichert deinen Widerspruch und bietet Hilfe neu an.
 - **Stift:** an der ersten Antwort, solange der Fall noch keinen Fortschritt hat. Er führt zurück zu „Problem melden“ mit demselben Fall. An der Schadenmeldung nie.
 - **Ein Fall ohne Inhalt** verschwindet, wenn man das Gespräch verlässt. Mit „Später weitermachen“ bleibt er.
+
+## Anleitung im Gespräch (02.11.2026, Entscheidung 16)
+
+- **Jeder Schritt ist eine Nachricht** von ganz mit Karte (Fortschritt, Bild, Warnhinweis vor dem Text, Werkzeug, Quelle). Ältere Schritte bleiben im Verlauf, kleiner und ohne Bild.
+- **Antworten unten:** „Erledigt“ und „Geht nicht“, im letzten Schritt einer Störung „Läuft wieder“ und „Läuft noch nicht“, bei Pflege „Fertig“, bei „nicht selbst lösbar“ nur „Hilfe holen“.
+- **Sicherheitsbestätigung** (Waterproof: „Der Wasserhahn ist zu“) ist selbst eine Antwort. Erst danach erscheinen die anderen. Ersetzt das Häkchen mit gesperrtem Button.
+- **Schritt zurück** über den Stift an der letzten Antwort „Erledigt“ (B-05). Im Gespräch verlässt Zurück den Fall wie bei jedem anderen Schritt.
+- **„Geht nicht“** öffnet wie bisher ein Sheet mit der Notiz für die Fachkraft.
+- **Großansicht:** Die bisherige Vollbild-Anleitung bleibt unter „Details“ am aktuellen Schritt. Dort gilt weiter: Zurück geht einen Schritt zurück.
+- **Erinnerung:** Steht nach dem Schritt schon ein Gespräch mit dem Assistenten, sagt ganz unten noch einmal, bei welchem Schritt du bist.

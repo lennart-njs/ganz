@@ -151,7 +151,7 @@ export default function ProblemMelden() {
     const guide = guides[key as GuideId];
     const id = caseFor('symptom', guide.title);
     store.getState().startGuide(id, guide.id);
-    toThread(id, { weiter: 'anleitung' });
+    toThread(id);
   };
 
   const pickMessage = (key: string) => {
@@ -159,7 +159,7 @@ export default function ProblemMelden() {
     if (!m) return;
     const id = caseFor('meldung', m.code);
     reportDisplayMessage(id, m.guideId as GuideId, m.code);
-    toThread(id, { weiter: 'anleitung' });
+    toThread(id);
   };
 
   /** Eigene Worte: Der Reparatur-Assistent antwortet im Gespräch des Falls */

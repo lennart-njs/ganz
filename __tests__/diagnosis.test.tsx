@@ -1,6 +1,7 @@
 import { Linking } from 'react-native';
 import { act, fireEvent, renderRouter, screen } from 'expo-router/testing-library';
 
+import { guides } from '@/data/guides';
 import { de } from '@/i18n/de';
 import { services } from '@/services';
 import { useAppStore } from '@/store/appStore';
@@ -77,7 +78,9 @@ describe('Foto → Ergebnis', () => {
     expect(screen.getByText(de.ds.confidenceLabel('hoch'))).toBeTruthy();
     await tap(new RegExp(`^${de.result.startGuide}`));
     expect(taps).toBe(4);
-    expect(r.getPathname()).toBe('/fall/GS-24817/anleitung');
+    // Der erste Schritt steht im Gespräch (Entscheidung 16)
+    expect(r.getPathname()).toBe('/fall/GS-24817');
+    expect(screen.getByText(guides.ablauf.steps[0]!.t)).toBeTruthy();
   });
 
   test('Bauteil: Laugenpumpe, Sicherheit mittel', async () => {

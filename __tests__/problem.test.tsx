@@ -37,7 +37,7 @@ describe('Taps bis zur ersten Hilfe (Review 5.1)', () => {
     await tap(pill);
     await tap(new RegExp(`^${de.problems[1]!.label}`));
     expect(taps).toBe(2);
-    expect(r.getPathname()).toBe('/fall/GS-24817/anleitung');
+    expect(r.getPathname()).toBe('/fall/GS-24817');
     const s = useAppStore.getState();
     expect(s.cases['GS-24817']?.status).toBe('selbsthilfe');
     expect(Object.values(s.guideRuns)[0]?.guideId).toBe('nass');
@@ -49,7 +49,7 @@ describe('Taps bis zur ersten Hilfe (Review 5.1)', () => {
     await tap(new RegExp(`^${de.problems[0]!.label}`));
     await tap(new RegExp(`^${de.displayMessages[1]!.code}`));
     expect(taps).toBe(3);
-    expect(r.getPathname()).toBe('/fall/GS-24817/anleitung');
+    expect(r.getPathname()).toBe('/fall/GS-24817');
     const s = useAppStore.getState();
     expect(s.cases['GS-24817']).toMatchObject({ entry: 'meldung', problemLabel: 'Wasserablauf' });
     expect(s.diagnoses[0]).toMatchObject({
@@ -113,8 +113,8 @@ describe('Entwürfe', () => {
     const r = await renderRouter(APP, { initialUrl: '/' });
     await tap(pill);
     await tap(new RegExp(`^${de.problems[1]!.label}`));
-    expect(r.getPathname()).toBe('/fall/GS-24817/anleitung');
-    await tap(de.a11y.back);
+    expect(r.getPathname()).toBe('/fall/GS-24817');
+    // Die Anleitung läuft im Gespräch: ein Zurück verlässt den Fall
     await tap(de.a11y.back);
     expect(r.getPathname()).toBe('/');
     await tap(pill);
@@ -185,7 +185,7 @@ test('Pflege aus dem Gerätedetail startet einen Pflege-Fall', async () => {
   const r = await renderRouter(APP, { initialUrl: `/geraet/${device.id}` });
   await act(async () => {});
   await tap(new RegExp(`^${de.maintenance[0]!.title}`));
-  expect(r.getPathname()).toBe('/fall/GS-24817/anleitung');
+  expect(r.getPathname()).toBe('/fall/GS-24817');
   expect(useAppStore.getState().cases['GS-24817']).toMatchObject({ entry: 'pflege' });
 });
 

@@ -55,10 +55,8 @@ export function hasProgress(s: AppData, c: Case): boolean {
 
 /** Wohin „Weitermachen“ führt */
 export function resumeHref(s: AppData, c: Case): Href {
-  // Jeder Fall ist ein Gespräch. Eine laufende Anleitung öffnet sich darüber.
-  const run = latestGuideRun(s, c);
-  const guideOpen = c.status === 'selbsthilfe' && run && !run.endedAt;
-  return (guideOpen ? `/fall/${c.id}?weiter=anleitung` : `/fall/${c.id}`) as Href;
+  // Jeder Fall ist ein Gespräch, auch die Anleitung läuft darin (Entscheidung 16)
+  return `/fall/${c.id}` as Href;
 }
 
 export interface GuideSummary {

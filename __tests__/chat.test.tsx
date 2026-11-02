@@ -102,7 +102,8 @@ describe('Reparatur-Assistent', () => {
     expect(useAppStore.getState().events.some((e) => e.type === 'assistent_gefragt')).toBe(true);
 
     await tap(t.startGuide(guides.ablauf.title));
-    expect(r.getPathname()).toBe(`/fall/${id}/anleitung`);
+    expect(r.getPathname()).toBe(`/fall/${id}`);
+    expect(screen.getByText(guides.ablauf.steps[0]!.t)).toBeTruthy();
     expect(Object.values(useAppStore.getState().guideRuns)[0]?.guideId).toBe('ablauf');
   });
 
@@ -165,7 +166,7 @@ describe('Reparatur-Assistent', () => {
     );
   });
 
-  test('aus der Anleitung: Entwurf mit dem Schritt im Gespräch', async () => {
+  test('zum Schritt: Entwurf mit dem Schritt im Eingabefeld', async () => {
     setup();
     const s = useAppStore.getState();
     const device = s.devices[0]!;
@@ -175,11 +176,11 @@ describe('Reparatur-Assistent', () => {
       problemLabel: 'Wasserablauf gestört',
     });
     s.startGuide(c.id, 'ablauf');
-    const r = await renderRouter(APP, { initialUrl: `/fall/${c.id}?weiter=anleitung` });
+    const r = await renderRouter(APP, { initialUrl: `/fall/${c.id}` });
     await act(async () => {
       jest.runOnlyPendingTimers();
     });
-    expect(r.getPathname()).toBe(`/fall/${c.id}/anleitung`);
+    // Die Frage zum Schritt bleibt im Gespräch, der Entwurf steht im Eingabefeld
     await tap(t.askStep);
     expect(r.getPathname()).toBe(`/fall/${c.id}`);
     expect(screen.getByLabelText(de.thread.inputLabel).props.value).toBe(

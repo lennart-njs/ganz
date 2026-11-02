@@ -137,11 +137,19 @@ describe('Zurück', () => {
     return r;
   }
 
-  test('Zurück aus der Anleitung führt ins Gespräch, aus dem Gespräch aus dem Fall heraus', async () => {
-    const r = await openFlow();
+  /** Die Anleitung läuft im Gespräch, „Details“ am Schritt öffnet die Großansicht */
+  async function openGuideDetails() {
     await fireEvent.press(
       screen.getByRole('button', { name: new RegExp(`^${de.result.startGuide}`) }),
     );
+    expect(screen.getByRole('button', { name: de.guide.done })).toBeTruthy();
+    const details = screen.getAllByRole('button', { name: de.thread.details });
+    await fireEvent.press(details.at(-1)!);
+  }
+
+  test('Zurück aus der Großansicht der Anleitung führt ins Gespräch, aus dem Gespräch aus dem Fall heraus', async () => {
+    const r = await openFlow();
+    await openGuideDetails();
     expect(r.getPathname()).toBe('/fall/GS-24817/anleitung');
     await fireEvent.press(screen.getByRole('button', { name: de.a11y.back }));
     expect(r.getPathname()).toBe('/fall/GS-24817');
@@ -162,9 +170,7 @@ describe('Zurück', () => {
       });
 
     const r = await openFlow();
-    await fireEvent.press(
-      screen.getByRole('button', { name: new RegExp(`^${de.result.startGuide}`) }),
-    );
+    await openGuideDetails();
     expect(r.getPathname()).toBe('/fall/GS-24817/anleitung');
     await pressBack();
     expect(r.getPathname()).toBe('/fall/GS-24817');

@@ -35,9 +35,10 @@ async function openGuide(guideIndex = 1) {
 
 const run = () => Object.values(useAppStore.getState().guideRuns)[0]!;
 
-describe('Anleitung', () => {
+describe('Anleitung im Gespräch (Entscheidung 16)', () => {
   test('Schritt 4 übersteht den Neustart: ein frischer Store liest ihn aus dem Speicher', async () => {
-    await openGuide();
+    const r = await openGuide();
+    expect(r.getPathname()).toBe('/fall/GS-24817');
     for (let i = 0; i < 3; i++) await tap(de.guide.done);
     expect(screen.getByText(ablauf.steps[3]!.t)).toBeTruthy();
     await act(async () => {});
@@ -50,6 +51,14 @@ describe('Anleitung', () => {
       completedSteps: [0, 1, 2],
     });
     expect(fresh.getState().cases['GS-24817']?.status).toBe('selbsthilfe');
+  });
+
+  test('erledigte Schritte bleiben im Verlauf, jeder Schritt steht als Nachricht', async () => {
+    await openGuide();
+    await tap(de.guide.done);
+    await tap(de.guide.done);
+    for (const i of [0, 1, 2]) expect(screen.getByText(ablauf.steps[i]!.t)).toBeTruthy();
+    expect(screen.getAllByText(de.guide.done)).toHaveLength(3); // zwei Antworten und der Button
   });
 
   test('nach dem Neustart zeigt die Startseite den Fall, ein Tap führt zu Schritt 4', async () => {
@@ -65,45 +74,24 @@ describe('Anleitung', () => {
     const r = await renderRouter(APP, { initialUrl: '/' });
     expect(screen.getByText(de.a11y.stepOf(4, 7))).toBeTruthy();
     await tap(de.home.continueCase);
-    expect(r.getPathname()).toBe('/fall/GS-24817/anleitung');
+    expect(r.getPathname()).toBe('/fall/GS-24817');
     expect(screen.getByText(ablauf.steps[3]!.t)).toBeTruthy();
+    expect(screen.getByRole('button', { name: de.guide.done })).toBeTruthy();
     expect(useAppStore.getState().cases['GS-24817']?.pausedAt).toBeUndefined();
   });
 
-  test('Zurück geht einen Schritt zurück, in Schritt 1 aus der Anleitung heraus', async () => {
-    const r = await openGuide();
+  test('der Stift am letzten „Erledigt“ geht einen Schritt zurück (B-05)', async () => {
+    await openGuide();
     await tap(de.guide.done);
     await tap(de.guide.done);
-    expect(screen.getByText(ablauf.steps[2]!.t)).toBeTruthy();
-    await tap(de.a11y.back);
-    expect(r.getPathname()).toBe('/fall/GS-24817/anleitung');
-    expect(screen.getByText(ablauf.steps[1]!.t)).toBeTruthy();
+    expect(run().currentStep).toBe(2);
+    // Nur die letzte Antwort hat einen Stift
+    expect(screen.getAllByRole('button', { name: de.talk.edit(de.guide.done) })).toHaveLength(1);
+    await tap(de.talk.edit(de.guide.done));
     expect(run().currentStep).toBe(1);
-    await tap(de.a11y.back);
-    expect(screen.getByText(ablauf.steps[0]!.t)).toBeTruthy();
-    await tap(de.a11y.back);
-    // Zurück ins Gespräch des Falls, die Anleitung lässt sich dort fortsetzen
-    expect(r.getPathname()).toBe('/fall/GS-24817');
-    expect(screen.getByRole('button', { name: de.thread.continueGuide })).toBeTruthy();
+    expect(screen.getByText(de.guide.stepBack)).toBeTruthy();
     const types = useAppStore.getState().events.map((e) => e.type);
-    expect(types.filter((x) => x === 'schritt_zurueck')).toHaveLength(2);
-  });
-
-  test('Android-Zurück geht ebenfalls einen Schritt zurück', async () => {
-    type Handler = Parameters<typeof BackHandler.addEventListener>[1];
-    const listeners: Handler[] = [];
-    const spy = jest.spyOn(BackHandler, 'addEventListener').mockImplementation((_, h) => {
-      listeners.push(h);
-      return { remove: () => listeners.splice(listeners.indexOf(h), 1) };
-    });
-    const r = await openGuide();
-    await tap(de.guide.done);
-    await act(async () => {
-      [...listeners].reverse().some((l) => l({} as Parameters<Handler>[0]));
-    });
-    expect(r.getPathname()).toBe('/fall/GS-24817/anleitung');
-    expect(screen.getByText(ablauf.steps[0]!.t)).toBeTruthy();
-    spy.mockRestore();
+    expect(types.filter((x) => x === 'schritt_zurueck')).toHaveLength(1);
   });
 
   test('„Geht nicht“ speichert den Abbruchschritt und die Notiz', async () => {
@@ -124,15 +112,18 @@ describe('Anleitung', () => {
       completedSteps: [0, 1, 2, 3],
     });
     expect(useAppStore.getState().cases['GS-24817']?.status).toBe('eskaliert');
+    // Danach geht es im Gespräch mit Hilfe weiter
+    expect(
+      screen.getByRole('button', { name: new RegExp(`^${de.thread.callStart}`) }),
+    ).toBeTruthy();
   });
 
   test('Störung endet mit „Läuft wieder“ oder „Läuft noch nicht“', async () => {
-    const r = await openGuide();
+    await openGuide();
     for (let i = 0; i < ablauf.steps.length - 1; i++) await tap(de.guide.done);
     expect(screen.getByText(de.appliance.waschmaschine.runsAgain)).toBeTruthy();
     expect(screen.queryByRole('button', { name: de.guide.finished })).toBeNull();
     await tap(de.guide.runsAgain);
-    expect(r.getPathname()).toBe('/fall/GS-24817');
     expect(screen.getByText(de.finish.solvedTitle)).toBeTruthy();
     expect(useAppStore.getState().cases['GS-24817']).toMatchObject({
       status: 'erledigt',
@@ -144,11 +135,11 @@ describe('Anleitung', () => {
     const device = useAppStore.getState().devices[0]!;
     const r = await renderRouter(APP, { initialUrl: `/geraet/${device.id}` });
     await tap(new RegExp(`^${de.maintenance[0]!.title}`));
+    expect(r.getPathname()).toBe('/fall/GS-24817');
     await tap(de.guide.done);
     expect(screen.queryByText(de.appliance.waschmaschine.runsAgain)).toBeNull();
     expect(screen.queryByRole('button', { name: de.guide.runsAgain })).toBeNull();
     await tap(de.guide.finished);
-    expect(r.getPathname()).toBe('/fall/GS-24817');
     expect(useAppStore.getState().cases['GS-24817']).toMatchObject({
       status: 'erledigt',
       resolution: 'pflege_erledigt',
@@ -166,16 +157,13 @@ describe('Anleitung', () => {
   });
 
   test('Waterproof: erst „Der Wasserhahn ist zu“ bestätigen, dann Hilfe holen', async () => {
-    const r = await openGuide(2);
-    const help = screen.getByRole('button', { name: de.guide.getHelp });
-    expect(help).toBeDisabled();
-    await tap(de.guide.getHelp);
-    expect(screen.getByText(de.guide.confirmFirst(de.guide.confirm.waterproof))).toBeTruthy();
-    expect(r.getPathname()).toBe('/fall/GS-24817/anleitung');
-    await fireEvent.press(screen.getByRole('checkbox', { name: de.guide.confirm.waterproof }));
-    await tap(de.guide.getHelp);
-    expect(r.getPathname()).toBe('/fall/GS-24817');
+    await openGuide(2);
+    expect(screen.queryByRole('button', { name: de.guide.getHelp })).toBeNull();
+    await tap(de.guide.confirm.waterproof);
     expect(useAppStore.getState().events.map((e) => e.type)).toContain('sicherheit_bestaetigt');
+    expect(screen.getByText(de.guide.confirm.waterproof)).toBeTruthy();
+    await tap(de.guide.getHelp);
+    expect(useAppStore.getState().cases['GS-24817']?.status).toBe('eskaliert');
   });
 
   test('„Später weitermachen“ aus Schritt 3 verlässt den Fall und behält den Schritt', async () => {
@@ -190,5 +178,41 @@ describe('Anleitung', () => {
     expect(r.getPathname()).toBe('/');
     expect(run().currentStep).toBe(2);
     expect(useAppStore.getState().cases['GS-24817']?.pausedAt).toBeDefined();
+  });
+});
+
+describe('Großansicht der Anleitung (Details)', () => {
+  async function openFull() {
+    const r = await openGuide();
+    await tap(de.guide.done);
+    await tap(de.guide.done);
+    const details = screen.getAllByRole('button', { name: de.thread.details });
+    await fireEvent.press(details.at(-1)!);
+    expect(r.getPathname()).toBe('/fall/GS-24817/anleitung');
+    return r;
+  }
+
+  test('zeigt denselben Schritt, Zurück geht einen Schritt zurück', async () => {
+    const r = await openFull();
+    expect(screen.getByText(ablauf.steps[2]!.t)).toBeTruthy();
+    await tap(de.a11y.back);
+    expect(r.getPathname()).toBe('/fall/GS-24817/anleitung');
+    expect(run().currentStep).toBe(1);
+  });
+
+  test('Android-Zurück geht ebenfalls einen Schritt zurück', async () => {
+    type Handler = Parameters<typeof BackHandler.addEventListener>[1];
+    const listeners: Handler[] = [];
+    const spy = jest.spyOn(BackHandler, 'addEventListener').mockImplementation((_, h) => {
+      listeners.push(h);
+      return { remove: () => listeners.splice(listeners.indexOf(h), 1) };
+    });
+    const r = await openFull();
+    await act(async () => {
+      [...listeners].reverse().some((l) => l({} as Parameters<Handler>[0]));
+    });
+    expect(r.getPathname()).toBe('/fall/GS-24817/anleitung');
+    expect(run().currentStep).toBe(1);
+    spy.mockRestore();
   });
 });

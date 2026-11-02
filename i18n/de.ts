@@ -586,6 +586,7 @@ export const de = {
     runsAgain: 'Läuft wieder',
     stillBroken: 'Läuft noch nicht',
     finished: 'Fertig',
+    stepBack: 'Schritt zurück',
     getHelp: 'Hilfe holen',
     images: { fehler: 'Display mit Meldung', pumpe: 'Laugenfilter hinter der Klappe' },
     confirm: { waterproof: 'Der Wasserhahn ist zu' },
