@@ -14,10 +14,9 @@ import {
   Screen,
   Text,
 } from '@/components/ds';
-import { GUIDE_SOURCE } from '@/data/guides';
 import { de } from '@/i18n/de';
 import { formatDateTime, formatEuro, formatMonthYear } from '@/i18n/format';
-import { hasGuides } from '@/lib/appliance';
+import { deviceGuides } from '@/lib/appliance';
 import { caseProgressLabel, caseStatusLabel, deviceStatusLabel, resumeHref } from '@/lib/caseView';
 import { deviceTitle, getManufacturer } from '@/lib/devices';
 import { selectDevice, selectOpenCaseForDevice, useAppStore } from '@/store/appStore';
@@ -57,6 +56,7 @@ export default function GeraetDetail() {
     .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
   const report = () => router.push(`/fall/neu?geraet=${device.id}`);
   const service = manufacturer.serviceContact;
+  const guideSet = deviceGuides(device);
 
   const deviceFacts = [
     [t.deviceFacts.manufacturer, manufacturer.name],
@@ -121,7 +121,7 @@ export default function GeraetDetail() {
         )}
       </Section>
 
-      {hasGuides(device.category) ? (
+      {guideSet?.care ? (
         <Section title={t.sections.maintenance}>
           {de.maintenance.map((m) => (
             <NavRow
@@ -144,8 +144,8 @@ export default function GeraetDetail() {
       ) : null}
 
       <Section title={t.sections.guides}>
-        {hasGuides(device.category) ? (
-          <Text variant="meta">{t.guideSource(GUIDE_SOURCE)}</Text>
+        {guideSet ? (
+          <Text variant="meta">{t.guideSource(guideSet.source)}</Text>
         ) : (
           <Text variant="meta">{t.noGuides}</Text>
         )}

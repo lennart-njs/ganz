@@ -7,7 +7,7 @@ import { backToThread } from '@/components/nav/leaveCase';
 import { ActionBar, Button, Icon, Text } from '@/components/ds';
 import { guides, type GuideId } from '@/data/guides';
 import { de } from '@/i18n/de';
-import { caseCategory } from '@/lib/appliance';
+import { caseDevice, guideForDevice, hasGuides } from '@/lib/appliance';
 import { isPhotoMode, toDiagnosis } from '@/lib/diagnosis';
 import { services } from '@/services';
 import { delay } from '@/services/mock/timing';
@@ -36,8 +36,16 @@ export default function Analyse() {
         AccessibilityInfo.announceForAccessibility(de.analysis.lineDone(lines[i]!));
       }
       const scenario = useAppStore.getState().demo.diagnosisScenario;
-      const category = caseCategory(useAppStore.getState(), caseId);
-      const result = await services.diagnosis.analyze({ mode, scenario, category });
+      const device = caseDevice(useAppStore.getState(), caseId);
+      const raw = await services.diagnosis.analyze({
+        mode,
+        scenario,
+        category: device?.category,
+        guided: hasGuides(device),
+      });
+      // Die Fehlererkennung kennt das Fehlerbild, die Anleitung kommt aus der Gebrauchsanweisung des Geräts.
+      const result =
+        raw.kind === 'ergebnis' ? { ...raw, guideId: guideForDevice(device, raw.guideId) } : raw;
       if (cancelled || !useAppStore.getState().cases[caseId]) return;
       const s = useAppStore.getState();
       const photoIds = params.foto ? [params.foto] : [];

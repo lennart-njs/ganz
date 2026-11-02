@@ -597,6 +597,7 @@ export const de = {
     notePlaceholder: 'z. B. Der Filter lässt sich nicht drehen.',
     missing: 'Diese Anleitung gibt es nicht mehr.',
     sourceDocument: (doc: string) => `Quelle: ${doc}`,
+    sourcePage: (doc: string, page: number) => `Quelle: ${doc}, Seite ${page}`,
   },
 
   help: {

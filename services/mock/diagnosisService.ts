@@ -5,11 +5,11 @@ import type { DiagnosisService } from '@/services/types';
 import { delay } from './timing';
 
 export const mockDiagnosisService: DiagnosisService = {
-  async analyze({ mode, scenario, category = 'waschmaschine' }) {
+  async analyze({ mode, scenario, category = 'waschmaschine', guided }) {
     await delay(400);
     if (scenario === 'unscharf') return { kind: 'fehler', reason: 'unscharf' };
     if (mode === 'typenschild') return { kind: 'geraet' };
-    if (category !== 'waschmaschine') return { kind: 'ohne_anleitung' };
+    if (!(guided ?? category === 'waschmaschine')) return { kind: 'ohne_anleitung' };
     if (scenario === 'unsicher') return { kind: 'rueckfrage', question: 'wasser' };
     if (mode === 'display') {
       return {

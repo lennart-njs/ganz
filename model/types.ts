@@ -231,6 +231,8 @@ export interface GuideStep {
   tool?: string;
   w?: string; // Warnhinweis – wörtlich
   img?: string; // Schlüssel des Fotos
+  /** Seite und Originaltext der Gebrauchsanweisung (Anleitungen außerhalb der Demo) */
+  src?: { page: number; text: string };
 }
 
 export interface Guide {

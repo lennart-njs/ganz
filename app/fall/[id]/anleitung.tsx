@@ -226,7 +226,11 @@ export default function Anleitung() {
         </Text>
       ) : null}
 
-      <Text variant="caption">{t.sourceDocument(guide.sourceDocument)}</Text>
+      <Text variant="caption">
+        {current.src
+          ? t.sourcePage(guide.sourceDocument, current.src.page)
+          : t.sourceDocument(guide.sourceDocument)}
+      </Text>
 
       <Button
         label={de.chat.askStep}

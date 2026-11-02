@@ -55,6 +55,8 @@ export interface DiagnosisService {
     scenario: DiagnosisScenario;
     /** Ohne Angabe: Waschmaschine */
     category?: DeviceCategory;
+    /** Gibt es Anleitungen zum Gerät? Ohne Angabe: nur bei der Waschmaschine. */
+    guided?: boolean;
   }): Promise<DiagnosisResult>;
   /** Antwort auf die Rückfrage. null: unklar, Hilfe holen. */
   answer(answer: QuestionAnswer): DiagnosisFinding | null;

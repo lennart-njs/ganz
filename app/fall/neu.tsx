@@ -9,7 +9,7 @@ import { DemoHint } from '@/components/app/DemoHint';
 import { AppHeader, Button, Screen, Text, TextField } from '@/components/ds';
 import { guides, type GuideId } from '@/data/guides';
 import { de } from '@/i18n/de';
-import { appliance, hasGuides } from '@/lib/appliance';
+import { appliance, deviceGuides } from '@/lib/appliance';
 import { chatLimits } from '@/lib/chat/limits';
 import { hasProgress } from '@/lib/caseView';
 import { deviceTitle } from '@/lib/devices';
@@ -115,7 +115,8 @@ export default function ProblemMelden() {
     );
   }
 
-  const guided = hasGuides(device?.category);
+  const set = deviceGuides(device);
+  const guided = !!set;
   const a = appliance(device?.category);
   const truncated = (s: string) => (s.length > 60 ? `${s.slice(0, 57)}…` : s);
 
@@ -148,14 +149,16 @@ export default function ProblemMelden() {
       toThread(id);
       return;
     }
-    const guide = guides[key as GuideId];
+    const problem = set?.problems.find((x) => x.id === key);
+    if (!problem) return;
+    const guide = guides[problem.guideId as GuideId];
     const id = caseFor('symptom', guide.title);
     store.getState().startGuide(id, guide.id);
     toThread(id, { weiter: 'anleitung' });
   };
 
   const pickMessage = (key: string) => {
-    const m = de.displayMessages.find((x) => x.guideId === key);
+    const m = set?.messages.find((x) => x.code === key);
     if (!m) return;
     const id = caseFor('meldung', m.code);
     reportDisplayMessage(id, m.guideId as GuideId, m.code);
@@ -211,12 +214,21 @@ export default function ProblemMelden() {
     ];
   } else if (step === 'meldung') {
     onPick = pickMessage;
-    replies = de.displayMessages.map((m) => ({ key: m.guideId, label: m.code, sub: m.hint }));
+    replies = (set?.messages ?? []).map((m) => ({ key: m.code, label: m.code, sub: m.hint }));
   } else {
     replies = [
       { key: PHOTO, label: t.photo, sub: t.photoSub },
-      ...(guided
-        ? de.problems.map((p) => ({ key: p.id, label: p.label, sub: p.sub }))
+      ...(set && set.messages.length > 0
+        ? [
+            {
+              key: 'meldung',
+              label: de.problems[0]!.label,
+              sub: set.care ? de.problems[0]!.sub : messagesSub(set.messages),
+            },
+          ]
+        : []),
+      ...(set
+        ? set.problems.map((p) => ({ key: p.id, label: p.label, sub: p.sub }))
         : a.symptoms.map((p) => ({ key: p.id, label: p.label, sub: p.sub }))),
     ];
   }
@@ -291,6 +303,11 @@ export default function ProblemMelden() {
       {step === 'meldung' ? <BotSays lines={[g.whichMessage]} /> : null}
     </Screen>
   );
+}
+
+/** „z. B. Wasserablauf, Waterproof, Fehler F“: die ersten drei Meldungen des Geräts */
+function messagesSub(messages: { code: string }[]): string {
+  return de.common.example([...new Set(messages.map((m) => m.code))].slice(0, 3).join(', '));
 }
 
 const styles = StyleSheet.create({

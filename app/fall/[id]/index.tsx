@@ -27,7 +27,7 @@ import { demoConfig } from '@/config/demo.config';
 import { guides, type GuideId } from '@/data/guides';
 import { de } from '@/i18n/de';
 import { formatDecimal, formatEuro } from '@/i18n/format';
-import { caseAppliance, hasGuides } from '@/lib/appliance';
+import { caseAppliance, guideForDevice, hasGuides } from '@/lib/appliance';
 import { amountToPay, costsLine, requestAppointment } from '@/lib/booking';
 import { chatLimits } from '@/lib/chat/limits';
 import { retryableChatErrors, useAssistant } from '@/lib/chat/useAssistant';
@@ -215,7 +215,8 @@ export default function FallGespraech() {
       actor: { kind: 'haushalt', id: s.persons[0]?.id },
       payload: { question: de.question.wasser, answer: de.question.answers[answer] },
     });
-    const finding = services.diagnosis.answer(answer);
+    const raw = services.diagnosis.answer(answer);
+    const finding = raw ? { ...raw, guideId: guideForDevice(device, raw.guideId) } : null;
     if (!finding) {
       escalate();
       return;
@@ -1007,7 +1008,7 @@ export default function FallGespraech() {
     const guide = d?.guideId ? guides[d.guideId as GuideId] : undefined;
     if (d?.errorPattern === 'geraet_erkannt') {
       reply('foto', de.result.photoDisplay, () => router.push(`/fall/${caseId}/kamera`));
-    } else if (guide && hasGuides(device?.category)) {
+    } else if (guide && hasGuides(device)) {
       reply(
         'anleitung',
         de.result.startGuide,

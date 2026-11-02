@@ -65,7 +65,7 @@ export async function POST(request: Request): Promise<Response> {
       .filter((b): b is Anthropic.Beta.BetaTextBlock => b.type === 'text')
       .map((b) => b.text)
       .join('');
-    const reply = parseReply(text, input.context.category);
+    const reply = parseReply(text, input.context);
     if (!reply) return json({ error: 'format' }, 502);
     return json(reply);
   } catch (error) {
