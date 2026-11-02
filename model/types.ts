@@ -74,6 +74,8 @@ export interface Device {
   materialNumber?: string; // vom Typenschild
   serialNumber?: string; // Fabrik-Nr. vom Typenschild
   purchaseDate?: ISODateTime;
+  /** Händler, bei dem das Gerät gekauft wurde (Entscheidung 22). Erste Adresse bei Gewährleistung. */
+  purchasedFrom?: PartnerRef;
   purchaseProofPhotoId?: Id;
   contractId?: Id;
   identifiedBy: 'typenschild_scan' | 'manuell' | 'vertrag';

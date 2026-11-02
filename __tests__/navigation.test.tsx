@@ -1,6 +1,7 @@
 import { BackHandler } from 'react-native';
 import { act, fireEvent, renderRouter, screen } from 'expo-router/testing-library';
 
+import { demoConfig } from '@/config/demo.config';
 import { de } from '@/i18n/de';
 import { useAppStore } from '@/store/appStore';
 
@@ -41,12 +42,43 @@ describe('Onboarding', () => {
     const r = await renderRouter(APP, { initialUrl: '/' });
     expect(r.getPathname()).toBe('/willkommen');
     await fireEvent.press(screen.getByRole('button', { name: de.onboarding.start }));
+    // Zuerst der Händler (Entscheidung 22)
+    expect(r.getPathname()).toBe('/haendler');
+    expect(screen.getByRole('button', { name: de.onboarding.next })).toBeDisabled();
+    await fireEvent.press(screen.getByRole('radio', { name: demoConfig.dealer.name }));
+    await fireEvent.press(screen.getByRole('button', { name: de.onboarding.next }));
+    // Dann: zusätzlich eine Versicherung?
     expect(r.getPathname()).toBe('/schutz');
-    await fireEvent.press(screen.getByRole('button', { name: de.common.later }));
+    expect(screen.getByText(de.onboarding.extraTitle)).toBeTruthy();
+    await fireEvent.press(screen.getByRole('button', { name: de.onboarding.noExtra }));
     expect(r.getPathname()).toBe('/geraet-bestaetigen');
     await fireEvent.press(screen.getByRole('button', { name: de.onboarding.skipDevice }));
     expect(r.getPathname()).toBe('/');
     expect(screen.getByRole('header', { name: de.home.myDevices })).toBeTruthy();
+    expect(useAppStore.getState().onboardingDealer).toMatchObject({
+      id: demoConfig.dealer.id,
+      kind: 'haendler',
+    });
+  });
+
+  test('im Onboarding hinzugefügte Geräte merken sich den Händler, spätere nicht', () => {
+    const s = useAppStore.getState();
+    s.setOnboardingDealer({ id: 'albers', kind: 'haendler', name: 'Elektro Albers' });
+    const first = s.addDevice({
+      manufacturerId: 'miele',
+      category: 'waschmaschine',
+      model: 'WKB 130',
+      identifiedBy: 'vertrag',
+    });
+    expect(first.purchasedFrom?.name).toBe('Elektro Albers');
+    s.completeOnboarding();
+    const later = s.addDevice({
+      manufacturerId: 'miele',
+      category: 'trockner',
+      model: 'TWB 140',
+      identifiedBy: 'manuell',
+    });
+    expect(later.purchasedFrom).toBeUndefined();
   });
 
   test('ohne Onboarding sind Fall-Screens gesperrt', async () => {

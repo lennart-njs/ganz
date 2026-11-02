@@ -41,7 +41,7 @@ Der Demo-Modus ist in `config/demo.config.ts` eingeschaltet (`demo.enabled`).
 
 Der ganze Fall ist ein Gespräch. Die Antworten stehen unten, „Details“ zeigt das Formular.
 
-1. Onboarding: „Los geht’s“ → Vertragsnummer `KV-2023-0471` → „Ja, das ist es“.
+1. Onboarding: „Los geht’s“ → Händler „Elektro Albers“ → „Weiter“ → Vertragsnummer `KV-2023-0471` → „Ja, das ist es“.
 2. „Was ist kaputt?“ → „Foto machen“ → Auslöser (im Browser: „Beispielfoto nehmen“).
 3. Im Gespräch: Ergebnis „Laugenfilter verstopft“, Sicherheit hoch → „Anleitung starten“.
 4. Die Schritte stehen im Gespräch: viermal „Erledigt“, in Schritt 5 „Geht nicht“ → „Hilfe holen“. Der Stift am letzten „Erledigt“ geht einen Schritt zurück, „Details“ am Schritt zeigt die Großansicht.

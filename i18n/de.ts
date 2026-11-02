@@ -41,6 +41,7 @@ export const de = {
   screens: {
     willkommen: 'Willkommen',
     schutz: 'Schutz verknüpfen',
+    haendler: 'Gekauft bei',
     geraetBestaetigen: 'Gerät bestätigen',
     geraete: 'Geräte',
     faelle: 'Fälle',
@@ -328,6 +329,19 @@ export const de = {
       'Grundlage ist dein Nutzungsvertrag mit ganz (Art. 6 Abs. 1 lit. b DSGVO). Einwilligungen für Zusätzliches fragen wir einzeln.',
     start: 'Los geht’s',
     testPhase: 'Noch in der Testphase.',
+    // Entscheidung 22: zuerst der Händler, dann die Versicherung
+    dealerTitle: 'Wo hast du das Gerät gekauft?',
+    dealerText:
+      'In den ersten zwei Jahren ist bei einem Defekt zuerst der Händler dran. Wenn du willst, schickt ganz deinen Fall direkt an ihn. Vorher fragen wir dich.',
+    dealerOther: 'Woanders',
+    dealerOtherSub: 'Du kannst den Händler später im Gerät eintragen',
+    dealerUnknown: 'Weiß ich nicht mehr',
+    dealerChoices: 'Händler',
+    next: 'Weiter',
+    extraTitle: 'Hast du zusätzlich eine Versicherung?',
+    extraText:
+      'Zum Beispiel eine Garantieverlängerung oder Geräteversicherung. Dann zeigt ganz dir, was abgedeckt ist.',
+    noExtra: 'Nein, keine Versicherung',
     linkTitle: 'Verknüpf deinen Schutz.',
     linkText:
       'Hast du einen Geräteschutz, zum Beispiel eine Garantieverlängerung? Dann zeigt ganz dir, was abgedeckt ist.',
@@ -410,6 +424,7 @@ export const de = {
       materialNumber: 'M.-Nr.',
       serialNumber: 'Fabrik-Nr.',
       purchased: 'Gekauft',
+      purchasedFrom: 'Gekauft bei',
     },
     guideSource: (source: string) => `Aus der ${source}`,
     noGuides:

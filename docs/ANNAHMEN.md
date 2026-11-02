@@ -240,3 +240,10 @@ Annahmen, die ich beim Bauen getroffen habe. Jede lässt sich ändern.
 - **Einwilligung:** Neue Fassung `2026-11-1` nennt Fotos. Wer vorher eingewilligt hat, wird beim ersten Foto noch einmal gefragt. Ohne Foto reicht die alte Einwilligung.
 - **Beispielfoto im Browser:** Ohne echtes Bild geht nur der Text mit. Die Blase zeigt „Beispielfoto“.
 - **Foto in der Fallakte:** Das Foto hat den Zweck `frage`. Es zählt zu den Fotos des Falls, steht im Gespräch aber an der Nachricht und nicht als eigene Zeile.
+
+## Händler zuerst im Onboarding (02.11.2026, Entscheidung 22)
+
+- **Reihenfolge:** Willkommen → „Wo hast du das Gerät gekauft?“ → „Hast du zusätzlich eine Versicherung?“ → Gerät bestätigen. Auf der Versicherungs-Seite heißt der zweite Button „Nein, keine Versicherung“ statt „Später“. Nachträglich verknüpfen geht wie bisher über Profil oder Gerät.
+- **Auswahl:** die Händler aus der Konfiguration, „Woanders“ und „Weiß ich nicht mehr“. Nur ein bekannter Händler wird gespeichert.
+- **Beispiel-Händler „Elektro Albers“, Code `EA-2023`.** In ENTSCHEIDUNGEN stand noch `[HÄNDLER]` und `[CODE]`. Für das Händlerportal brauchte die Demo einen lesbaren Namen. Beides ist fiktiv und steht nur in `config/demo.config.ts`. Zweiter Beispiel-Händler: „Technikhaus Nord“.
+- **`Device.purchasedFrom`:** Geräte, die im Onboarding dazukommen (Vertrag bestätigt oder Typenschild), bekommen den gewählten Händler. Später hinzugefügte Geräte fragen noch nicht danach. Das Gerätedetail zeigt „Gekauft bei“.

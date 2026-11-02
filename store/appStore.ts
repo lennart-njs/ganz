@@ -34,6 +34,7 @@ import type {
   GuideRun,
   Household,
   Id,
+  PartnerRef,
   Person,
   Photo,
   Quote,
@@ -83,6 +84,8 @@ export interface AppData {
   /** Lokale Mitteilungen: erst nach dem Systemdialog, der nach „Termin anfragen“ kommt */
   notifications: NotificationSetting;
   household?: Household;
+  /** Antwort aus dem Onboarding: Wo gekauft? Gilt für die Geräte, die im Onboarding dazukommen. */
+  onboardingDealer?: PartnerRef;
   persons: Person[];
   contracts: Contract[];
   devices: Device[];
@@ -113,6 +116,8 @@ export interface AppActions {
   /** Legt Haushalt und Person beim ersten Start an. Idempotent. */
   ensureHousehold: () => Person;
   completeOnboarding: () => void;
+  /** Onboarding: Händler, bei dem das Gerät gekauft wurde. undefined: woanders oder unbekannt. */
+  setOnboardingDealer: (dealer: PartnerRef | undefined) => void;
   /** Legt den Vertrag aus der Konfiguration an (nach erfolgreicher Prüfung). */
   linkContract: (via: Contract['linkedVia']) => Contract;
   addDevice: (input: NewDevice) => Device;
@@ -245,6 +250,8 @@ export function createAppStore(storage: StateStorage = AsyncStorage, env: StoreE
 
           completeOnboarding: () => set({ onboardingDone: true }),
 
+          setOnboardingDealer: (dealer) => set({ onboardingDealer: dealer }),
+
           linkContract: (via) => {
             const p = person();
             const now = env.now();
@@ -281,8 +288,13 @@ export function createAppStore(storage: StateStorage = AsyncStorage, env: StoreE
 
           addDevice: (input) => {
             person();
+            const s = get();
+            // Im Onboarding gilt die Antwort auf „Wo hast du es gekauft?“
+            const purchasedFrom =
+              input.purchasedFrom ?? (s.onboardingDone ? undefined : s.onboardingDealer);
             const device: Device = {
               ...input,
+              ...(purchasedFrom ? { purchasedFrom } : {}),
               id: env.newId('geraet'),
               householdId: get().household?.id ?? '',
               createdAt: env.now(),
@@ -1005,7 +1017,8 @@ export function createAppStore(storage: StateStorage = AsyncStorage, env: StoreE
           },
 
           // Die Darstellung ist eine Einstellung des Telefons, kein Demo-Stand
-          reset: () => set({ ...initialData, appearance: get().appearance }),
+          reset: () =>
+            set({ ...initialData, onboardingDealer: undefined, appearance: get().appearance }),
         };
       },
       {
@@ -1023,6 +1036,7 @@ export function createAppStore(storage: StateStorage = AsyncStorage, env: StoreE
           demo: s.demo,
           notifications: s.notifications,
           household: s.household,
+          onboardingDealer: s.onboardingDealer,
           persons: s.persons,
           contracts: s.contracts,
           devices: s.devices,

@@ -21,9 +21,20 @@ interface LinkContractFormProps {
   onBack: () => void;
   onLinked: () => void;
   onSkip?: () => void;
+  /** Im Onboarding: Frage nach einer zusätzlichen Versicherung (Entscheidung 22) */
+  title?: string;
+  text?: string;
+  skipLabel?: string;
 }
 
-export function LinkContractForm({ onBack, onLinked, onSkip }: LinkContractFormProps) {
+export function LinkContractForm({
+  onBack,
+  onLinked,
+  onSkip,
+  title = t.linkTitle,
+  text = t.linkText,
+  skipLabel = de.common.later,
+}: LinkContractFormProps) {
   const linkContract = useAppStore((s) => s.linkContract);
   const [via, setVia] = useState<LinkVia>('vertragsnummer');
   const [value, setValue] = useState('');
@@ -62,15 +73,15 @@ export function LinkContractForm({ onBack, onLinked, onSkip }: LinkContractFormP
             onPress={submit}
           />
           {onSkip ? (
-            <Button label={de.common.later} variant="secondary" fullWidth onPress={onSkip} />
+            <Button label={skipLabel} variant="secondary" fullWidth onPress={onSkip} />
           ) : null}
         </ActionBar>
       }
     >
       <Text variant="h1" accessibilityRole="header">
-        {t.linkTitle}
+        {title}
       </Text>
-      <Text variant="body">{t.linkText}</Text>
+      <Text variant="body">{text}</Text>
       <SegmentedControl
         accessibilityLabel={t.viaLabel}
         options={[

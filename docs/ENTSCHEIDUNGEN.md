@@ -62,8 +62,8 @@ Alles fiktiv und als Beispielwert gekennzeichnet.
 | Schutzprodukt | Garantieverlängerung, gültig bis 03/2028 |
 | Selbstbeteiligung | 0 € |
 | Demo-Vertragsnummer | KV-2023-0471 |
-| Händler (fehlt in der Demo) | [HÄNDLER] – Name eintragen, z. B. für den Händler-Code |
-| Demo-Händler-Code | [CODE] |
+| Händler (fehlt in der Demo) | [HÄNDLER] – Name eintragen, z. B. für den Händler-Code. Bis dahin „Elektro Albers“ (Annahme, siehe ANNAHMEN) |
+| Demo-Händler-Code | [CODE]. Bis dahin `EA-2023` (Annahme) |
 | Hersteller | Miele |
 | Gerät | Miele WKB 130, Waschmaschine, gekauft 03/2023 |
 | Kundendienst | Miele Kundendienst, 0800 22 44 666, kostenfrei |

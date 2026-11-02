@@ -67,6 +67,7 @@ export default function GeraetDetail() {
     ...(device.purchaseDate
       ? [[t.deviceFacts.purchased, formatMonthYear(device.purchaseDate)]]
       : []),
+    ...(device.purchasedFrom ? [[t.deviceFacts.purchasedFrom, device.purchasedFrom.name]] : []),
   ] as [string, string][];
 
   return (

@@ -29,12 +29,18 @@ export const demoConfig = {
     shortName: 'Kranich',
   },
 
+  /** Händler, bei dem das Demo-Gerät gekauft wurde. Name und Code sind Beispielwerte. */
   dealer: {
-    id: 'haendler',
-    name: '[HÄNDLER]',
+    id: 'albers',
+    name: 'Elektro Albers',
     /** Händler-Code zum Verknüpfen des Schutzes */
-    code: '[CODE]',
+    code: 'EA-2023',
+    /** Demo-Login im Händlerportal (portal/). Kein echtes Passwort. */
+    portalUser: 'demo@elektro-albers.example',
   },
+
+  /** Weitere Händler zur Auswahl im Onboarding. Beispielwerte. */
+  otherDealers: [{ id: 'technikhaus-nord', name: 'Technikhaus Nord' }],
 
   manufacturer: {
     id: 'miele',
