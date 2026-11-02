@@ -13,7 +13,8 @@ export type TextTone =
   | 'onDanger'
   | 'photoInk'
   | 'inverted'
-  | 'danger';
+  | 'danger'
+  | 'accent';
 
 const toneColor: Record<TextTone, keyof ThemeColors> = {
   strong: 'textStrong',
@@ -28,6 +29,8 @@ const toneColor: Record<TextTone, keyof ThemeColors> = {
   /** Text auf dem Inverse-Button (heller Button auf dunklem Block) */
   inverted: 'surfaceInverse',
   danger: 'actionDanger',
+  /** Links und Secondary Button (mach’s: Blaumann-Blau) */
+  accent: 'actionPrimary',
 };
 
 export interface TextProps extends RNTextProps {
@@ -57,6 +60,7 @@ export function Text({ variant = 'body', tone, align, style, ...rest }: TextProp
       style={[
         {
           fontFamily: theme.fontFamily[role.weight],
+          fontWeight: theme.fontWeight[role.weight],
           fontSize,
           lineHeight: Math.round(fontSize * role.lineHeight),
           letterSpacing: tracking * fontSize,

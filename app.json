@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "ganz",
+    "name": "mach’s",
     "slug": "ganz",
     "version": "0.1.0",
     "orientation": "portrait",
@@ -21,7 +21,7 @@
       [
         "expo-camera",
         {
-          "cameraPermission": "ganz nutzt die Kamera für Fotos von Display, Typenschild und Bauteil. Die Fotos bleiben in deinem Fall.",
+          "cameraPermission": "mach’s nutzt die Kamera für Fotos von Display, Typenschild und Bauteil. Die Fotos bleiben in deinem Fall.",
           "microphonePermission": false,
           "recordAudioAndroid": false
         }

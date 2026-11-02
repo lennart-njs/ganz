@@ -2,7 +2,7 @@
 // Glossar: docs/REVIEW.md Abschnitt 6.
 export const de = {
   app: {
-    name: 'ganz',
+    name: 'mach’s',
   },
   a11y: {
     back: 'Zurück',
@@ -314,17 +314,17 @@ export const de = {
     welcomePhoto: 'Waschmaschine in einer Küche',
     welcomeTitle: 'Reparatur, die mit einem Foto beginnt.',
     welcomeText:
-      'ganz erkennt, was deinem Haushaltsgerät fehlt, führt dich durch einfache Reparaturen und holt einen Fachbetrieb, wenn es nicht selbst geht.',
+      'mach’s erkennt, was deinem Haushaltsgerät fehlt, führt dich durch einfache Reparaturen und holt einen Fachbetrieb, wenn es nicht selbst geht.',
     privacyTitle: 'Was mit deinen Daten passiert',
     privacyText:
-      'ganz speichert Fotos, Gerätedaten und den Verlauf deiner Fälle auf diesem Gerät. Weitergegeben wird nur, was du vorher bestätigst: an die Fachkraft, den Betrieb oder deinen Versicherer. Jede Einwilligung kannst du im Profil widerrufen.',
+      'mach’s speichert Fotos, Gerätedaten und den Verlauf deiner Fälle auf diesem Gerät. Weitergegeben wird nur, was du vorher bestätigst: an die Fachkraft, den Betrieb oder deinen Versicherer. Jede Einwilligung kannst du im Profil widerrufen.',
     privacyBasis:
-      'Grundlage ist dein Nutzungsvertrag mit ganz (Art. 6 Abs. 1 lit. b DSGVO). Einwilligungen für Zusätzliches fragen wir einzeln.',
+      'Grundlage ist dein Nutzungsvertrag mit mach’s (Art. 6 Abs. 1 lit. b DSGVO). Einwilligungen für Zusätzliches fragen wir einzeln.',
     start: 'Los geht’s',
     testPhase: 'Noch in der Testphase.',
     linkTitle: 'Verknüpf deinen Schutz.',
     linkText:
-      'Hast du einen Geräteschutz, zum Beispiel eine Garantieverlängerung? Dann zeigt ganz dir, was abgedeckt ist.',
+      'Hast du einen Geräteschutz, zum Beispiel eine Garantieverlängerung? Dann zeigt mach’s dir, was abgedeckt ist.',
     viaLabel: 'Womit verknüpfst du?',
     via: { vertragsnummer: 'Vertragsnummer', haendler_code: 'Händler-Code' },
     hint: {
@@ -339,7 +339,7 @@ export const de = {
     checking: 'Wird geprüft',
     link: 'Schutz verknüpfen',
     laterHint:
-      'Ohne Schutz funktioniert ganz auch. Reparaturen zahlst du dann selbst und siehst den Preis vorher.',
+      'Ohne Schutz funktioniert mach’s auch. Reparaturen zahlst du dann selbst und siehst den Preis vorher.',
     linked: (product: string, insurer: string) => `${product} bei ${insurer} verknüpft.`,
     confirmTitle: 'Ist das dein Gerät?',
     confirmText: (insurer: string) => `Dieses Gerät steht in deinem Vertrag bei ${insurer}.`,
@@ -408,7 +408,7 @@ export const de = {
     addDeviceSub: 'Typenschild fotografieren',
     emptyTitle: 'Noch kein Gerät',
     emptyText:
-      'Füg dein erstes Gerät hinzu. Dann führt dich ganz bei Problemen Schritt für Schritt.',
+      'Füg dein erstes Gerät hinzu. Dann führt dich mach’s bei Problemen Schritt für Schritt.',
     openCase: 'Offener Fall',
     caseNumber: (id: string) => `Fall ${id}`,
     openCaseLabel: (id: string) => `Offener Fall · Fall ${id}`,
@@ -487,7 +487,7 @@ export const de = {
   },
 
   camera: {
-    permissionTitle: 'ganz braucht deine Kamera.',
+    permissionTitle: 'mach’s braucht deine Kamera.',
     permissionText:
       'Damit fotografierst du Display, Typenschild oder Bauteil. Die Fotos bleiben in deinem Fall. Aus der Galerie laden geht nicht, damit jedes Foto als Nachweis zählt.',
     allow: 'Kamera erlauben',
@@ -523,7 +523,7 @@ export const de = {
     otherTooShort: 'Schreib bitte ein paar Worte dazu.',
     getHelp: 'Hilfe holen',
     photoLabel: 'Foto',
-    noDevice: 'Füg zuerst ein Gerät hinzu. Dann führt ganz dich durch die Lösung.',
+    noDevice: 'Füg zuerst ein Gerät hinzu. Dann führt mach’s dich durch die Lösung.',
     forDevice: (name: string) => `Für ${name}`,
   },
 
@@ -954,7 +954,7 @@ export const de = {
     },
   },
 
-  /** Gespräche: ganz fragt, Antworten stehen unten */
+  /** Gespräche: mach’s fragt, Antworten stehen unten */
   talk: {
     replies: 'Antworten',
     edit: (answer: string) => `Antwort ändern: ${answer}`,
@@ -1129,7 +1129,7 @@ export const de = {
     appearanceOptions: { system: 'Wie System', hell: 'Hell', dunkel: 'Dunkel' },
     privacy: 'Datenschutz',
     privacyText:
-      'Verantwortlich ist ganz. Wir speichern Fotos, Gerätedaten, Schritte und Befunde zu deinen Fällen. Weitergegeben wird nur, was du vorher bestätigst. Du hast das Recht auf Auskunft, Berichtigung, Löschung und Widerspruch.',
+      'Verantwortlich ist mach’s. Wir speichern Fotos, Gerätedaten, Schritte und Befunde zu deinen Fällen. Weitergegeben wird nur, was du vorher bestätigst. Du hast das Recht auf Auskunft, Berichtigung, Löschung und Widerspruch.',
     version: (v: string) => `Version ${v}`,
     demo: 'Demo',
   },
@@ -1143,7 +1143,7 @@ export const de = {
     kamera: 'Wähle, was du fotografierst, und tippe auf den Auslöser.',
     ergebnis: 'Starte die Anleitung. „Passt nicht“ führt zurück.',
     anleitung:
-      'Tippe dich mit „Erledigt“ durch. In Schritt 5 zeigt „Geht nicht“, wie ganz Hilfe holt.',
+      'Tippe dich mit „Erledigt“ durch. In Schritt 5 zeigt „Geht nicht“, wie mach’s Hilfe holt.',
     hilfe: 'Starte den Videocall. Vorher steht, wer welche Daten sieht.',
     kosten: 'Klapp „Das geht an …“ auf: So kommt der Fall beim Versicherer an.',
     status: 'Mit „Nächster Schritt (Demo)“ springst du durch Freigabe und Termin.',

@@ -29,7 +29,7 @@ export default function TabsLayout() {
           paddingTop: 4,
           paddingBottom: insets.bottom + 8,
         },
-        tabBarLabelStyle: { fontFamily: theme.fontFamily.medium, fontSize: 12, lineHeight: 16 },
+        tabBarLabelStyle: { fontWeight: theme.fontWeight.medium, fontSize: 11, lineHeight: 14 },
         // Wie im System: Tab-Beschriftungen wachsen nicht mit. Langes Drücken zeigt sie groß (iOS).
         tabBarAllowFontScaling: false,
       }}

@@ -37,7 +37,7 @@ export function BotSays({
   return (
     <View style={styles.bot}>
       {sender ? (
-        <Text variant="meta" style={{ fontFamily: theme.fontFamily.semibold }}>
+        <Text variant="meta" style={{ fontWeight: theme.fontWeight.semibold }}>
           {name}
         </Text>
       ) : null}

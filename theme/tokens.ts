@@ -40,11 +40,28 @@ export const size = {
   hairline: 1,
 } as const;
 
-export const fontFamily = {
-  regular: 'SchibstedGrotesk_400Regular',
-  medium: 'SchibstedGrotesk_500Medium',
-  semibold: 'SchibstedGrotesk_600SemiBold',
-  bold: 'SchibstedGrotesk_700Bold',
+/**
+ * mach’s: Systemschrift für Text (SF Pro, Roboto), Schibsted Grotesk 700 nur für Wortmarke,
+ * große Überschrift und die eine wichtige Zahl. undefined = Systemschrift.
+ */
+export const fontFamily: Record<
+  'regular' | 'medium' | 'semibold' | 'bold' | 'display',
+  string | undefined
+> = {
+  regular: undefined,
+  medium: undefined,
+  semibold: undefined,
+  bold: undefined,
+  display: 'SchibstedGrotesk_700Bold',
+};
+
+/** Gewicht der Systemschrift. Die Display-Schrift bringt ihr Gewicht selbst mit. */
+export const fontWeight = {
+  regular: '400',
+  medium: '500',
+  semibold: '600',
+  bold: '700',
+  display: undefined,
 } as const;
 
 export type FontWeightName = keyof typeof fontFamily;
@@ -57,18 +74,18 @@ export interface TypeRole {
   tracking?: number;
 }
 
-/** Typo-Rollen. Alle skalieren mit der Systemschrift bis Faktor 2. */
+/** Typo-Rollen nach mach’s. Alle skalieren mit der Systemschrift bis Faktor 2. */
 export const typeRoles = {
-  display: { fontSize: 34, lineHeight: 1.08, weight: 'medium', tracking: -0.03 },
-  h1: { fontSize: 28, lineHeight: 1.12, weight: 'medium', tracking: -0.02 },
-  title: { fontSize: 20, lineHeight: 1.3, weight: 'semibold' },
-  bodyLg: { fontSize: 17, lineHeight: 1.45, weight: 'regular' },
-  body: { fontSize: 16, lineHeight: 1.45, weight: 'regular' },
-  label: { fontSize: 16, lineHeight: 1.25, weight: 'medium' },
-  labelStrong: { fontSize: 16, lineHeight: 1.3, weight: 'semibold' },
-  meta: { fontSize: 14, lineHeight: 1.4, weight: 'regular' },
-  caption: { fontSize: 13, lineHeight: 1.4, weight: 'regular' },
-  tab: { fontSize: 12, lineHeight: 1.3, weight: 'medium' },
+  display: { fontSize: 34, lineHeight: 1.06, weight: 'display', tracking: -0.035 },
+  h1: { fontSize: 30, lineHeight: 1.08, weight: 'display', tracking: -0.03 },
+  title: { fontSize: 22, lineHeight: 1.2, weight: 'bold', tracking: -0.02 },
+  bodyLg: { fontSize: 17, lineHeight: 1.42, weight: 'regular', tracking: -0.01 },
+  body: { fontSize: 17, lineHeight: 1.42, weight: 'regular', tracking: -0.01 },
+  label: { fontSize: 17, lineHeight: 1.3, weight: 'medium', tracking: -0.01 },
+  labelStrong: { fontSize: 17, lineHeight: 1.3, weight: 'semibold', tracking: -0.01 },
+  meta: { fontSize: 15, lineHeight: 1.35, weight: 'regular' },
+  caption: { fontSize: 13, lineHeight: 1.35, weight: 'regular' },
+  tab: { fontSize: 11, lineHeight: 1.2, weight: 'medium' },
 } as const satisfies Record<string, TypeRole>;
 
 export type TypeRoleName = keyof typeof typeRoles;

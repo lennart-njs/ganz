@@ -31,7 +31,11 @@ export function TextField({
   const [focus, setFocus] = useState(false);
   const scale = theme.previewFontScale ?? 1;
   const fontSize = theme.typeRoles.bodyLg.fontSize * scale;
-  const borderColor = focus || error ? theme.colors.textStrong : theme.colors.borderControl;
+  const borderColor = error
+    ? theme.colors.actionDanger
+    : focus
+      ? theme.colors.focus
+      : theme.colors.borderControl;
   return (
     <View style={styles.wrap}>
       {labelHidden ? null : (
@@ -59,6 +63,7 @@ export function TextField({
         {...rest}
         style={{
           fontFamily: theme.fontFamily.regular,
+          fontWeight: theme.fontWeight.regular,
           fontSize,
           color: theme.colors.textStrong,
           backgroundColor: theme.colors.surfaceCard,

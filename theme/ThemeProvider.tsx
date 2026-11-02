@@ -2,7 +2,7 @@ import { createContext, useContext, useMemo, type ReactNode } from 'react';
 import { useColorScheme } from 'react-native';
 
 import { colors, type ColorScheme, type ThemeColors } from './colors';
-import { fontFamily, gutter, radius, size, space, typeRoles } from './tokens';
+import { fontFamily, fontWeight, gutter, radius, size, space, typeRoles } from './tokens';
 
 export interface Theme {
   scheme: ColorScheme;
@@ -12,6 +12,7 @@ export interface Theme {
   radius: typeof radius;
   size: typeof size;
   fontFamily: typeof fontFamily;
+  fontWeight: typeof fontWeight;
   typeRoles: typeof typeRoles;
   /** Nur Vorschau in der Galerie: feste Schriftskalierung statt Systemwert */
   previewFontScale?: number;
@@ -26,6 +27,7 @@ function buildTheme(scheme: ColorScheme, previewFontScale?: number): Theme {
     radius,
     size,
     fontFamily,
+    fontWeight,
     typeRoles,
     previewFontScale,
   };

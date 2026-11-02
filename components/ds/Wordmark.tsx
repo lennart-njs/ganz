@@ -3,7 +3,7 @@ import { maxFontScale, useTheme } from '@/theme';
 
 import { Text } from './Text';
 
-/** Wortmarke „ganz“: Schibsted Grotesk 600, Tracking -0.03em. Es gibt kein Logo. */
+/** Wortmarke „mach’s“: Schibsted Grotesk 700, Tracking -0.04em, immer klein. */
 export function Wordmark({ size = 24, inverse = false }: { size?: number; inverse?: boolean }) {
   const theme = useTheme();
   const fontSize = size * (theme.previewFontScale ?? 1);
@@ -13,10 +13,10 @@ export function Wordmark({ size = 24, inverse = false }: { size?: number; invers
       tone={inverse ? 'onInverse' : 'strong'}
       maxFontSizeMultiplier={maxFontScale}
       style={{
-        fontFamily: theme.fontFamily.semibold,
+        fontFamily: theme.fontFamily.display,
         fontSize,
         lineHeight: Math.round(fontSize * 1.1),
-        letterSpacing: -0.03 * fontSize,
+        letterSpacing: -0.04 * fontSize,
       }}
     >
       {de.app.name}

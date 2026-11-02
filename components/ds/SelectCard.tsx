@@ -29,7 +29,7 @@ export function SelectCard({ title, sub, selected, onPress, media }: SelectCardP
         {
           borderRadius: theme.radius.media,
           backgroundColor: theme.colors.surfaceCard,
-          borderColor: selected ? theme.colors.textStrong : theme.colors.borderDefault,
+          borderColor: selected ? theme.colors.actionPrimary : theme.colors.borderDefault,
           borderWidth: selected ? 2 : 1,
           padding: selected ? 15 : 16,
         },

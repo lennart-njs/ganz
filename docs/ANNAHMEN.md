@@ -249,3 +249,12 @@ Annahmen, die ich beim Bauen getroffen habe. Jede lässt sich ändern.
 - **Händler mit Kundendienst:** Ohne Versicherung und mit Händler Fründ übernimmt „Fründ Kundendienst (DEMO)“ Videocall, Befund und Termin. Fachkraft „Markus T.“ (erfunden). Der Kundendienst steht als einziger Betrieb zur Wahl, mit der Kennzeichnung „Kundendienst deines Händlers“, ohne Aussage zur Herstellerautorisierung.
 - **Kosten ohne Versicherung:** wie bisher „Du zahlst“ mit „Zahlungspflichtig buchen“. Kein Schadenfall, kein Versicherer im Gespräch.
 - **Händler unbekannt** oder ohne Kundendienst: Fachkraft und Betriebe aus der Konfiguration wie bisher.
+
+### Umstellung auf mach’s (Entscheidung 15)
+
+- **Farben** aus `tokens.json` des mach’s-Designsystems in `theme/palette.ts`. Weißer Grund, graue Flächen (`sunken`) für Karten, Gruppen und Felder. Blaumann-Blau für Primary Button, Links, Auswahl, Fortschritt und Fokus.
+- **Schrift:** Systemschrift für Text, Schibsted Grotesk 700 nur für Wortmarke und große Überschriften (`display`, `h1`). Fließtext 17 pt wie in iOS.
+- **Buttons** sind Kapseln. Secondary getönt (accent-soft, Text in accent, ohne Rahmen). Links in accent.
+- **Achtung-Box** weiß mit Tinten-Rahmen statt dunklem Block.
+- **Name** „mach’s“ in allen Texten, im App-Namen und im Reparatur-Assistenten. Repo, Slug und Ordner heißen weiter „ganz“.
+- **Noch nicht umgestellt:** Wortmarke als Pfad-Datei aus Assets › Logos (die App setzt sie aus der Schrift), App-Icon „m’“, Karten ohne Rahmen bei NavRow und SearchPill, Tab-Icons als SF Symbols. `design-system/` im Repo ist noch das ganz-Designsystem.

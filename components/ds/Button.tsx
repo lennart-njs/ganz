@@ -23,7 +23,7 @@ interface ButtonProps {
   testID?: string;
 }
 
-const heights: Record<ButtonSize, number> = { sm: 44, md: 50, lg: 52 };
+const heights: Record<ButtonSize, number> = { sm: 44, md: 50, lg: 54 };
 
 interface VariantStyle {
   bg?: keyof ThemeColors;
@@ -41,15 +41,15 @@ const variants: Record<ButtonVariant, VariantStyle> = {
     text: 'onPrimary',
     icon: 'actionOnPrimary',
   },
+  // mach’s: getönt, Fläche accent-soft, Text in accent, ohne Rahmen
   secondary: {
-    bg: 'surfaceCard',
-    border: 'borderControl',
-    borderPressed: 'textStrong',
-    text: 'strong',
-    icon: 'textStrong',
+    bg: 'actionSoft',
+    bgPressed: 'borderSubtle',
+    text: 'accent',
+    icon: 'actionPrimary',
   },
   inverse: { bg: 'textOnInverse', text: 'inverted', icon: 'surfaceInverse' },
-  link: { text: 'strong', icon: 'textStrong' },
+  link: { text: 'accent', icon: 'actionPrimary' },
   danger: { bg: 'actionDanger', text: 'onDanger', icon: 'actionOnDanger' },
 };
 
@@ -83,7 +83,7 @@ export function Button({
         {
           minHeight: isLink ? theme.size.hitMin : heights[size],
           paddingHorizontal: isLink ? 0 : size === 'lg' ? 24 : size === 'sm' ? 16 : 20,
-          borderRadius: theme.radius.sm,
+          borderRadius: isLink ? theme.radius.sm : theme.radius.pill,
           opacity: disabled ? 0.4 : 1,
           alignSelf: fullWidth ? 'stretch' : isLink ? 'flex-start' : undefined,
         },
