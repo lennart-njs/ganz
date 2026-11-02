@@ -114,12 +114,24 @@ export const de = {
     abgebrochen: 'Fall abgebrochen',
     assistent_gefragt: 'Reparatur-Assistent gefragt',
     status_geaendert: 'Status geändert',
+    haendler_angenommen: 'Händler hat den Fall angenommen',
+    haendler_rueckfrage: 'Rückfrage vom Händler',
+    haendler_entscheidung: 'Entscheidung des Händlers',
+    haendler_betrieb: 'Händler hat einen Betrieb beauftragt',
+    haendler_status: 'Nachricht vom Händler',
   },
 
   /** Datenumfang je Weitergabe, so gespeichert und im Profil gezeigt */
   consentData: {
     versicherer: ['Gerät', 'Fotos', 'Ergebnis', 'Schritte', 'Befund', 'Kosten'],
     betrieb: ['Gerät', 'Typenschild', 'Fotos', 'Befund', 'Schritte', 'Adresse'],
+    haendler: [
+      'Name und Adresse',
+      'Gerät, Typenschild und Kaufdatum',
+      'Problem und Fotos aus dem Fall',
+      'Ergebnis und Schritte der Anleitung',
+      'Befund, Kosten und Termin',
+    ],
     assistent: [
       'Deine Nachrichten',
       'Fotos, die du im Gespräch aufnimmst',
@@ -133,6 +145,7 @@ export const de = {
     weitergabe_fachkraft: 'Weitergabe an die Fachkraft',
     weitergabe_versicherer: 'Weitergabe an den Versicherer',
     weitergabe_betrieb: 'Weitergabe an den Betrieb',
+    weitergabe_haendler: 'Fall an den Händler',
     screenshots_im_call: 'Screenshots im Videocall',
     hersteller_einzelfall: 'Einzelfall an den Hersteller',
     mitteilungen: 'Mitteilungen',
@@ -1090,6 +1103,61 @@ export const de = {
       passt: 'Einschätzung: sieht nach dem Schritt aus',
       passt_nicht: 'Einschätzung: sieht anders aus als im Schritt',
       unklar: 'Einschätzung: auf dem Foto nicht zu erkennen',
+    },
+  },
+
+  // Fall an den Händler (Entscheidung 19, 20)
+  sharing: {
+    actor: {
+      haushalt: 'Haushalt',
+      fachkraft: 'Fachkraft im Videocall',
+      betrieb: 'Fachbetrieb vor Ort',
+      haendler: 'Händler',
+    },
+    booking: {
+      angefragt: 'Angefragt',
+      bestaetigt: 'Bestätigt',
+      unterwegs: 'Unterwegs',
+      erledigt: 'Erledigt',
+      storniert: 'Storniert',
+    },
+    offer: (dealer: string) => `Fall an ${dealer} senden`,
+    offerSub: 'Dort gekauft. Der Händler prüft Gewährleistung oder Kulanz.',
+    confirmTitle: (dealer: string) => `Das sieht ${dealer}`,
+    confirmText:
+      'Nur diesen Fall. Nicht dabei sind dein Gespräch mit dem Reparatur-Assistenten und deine Vertragsnummer.',
+    legal:
+      'Grundlage ist deine Anfrage (Art. 6 Abs. 1 lit. b DSGVO). Du kannst die Weitergabe im Profil widerrufen. Dann sieht der Händler deine Angaben nicht mehr.',
+    send: 'Ja, senden',
+    cancel: 'Doch nicht',
+    sent: (dealer: string) => `Gesendet. ${dealer} meldet sich hier im Gespräch.`,
+    accepted: (dealer: string) => `${dealer} hat deinen Fall angenommen.`,
+    decision: {
+      gewaehrleistung: 'Das ist ein Fall für die Gewährleistung. Wir kümmern uns um die Reparatur.',
+      kulanz: 'Wir übernehmen das aus Kulanz und kümmern uns um die Reparatur.',
+      an_versicherer: 'Das läuft über deine Versicherung. Wir geben den Fall dorthin weiter.',
+      abgelehnt: 'Das können wir leider nicht übernehmen.',
+    },
+    partner: (partner: string, slot?: string) =>
+      slot ? `${partner} kommt ${slot}.` : `${partner} meldet sich bei dir für einen Termin.`,
+    status: {
+      in_pruefung: 'Wir prüfen deinen Fall.',
+      ersatzteil_bestellt: 'Das Ersatzteil ist bestellt.',
+      abgeschlossen: 'Wir haben den Fall abgeschlossen.',
+    },
+    defaultOptions: ['Ja', 'Nein'],
+    eventDetail: {
+      decision: {
+        gewaehrleistung: 'Gewährleistung',
+        kulanz: 'Kulanz',
+        an_versicherer: 'An den Versicherer',
+        abgelehnt: 'Abgelehnt',
+      },
+      status: {
+        in_pruefung: 'In Prüfung',
+        ersatzteil_bestellt: 'Ersatzteil bestellt',
+        abgeschlossen: 'Abgeschlossen',
+      },
     },
   },
 

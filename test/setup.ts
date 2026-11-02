@@ -57,3 +57,12 @@ jest.mock('expo-notifications', () => ({
 jest.mock('@/services/guideService', () => ({
   httpGuideService: { forDevice: jest.fn(async () => null) },
 }));
+
+// Backend für geteilte Fälle: in Tests ein steuerbarer Mock, damit fetch-Mocks nur den Assistenten betreffen
+jest.mock('@/services/backendService', () => ({
+  httpBackendService: {
+    share: jest.fn(async () => ({ ok: true, token: 'test-token' })),
+    retailerEvents: jest.fn(async () => []),
+    revoke: jest.fn(async () => true),
+  },
+}));

@@ -39,6 +39,28 @@ export const demoConfig = {
     portalUser: 'demo@elektro-albers.example',
   },
 
+  /** Beispielfälle im Händlerportal, damit es ohne Telefon etwas zeigt. Alles fiktiv. */
+  portalExamples: [
+    {
+      caseId: 'GS-24790',
+      customer: 'Robin K.',
+      address: { street: 'Musterweg 3', zip: '12047', city: 'Berlin' },
+      model: 'G 7100',
+      category: 'geschirrspueler' as DeviceCategory,
+      purchaseDate: '2025-02-10T00:00:00+01:00',
+      daysAgo: 1,
+    },
+    {
+      caseId: 'GS-24802',
+      customer: 'Alex M.',
+      address: { street: 'Probestraße 8', zip: '10967', city: 'Berlin' },
+      model: 'WKB 130',
+      category: 'waschmaschine' as DeviceCategory,
+      purchaseDate: '2024-11-20T00:00:00+01:00',
+      daysAgo: 3,
+    },
+  ],
+
   /** Weitere Händler zur Auswahl im Onboarding. Beispielwerte. */
   otherDealers: [{ id: 'technikhaus-nord', name: 'Technikhaus Nord' }],
 

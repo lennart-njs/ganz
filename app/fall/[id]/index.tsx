@@ -55,6 +55,7 @@ import { useTheme } from '@/theme';
 const t = de.thread;
 const CONSENT_TEXT_VERSION = '2026-10-1';
 const CLAIM_TEXT_VERSION = '2026-10-1';
+const SHARE_TEXT_VERSION = '2026-11-1';
 
 interface Item {
   at: string;
@@ -96,6 +97,8 @@ export default function FallGespraech() {
   // „Geht nicht“ in der Anleitung: Notiz für die Fachkraft
   const [notWorking, setNotWorking] = useState(false);
   const [note, setNote] = useState('');
+  // Fall an den Händler: erst zeigen, was er sieht, dann senden (Entscheidung 19)
+  const [dealerConfirm, setDealerConfirm] = useState(false);
 
   // Ein Fall ohne Inhalt bleibt nicht liegen, wenn man das Gespräch verlässt
   useEffect(() => () => useAppStore.getState().discardIfEmpty(caseId), [caseId]);
@@ -290,6 +293,25 @@ export default function FallGespraech() {
     });
   };
 
+  const shareWithDealer = () => {
+    useAppStore.getState().shareWithDealer(caseId, SHARE_TEXT_VERSION);
+    setDealerConfirm(false);
+  };
+
+  const answerDealer = (question: CaseEvent, answer: string) => {
+    const s = useAppStore.getState();
+    s.addEvent({
+      caseId,
+      type: 'rueckfrage_beantwortet',
+      actor: { kind: 'haushalt', id: s.persons[0]?.id },
+      payload: {
+        question: String(question.payload.question),
+        answer,
+        questionEventId: question.id,
+      },
+    });
+  };
+
   const report = () => {
     useAppStore.getState().reportClaim(caseId, CLAIM_TEXT_VERSION);
     setPayment(undefined);
@@ -378,6 +400,39 @@ export default function FallGespraech() {
       add(e.at, e.id, <UserSaid text={t.findingWrongAnswer} />);
       add(e.at, `${e.id}-a`, <BotSays lines={[t.findingWrongText]} />);
     }
+    // Antwort auf eine Rückfrage des Händlers
+    if (e.payload.questionEventId) add(e.at, e.id, <UserSaid text={String(e.payload.answer)} />);
+  }
+
+  // Fall an den Händler und seine Antworten (Entscheidung 19, 20)
+  for (const e of of('weitergabe_bestaetigt')) {
+    if (e.payload.purpose !== 'weitergabe_haendler') continue;
+    const name = String(e.payload.recipient);
+    add(e.at, e.id, <UserSaid text={de.sharing.offer(name)} />);
+    add(e.at, `${e.id}-a`, <BotSays lines={[de.sharing.sent(name)]} />);
+  }
+  for (const e of events) {
+    if (e.actor.kind !== 'haendler') continue;
+    const name = e.actor.name ?? de.sharing.actor.haendler;
+    const p = e.payload;
+    let lines: string[] = [];
+    let hint: string | undefined;
+    if (e.type === 'haendler_angenommen') lines = [de.sharing.accepted(name)];
+    if (e.type === 'haendler_rueckfrage') lines = [String(p.question ?? '')];
+    if (e.type === 'haendler_entscheidung') {
+      lines = [de.sharing.decision[p.decision as keyof typeof de.sharing.decision] ?? ''];
+      hint = p.note ? String(p.note) : undefined;
+    }
+    if (e.type === 'haendler_betrieb') {
+      lines = [
+        de.sharing.partner(String(p.partnerName ?? ''), p.slot ? String(p.slot) : undefined),
+      ];
+    }
+    if (e.type === 'haendler_status') {
+      lines = [de.sharing.status[p.status as keyof typeof de.sharing.status] ?? ''];
+      hint = p.note ? String(p.note) : undefined;
+    }
+    if (lines.some(Boolean)) add(e.at, e.id, <BotSays name={name} lines={lines} hint={hint} />);
   }
 
   // Ergebnis der Intelligenten Fehlererkennung
@@ -833,7 +888,45 @@ export default function FallGespraech() {
     }
   }
 
-  if (assistant.waiting) {
+  // Offene Rückfrage des Händlers: Antworten als Buttons (Entscheidung 20)
+  const dealerQuestion = of('haendler_rueckfrage')
+    .filter((q) => !of('rueckfrage_beantwortet').some((a) => a.payload.questionEventId === q.id))
+    .at(-1);
+  const dealer = device?.purchasedFrom;
+  const dealerShared = !!state.shares[caseId] && !state.shares[caseId]?.revoked;
+
+  if (dealerQuestion && !assistant.waiting) {
+    const options = Array.isArray(dealerQuestion.payload.options)
+      ? (dealerQuestion.payload.options as string[])
+      : [];
+    for (const [i, o] of (options.length ? options : de.sharing.defaultOptions).entries()) {
+      reply(`haendler-antwort-${i}`, o, () => answerDealer(dealerQuestion, o));
+    }
+  } else if (dealerConfirm && dealer) {
+    // Was der Händler sieht, steht vor dem Senden (wie beim Versicherer, B-53)
+    tail.push(
+      <View key="haendler" style={styles.stack}>
+        <UserSaid text={de.sharing.offer(dealer.name)} onEdit={() => setDealerConfirm(false)} />
+        <BotSays lines={[de.sharing.confirmTitle(dealer.name)]}>
+          <View style={styles.full}>
+            <Card>
+              <View style={styles.items}>
+                {de.consentData.haendler.map((item) => (
+                  <Text key={item} variant="body">
+                    {de.help.item(item)}
+                  </Text>
+                ))}
+              </View>
+            </Card>
+          </View>
+          <Text variant="body">{de.sharing.confirmText}</Text>
+          <Text variant="meta">{de.sharing.legal}</Text>
+        </BotSays>
+      </View>,
+    );
+    reply('haendler-senden', de.sharing.send, shareWithDealer);
+    reply('haendler-nicht', de.sharing.cancel, () => setDealerConfirm(false));
+  } else if (assistant.waiting) {
     // Einwilligung vor der ersten Nachricht an den Assistenten
     tail.push(
       <View key="consent" style={styles.stack}>
@@ -1163,6 +1256,31 @@ export default function FallGespraech() {
     } else if (!msgs.length && !assistant.waiting) {
       reply('hilfe', de.result.getHelp, escalate);
     }
+  }
+
+  // Gekauft beim Händler: Den Fall kannst du ihm senden, sobald Hilfe nötig ist (Entscheidung 19)
+  const needsHelp =
+    c.status === 'eskaliert' ||
+    c.status === 'freigabe_noetig' ||
+    c.status === 'abgelehnt' ||
+    !!quote ||
+    run?.outcome === 'geht_nicht' ||
+    run?.outcome === 'laeuft_nicht';
+  if (
+    dealer &&
+    !dealerShared &&
+    !dealerConfirm &&
+    !dealerQuestion &&
+    needsHelp &&
+    c.status !== 'erledigt' &&
+    c.status !== 'abgebrochen'
+  ) {
+    reply(
+      'haendler',
+      de.sharing.offer(dealer.name),
+      () => setDealerConfirm(true),
+      de.sharing.offerSub,
+    );
   }
 
   if (assistant.pending) tail.push(<Typing key="typing" label={de.chat.typing} />);

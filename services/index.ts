@@ -1,4 +1,5 @@
 // Hier wird später das echte Backend eingesetzt. Screens importieren nur `services`.
+import { httpBackendService } from './backendService';
 import { httpChatService } from './chatService';
 import { httpGuideService } from './guideService';
 import { mockContractService } from './mock/contractService';
@@ -7,6 +8,7 @@ import { mockTypePlateService } from './mock/typePlateService';
 import { mockVideoService } from './mock/videoService';
 
 export const services = {
+  backend: httpBackendService,
   chat: httpChatService,
   contract: mockContractService,
   diagnosis: mockDiagnosisService,
@@ -18,3 +20,4 @@ export const services = {
 export type * from './types';
 export type { ChatError, ChatResult, ChatService } from './chatService';
 export type { GuideService } from './guideService';
+export type { BackendService, ShareResult } from './backendService';

@@ -16,6 +16,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { useAppStore } from '@/store/appStore';
 import { useCaseSimulation } from '@/store/useCaseSimulation';
 import { useGuideCatalogSync } from '@/store/useGuideCatalogSync';
+import { useShareSync } from '@/store/useShareSync';
 import { useHydrated } from '@/store/useHydrated';
 import { ThemeProvider, useTheme } from '@/theme';
 
@@ -29,6 +30,7 @@ function RootStack() {
   const onboardingDone = useAppStore((s) => s.onboardingDone);
   useCaseSimulation();
   useGuideCatalogSync();
+  useShareSync();
   return (
     <>
       <StatusBar style={theme.scheme === 'dark' ? 'light' : 'dark'} />

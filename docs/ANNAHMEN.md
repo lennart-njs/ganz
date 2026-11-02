@@ -259,3 +259,11 @@ Annahmen, die ich beim Bauen getroffen habe. Jede lässt sich ändern.
 - **Import:** `npm run guides:import -- <pdf> --id … --hersteller … --kategorie … --modell …` schickt das PDF an Claude (strukturierte Ausgabe, Aufwand hoch) und schreibt einen Entwurf. Danach prüft `pdftotext`, ob jeder Text wörtlich im PDF steht, und listet Abweichungen.
 - **Freigabe:** `npm run guides:approve -- <id> --von "Name, Firma"` verschiebt den Entwurf in den Katalog. Mit Abweichungen nur mit `--trotzdem`. Später gehört das in ein Hersteller-Portal mit Anmeldung.
 - **Noch offen:** Bilder zu den Schritten (Seitenausschnitte aus dem PDF), Sicherheitsbestätigungen wie „Der Wasserhahn ist zu“ für importierte Anleitungen (heute nur für die Demo in `lib/guideMeta.ts`), Lizenz und Updates je Herstellerversion.
+
+## Fall an den Händler (02.11.2026, Entscheidungen 19 und 20)
+
+- **Wann das Angebot kommt:** Sobald Hilfe nötig ist (Hilfe geholt, Anleitung ging nicht, Kostenvoranschlag, Freigabe offen oder abgelehnt) und das Gerät einen bekannten Händler hat. Ein Tap zeigt zuerst, was der Händler sieht, erst „Ja, senden“ gibt weiter. Grundlage ist die angefragte Leistung (lit. b), wie beim Versicherer.
+- **Abgleich:** Die App sendet die Akte nach jeder Änderung am Fall neu und holt alle 15 Sekunden (und beim Zurückkehren in die App) die Antworten des Händlers. Ohne Netz versucht sie es beim nächsten Mal.
+- **Texte zu Entscheidungen** sagen keine Kosten zu („Wir kümmern uns um die Reparatur“). Was es kostet, steht in der Notiz des Händlers.
+- **Händler-Ereignisse** stehen im Gespräch mit dem Namen des Händlers als Absender und in der Fallakte im Zeitstrahl.
+- Details: `docs/BACKEND.md`.

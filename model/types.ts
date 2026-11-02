@@ -175,9 +175,16 @@ export type CaseEventType =
   | 'fortgesetzt'
   | 'abgebrochen'
   | 'assistent_gefragt'
-  | 'status_geaendert';
+  | 'status_geaendert'
+  // Händler (Entscheidung 19, 20): kommen aus dem Händlerportal zurück in den Fall
+  | 'haendler_angenommen'
+  | 'haendler_rueckfrage'
+  | 'haendler_entscheidung'
+  | 'haendler_betrieb'
+  | 'haendler_status';
 
-export type ActorKind = 'haushalt' | 'fachkraft' | 'betrieb' | 'versicherer' | 'system';
+export type ActorKind =
+  'haushalt' | 'fachkraft' | 'betrieb' | 'versicherer' | 'haendler' | 'system';
 
 export interface CaseEvent {
   id: Id;
@@ -298,6 +305,7 @@ export type ConsentPurpose =
   | 'weitergabe_fachkraft'
   | 'weitergabe_versicherer'
   | 'weitergabe_betrieb'
+  | 'weitergabe_haendler'
   | 'screenshots_im_call'
   | 'hersteller_einzelfall'
   | 'mitteilungen'

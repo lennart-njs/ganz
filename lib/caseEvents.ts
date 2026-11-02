@@ -71,6 +71,22 @@ export function eventLabel(e: CaseEvent): string {
     case 'abgebrochen':
       detail = p.reason ? f.reason(String(p.reason)) : undefined;
       break;
+    case 'haendler_rueckfrage':
+      detail = String(p.question ?? '');
+      break;
+    case 'haendler_entscheidung':
+      detail =
+        de.sharing.eventDetail.decision[p.decision as keyof typeof de.sharing.eventDetail.decision];
+      break;
+    case 'haendler_betrieb':
+      detail = [String(p.partnerName ?? ''), p.slot ? String(p.slot) : '']
+        .filter(Boolean)
+        .join(' · ');
+      break;
+    case 'haendler_status':
+      detail =
+        de.sharing.eventDetail.status[p.status as keyof typeof de.sharing.eventDetail.status];
+      break;
   }
   return detail ? f.detail(base, detail) : base;
 }

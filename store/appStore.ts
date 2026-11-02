@@ -104,7 +104,20 @@ export interface AppData {
   chatMessages: ChatMessage[];
   /** Freigegebene Katalog-Einträge vom Server (Entscheidung 15). Der Demo-Eintrag ist eingebaut. */
   guideCatalog: GuideCatalogEntry[];
+  /** Fälle, die an den Händler gesendet wurden (Entscheidung 19), je Fall */
+  shares: Record<Id, CaseShare>;
   nextCaseNumber: number;
+}
+
+export interface CaseShare {
+  consentId: Id;
+  /** Vom Backend beim ersten Senden. Nur damit darf die App den Fall ändern oder widerrufen. */
+  token?: string;
+  /** Zuletzt gesendeter Stand: Zahl der Ereignisse im Fall */
+  syncedEvents?: number;
+  /** Letztes Ereignis des Händlers, das schon im Fall ist */
+  retailerSince?: string;
+  revoked?: boolean;
 }
 
 export interface CommandOptions extends Omit<
@@ -124,6 +137,11 @@ export interface AppActions {
   setOnboardingDealer: (dealer: PartnerRef | undefined) => void;
   /** Freigegebenen Katalog-Eintrag aufnehmen. Entwürfe werden ignoriert. */
   addCatalogEntry: (entry: GuideCatalogEntry) => void;
+  /** Fall an den Händler: Bestätigung speichern (lit. b). Senden übernimmt useShareSync. */
+  shareWithDealer: (caseId: Id, textVersion: string) => Consent | undefined;
+  updateShare: (caseId: Id, patch: Partial<CaseShare>) => void;
+  /** Ereignisse des Händlers aus dem Backend in den Fall übernehmen, ohne Doppelte */
+  importRetailerEvents: (caseId: Id, events: CaseEvent[]) => void;
   /** Legt den Vertrag aus der Konfiguration an (nach erfolgreicher Prüfung). */
   linkContract: (via: Contract['linkedVia']) => Contract;
   addDevice: (input: NewDevice) => Device;
@@ -211,6 +229,7 @@ export const initialData: AppData = {
   videoSessions: [],
   chatMessages: [],
   guideCatalog: [],
+  shares: {},
   nextCaseNumber: demoConfig.caseNumber.start,
 };
 
@@ -258,6 +277,55 @@ export function createAppStore(storage: StateStorage = AsyncStorage, env: StoreE
           completeOnboarding: () => set({ onboardingDone: true }),
 
           setOnboardingDealer: (dealer) => set({ onboardingDealer: dealer }),
+
+          shareWithDealer: (caseId, textVersion) => {
+            const c = get().cases[caseId];
+            const device = get().devices.find((d) => d.id === c?.deviceId);
+            if (!c || !device?.purchasedFrom) return undefined;
+            const consent = get().grantConsent({
+              caseId,
+              purpose: 'weitergabe_haendler',
+              legalBasis: 'vertrag',
+              recipient: device.purchasedFrom,
+              dataCategories: [...de.consentData.haendler],
+              textVersion,
+            });
+            set((s) => ({ shares: { ...s.shares, [caseId]: { consentId: consent.id } } }));
+            return consent;
+          },
+
+          updateShare: (caseId, patch) =>
+            set((s) => {
+              const current = s.shares[caseId];
+              if (!current) return {};
+              return { shares: { ...s.shares, [caseId]: { ...current, ...patch } } };
+            }),
+
+          importRetailerEvents: (caseId, incoming) =>
+            set((s) => {
+              if (!s.cases[caseId]) return {};
+              const known = new Set(s.events.map((e) => e.id));
+              // Nur Ereignisse des Händlers, nur für diesen Fall
+              const fresh = incoming.filter(
+                (e) =>
+                  e.caseId === caseId &&
+                  e.actor?.kind === 'haendler' &&
+                  e.type.startsWith('haendler_') &&
+                  !known.has(e.id),
+              );
+              if (!fresh.length) return {};
+              const since = fresh
+                .map((e) => e.at)
+                .sort()
+                .at(-1);
+              const share = s.shares[caseId];
+              return {
+                events: [...s.events, ...fresh],
+                shares: share
+                  ? { ...s.shares, [caseId]: { ...share, retailerSince: since } }
+                  : s.shares,
+              };
+            }),
 
           addCatalogEntry: (entry) => {
             if (!registerCatalogEntry(entry)) return;
@@ -1067,6 +1135,7 @@ export function createAppStore(storage: StateStorage = AsyncStorage, env: StoreE
           videoSessions: s.videoSessions,
           chatMessages: s.chatMessages,
           guideCatalog: s.guideCatalog,
+          shares: s.shares,
           nextCaseNumber: s.nextCaseNumber,
         }),
       },
