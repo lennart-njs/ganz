@@ -114,7 +114,20 @@ The privacy policy names `lennart@machs.io` and the mailbox at united-domains. I
 3. Without JavaScript, the page shows all content without movement. All sections of the list "Was jede Seite davon hat" are open.
 4. The setting `Strict-Transport-Security` tells browsers to use only HTTPS for one year. Remove this line if you are not sure that HTTPS will always work.
 
-## 12. The photo
+## 12. The navigation capsule
+
+The black navigation capsule at the top changes when the visitor scrolls:
+
+1. When the visitor scrolls down, the capsule becomes a small round button with the sign „m’“.
+2. When the visitor scrolls up, or clicks the small button, the full capsule shows again.
+3. After the capsule opens, it stays open until the visitor scrolls down again by approximately 50 pixels.
+4. Near the top of the page (less than 120 pixels), the full capsule always shows.
+
+The code is in `site/js/site.js` (section „Navigation: beim Runterscrollen wird die Kapsel zum Zeichen“). The styles are in `site/css/site.css` (classes `.pmark` and `.pill.zeichen`). Do not use the class name `mini` for the capsule: the page uses `.mini` for other elements.
+
+If the visitor selects „reduce motion“ in the operating system, the capsule changes without animation.
+
+## 13. The photo
 
 The image version shows a black-and-white photo with the headline "Gemeinsam machen wir Reparaturen wieder normal." The photo is in the folder `site/img/`.
 

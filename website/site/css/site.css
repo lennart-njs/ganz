@@ -8,7 +8,7 @@
   --bg:#FFFFFF; --chalk:#F3F5F8; --chambray:#E5EBF4; --chambray-2:#D5DEEC; --ghost:#C3CAD4; --ghost-text:#8A919C;
   --ink:#16181A; --body:#3C3F44; --muted:#5C5F66;
   --accent:#1F4FA8; --accent-pressed:#183F87; --on-accent:#FFFFFF; --accent-soft:#EAF0FB; --accent-soft-2:#DCE6F8;
-  --pill:#16181A; --pill-2:#2B2E33; --on-pill:#F5F6F8; --on-pill-muted:#A3A7AE;
+  --pill:#16181A; --pill-2:#2B2E33; --on-pill:#F5F6F8; --on-pill-muted:#A3A7AE; --on-pill-accent:#8AAEF5;
   --paper:#FFFFFF; --app-bg:#FFFFFF; --app-sunken:#F4F5F7; --app-line:#E5E7EB;
   --shadow:rgba(20,32,56,.16); --border-control:#8A8D93;
   --sg:"Schibsted Grotesk",-apple-system,"SF Pro Display","Helvetica Neue",Arial,sans-serif;
@@ -20,7 +20,7 @@
   --bg:#111316; --chalk:#1A1D21; --chambray:#172030; --chambray-2:#22314A; --ghost:#3C424A; --ghost-text:#7B828C;
   --ink:#F5F6F8; --body:#D4D7DC; --muted:#A3A7AE;
   --accent:#8AAEF5; --accent-pressed:#A8C3F8; --on-accent:#16181A; --accent-soft:#1C2A44; --accent-soft-2:#24375A;
-  --pill:#F5F6F8; --pill-2:#E2E4E8; --on-pill:#16181A; --on-pill-muted:#5C5F66;
+  --pill:#F5F6F8; --pill-2:#E2E4E8; --on-pill:#16181A; --on-pill-muted:#5C5F66; --on-pill-accent:#1F4FA8;
   --paper:#1F2328; --app-bg:#16181A; --app-sunken:#202326; --app-line:#2C2F33;
   --shadow:rgba(0,0,0,.55); --border-control:#7E8288; color-scheme:dark}}
 
@@ -98,6 +98,18 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:poin
 .pburger{display:none;width:44px;height:44px;border-radius:50%;background:var(--pill-2);margin-left:auto;place-items:center}
 .pburger svg{width:16px;height:16px;stroke:var(--on-pill);stroke-width:2;stroke-linecap:round;transition:transform .45s var(--ease-io)}
 .pill.open .pburger svg{transform:rotate(45deg)}
+/* Beim Runterscrollen wird die Kapsel zum Zeichen „m’“. Hochscrollen oder Tippen macht sie wieder groß. */
+.pmark{position:absolute;left:0;top:0;z-index:1;display:grid;place-items:center;width:56px;height:56px;border-radius:50%;color:var(--on-pill);opacity:0;pointer-events:none;transition:opacity .25s ease,background-color .2s ease}
+.pmark svg{height:19px;width:auto;display:block;fill:currentColor;transform:scale(.6);transition:transform .55s var(--ease-io)}
+.pmark .q{fill:var(--on-pill-accent)}
+.pill-row{transition:opacity .3s ease .15s}
+.pill.zeichen{box-shadow:0 14px 30px -18px var(--shadow)}
+.pill.zeichen .pill-row{opacity:0;pointer-events:none;transition-delay:0s}
+.pill.zeichen .pmark{opacity:1;pointer-events:auto;transition-delay:.2s,0s}
+.pill.zeichen .pmark svg{transform:none}
+@media (hover:hover){.pill.zeichen .pmark:hover{background:var(--pill-2)}}
+.pmark:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+.rm .pill,.rm .pill-row,.rm .pmark,.rm .pmark svg{transition:none!important}
 .pmenu{display:grid;grid-template-rows:0fr;transition:grid-template-rows .55s var(--ease-io)}
 .pill.open .pmenu{grid-template-rows:1fr}
 .pmenu-in{min-height:0;overflow:hidden}

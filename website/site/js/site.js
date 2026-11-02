@@ -19,7 +19,7 @@
   var pill=$("#pill"),menuBtn=$("#menuBtn"),burger=$("#burger"),open=false;
   function closedW(){pill.style.width="";return pill.offsetWidth}
   var cw=0;
-  function measure(){var o=open;pill.classList.remove("open");pill.style.transition="none";cw=closedW();if(o)pill.classList.add("open");pill.style.width=(o?openW():cw)+"px";void pill.offsetWidth;pill.style.transition=""}
+  function measure(){var o=open;pill.classList.remove("open");pill.style.transition="none";cw=closedW();if(o)pill.classList.add("open");pill.style.width=(typeof mini!=="undefined"&&mini?56:o?openW():cw)+"px";void pill.offsetWidth;pill.style.transition=""}
   function openW(){return window.innerWidth<=760?cw:Math.max(cw,Math.min(520,window.innerWidth-24))}
   function setOpen(v){
     open=v;pill.classList.toggle("open",v);
@@ -37,6 +37,36 @@
   document.addEventListener("keydown",function(e){if(e.key==="Escape"&&open){setOpen(false);(window.innerWidth<=760?burger:menuBtn).focus()}});
   document.addEventListener("click",function(e){if(open&&!pill.contains(e.target))setOpen(false)});
   $$(".pmenu-list a").forEach(function(a){a.addEventListener("click",function(){var i=a.getAttribute("data-open");setOpen(false);if(i!==null)openRow(+i)})});
+
+  /* ——— Navigation: beim Runterscrollen wird die Kapsel zum Zeichen „m’“ ———
+     Runter: klein. Hoch oder Tippen auf das Zeichen: wieder die volle Leiste.
+     Nach dem Aufklappen bleibt sie groß, bis wieder ein Stück nach unten gescrollt wird. */
+  var mark=$("#pmark"),row=$(".pill-row",pill),mini=false,lastY=window.scrollY,turnY=lastY,navTick=false;
+  var MINI=56,TOP=120,RUN=48;
+  function setMini(v){
+    if(v===mini)return;
+    if(v&&open)setOpen(false);
+    mini=v;pill.classList.toggle("zeichen",v);
+    pill.style.width=(v?MINI:(open?openW():cw))+"px";
+    row.inert=v;
+    mark.tabIndex=v?0:-1;mark.setAttribute("aria-hidden",v?"false":"true");
+  }
+  setMini(false);mark.setAttribute("aria-hidden","true");
+  function navScroll(){
+    navTick=false;
+    var y=Math.max(0,window.scrollY),d=y-lastY;
+    if(y<TOP)setMini(false);
+    else if(d<0){turnY=y;setMini(false)}
+    else if(d>0&&y-turnY>RUN&&!open)setMini(true);
+    if(d<0)turnY=y;
+    lastY=y;
+  }
+  window.addEventListener("scroll",function(){if(!navTick){navTick=true;requestAnimationFrame(navScroll)}},{passive:true});
+  mark.addEventListener("click",function(e){
+    turnY=window.scrollY;setMini(false);
+    /* Per Tastatur: Fokus auf den ersten Eintrag der Leiste */
+    if(e.detail===0){var first=$(".pwm",pill);if(first)first.focus()}
+  });
 
   /* ——— App-Beispiel im Hero: Screens stehen im HTML ——— */
   var LABELS=["Anleitung","Fachkraft","Reparatur"];
