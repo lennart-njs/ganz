@@ -21,6 +21,7 @@
   "exclude": [
     "node_modules",
     "design-system",
-    "reference"
+    "reference",
+    "portal"
   ]
 }

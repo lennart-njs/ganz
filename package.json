@@ -66,7 +66,8 @@
     "testPathIgnorePatterns": [
       "/node_modules/",
       "/design-system/",
-      "/reference/"
+      "/reference/",
+      "/portal/"
     ],
     "transformIgnorePatterns": [
       "node_modules/(?!((jest-)?react-native|@react-native(-community)?)|expo(nent)?|@expo(nent)?/.*|@expo-google-fonts/.*|react-navigation|@react-navigation/.*|standard-navigation|react-native-svg)"
