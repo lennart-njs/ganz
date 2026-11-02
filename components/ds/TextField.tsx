@@ -35,7 +35,7 @@ export function TextField({
     ? theme.colors.actionDanger
     : focus
       ? theme.colors.focus
-      : theme.colors.borderControl;
+      : theme.colors.surfaceCard;
   return (
     <View style={styles.wrap}>
       {labelHidden ? null : (
@@ -67,10 +67,10 @@ export function TextField({
           fontSize,
           color: theme.colors.textStrong,
           backgroundColor: theme.colors.surfaceCard,
-          borderWidth: focus || error ? 2 : 1,
-          borderColor,
-          borderRadius: theme.radius.sm,
-          paddingHorizontal: focus || error ? 13 : 14,
+          borderWidth: 2,
+          borderColor: focus || error ? borderColor : theme.colors.surfaceCard,
+          borderRadius: theme.radius.media,
+          paddingHorizontal: 14,
           paddingVertical: multiline ? 12 : 10,
           minHeight: multiline ? Math.round(fontSize * 1.4 * rows) + 24 : theme.size.control,
         }}

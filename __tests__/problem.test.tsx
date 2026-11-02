@@ -126,7 +126,7 @@ describe('Entwürfe', () => {
     expect(open[0]).toMatchObject({ entry: 'symptom', problemLabel: 'Tür geht nicht auf' });
   });
 
-  test('mit Fortschritt fragt ganz: weitermachen oder neues Problem', async () => {
+  test('mit Fortschritt fragt mach’s: weitermachen oder neues Problem', async () => {
     const r = await renderRouter(APP, { initialUrl: '/' });
     await tap(pill);
     await tap(new RegExp(`^${de.problems[1]!.label}`));
@@ -190,7 +190,7 @@ test('Pflege aus dem Gerätedetail startet einen Pflege-Fall', async () => {
 });
 
 describe('Problem melden als Gespräch', () => {
-  test('bei mehreren Geräten fragt ganz zuerst nach dem Gerät, der Stift ändert die Antwort', async () => {
+  test('bei mehreren Geräten fragt mach’s zuerst nach dem Gerät, der Stift ändert die Antwort', async () => {
     const s = useAppStore.getState();
     s.addDevice({
       manufacturerId: 'miele',

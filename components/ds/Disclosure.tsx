@@ -38,7 +38,7 @@ export function Disclosure({ title, children, initiallyOpen = false }: Disclosur
 }
 
 const styles = StyleSheet.create({
-  wrap: { borderTopWidth: StyleSheet.hairlineWidth, borderBottomWidth: StyleSheet.hairlineWidth },
+  wrap: {},
   head: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 10 },
   title: { flex: 1 },
   rotated: { transform: [{ rotate: '180deg' }] },

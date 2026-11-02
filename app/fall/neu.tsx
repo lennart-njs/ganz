@@ -28,7 +28,7 @@ const PHOTO = 'foto';
 const ADD_DEVICE = 'neues-geraet';
 
 /**
- * Problem melden: der Anfang des Fall-Gesprächs. ganz fragt nach Gerät und Problem, die Antworten
+ * Problem melden: der Anfang des Fall-Gesprächs. mach’s fragt nach Gerät und Problem, die Antworten
  * stehen unten, eigene Worte gehen direkt an den Reparatur-Assistenten (Entscheidung 12).
  * Sobald es einen Fall gibt, geht es im Gespräch des Falls weiter. Pro Gerät gibt es einen
  * offenen Fall (Entscheidung 13). Kein Link nach außen.
@@ -316,7 +316,6 @@ const styles = StyleSheet.create({
     alignItems: 'flex-end',
     gap: 8,
     paddingTop: 10,
-    borderTopWidth: StyleSheet.hairlineWidth,
   },
   input: { flex: 1 },
 });

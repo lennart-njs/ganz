@@ -43,7 +43,7 @@ import type {
 
 import { defaultEnv, type StoreEnv } from './env';
 
-export const STORE_KEY = 'ganz-app';
+export const STORE_KEY = 'machs-app';
 export const STORE_VERSION = 1;
 
 /** Einstellungen für Pitch und Tests. Steuerung im Profil (Schritt 13). */

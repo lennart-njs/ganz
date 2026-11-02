@@ -29,6 +29,8 @@ export const radius = {
   media: 12,
   /** Karten */
   lg: 14,
+  /** Graue Flächen: Group, NavRow, Info-Box (mach’s radius-group) */
+  group: 16,
   pill: 999,
 } as const;
 
@@ -78,7 +80,7 @@ export interface TypeRole {
 export const typeRoles = {
   display: { fontSize: 34, lineHeight: 1.06, weight: 'display', tracking: -0.035 },
   h1: { fontSize: 30, lineHeight: 1.08, weight: 'display', tracking: -0.03 },
-  title: { fontSize: 22, lineHeight: 1.2, weight: 'bold', tracking: -0.02 },
+  title: { fontSize: 20, lineHeight: 1.25, weight: 'semibold', tracking: -0.015 },
   bodyLg: { fontSize: 17, lineHeight: 1.42, weight: 'regular', tracking: -0.01 },
   body: { fontSize: 17, lineHeight: 1.42, weight: 'regular', tracking: -0.01 },
   label: { fontSize: 17, lineHeight: 1.3, weight: 'medium', tracking: -0.01 },

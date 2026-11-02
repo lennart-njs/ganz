@@ -75,7 +75,7 @@ export function ActionBar({ meta, sub, children }: ActionBarProps) {
 }
 
 const styles = StyleSheet.create({
-  bar: { borderTopWidth: StyleSheet.hairlineWidth, paddingTop: 12, gap: 10 },
+  bar: { paddingTop: 12, gap: 10 },
   row: { flexDirection: 'row', alignItems: 'center' },
   stacked: { flexDirection: 'column', alignItems: 'stretch' },
   info: { flex: 1 },

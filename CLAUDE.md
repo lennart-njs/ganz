@@ -1,4 +1,4 @@
-# CLAUDE.md – ganz Haushalts-App
+# CLAUDE.md – mach’s Haushalts-App (Repo „ganz“)
 
 ## Lies zuerst
 1. `docs/ENTSCHEIDUNGEN.md` – Antworten von Lennart. Sie gehen allem anderen vor.
@@ -10,7 +10,7 @@
 Quelle für Inhalte: `reference/demo-v1.0/Main.dc.html`. Nur als Spezifikation lesen, nicht als Code kopieren.
 
 ## Feste Regeln
-- Name „ganz“, immer klein. Die Fotodiagnose heißt „Intelligente Fehlererkennung“. Nie „KI“ oder „AI“, keine Funken-Icons.
+- Name „mach’s“, immer klein, mit typografischem Apostroph (Entscheidung 15). Domain machs.io. Die Wortmarke kommt aus der Logo-Datei, nie aus der Schrift. Die Fotodiagnose heißt „Intelligente Fehlererkennung“. Nie „KI“ oder „AI“, keine Funken-Icons.
 - Du-Form, kurze Sätze, ruhiger Ton. Keine Ausrufezeichen, keine Emojis.
 - Anleitungsinhalte aus `guides()` wörtlich übernehmen. Nicht umformulieren.
 - Alle Texte in `i18n/de.ts`. Alle fiktiven Namen und Preise in `config/demo.config.ts`.

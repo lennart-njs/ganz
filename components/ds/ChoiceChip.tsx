@@ -26,8 +26,7 @@ export function ChoiceChip({ label, selected, onPress, sub, mode = 'radio' }: Ch
         styles.chip,
         {
           minHeight: sub ? 56 : theme.size.hitMin,
-          borderRadius: theme.radius.sm,
-          borderColor: selected ? theme.colors.actionPrimary : theme.colors.borderControl,
+          borderRadius: theme.radius.pill,
           backgroundColor: selected ? theme.colors.actionPrimary : theme.colors.surfaceCard,
         },
       ]}
@@ -46,7 +45,6 @@ export function ChoiceChip({ label, selected, onPress, sub, mode = 'radio' }: Ch
 
 const styles = StyleSheet.create({
   chip: {
-    borderWidth: 1,
     paddingHorizontal: 16,
     paddingVertical: 8,
     justifyContent: 'center',

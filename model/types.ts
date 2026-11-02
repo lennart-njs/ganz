@@ -1,4 +1,4 @@
-// ganz – gemeinsames Datenmodell (App, später Backend und Dashboards)
+// mach’s – gemeinsames Datenmodell (App, später Backend und Dashboards)
 // Quelle: docs/BUILD_PLAN.md Abschnitt 3. Feldbeschreibungen für Dashboards: docs/DATA_MODEL.md (Schritt 14).
 // Zeitangaben: ISO 8601 mit Zeitzone. Beträge: Cent (ganzzahlig).
 

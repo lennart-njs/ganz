@@ -55,7 +55,7 @@ export default function Analyse() {
           AccessibilityInfo.announceForAccessibility(de.analysis.blurryTitle);
           return;
         case 'rueckfrage':
-          // Die Rückfrage stellt ganz im Gespräch (B-12)
+          // Die Rückfrage stellt mach’s im Gespräch (B-12)
           s.addEvent({
             caseId,
             type: 'rueckfrage_gestellt',

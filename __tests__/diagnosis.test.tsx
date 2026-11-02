@@ -110,7 +110,7 @@ describe('Foto → Ergebnis', () => {
   test('„unsicher“ zeigt die Rückfrage, die Antwort wählt die Anleitung', async () => {
     useAppStore.getState().setDemo({ diagnosisScenario: 'unsicher' });
     const r = await photoFlow('display');
-    // ganz fragt im Gespräch nach
+    // mach’s fragt im Gespräch nach
     expect(r.getPathname()).toBe('/fall/GS-24817');
     expect(screen.getByText(de.question.wasser)).toBeTruthy();
     await tap(de.question.answers.zulauf);
