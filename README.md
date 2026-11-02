@@ -37,6 +37,18 @@ Der Demo-Modus ist in `config/demo.config.ts` eingeschaltet (`demo.enabled`).
 - **Hell oder dunkel:** Profil → „Darstellung“: Wie System, Hell, Dunkel.
 - **Gespräch und Formular:** Jeder Fall ist ein Gespräch. „Details“ an Ergebnis, Kosten und Termin öffnet die Formular-Ansicht.
 
+### Golden Path für Fründ (Geschirrspüler ohne Versicherung)
+
+1. Onboarding: „Los geht’s“ → Suche „G 5833“ → „Miele G 5833 SC“.
+2. „Versicherung vorhanden?“ → „Nein, keine Versicherung“ → Suche „Fründ“ → „Fründ Elektrogeräte AG (DEMO)“ → „Händler speichern“.
+3. „Was ist kaputt?“ → „Wasser bleibt stehen“. Die Anleitung kommt aus der Gebrauchsanweisung (Quelle mit Seite unter jedem Schritt).
+4. Fünf Schritte „Erledigt“, im Schritt „Ablaufpumpe reinigen“ „Geht nicht“ → „Hilfe holen“.
+5. „Videocall starten“ → Markus T. vom Fründ Kundendienst (DEMO) → Auflegen → Befund → „Passt, weiter“.
+6. „Weiter zum Termin“ → Fründ Kundendienst (DEMO) → Zeitfenster → „Zahlungspflichtig buchen“.
+7. Weiter wie unten ab Schritt 7.
+
+Weitere Geräte im Katalog: Bosch SMI4EAS24E (Geschirrspüler), Miele WQ 1000 WPS (Waschmaschine), Miele WKB 130 (erste Demo).
+
 ### Golden Path für den Pitch (ca. 3 Minuten)
 
 Der ganze Fall ist ein Gespräch. Die Antworten stehen unten, „Details“ zeigt das Formular.

@@ -88,6 +88,21 @@ describe('Händler statt Versicherer (Fründ-Demo)', () => {
     expect(tree()).not.toContain(demoConfig.insurer.shortName);
   });
 
+  test('Hilfe holen: Vor-Ort-Diagnose durch den Händler, keine Hotline des Herstellers', async () => {
+    const deviceId = setup();
+    const s = useAppStore.getState();
+    const c = s.createCase({
+      deviceId,
+      entry: 'symptom',
+      problemLabel: 'Wasser bleibt im Spülraum',
+    });
+    s.escalate(c.id);
+    await renderRouter(APP, { initialUrl: `/fall/${c.id}` });
+    await flush();
+    expect(screen.getByText(de.thread.onSiteSubDealer(SERVICE))).toBeTruthy();
+    expect(screen.queryByText(demoConfig.manufacturer.serviceContact.label)).toBeNull();
+  });
+
   test('Betriebswahl im Gespräch nennt nur den Kundendienst des Händlers', async () => {
     const deviceId = setup();
     const s = useAppStore.getState();

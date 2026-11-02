@@ -22,7 +22,7 @@ export function CostCompare({ quote, focus = 'repair' }: CostCompareProps) {
     {
       borderRadius: theme.radius.media,
       backgroundColor: theme.colors.surfaceCard,
-      borderColor: on ? theme.colors.textStrong : theme.colors.borderDefault,
+      borderColor: on ? theme.colors.actionPrimary : theme.colors.borderDefault,
       borderWidth: on ? 2 : 1,
     },
   ];

@@ -33,7 +33,7 @@ import { chatLimits } from '@/lib/chat/limits';
 import { retryableChatErrors, useAssistant } from '@/lib/chat/useAssistant';
 import { hasProgress } from '@/lib/caseView';
 import { deviceTitle, getManufacturer } from '@/lib/devices';
-import { insurerShortName, partnerKind, serviceFor } from '@/lib/service';
+import { dealerService, insurerShortName, partnerKind, serviceFor } from '@/lib/service';
 import { guideTools } from '@/lib/guideMeta';
 import { toDiagnosis } from '@/lib/diagnosis';
 import type { CaseEvent, Diagnosis } from '@/model/types';
@@ -827,7 +827,11 @@ export default function FallGespraech() {
       tail.push(
         <BotSays key="kosten" sender={false} lines={[]}>
           <Text variant="bodyLg">{de.costs.noContractText}</Text>
-          <Text variant="title">{de.talk.claim.askNoContract}</Text>
+          <Text variant="title">
+            {dealerService(device)
+              ? de.talk.claim.askDealer(helpPartner.name)
+              : de.talk.claim.askNoContract}
+          </Text>
         </BotSays>,
       );
       reply('selbst', de.costs.toAppointment, () => setPayment('selbst'));
@@ -988,8 +992,15 @@ export default function FallGespraech() {
       </BotSays>,
     );
     reply('call', t.callStart, startCall, t.callSub);
-    reply('vor-ort', t.onSite, () => setOnSite(true), t.onSiteSub);
-    if (service) {
+    // Mit Händler-Kundendienst kommt dieser, und die Hotline des Herstellers entfällt
+    const viaDealer = !!dealerService(device);
+    reply(
+      'vor-ort',
+      t.onSite,
+      () => setOnSite(true),
+      viaDealer ? t.onSiteSubDealer(helpPartner.name) : t.onSiteSub,
+    );
+    if (service && !viaDealer) {
       reply(
         'kundendienst',
         service.label,

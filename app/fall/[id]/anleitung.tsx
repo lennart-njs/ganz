@@ -182,7 +182,11 @@ export default function Anleitung() {
       <DemoHint id="anleitung" />
       <StepProgress total={guide.steps.length} current={step} />
       {current.img ? (
-        <PhotoFrame label={t.images[current.img as keyof typeof t.images] ?? current.t} />
+        <PhotoFrame
+          label={
+            current.src ? current.t : (t.images[current.img as keyof typeof t.images] ?? current.t)
+          }
+        />
       ) : null}
       <Text variant="meta">{guide.title}</Text>
       <Text variant="h1" accessibilityRole="header">

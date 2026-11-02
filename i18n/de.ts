@@ -405,7 +405,7 @@ export const de = {
     myDevices: 'Deine Geräte',
     protectionActive: 'Geräteschutz aktiv',
     addDevice: 'Gerät hinzufügen',
-    addDeviceSub: 'Typenschild fotografieren',
+    addDeviceSub: 'Aus der Liste oder per Typenschild',
     emptyTitle: 'Noch kein Gerät',
     emptyText:
       'Füg dein erstes Gerät hinzu. Dann führt dich mach’s bei Problemen Schritt für Schritt.',
@@ -987,6 +987,7 @@ export const de = {
         `Lehnt ${insurer} ab, entscheidest du neu. Der Kostenvoranschlag bleibt in deiner Fallakte.`,
       ask: (insurer: string) => `Willst du den Schadenfall an ${insurer} melden?`,
       askNoContract: 'Sollen wir einen Fachbetrieb für die Reparatur suchen?',
+      askDealer: (service: string) => `Soll ${service} die Reparatur übernehmen?`,
       reported: (insurer: string) =>
         `Gemeldet. ${insurer} prüft die Kosten. Den Termin kannst du schon anfragen.`,
       selfPay: (amount: string) => `Gut. Du zahlst die Reparatur selbst: ${amount}.`,
@@ -1019,6 +1020,7 @@ export const de = {
     callSub: 'Wartezeit ca. 1 Minute',
     onSite: 'Vor-Ort-Diagnose',
     onSiteSub: 'Ein Fachbetrieb kommt und schaut es sich an',
+    onSiteSubDealer: (service: string) => `${service} kommt und schaut es sich an`,
     callEnded: (expert: string) => `Videocall mit ${expert} beendet.`,
     callAborted: 'Videocall abgebrochen.',
     callbackAsk: 'Wann passt der Rückruf?',
@@ -1142,8 +1144,7 @@ export const de = {
     problem: 'Tippe auf „Foto machen“ oder wähle „Display zeigt eine Meldung“.',
     kamera: 'Wähle, was du fotografierst, und tippe auf den Auslöser.',
     ergebnis: 'Starte die Anleitung. „Passt nicht“ führt zurück.',
-    anleitung:
-      'Tippe dich mit „Erledigt“ durch. In Schritt 5 zeigt „Geht nicht“, wie mach’s Hilfe holt.',
+    anleitung: 'Tippe dich mit „Erledigt“ durch. „Geht nicht“ zeigt, wie mach’s Hilfe holt.',
     hilfe: 'Starte den Videocall. Vorher steht, wer welche Daten sieht.',
     kosten: 'Klapp „Das geht an …“ auf: So kommt der Fall beim Versicherer an.',
     status: 'Mit „Nächster Schritt (Demo)“ springst du durch Freigabe und Termin.',

@@ -86,7 +86,8 @@ export function UserSaid({ text, onEdit }: { text: string; onEdit?: () => void }
         style={[
           styles.bubble,
           {
-            backgroundColor: theme.colors.surfaceInverse,
+            // mach’s: keine dunklen Flächen, die eigene Antwort ist blau wie eine Auswahl
+            backgroundColor: theme.colors.actionPrimary,
             borderTopLeftRadius: theme.radius.lg,
             borderTopRightRadius: theme.radius.lg,
             borderBottomLeftRadius: theme.radius.lg,
@@ -94,7 +95,7 @@ export function UserSaid({ text, onEdit }: { text: string; onEdit?: () => void }
           },
         ]}
       >
-        <Text variant="bodyLg" tone="onInverse">
+        <Text variant="bodyLg" tone="onPrimary">
           {text}
         </Text>
       </View>
