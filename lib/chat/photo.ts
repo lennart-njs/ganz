@@ -1,4 +1,4 @@
-// Fotos für den Reparatur-Assistenten (Entscheidung 17).
+// Fotos für den Reparatur-Assistenten (Entscheidung 26).
 // Das Bild wird verkleinert und nur für die nächste Anfrage im Speicher gehalten.
 // Es landet nicht im gespeicherten Zustand und der Server speichert es nicht.
 import { ImageManipulator, SaveFormat } from 'expo-image-manipulator';

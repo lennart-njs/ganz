@@ -1,4 +1,4 @@
-// Katalog der Anleitungen (Entscheidung 15): GET /api/guides?hersteller=miele&kategorie=waschmaschine&modell=WKB%20130&material=11%20450%20120
+// Katalog der Anleitungen (Entscheidung 24): GET /api/guides?hersteller=miele&kategorie=waschmaschine&modell=WKB%20130&material=11%20450%20120
 // Gibt nur freigegebene Anleitungen für genau dieses Gerät zurück. Ohne Treffer: 404, die App holt dann Hilfe.
 import { findCatalogEntry } from '@/lib/guideCatalog';
 import type { DeviceCategory } from '@/model/types';

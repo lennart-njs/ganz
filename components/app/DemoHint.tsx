@@ -23,15 +23,15 @@ export function DemoHint({ id }: { id: HintKey }) {
     <View
       style={[
         styles.hint,
-        { backgroundColor: theme.colors.surfaceInverse, borderRadius: theme.radius.md },
+        { backgroundColor: theme.colors.surfaceMuted, borderRadius: theme.radius.lg },
       ]}
     >
-      <View style={[styles.tag, { borderColor: theme.colors.textOnInverseMuted }]}>
-        <Text variant="caption" tone="onInverseMuted">
+      <View style={[styles.tag, { borderColor: theme.colors.borderControl }]}>
+        <Text variant="caption" tone="muted">
           {de.demoHints.label}
         </Text>
       </View>
-      <Text variant="meta" tone="onInverse" style={styles.text}>
+      <Text variant="meta" tone="strong" style={styles.text}>
         {de.demoHints[id]}
       </Text>
       <Pressable
@@ -41,7 +41,7 @@ export function DemoHint({ id }: { id: HintKey }) {
         hitSlop={8}
         style={styles.close}
       >
-        <Icon name="close" size={16} color="textOnInverse" />
+        <Icon name="close" size={16} color="textMuted" />
       </Pressable>
     </View>
   );

@@ -1,4 +1,4 @@
-// Die Anleitung als Teil des Fall-Gesprächs (Entscheidung 16).
+// Die Anleitung als Teil des Fall-Gesprächs (Entscheidung 25).
 // Aus den gespeicherten Ereignissen einer Anleitung entsteht die Folge der Nachrichten:
 // Schritt gezeigt, „Erledigt“, „Schritt zurück“, Sicherheit bestätigt.
 import type { CaseEvent, GuideRun } from '@/model/types';
@@ -18,7 +18,9 @@ const belongs = (run: GuideRun) => (e: CaseEvent) =>
 
 /** Nachrichten einer Anleitung in zeitlicher Reihenfolge */
 export function guideThread(run: GuideRun, events: CaseEvent[], total: number): GuideThreadItem[] {
-  const items: GuideThreadItem[] = [{ kind: 'schritt', at: run.startedAt, key: run.id, step: 0 }];
+  const items: GuideThreadItem[] = [
+    { kind: 'schritt', at: run.startedAt, key: `${run.id}-s0`, step: 0 },
+  ];
   for (const e of events.filter(belongs(run))) {
     const n = Number(e.payload.step); // 1-basiert: der Schritt, in dem es passiert ist
     if (!Number.isFinite(n)) continue;

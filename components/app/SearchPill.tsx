@@ -16,8 +16,7 @@ export function SearchPill({ onPress }: { onPress: () => void }) {
         styles.pill,
         {
           borderRadius: theme.radius.pill,
-          backgroundColor: theme.colors.surfaceCard,
-          borderColor: pressed ? theme.colors.textStrong : theme.colors.borderDefault,
+          backgroundColor: pressed ? theme.colors.borderSubtle : theme.colors.surfaceCard,
         },
       ]}
     >
@@ -38,7 +37,6 @@ const styles = StyleSheet.create({
     gap: 14,
     paddingHorizontal: 20,
     paddingVertical: 8,
-    borderWidth: 1,
   },
   text: { flex: 1 },
 });

@@ -7,11 +7,11 @@ import { CaseScreen, useCaseId } from '@/components/app/CaseScreen';
 import { CostCompare } from '@/components/app/CostCompare';
 import { backToThread, leaveCase } from '@/components/nav/leaveCase';
 import { ActionBar, Button, Card, Disclosure, FactList, Text } from '@/components/ds';
-import { demoConfig } from '@/config/demo.config';
 import { de } from '@/i18n/de';
 import { formatEuro } from '@/i18n/format';
 import { latestDiagnosis } from '@/lib/caseView';
 import { useAppStore } from '@/store/appStore';
+import { insurerShortName } from '@/lib/service';
 
 const t = de.costs;
 const CLAIM_TEXT_VERSION = '2026-10-1';
@@ -30,7 +30,7 @@ export default function Kosten() {
   const finding = c
     ? (latestDiagnosis(state, c, 'fachkraft') ?? latestDiagnosis(state, c, 'betrieb'))
     : undefined;
-  const insurer = demoConfig.insurer.shortName;
+  const insurer = insurerShortName(state, caseId);
   const deductible = formatEuro(state.demo.deductible);
   const replacement = finding?.errorPattern === 'ersatzgeraet_noetig';
 

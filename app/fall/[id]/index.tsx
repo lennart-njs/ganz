@@ -34,11 +34,11 @@ import {
   TextField,
 } from '@/components/ds';
 import { demoConfig } from '@/config/demo.config';
-import { deviceHasGuides, getGuide, guidesForDevice } from '@/lib/guideCatalog';
+import { getGuide, guidesForDevice } from '@/lib/guideCatalog';
 import type { GuideId } from '@/data/guides';
 import { de } from '@/i18n/de';
 import { formatDecimal, formatEuro } from '@/i18n/format';
-import { caseAppliance } from '@/lib/appliance';
+import { caseAppliance, guideForDevice, hasGuides } from '@/lib/appliance';
 import { amountToPay, costsLine, requestAppointment } from '@/lib/booking';
 import { chatLimits } from '@/lib/chat/limits';
 import { retryableChatErrors, useAssistant } from '@/lib/chat/useAssistant';
@@ -46,6 +46,7 @@ import { hasProgress } from '@/lib/caseView';
 import { deviceTitle, getManufacturer } from '@/lib/devices';
 import { guideEnding, guideTools, SAFETY_CONFIRM } from '@/lib/guideMeta';
 import { guideThread, safetyConfirmed } from '@/lib/guideThread';
+import { dealerService, insurerShortName, partnerKind, serviceFor } from '@/lib/service';
 import { toDiagnosis } from '@/lib/diagnosis';
 import type { CaseEvent, Diagnosis } from '@/model/types';
 import { services, type FindingOption, type PhotoMode, type QuestionAnswer } from '@/services';
@@ -97,7 +98,7 @@ export default function FallGespraech() {
   // „Geht nicht“ in der Anleitung: Notiz für die Fachkraft
   const [notWorking, setNotWorking] = useState(false);
   const [note, setNote] = useState('');
-  // Fall an den Händler: erst zeigen, was er sieht, dann senden (Entscheidung 19)
+  // Fall an den Händler: erst zeigen, was er sieht, dann senden (Entscheidung 28)
   const [dealerConfirm, setDealerConfirm] = useState(false);
 
   // Ein Fall ohne Inhalt bleibt nicht liegen, wenn man das Gespräch verlässt
@@ -113,7 +114,7 @@ export default function FallGespraech() {
     if (frage) assistant.send(frage);
     const go = () => {
       if (weiter || frage) router.setParams({ weiter: undefined, frage: undefined });
-      // Die Anleitung läuft im Gespräch (Entscheidung 16), nur die Kamera öffnet sich als Vollbild
+      // Die Anleitung läuft im Gespräch (Entscheidung 25), nur die Kamera öffnet sich als Vollbild
       if (weiter === 'kamera') router.push(`/fall/${caseId}/kamera`);
     };
     // Beim Kaltstart direkt in den Fall ist der Router erst nach dem ersten Rendern bereit
@@ -132,7 +133,7 @@ export default function FallGespraech() {
     setDraft(params.entwurf);
     setInput(params.entwurf);
   }
-  // Foto für den Assistenten: hängt am Eingabefeld, bis du sendest (Entscheidung 17)
+  // Foto für den Assistenten: hängt am Eingabefeld, bis du sendest (Entscheidung 26)
   const [photoParam, setPhotoParam] = useState<string>();
   const [attached, setAttached] = useState<string>();
   if (params.foto && params.foto !== photoParam) {
@@ -170,11 +171,12 @@ export default function FallGespraech() {
   const device = state.devices.find((d) => d.id === c.deviceId);
   const contract = state.contracts.find((k) => k.id === device?.contractId);
   const a = caseAppliance(state, caseId);
-  const insurer = demoConfig.insurer.shortName;
-  const expert = demoConfig.expert.name;
+  const insurer = insurerShortName(state, caseId);
+  const svc = serviceFor(device);
+  const expert = svc.expert.name;
   const manufacturer = device ? getManufacturer(device.manufacturerId).name : '';
   const service = device ? getManufacturer(device.manufacturerId).serviceContact : undefined;
-  const helpPartner = demoConfig.partners.find((p) => p.id === demoConfig.expert.partnerId)!;
+  const helpPartner = svc.expert.partner;
   const diagnoses = c.diagnosisIds
     .map((id) => state.diagnoses.find((d) => d.id === id))
     .filter((d): d is Diagnosis => !!d);
@@ -268,7 +270,8 @@ export default function FallGespraech() {
       actor: { kind: 'haushalt', id: s.persons[0]?.id },
       payload: { question: de.question.wasser, answer: de.question.answers[answer] },
     });
-    const finding = services.diagnosis.answer(answer);
+    const raw = services.diagnosis.answer(answer);
+    const finding = raw ? { ...raw, guideId: guideForDevice(device, raw.guideId) } : null;
     if (!finding) {
       escalate();
       return;
@@ -404,7 +407,7 @@ export default function FallGespraech() {
     if (e.payload.questionEventId) add(e.at, e.id, <UserSaid text={String(e.payload.answer)} />);
   }
 
-  // Fall an den Händler und seine Antworten (Entscheidung 19, 20)
+  // Fall an den Händler und seine Antworten (Entscheidung 28, 29)
   for (const e of of('weitergabe_bestaetigt')) {
     if (e.payload.purpose !== 'weitergabe_haendler') continue;
     const name = String(e.payload.recipient);
@@ -586,7 +589,7 @@ export default function FallGespraech() {
   // Hilfe holen
   for (const e of of('status_geaendert')) {
     if (e.payload.to !== 'eskaliert') continue;
-    add(e.at, e.id, <BotSays lines={[t.helpIntro]} hint={t.helpText} />);
+    add(e.at, e.id, <BotSays lines={[t.helpIntro]} />);
   }
   for (const e of of('problem_besteht_weiter')) {
     add(e.at, e.id, <UserSaid text={t.stillBroken} />);
@@ -647,12 +650,7 @@ export default function FallGespraech() {
     add(
       quote.createdAt,
       quote.id,
-      <BotSays
-        lines={[
-          ...(finding?.component ? [de.talk.claim.intro(finding.component)] : []),
-          replacement ? de.costs.titleReplacement : de.costs.title,
-        ]}
-      >
+      <BotSays lines={[replacement ? de.costs.titleReplacement : de.costs.title]}>
         <View style={styles.full}>
           <CostCompare quote={quote} focus={replacement ? 'replacement' : 'repair'} />
         </View>
@@ -888,11 +886,11 @@ export default function FallGespraech() {
     }
   }
 
-  // Offene Rückfrage des Händlers: Antworten als Buttons (Entscheidung 20)
+  // Offene Rückfrage des Händlers: Antworten als Buttons (Entscheidung 29)
   const dealerQuestion = of('haendler_rueckfrage')
     .filter((q) => !of('rueckfrage_beantwortet').some((a) => a.payload.questionEventId === q.id))
     .at(-1);
-  const dealer = device?.purchasedFrom;
+  const dealer = device?.soldBy;
   const dealerShared = !!state.shares[caseId] && !state.shares[caseId]?.revoked;
 
   if (dealerQuestion && !assistant.waiting) {
@@ -1018,8 +1016,11 @@ export default function FallGespraech() {
     } else {
       tail.push(
         <BotSays key="kosten" sender={false} lines={[]}>
-          <Text variant="bodyLg">{de.costs.noContractText}</Text>
-          <Text variant="title">{de.talk.claim.askNoContract}</Text>
+          <Text variant="title">
+            {dealerService(device)
+              ? de.talk.claim.askDealer(helpPartner.name)
+              : de.talk.claim.askNoContract}
+          </Text>
         </BotSays>,
       );
       reply('selbst', de.costs.toAppointment, () => setPayment('selbst'));
@@ -1046,16 +1047,16 @@ export default function FallGespraech() {
     }
     if (onSite)
       tail.push(<UserSaid key="vorort" text={t.onSite} onEdit={() => setOnSite(false)} />);
-    const partner = demoConfig.partners.find((p) => p.id === partnerId);
+    const partner = svc.partners.find((p) => p.id === partnerId);
     tail.push(<BotSays key="wer" lines={[onSite ? t.diagnosisAsk : de.appointment.titleRepair]} />);
     if (!partner) {
-      for (const p of demoConfig.partners) {
+      for (const p of svc.partners) {
         reply(
           `betrieb-${p.id}`,
           p.name,
           () => setPartnerId(p.id),
           de.common.dot(
-            p.authorized ? de.partner.authorized(manufacturer) : de.partner.independent,
+            partnerKind(p, manufacturer),
             de.partner.distance(formatDecimal(p.distanceKm)),
           ),
         );
@@ -1140,15 +1141,14 @@ export default function FallGespraech() {
     // Hilfe holen: wer welche Daten sieht, steht vor dem Call (B-19)
     tail.push(
       <BotSays key="hilfe" sender={false} lines={[]}>
-        {/* Was die Fachkraft vorab sieht: das echte Protokoll (B-22) */}
+        {/* Ein Satz: wer was sieht (B-19). Alles Weitere unter „Details“ (Entscheidung 20). */}
+        <Text variant="bodyLg">{de.help.shareSummary(expert, helpPartner.name)}</Text>
+        {contract ? (
+          <Text variant="meta">{de.help.costNote(insurer, formatEuro(state.demo.deductible))}</Text>
+        ) : null}
         <View style={styles.full}>
-          <CaseFileCard caseId={caseId} />
-        </View>
-        <View style={styles.full}>
-          <Card>
-            <Text variant="labelStrong" accessibilityRole="header">
-              {de.help.shareTitle(expert, helpPartner.name)}
-            </Text>
+          <Disclosure title={de.help.details}>
+            <Text variant="labelStrong">{de.help.shareTitle(expert, helpPartner.name)}</Text>
             <View style={styles.items}>
               {de.help.shareItems.map((item) => (
                 <Text key={item} variant="body">
@@ -1156,32 +1156,31 @@ export default function FallGespraech() {
                 </Text>
               ))}
             </View>
-            <Text variant="labelStrong" style={styles.gapTop}>
-              {de.help.noRecording}
-            </Text>
+            {/* Was die Fachkraft vorab sieht: das echte Protokoll (B-22) */}
+            <CaseFileCard caseId={caseId} />
+            <Checkbox
+              label={de.help.screenshots}
+              sub={de.help.screenshotsSub}
+              checked={screenshots}
+              onChange={setScreenshots}
+            />
             <Text variant="meta" style={styles.gapTop}>
               {de.help.legalBasis}
             </Text>
-          </Card>
+          </Disclosure>
         </View>
-        <View style={styles.full}>
-          <Checkbox
-            label={de.help.screenshots}
-            sub={de.help.screenshotsSub}
-            checked={screenshots}
-            onChange={setScreenshots}
-          />
-        </View>
-        <InfoBox>
-          {contract
-            ? de.help.costNote(insurer, formatEuro(state.demo.deductible))
-            : de.help.costNoteNoContract}
-        </InfoBox>
       </BotSays>,
     );
     reply('call', t.callStart, startCall, t.callSub);
-    reply('vor-ort', t.onSite, () => setOnSite(true), t.onSiteSub);
-    if (service) {
+    // Mit Händler-Kundendienst kommt dieser, und die Hotline des Herstellers entfällt
+    const viaDealer = !!dealerService(device);
+    reply(
+      'vor-ort',
+      t.onSite,
+      () => setOnSite(true),
+      viaDealer ? t.onSiteSubDealer(helpPartner.name) : t.onSiteSub,
+    );
+    if (service && !viaDealer) {
       reply(
         'kundendienst',
         service.label,
@@ -1233,7 +1232,7 @@ export default function FallGespraech() {
     const guide = d?.guideId ? getGuide(d.guideId) : undefined;
     if (d?.errorPattern === 'geraet_erkannt') {
       reply('foto', de.result.photoDisplay, () => router.push(`/fall/${caseId}/kamera`));
-    } else if (guide && deviceHasGuides(device)) {
+    } else if (guide && hasGuides(device)) {
       reply(
         'anleitung',
         de.result.startGuide,
@@ -1258,7 +1257,7 @@ export default function FallGespraech() {
     }
   }
 
-  // Gekauft beim Händler: Den Fall kannst du ihm senden, sobald Hilfe nötig ist (Entscheidung 19)
+  // Gekauft beim Händler: Den Fall kannst du ihm senden, sobald Hilfe nötig ist (Entscheidung 28)
   const needsHelp =
     c.status === 'eskaliert' ||
     c.status === 'freigabe_noetig' ||
@@ -1396,7 +1395,6 @@ const styles = StyleSheet.create({
     alignItems: 'flex-end',
     gap: 8,
     paddingTop: 10,
-    borderTopWidth: StyleSheet.hairlineWidth,
   },
   inputField: { flex: 1 },
   links: { flexDirection: 'row', flexWrap: 'wrap', columnGap: 16 },

@@ -1,4 +1,4 @@
-# ganz – Haushalts-App (Prototyp)
+# mach’s – Haushalts-App (Prototyp)
 
 Expo SDK 58, React Native 0.88, TypeScript strict, Expo Router. Stand: Schritte 1 bis 14 aus `docs/BUILD_PLAN.md`, dazu das Review nach dem Gerätetest (Layout, Tastatur, Texte je Hausgerät, Reparatur-Assistent).
 
@@ -30,18 +30,31 @@ Der Demo-Modus ist in `config/demo.config.ts` eingeschaltet (`demo.enabled`).
 
 - **Demo-Steuerung öffnen:** Profil → 7-mal schnell auf die Versionsnummer tippen.
 - **Dort einstellen:** Ergebnis der Intelligenten Fehlererkennung (Standard, unsicher, unscharf), Typenschild erkannt oder nicht, Fachkraft frei oder nicht, Freigabe oder Ablehnung, Selbstbeteiligung 0 € oder 50 €.
-- **Hinweise an/aus:** An zeigt schließbare Tipps, „Wartezeit überspringen“, „Nächster Schritt (Demo)“ und die Kennzeichnung „Beispielwerte“. Aus: keine Demo-Spur in der App.
+- **Hinweise an/aus:** Standard ist aus (Entscheidung 21): keine Demo-Spur in der App, Freigabe und Termin laufen per Timer. An zeigt schließbare Tipps, „Wartezeit überspringen“, „Nächster Schritt (Demo)“ und die Kennzeichnung „Beispielwerte“.
 - **Offene Fälle einen Schritt weiter:** schaltet Freigabe, Termin, unterwegs, repariert. Ohne Tap läuft das per Timer (Freigabe 10 s, danach je 5 s).
 - **Alles zurücksetzen:** löscht Geräte, Fälle und Einwilligungen und startet das Onboarding neu.
 
 - **Hell oder dunkel:** Profil → „Darstellung“: Wie System, Hell, Dunkel.
 - **Gespräch und Formular:** Jeder Fall ist ein Gespräch. „Details“ an Ergebnis, Kosten und Termin öffnet die Formular-Ansicht.
 
+### Golden Path für Fründ (Geschirrspüler ohne Versicherung)
+
+1. Onboarding: „Los geht’s“ → Suche „G 5833“ → „Miele G 5833 SC“.
+2. „Versicherung vorhanden?“ → „Nein, keine Versicherung“ → Suche „Fründ“ → „Fründ Elektrogeräte AG“ → „Händler speichern“.
+3. „Was ist kaputt?“ → „Wasser bleibt stehen“. Die Anleitung kommt aus der Gebrauchsanweisung (Quelle mit Seite unter jedem Schritt).
+4. Fünf Schritte „Erledigt“, im Schritt „Ablaufpumpe reinigen“ „Geht nicht“ → „Hilfe holen“.
+5. „Videocall starten“ → Markus T. vom Fründ Kundendienst → Auflegen → Befund → „Passt, weiter“.
+6. „Weiter zum Termin“ → Fründ Kundendienst → Zeitfenster → „Zahlungspflichtig buchen“.
+7. Weiter wie unten ab Schritt 7.
+
+Weitere Geräte im Katalog: Bosch SMI4EAS24E (Geschirrspüler), Miele WQ 1000 WPS (Waschmaschine), Miele WKB 130 (erste Demo).
+
 ### Golden Path für den Pitch (ca. 3 Minuten)
 
 Der ganze Fall ist ein Gespräch. Die Antworten stehen unten, „Details“ zeigt das Formular.
 
-1. Onboarding: „Los geht’s“ → Händler „Elektro Albers“ → „Weiter“ → Vertragsnummer `KV-2023-0471` → „Ja, das ist es“.
+1. Onboarding: „Los geht’s“ → Gerät wählen → „Wo hast du es gekauft?“ Fründ → „Weiter“ → „Zusätzlich eine Versicherung?“ Ja: Kranich, Police-Nr. `KV-2023-0471`.
+   Ohne Versicherung übernimmt der Fründ Kundendienst. In beiden Fällen geht der Fall im Gespräch auch an Fründ („Fall an … senden“, sobald Hilfe nötig ist).
 2. „Was ist kaputt?“ → „Foto machen“ → Auslöser (im Browser: „Beispielfoto nehmen“).
 3. Im Gespräch: Ergebnis „Laugenfilter verstopft“, Sicherheit hoch → „Anleitung starten“.
 4. Die Schritte stehen im Gespräch: viermal „Erledigt“, in Schritt 5 „Geht nicht“ → „Hilfe holen“. Der Stift am letzten „Erledigt“ geht einen Schritt zurück, „Details“ am Schritt zeigt die Großansicht.
@@ -94,5 +107,6 @@ Lint-Regeln: keine Hex-Farben außerhalb von `theme/`, kein Text außerhalb von 
 - `lib/guideCatalog.ts` – Katalog der Anleitungen, `server/guides/` – freigegebene Einträge und Entwürfe
 - `i18n/de.ts` – alle Texte
 - `docs/` – Review, Bauplan, Entscheidungen, Annahmen, Befunde, Datenmodell
-- `design-system/` – ganz-Designsystem (verbindlich)
+- `design-system/` – mach’s-Designsystem (verbindlich), mit Logos unter `assets/logos/`
+- `reference/ganz-design-system/` – früheres ganz-Designsystem, gilt nicht mehr
 - `reference/demo-v1.0/` – Klick-Demo v1.0 (nur Spezifikation)

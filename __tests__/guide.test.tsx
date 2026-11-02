@@ -2,6 +2,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { BackHandler } from 'react-native';
 import { act, fireEvent, renderRouter, screen } from 'expo-router/testing-library';
 
+import { openAll } from '../test/sections';
 import { guides } from '@/data/guides';
 import { de } from '@/i18n/de';
 import { createAppStore, useAppStore } from '@/store/appStore';
@@ -35,7 +36,7 @@ async function openGuide(guideIndex = 1) {
 
 const run = () => Object.values(useAppStore.getState().guideRuns)[0]!;
 
-describe('Anleitung im Gespräch (Entscheidung 16)', () => {
+describe('Anleitung im Gespräch (Entscheidung 25)', () => {
   test('Schritt 4 übersteht den Neustart: ein frischer Store liest ihn aus dem Speicher', async () => {
     const r = await openGuide();
     expect(r.getPathname()).toBe('/fall/GS-24817');
@@ -134,6 +135,7 @@ describe('Anleitung im Gespräch (Entscheidung 16)', () => {
   test('Pflege endet mit „Fertig“ und einem Eintrag im Fall', async () => {
     const device = useAppStore.getState().devices[0]!;
     const r = await renderRouter(APP, { initialUrl: `/geraet/${device.id}` });
+    await openAll();
     await tap(new RegExp(`^${de.maintenance[0]!.title}`));
     expect(r.getPathname()).toBe('/fall/GS-24817');
     await tap(de.guide.done);

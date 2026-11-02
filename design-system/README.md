@@ -1,71 +1,138 @@
-# ganz Design System
+# mach’s Designsystem
 
-ganz ist ein Reparatur-Marktplatz für Haushaltsgeräte (Testphase, Deutschland). Haushalte melden einen Defekt per Text, Fehlercode und Foto. ganz stellt eine Diagnose und löst den Fall auf einem von drei Wegen: Anleitung, Fachkraft per Video oder Fachbetrieb vor Ort. Hersteller und Händler nutzen ganz, um die Reparaturpflicht nach §§ 479a ff. BGB (Richtlinie (EU) 2024/1799, ab 31.07.2026) zu erfüllen. Jeder Fall endet in einer **Fallakte**.
+Quelle: Artifact „mach’s“ (Design System, Stand 29.10.2026). Diese Kopie ist verbindlich für die App (Entscheidung 15). Tokens: `tokens.json`, umgesetzt in `theme/`. Logos: `assets/logos/`. Das frühere ganz-Designsystem liegt unter `reference/ganz-design-system/` und gilt nicht mehr.
 
-**Produkte / Oberflächen**
-- Website: eine Landingpage, drei Zielgruppen (Zu Hause · Hersteller & Handel · Fachbetriebe) hinter einem Umschalter
-- App „Zu Hause“ (iOS): Meldung → Rückfragen → Diagnose → Anleitung / Video / Fachbetrieb → Fallakte → Bewertung
-- Pitchdeck (1920×1080)
+mach’s (machs.io) hilft Haushalten bei kaputten Hausgeräten: Problem melden, selbst lösen mit der Herstelleranleitung, sonst Hilfe holen. Der Look ist eine cleane, native App: weißer Grund, viel Luft, große Fotos, ruhige graue Flächen statt Linien und genau eine Signalfarbe, Blaumann-Blau. Die Bezahler (Versicherer, Händler) erscheinen nur als Kostenträger. Die sichtbare Marke ist mach’s.
 
-**Quellen** (dieses Projekt): `ganz Richtung B.dc.html` (Landingpage, gewählte Richtung), `ganz App Zuhause.dc.html` (App-Prototyp), `ganz Pitchdeck.dc.html`, `uploads/Handover Landingpage ganz.docx`. `Landingpage ganz.dc.html` (Newsreader / Hanken Grotesk / IBM Plex Mono) ist die verworfene Richtung A und **nicht** Teil dieses Systems.
+Diese Regeln gelten für die Haushalts-App (Expo, React Native). Website und Mail-Signatur stehen im Abschnitt **Website und E-Mail**. Die Web-Komponenten hier sind die Referenz. Die App baut sie mit denselben Namen und Props nach.
 
----
+## Sprache
 
-## Content fundamentals
+- Sprich die Nutzerin mit **du** an. Kurze, klare Sätze. Ruhiger Ton.
+- Keine Ausrufezeichen-Euphorie, keine Emojis.
+- Schreib **„mach’s“** immer klein, auch am Satzanfang, mit typografischem Apostroph (’). Die Domain schreibst du **machs.io**, ohne Apostroph.
+- Das Wort **„KI“** und **„AI“** kommt nicht vor. Die Fotodiagnose heißt immer **„Intelligente Fehlererkennung“**.
+- Buttons sind Verb + Objekt oder ein klarer Zustand: „Anleitung starten“, „Erledigt“, „Geht nicht“, „Läuft wieder“, „Läuft noch nicht“, „Videocall starten“, „Schadenfall melden“, „Termin anfragen“. Nie nur „Ja“, „Nein“ oder „Weiter“.
+- Begriffe stehen im Abschnitt **Glossar**. Nimm immer dasselbe Wort für dieselbe Sache.
 
-- **Sprache:** Deutsch. Haushalte werden geduzt („Beschreib, was dein Gerät macht.“), Hersteller und Betriebe gesiezt („Sie bleiben verantwortlich.“). Nie mischen innerhalb einer Fläche.
-- **Ton:** sachlich, konkret, ruhig. Kurze Hauptsätze. Keine Superlative, kein Marketingsprech, keine Ausrufezeichen.
-- **Ehrlich über Grenzen:** Sicherheitsgrenzen werden direkt benannt („Am Kältemittelkreislauf bitte nicht selbst arbeiten.“, „Wann wir dir keine Anleitung geben.“).
-- **Konkret statt abstrakt:** echte Geräte, echte Fehlerbilder, echte Zeiten („Spülmaschine pumpt nicht ab, unten steht Wasser.“, „Do, 10–12 Uhr“).
-- **Überschriften** sind ganze Aussagen mit Punkt („Reparatur, die mit einem Foto beginnt.“). Im Deck: Aussage des Teams in der ersten Person Plural („Wir starten mit …“).
-- **Schreibweise:** Satzbau-Großschreibung, keine VERSALIEN, kein Letterspacing auf Labels. Typografische Anführungszeichen „…“ und Apostroph ’. Daten deutsch: „Mo, 13.10. · 19:42“. Mittelpunkt · als Trenner.
-- **Offene Werte** stehen in eckigen Versalien-Platzhaltern: [PREIS], [BETRIEB], [MODELLNUMMER].
-- **Kein Emoji.** Einzige Glyphe ist ★ in der Bewertung.
-- Das Wort „ganz“ immer klein, auch am Satzanfang.
+Beispiele aus der App:
 
-## Visual foundations
+> Die Kosten prüft Kranich nach dem Befund. Deine Selbstbeteiligung laut Vertrag: 0 €.
 
-- **Farbe:** fast monochrom. Warmer Papiergrund Stone 100 `#F5F4F0`, Tinte `#16181A` für Text und die einzige Primärfarbe. Akzentfarben gibt es nicht; Farbe kommt aus den Fotos. Rot `#C8372D` nur für „Auflegen“ im Videocall.
-- **Typo:** eine Familie, Schibsted Grotesk. Überschriften 500 (Web/App) bzw. 600 (Deck) mit negativem Tracking (-0.02 bis -0.045em), Fließtext 400, UI-Labels 500/600. Labels sind klein (13–15px) und grau, nie Versalien, nie Mono.
-- **Hintergründe:** Seiten auf Stone 100, App-Canvas Stone 150. Dunkle Blöcke (Ink 900) für Sicherheit und Abschluss. Keine Verläufe außer Foto-Scrims (unten oder links, Ink mit 35–92 % Deckkraft), keine Muster oder Texturen.
-- **Bilder:** dokumentarische Fotos echter Situationen: Küche, Hände am Gerät, Monteurin an der Tür, Werkstatt, Lager. Warmes Tageslicht, natürliche Farben, leichte Unschärfe im Hintergrund. Vollflächig im Hero mit Text darauf, sonst randlos oben in Karten (16:10) oder als Hälfte einer Folie.
-- **Karten:** weiß, Radius 14px, kein Rahmen, kein Schatten. Schatten (`--shadow-float`) nur, wenn eine Karte über einem Foto oder einer Farbfläche schwebt. Keine farbigen Seitenränder, keine Icons in Kreisen.
-- **Linien:** Haarlinien 1px für Listen und Tabellen (`--border-subtle` in Karten, `--border-default` auf der Seite). Im Deck beginnt eine Liste mit einer 2px-Tintenlinie, danach 1px Stone 400.
-- **Radien:** 8px für Buttons, Inputs, Chips. 14px für Karten, Fotos, Blöcke. 4px innerer Zipfel bei Chat-Blasen. Pill nur für das Chat-Eingabefeld.
-- **Layout:** max. 1400px, 24px Rand, 104px zwischen Sektionen. Raster mit `auto-fit minmax`. App: 20px Seitenrand, Kopfzeile mit Zurück-Chevron, unten fixierte Aktionsleiste mit einer Primäraktion in voller Breite.
-- **Deck:** 1920×1080, 120px Seitenrand, Titel 64px/600 oben links, Inhalt am unteren Rand (`margin-top:auto`), Fußzeile 24px mit Quelle links und Seitenzahl rechts. Hell (Stone 100) und dunkel (Ink 900) wechseln sich ab; nie mehr als diese zwei Gründe.
-- **Bewegung:** zurückhaltend. Inhalt blendet beim Zielgruppenwechsel 200 ms aus und ein (`ease`). Keine Bounces, keine Parallax-Effekte.
-- **Hover:** Primärbutton Ink 900 → Ink 700. Sekundär: Rahmen wird Tinte. Links: Ink 700. **Press:** keine Skalierung. **Disabled:** 40 % Deckkraft, Hinweis per Toast beim Tippen.
-- **Fokus:** 2px Tinten-Outline, 2px Abstand.
-- **Transparenz/Blur:** nur Scrims auf Fotos und Untertitel-Kästen im Videocall (Ink 78 %). Kein Glas-Effekt.
-- **Trefferflächen:** min. 44px, Primärbuttons 50–52px.
+> Jonas K. (Hausgeräte Brandt) sieht: Gerät, Fotos und deine erledigten Schritte.
 
-## Iconography
+> Der Betrieb bekommt die Original-Laugenpumpe innerhalb von 15 Arbeitstagen. So verlangt es das EU-Ökodesign-Recht.
 
-Es gibt kein Icon-Set. ganz arbeitet mit Wörtern statt Symbolen. Einzige Zeichen, als kleine Inline-SVG (2–2.2px Strich, runde Enden, Ink oder Ink 500): Zurück-Chevron, Weiter-Chevron, Häkchen in der Checkbox, Senden-Pfeil, Auflegen-Hörer. Bewertung mit dem Unicode-Stern ★. Kein Emoji. Wird ein größeres Icon-Set nötig, Lucide (gleiche Strichstärke) verwenden und das hier vermerken.
+### Texte mit rechtlicher Wirkung
 
-**Vermerk App (Phase 2, 26.10.2026):** Die App nutzt ein kleines Lucide-Set (`lucide-react-native`, Strich 2): Zurück, Weiter, Aufklappen, Schließen, Häkchen, Warndreieck (nur mit dem Wort „Achtung“), Tab-Leiste (Haus, Ordner, Person), Kamera, Mikrofon an/aus, Kamera an/aus, Auflegen, Suche, Plus, Stift (Antwort im Gespräch ändern). Jedes Icon steht neben einem Wort oder hat ein Label am Bedienteil. Liste: `components/ds/Icon.tsx`.
+- **Keine Kostenzusage vor der Freigabe.** „Die Kosten prüft …“, nicht „… übernimmt die Kosten“. Bis zur Freigabe heißt es „vorbehaltlich Freigabe“.
+- **Keine Weitergabe ohne Bestätigung.** Vor jedem Videocall, jeder Schadenmeldung und jeder Buchung nennt die App Empfänger und Daten. Die Nutzerin bestätigt mit einem eigenen Button.
+- **Ein Schadenfall entsteht nur durch „Schadenfall melden“.** Nie „wurde automatisch angelegt“.
+- Wird Geld fällig, heißt der Button „Zahlungspflichtig buchen“.
+- Sicherheitshinweise aus der Herstelleranleitung bleiben wörtlich. Sie stehen in `InfoBox` mit `tone="achtung"` **vor** dem Schritttext.
 
-**Logo:** Es gibt keine Logodatei. Die Wortmarke ist „ganz“ in Schibsted Grotesk 600, Tracking -0.03em (Komponente `Wordmark`).
+## Farbe
 
----
+Eine Signalfarbe, sonst Weiß. Das Blau kommt vom Arbeitsanzug, aber die App sieht nicht nach Werkstatt aus.
 
-## Index
+- `accent` (Blaumann-Blau) zeigt, wo es weitergeht und was gewählt ist: Primary Button, Text von Secondary Button und Links, „‹ Zurück“, gewählte Chips, Häkchen, erledigte Schritte, aktiver Tab, Fokusring. Text darauf in `on-accent`.
+- `accent` ist kein Schmuck. Keine blauen Überschriften, keine blauen Flächen ohne Aufgabe, keine Verläufe. Auf einem Screen ist höchstens ein großes blaues Element: der Primary Button.
+- `accent-soft` nur als Fläche des Secondary Buttons.
+- Seitengrund ist `bg`. Text in `ink` (Titel), `body` (Fließtext) und `muted` (Meta).
+- `sunken` ist die Fläche, die ordnet: Groups, Beleg, offener Fall, Eingabefelder, leere Chips, Suchpille, Info-Box, Foto-Platzhalter.
+- Keine dunklen Flächen. `inv` und `on-inv` sind reserviert und werden in der App nicht genutzt. Toast und offener Fall sind hell.
+- Keine Haarlinien. `line` und `line-2` werden nicht mehr für Trenner genutzt.
+- `border-control` nur für den Ring leerer Auswahl-Kreise. Eingabefelder sind gefüllt, ohne Linie.
+- `placeholder` nur für Platzhalter in leeren Feldern.
+- `danger` nur für Fehler in Feldern, immer mit Wort und Icon.
+- `page` nur außerhalb der App (Demo-Rahmen, Pitch).
+- Information steht nie nur in der Farbe. Gewählt heißt immer auch Häkchen; Status heißt immer auch Wort.
+- Dark Mode folgt dem System. Jede Fläche nutzt Tokens, nie feste Hex-Werte.
 
-- `styles.css` – Einstieg, importiert alle Tokens
-- `tokens/` – `fonts.css`, `colors.css`, `typography.css`, `spacing.css` (inkl. Radien), `effects.css` (Schatten, Scrims, Motion)
-- `guidelines/` – Foundation-Karten (Farben, Typo, Abstände, Radien, Elevation, Bildsprache, Wortmarke, Tonalität)
-- `components/`
-  - `core/` Button, Wordmark
-  - `forms/` TextField, Checkbox, ChoiceChip, SegmentedControl
-  - `content/` Card (+ CardTitle, CardText), FactList, Timeline, NavRow
-  - `app/` AppHeader (+ BottomBar), ChatBubble, StepProgress, Toast, StarRating
-- `ui_kits/web/` – Landingpage mit Zielgruppen-Umschalter
-- `ui_kits/app/` – App „Zu Hause“, 6 Screens zum Durchklicken
-- `slides/` – Folientypen: Title, BigNumber, RuledList, SplitImage, Table, Closing
-- `assets/web/`, `assets/app/` – Fotos (KI-generierte Platzhalter, vor Veröffentlichung ersetzen)
-- `SKILL.md` – Nutzung als Agent Skill
-- `ganz-loader.js` – stellt `window.GANZ` bereit (kompiliertes Bundle oder, falls nicht vorhanden, die Komponenten-Quellen im Browser übersetzt); Karten und UI-Kits warten auf `ganzReady`
+## Schrift
 
-### Intentional additions
-- `Wordmark` – es gibt kein Logo; die Wortmarke soll überall gleich gesetzt werden.
+Zwei Familien mit klarer Aufgabe.
+
+- **Display** (`font-display`, Schibsted Grotesk 700, eng gesetzt): nur für die Wortmarke, die eine große Überschrift pro Screen (`large-title`) und die eine wichtige Zahl (`number`). Die Datei liegt unter `fonts/schibsted-grotesk-latin-700-normal.woff2` (SIL Open Font License, siehe `fonts/OFL.txt`). Im Web immer vom eigenen Server laden, nie von Google Fonts.
+- **Text** (`font-text`, Systemschrift: SF Pro auf iOS, Roboto auf Android): alles andere. So fühlt sich die App an wie das Telefon selbst.
+- Hierarchie über Größe und Gewicht, nicht über Farbe: `large-title` 34/700, `title` 22/700, `headline` 17/600, `body` 17/400, `subhead` 15, `footnote` 13. Kein Medium-Einheitsgrau.
+- `body` ist 17 px wie in iOS, nicht 16.
+- Große Überschriften sind kurze Aussagen mit Punkt: „Pumpt nicht ab.“, „Wer zahlt was.“ Keine Fragen als Überschrift, keine Doppelpunkte.
+- Zahlen (Preise, Uhrzeiten, Nummern) immer mit `font-variant-numeric: tabular-nums`.
+- Alles skaliert mit der Systemschrift bis 200 %. Kein Text darf abgeschnitten werden.
+
+## Raum, Radien, Layout
+
+- Seitenrand `space-5`. Abstand zwischen Abschnitten `space-8`. Innerhalb eines Abschnitts `space-2` bis `space-4`. Der Unterschied ist gewollt groß.
+- Alles linksbündig. Zentriert ist nur der kleine Titel in der Kopfzeile und der Text in Buttons.
+- Radien mit Aufgabe: `radius-pill` für alles, was man drückt (Buttons, Chips, Suchpille). `radius-group` für gefüllte Flächen. `radius-photo` für Fotos.
+- Zusammengehöriges steht in einer `Group` (graue Fläche, `radius-group`). In einer Group trennt nur der Abstand, nie eine Linie.
+- Gefüllte Flächen statt Rahmen und Linien. Kein Element hat einen Rahmen oder eine Trennlinie, außer die Achtung-Box.
+- Jeder Screen mit einer Hauptaktion hat unten die `ActionBar`: der Primary Button über volle Breite, darunter optional ein leiser Link.
+- Kopfzeile wie in iOS (`AppHeader`): „‹ Befund“ links, X rechts, großer Titel darunter.
+- Drei Tabs: Geräte, Fälle, Profil (`TabBar`). Ein Fall läuft als modaler Stack ohne Tab-Leiste.
+- Schatten nur beim gewählten Segment, beim Toast und bei Sheets.
+
+## So stellen wir uns dar: der Beleg
+
+Jeder Screen sieht aus wie ein guter Beleg: wenige Posten, klar gerechnet, unten steht, was für dich bleibt.
+
+- **Graue Flächen ordnen, Abstand trennt.** Keine Haarlinien, keine Rahmen, keine Kästen in Kästen. Was zusammengehört, steht in einer `Group`.
+- **Eine Antwort, groß.** Jeder Screen beantwortet eine Frage, und die Antwort ist das größte Element: „Du zahlst 0 €“, das Foto des Schritts, der Termin.
+- **Gerechnet, nicht behauptet.** Geld steht immer als `Receipt`: Posten, was der Kostenträger übernimmt (Minus in `accent`, „nach Freigabe“), und „Du zahlst“. Vergleiche wie „Ein neues Gerät würde 899 € kosten“ stehen klein darunter.
+- **Jede Angabe nur einmal.** Kein Betrag, kein Name doppelt auf einem Screen.
+- **Nebenwege leise.** Ein Primary Button pro Screen. Alles andere ist ein Link in `accent` oder eine Zeile in einer Group, nie ein zweiter loser Absatz.
+- **Hell.** Keine schwarzen Karten, keine dunklen Toasts. Das einzige kräftige Element ist der blaue Button.
+
+## Gestaltung, die nicht generiert aussieht
+
+- **Ein Ding ist groß.** Jeder Screen hat genau ein dominantes Element: das Foto, die Zahl oder die große Überschrift. Alles andere ist deutlich kleiner.
+- **Asymmetrie.** Keine zwei gleich großen Spalten, keine Raster aus drei gleichen Kacheln, keine gleich starken Buttons nebeneinander. Vergleiche stehen als Beleg plus kleiner Satz darunter.
+- **Echter Inhalt statt Etiketten.** „Hausgeräte Brandt kommt Mo, 8 bis 12 Uhr“ statt „Termin: bestätigt“. Keine Füllwörter wie „nahtlos“, „smart“, „mühelos“.
+- **Keine Deko-Icons.** Keine Icons in farbigen Kreisen oder Kacheln, keine Icon-Zeile über jedem Abschnitt. Icons nur, wo sie bedienen: Zurück, Schließen, Suche, Tabs, Häkchen.
+- **Keine Effekte.** Keine Verläufe, kein Glas, kein Glühen, keine farbigen Schatten, keine Karten mit farbigem Rand links.
+- **Native Muster.** Was iOS schon hat (Liste mit Häkchen, Sheet, großer Titel, Zurück mit Name), wird nicht neu erfunden.
+
+Die Beispiel-Screens unter Komponenten (Startseite, Anleitungsschritt, Kosten) zeigen diese Regeln zusammen.
+
+## Clean, nicht Werkstatt
+
+mach’s fühlt sich an wie eine gute iPhone-App, nicht wie ein Baumarkt.
+
+- Keine Texturen, kein Metall, kein Holz, keine Stempel, kein Klebeband, keine Durchschlag-Optik.
+- Keine Schablonen- oder Typenschild-Schriften. Nummern wie M.-Nr. oder Fall-Nummer stehen in `subhead` oder `footnote`, mit Ziffern in fester Breite (`font-variant-numeric: tabular-nums`).
+- Keine Werkzeug-Icons als Deko (Schraubenschlüssel, Hammer, Zahnrad). Ein Werkzeug darf nur erscheinen, wenn die Anleitung es verlangt.
+- Das Handwerk zeigt sich im Inhalt: echte Fotos, genaue Anleitungsschritte, Namen der Fachkräfte. Nie in der Dekoration.
+- Native Muster vor eigenen Erfindungen: gruppierte Listen, Sheets, große Titel, Systemgesten.
+
+## Fotos
+
+- Große Fotos mit `radius-photo`, volle Breite im Seitenrand. Im Anleitungsschritt ist das Foto das größte Element.
+- Echte Markenfotos kommen nach `assets/photos/` (Display, Laugenpumpe, Typenschild, Fachkraft im Videocall, eigenes Bild der Pumpe, Werkstatt, Abschluss, Monteurin). Bis dahin: `PhotoFrame` mit Beschriftung.
+- Keine generierten Fotos in der App.
+- Fotos als Nachweis zeigen Zeitstempel und „in der App aufgenommen“. Kein Import aus der Galerie.
+- Bildsprache: Geräte in echten, hellen Wohnungen, Hände bei der Arbeit, Fachkräfte mit Gesicht. Hell und ruhig, keine dunkle Werkstatt-Stimmung, keine Stockfoto-Posen.
+
+## Ikonografie
+
+- In der App SF Symbols (iOS) und Material Symbols (Android), damit Icons nativ wirken. Die Komponente `Icon` ist nur die Web-Referenz im gleichen Strichstil.
+- Icons stehen neben Text. Ein Icon allein braucht ein Label.
+- Keine Funken, keine Zauberstäbe, keine Emojis, keine Werkzeug-Deko.
+- Icons sind `ink` oder `muted`. Nur der aktive Tab ist `accent`.
+- **Logo:** Die Wortmarke „mach’s“ liegt als Pfade unter **Assets › Logos** (Schwarz, Weiß, Blau). Nutze immer diese Dateien, setz die Wortmarke nicht neu aus der Schrift.
+- **Zeichen und App-Icon:** „m’“, das „m“ in `ink`, der Apostroph in `accent`. Das App-Icon steht auf weißem Grund. Der Apostroph ist das Markenzeichen und das einzige farbige Teil.
+- Kein weißes „m“ auf blauem Quadrat: zu nah an bestehenden Marken.
+
+## Bedienung und Barrierefreiheit
+
+- Jede Trefferfläche ist mindestens `touch-min` (44 pt).
+- Text erreicht mindestens 4,5 : 1, Rahmen und Icons mindestens 3 : 1, in beiden Themes.
+- Fokusring: `focus-width` in `accent`, 2 px Abstand.
+- Jedes Bedienelement hat ein Label und eine Rolle für VoiceOver und TalkBack. Auswahlkarten und Chips sind Radios.
+- Fortschritt und Laden werden angesagt, nicht nur gezeigt.
+- Bewegung nur kurz (unter 200 ms) und aus bei „Bewegung reduzieren“.
+- Haptik beim Auslöser der Kamera und bei „Erledigt“.
+
+## Beispielwerte
+
+Fiktive Namen und Preise bleiben fiktiv und stehen in einer Konfigurationsdatei: Kranich Versicherung, Hausgeräte Brandt, Reparaturwerk Neukölln, Jonas K., 189 € und 899 €. Im Demo-Modus zeigt `Receipt` „Beispielwerte“.

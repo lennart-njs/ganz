@@ -2,7 +2,7 @@
 // Glossar: docs/REVIEW.md Abschnitt 6.
 export const de = {
   app: {
-    name: 'ganz',
+    name: 'mach’s',
   },
   a11y: {
     back: 'Zurück',
@@ -22,6 +22,8 @@ export const de = {
   },
   ds: {
     attention: 'Achtung',
+    expand: 'Aufklappen',
+    collapse: 'Zuklappen',
     confidence: 'Sicherheit',
     confidenceLabel: (level: string) => `Sicherheit: ${level}`,
     confidenceLevel: {
@@ -277,6 +279,7 @@ export const de = {
   partner: {
     authorized: (manufacturer: string) => `${manufacturer}-autorisiert`,
     independent: 'Freie Werkstatt',
+    dealerService: 'Kundendienst deines Händlers',
     distance: (km: string) => `${km} km`,
   },
 
@@ -334,30 +337,17 @@ export const de = {
     welcomePhoto: 'Waschmaschine in einer Küche',
     welcomeTitle: 'Reparatur, die mit einem Foto beginnt.',
     welcomeText:
-      'ganz erkennt, was deinem Haushaltsgerät fehlt, führt dich durch einfache Reparaturen und holt einen Fachbetrieb, wenn es nicht selbst geht.',
+      'mach’s erkennt, was deinem Haushaltsgerät fehlt, führt dich durch einfache Reparaturen und holt einen Fachbetrieb, wenn es nicht selbst geht.',
     privacyTitle: 'Was mit deinen Daten passiert',
     privacyText:
-      'ganz speichert Fotos, Gerätedaten und den Verlauf deiner Fälle auf diesem Gerät. Weitergegeben wird nur, was du vorher bestätigst: an die Fachkraft, den Betrieb oder deinen Versicherer. Jede Einwilligung kannst du im Profil widerrufen.',
+      'mach’s speichert Fotos, Gerätedaten und den Verlauf deiner Fälle auf diesem Gerät. Weitergegeben wird nur, was du vorher bestätigst: an die Fachkraft, den Betrieb oder deinen Versicherer. Jede Einwilligung kannst du im Profil widerrufen.',
     privacyBasis:
-      'Grundlage ist dein Nutzungsvertrag mit ganz (Art. 6 Abs. 1 lit. b DSGVO). Einwilligungen für Zusätzliches fragen wir einzeln.',
+      'Grundlage ist dein Nutzungsvertrag mit mach’s (Art. 6 Abs. 1 lit. b DSGVO). Einwilligungen für Zusätzliches fragen wir einzeln.',
     start: 'Los geht’s',
     testPhase: 'Noch in der Testphase.',
-    // Entscheidung 22: zuerst der Händler, dann die Versicherung
-    dealerTitle: 'Wo hast du das Gerät gekauft?',
-    dealerText:
-      'In den ersten zwei Jahren ist bei einem Defekt zuerst der Händler dran. Wenn du willst, schickt ganz deinen Fall direkt an ihn. Vorher fragen wir dich.',
-    dealerOther: 'Woanders',
-    dealerOtherSub: 'Du kannst den Händler später im Gerät eintragen',
-    dealerUnknown: 'Weiß ich nicht mehr',
-    dealerChoices: 'Händler',
-    next: 'Weiter',
-    extraTitle: 'Hast du zusätzlich eine Versicherung?',
-    extraText:
-      'Zum Beispiel eine Garantieverlängerung oder Geräteversicherung. Dann zeigt ganz dir, was abgedeckt ist.',
-    noExtra: 'Nein, keine Versicherung',
     linkTitle: 'Verknüpf deinen Schutz.',
     linkText:
-      'Hast du einen Geräteschutz, zum Beispiel eine Garantieverlängerung? Dann zeigt ganz dir, was abgedeckt ist.',
+      'Hast du einen Geräteschutz, zum Beispiel eine Garantieverlängerung? Dann zeigt mach’s dir, was abgedeckt ist.',
     viaLabel: 'Womit verknüpfst du?',
     via: { vertragsnummer: 'Vertragsnummer', haendler_code: 'Händler-Code' },
     hint: {
@@ -372,7 +362,7 @@ export const de = {
     checking: 'Wird geprüft',
     link: 'Schutz verknüpfen',
     laterHint:
-      'Ohne Schutz funktioniert ganz auch. Reparaturen zahlst du dann selbst und siehst den Preis vorher.',
+      'Ohne Schutz funktioniert mach’s auch. Reparaturen zahlst du dann selbst und siehst den Preis vorher.',
     linked: (product: string, insurer: string) => `${product} bei ${insurer} verknüpft.`,
     confirmTitle: 'Ist das dein Gerät?',
     confirmText: (insurer: string) => `Dieses Gerät steht in deinem Vertrag bei ${insurer}.`,
@@ -385,16 +375,62 @@ export const de = {
     skipDevice: 'Später hinzufügen',
   },
 
+  /** Gerät anlegen: Gerät wählen, dann Versicherung oder Händler (Entscheidung 16) */
+  setup: {
+    pickTitle: 'Wähl dein Gerät.',
+    pickText:
+      'Für diese Geräte kennen wir die Gebrauchsanweisung und führen dich Schritt für Schritt.',
+    searchLabel: 'Gerät suchen',
+    searchPlaceholder: 'Hersteller oder Modell, z. B. G 5833',
+    catalogSub: (category: string) => `${category} · Anleitungen aus der Gebrauchsanweisung`,
+    noMatch: 'Kein Gerät gefunden. Fotografier das Typenschild oder trag es selbst ein.',
+    scan: 'Typenschild fotografieren',
+    manual: 'Anderes Gerät eintragen',
+    coverageTitle: 'Zusätzlich eine Versicherung?',
+    coverageText: (device: string) => `Zum Beispiel eine Garantieverlängerung für ${device}.`,
+    insured: 'Ja, Versicherung vorhanden',
+    insuredSub: 'Versicherer wählen und Police-Nr. eintragen',
+    notInsured: 'Nein, keine Versicherung',
+    notInsuredSub: 'Händler oder Fachbetrieb kümmern sich',
+    insurerTitle: 'Wähl deinen Versicherer.',
+    insurerSearch: 'Versicherer suchen',
+    insurerPlaceholder: (example: string) => `Name, z. B. ${example}`,
+    policyLabel: 'Police-Nr.',
+    policyHint: 'Steht auf deinem Versicherungsschein.',
+    policyEmpty: 'Gib zuerst die Police-Nr. ein.',
+    pickInsurerFirst: 'Wähl zuerst deinen Versicherer.',
+    savePolicy: 'Versicherung speichern',
+    dealerTitle: 'Wo hast du es gekauft?',
+    dealerText: 'Hat der Händler einen eigenen Kundendienst, kümmert er sich um deinen Fall.',
+    dealerSearch: 'Händler suchen',
+    dealerPlaceholder: (example: string) => `Name oder Ort, z. B. ${example}`,
+    dealerService: (place: string, service: string) => `${place} · Kundendienst: ${service}`,
+    dealerUnknown: 'Weiß ich nicht mehr',
+    dealerUnknownSub: 'Dann holen wir einen Fachbetrieb in deiner Nähe',
+    pickDealerFirst: 'Wähl zuerst einen Händler oder „Weiß ich nicht mehr“.',
+    saveDealer: 'Weiter',
+    nothingFound: 'Nichts gefunden. Prüf die Schreibweise.',
+  },
+
+  coverage: {
+    productDefault: 'Geräteversicherung',
+    dealer: 'Gekauft bei',
+    dealerUnknown: 'Händler unbekannt',
+    insurer: 'Versichert bei',
+    policy: 'Police-Nr.',
+    change: 'Versicherung oder Händler ändern',
+  },
+
   home: {
     searchTitle: 'Was ist kaputt?',
     searchSub: 'Foto, Meldung oder Symptom',
     myDevices: 'Deine Geräte',
     protectionActive: 'Geräteschutz aktiv',
     addDevice: 'Gerät hinzufügen',
-    addDeviceSub: 'Typenschild fotografieren',
+    addDeviceSub: 'Aus der Liste oder per Typenschild',
     emptyTitle: 'Noch kein Gerät',
     emptyText:
-      'Füg dein erstes Gerät hinzu. Dann führt dich ganz bei Problemen Schritt für Schritt.',
+      'Füg dein erstes Gerät hinzu. Dann führt dich mach’s bei Problemen Schritt für Schritt.',
     openCase: 'Offener Fall',
     caseNumber: (id: string) => `Fall ${id}`,
     openCaseLabel: (id: string) => `Offener Fall · Fall ${id}`,
@@ -429,6 +465,10 @@ export const de = {
       number: 'Vertrag',
     },
     noProtection: 'Kein Schutz verknüpft',
+    count: (n: number) => (n === 1 ? '1 Anleitung' : `${n} Anleitungen`),
+    casesCount: (n: number) => (n === 1 ? '1 Fall' : `${n} Fälle`),
+    casesCountShared: (n: number) =>
+      n === 0 ? 'Nichts weitergegeben' : n === 1 ? '1 Weitergabe' : `${n} Weitergaben`,
     noProtectionText: 'Reparaturen zahlst du selbst. Den Preis siehst du vorher.',
     deviceFacts: {
       manufacturer: 'Hersteller',
@@ -437,7 +477,6 @@ export const de = {
       materialNumber: 'M.-Nr.',
       serialNumber: 'Fabrik-Nr.',
       purchased: 'Gekauft',
-      purchasedFrom: 'Gekauft bei',
     },
     guideSource: (source: string) => `Aus der ${source}`,
     noGuides:
@@ -474,7 +513,7 @@ export const de = {
   },
 
   camera: {
-    permissionTitle: 'ganz braucht deine Kamera.',
+    permissionTitle: 'mach’s braucht deine Kamera.',
     permissionText:
       'Damit fotografierst du Display, Typenschild oder Bauteil. Die Fotos bleiben in deinem Fall. Aus der Galerie laden geht nicht, damit jedes Foto als Nachweis zählt.',
     allow: 'Kamera erlauben',
@@ -510,7 +549,7 @@ export const de = {
     otherTooShort: 'Schreib bitte ein paar Worte dazu.',
     getHelp: 'Hilfe holen',
     photoLabel: 'Foto',
-    noDevice: 'Füg zuerst ein Gerät hinzu. Dann führt ganz dich durch die Lösung.',
+    noDevice: 'Füg zuerst ein Gerät hinzu. Dann führt mach’s dich durch die Lösung.',
     forDevice: (name: string) => `Für ${name}`,
   },
 
@@ -615,6 +654,8 @@ export const de = {
     noSelf: 'Nicht selbst lösbar',
     noSelfSub: (manufacturer: string) => `laut Anleitung von ${manufacturer}`,
     youNeed: 'Du brauchst',
+    /** Einmal im ersten Schritt (Entscheidung 20). Seite und Originaltext stehen in der Fallakte. */
+    sourceShort: (document: string) => `Aus der ${document}`,
     beforeTitle: 'Bevor du anfängst',
     done: 'Erledigt',
     notWorking: 'Geht nicht',
@@ -633,6 +674,7 @@ export const de = {
     notePlaceholder: 'z. B. Der Filter lässt sich nicht drehen.',
     missing: 'Diese Anleitung gibt es nicht mehr.',
     sourceDocument: (doc: string) => `Quelle: ${doc}`,
+    sourcePage: (doc: string, page: number) => `Quelle: ${doc}, Seite ${page}`,
   },
 
   help: {
@@ -654,6 +696,9 @@ export const de = {
     abortedAt: (step: number, title: string) => `Ging nicht bei Schritt ${step}: ${title}`,
     notStarted: 'Anleitung nicht gestartet',
     shareTitle: (expert: string, company: string) => `Das sieht ${expert} (${company})`,
+    shareSummary: (expert: string, company: string) =>
+      `${expert} (${company}) sieht Gerät, Fotos und deine erledigten Schritte. Keine Aufnahme.`,
+    details: 'Details',
     shareItems: [
       'Gerät und Modell',
       'Fotos aus diesem Fall',
@@ -753,6 +798,8 @@ export const de = {
     replacement: 'Ersatzgerät',
     replacementSub: 'vergleichbares Modell',
     saving: (amount: string) => `Ersparnis in diesem Fall: ${amount}`,
+    compareNew: (replacement: string, saving: string) =>
+      `Ein neues Gerät würde ${replacement} kosten. Ersparnis in diesem Fall: ${saving}.`,
     payer: 'Das zahlt',
     payerValue: (insurer: string) => `${insurer}, vorbehaltlich Freigabe`,
     payerSelf: 'Du selbst',
@@ -918,8 +965,12 @@ export const de = {
     sharedLine: (recipient: string, date: string) => `${recipient} · ${date}`,
     revoked: (date: string) => `widerrufen am ${date}`,
     none: 'Noch nichts weitergegeben.',
+    overview: 'Überblick',
+    eventsCount: (n: number) => (n === 1 ? '1 Eintrag' : `${n} Einträge`),
     event: {
       step: (n: number, title: string) => `Schritt ${n}: ${title}`,
+      stepPage: (n: number, title: string, page: number) =>
+        `Schritt ${n}: ${title} · Gebrauchsanweisung Seite ${page}`,
       guide: (title: string) => `Anleitung: ${title}`,
       outcome: {
         laeuft_wieder: 'Läuft wieder',
@@ -942,7 +993,7 @@ export const de = {
     },
   },
 
-  /** Gespräche: ganz fragt, Antworten stehen unten */
+  /** Gespräche: mach’s fragt, Antworten stehen unten */
   talk: {
     replies: 'Antworten',
     edit: (answer: string) => `Antwort ändern: ${answer}`,
@@ -951,7 +1002,7 @@ export const de = {
       forDevice: (name: string) => `Es geht um deine ${name}.`,
       addDevice: 'Anderes Gerät hinzufügen',
       whatsUp: 'Was ist los?',
-      whatsUpHint: 'Wähl unten, was passt. Am schnellsten geht es mit einem Foto.',
+      whatsUpHint: 'Wähl unten, was passt.',
       whatsUpNoGuides:
         'Wähl unten, was passt. Für dieses Gerät holen wir dir gleich eine Fachkraft dazu.',
       whichMessage: 'Was steht im Display?',
@@ -975,6 +1026,7 @@ export const de = {
         `Lehnt ${insurer} ab, entscheidest du neu. Der Kostenvoranschlag bleibt in deiner Fallakte.`,
       ask: (insurer: string) => `Willst du den Schadenfall an ${insurer} melden?`,
       askNoContract: 'Sollen wir einen Fachbetrieb für die Reparatur suchen?',
+      askDealer: (service: string) => `Soll ${service} die Reparatur übernehmen?`,
       reported: (insurer: string) =>
         `Gemeldet. ${insurer} prüft die Kosten. Den Termin kannst du schon anfragen.`,
       selfPay: (amount: string) => `Gut. Du zahlst die Reparatur selbst: ${amount}.`,
@@ -1007,6 +1059,7 @@ export const de = {
     callSub: 'Wartezeit ca. 1 Minute',
     onSite: 'Vor-Ort-Diagnose',
     onSiteSub: 'Ein Fachbetrieb kommt und schaut es sich an',
+    onSiteSubDealer: (service: string) => `${service} kommt und schaut es sich an`,
     callEnded: (expert: string) => `Videocall mit ${expert} beendet.`,
     callAborted: 'Videocall abgebrochen.',
     callbackAsk: 'Wann passt der Rückruf?',
@@ -1040,7 +1093,7 @@ export const de = {
     newProblem: 'Neues Problem melden',
     newProblemReason: 'Neues Problem gemeldet',
     inputLabel: 'Schreib dem Reparatur-Assistenten',
-    inputHint: 'Frag etwas oder beschreib dein Problem in eigenen Worten.',
+    inputHint: 'Oder beschreib es in eigenen Worten.',
     noteFallback:
       'Der Assistent ist gerade nicht erreichbar. Deine Nachricht geht als Notiz an die Fachkraft.',
     noteQuestion: 'Notiz an die Fachkraft',
@@ -1088,7 +1141,7 @@ export const de = {
     stepDraft: (step: number, title: string) => `Ich hänge bei Schritt ${step}: ${title}. `,
     fileTitle: 'Reparatur-Assistent',
     fileCount: (n: number) => (n === 1 ? '1 Nachricht' : `${n} Nachrichten`),
-    // Foto im Gespräch (Entscheidung 17)
+    // Foto im Gespräch (Entscheidung 26)
     photoButton: 'Foto für den Assistenten aufnehmen',
     photoHelp: 'Halte die Kamera auf die Stelle, um die es geht. Mit Licht und nah dran.',
     photoAttached: 'Foto angehängt',
@@ -1106,7 +1159,7 @@ export const de = {
     },
   },
 
-  // Fall an den Händler (Entscheidung 19, 20)
+  // Fall an den Händler (Entscheidung 28, 29)
   sharing: {
     actor: {
       haushalt: 'Haushalt',
@@ -1161,7 +1214,7 @@ export const de = {
     },
   },
 
-  // Händlerportal (portal/, Entscheidung 21). Marke machs.io. Gesiezt, keine Erklärtexte.
+  // Händlerportal (portal/, Entscheidung 30). Marke machs.io. Gesiezt, keine Erklärtexte.
   portal: {
     brand: 'machs.io',
     title: 'Händlerportal',
@@ -1279,10 +1332,12 @@ export const de = {
     notificationsSub: 'Wenn sich bei Freigabe oder Termin etwas ändert.',
     notificationsDenied: 'In den Einstellungen deines Telefons ausgeschaltet.',
     appearance: 'Darstellung',
+    consentsCount: (n: number) => (n === 0 ? 'Keine aktiv' : n === 1 ? '1 aktiv' : `${n} aktiv`),
+    optionalCount: (n: number) => (n === 0 ? 'Alles aus' : n === 1 ? '1 an' : `${n} an`),
     appearanceOptions: { system: 'Wie System', hell: 'Hell', dunkel: 'Dunkel' },
     privacy: 'Datenschutz',
     privacyText:
-      'Verantwortlich ist ganz. Wir speichern Fotos, Gerätedaten, Schritte und Befunde zu deinen Fällen. Weitergegeben wird nur, was du vorher bestätigst. Du hast das Recht auf Auskunft, Berichtigung, Löschung und Widerspruch.',
+      'Verantwortlich ist mach’s. Wir speichern Fotos, Gerätedaten, Schritte und Befunde zu deinen Fällen. Weitergegeben wird nur, was du vorher bestätigst. Du hast das Recht auf Auskunft, Berichtigung, Löschung und Widerspruch.',
     version: (v: string) => `Version ${v}`,
     demo: 'Demo',
   },
@@ -1295,8 +1350,7 @@ export const de = {
     problem: 'Tippe auf „Foto machen“ oder wähle „Display zeigt eine Meldung“.',
     kamera: 'Wähle, was du fotografierst, und tippe auf den Auslöser.',
     ergebnis: 'Starte die Anleitung. „Passt nicht“ führt zurück.',
-    anleitung:
-      'Tippe dich mit „Erledigt“ durch. In Schritt 5 zeigt „Geht nicht“, wie ganz Hilfe holt.',
+    anleitung: 'Tippe dich mit „Erledigt“ durch. „Geht nicht“ zeigt, wie mach’s Hilfe holt.',
     hilfe: 'Starte den Videocall. Vorher steht, wer welche Daten sieht.',
     kosten: 'Klapp „Das geht an …“ auf: So kommt der Fall beim Versicherer an.',
     status: 'Mit „Nächster Schritt (Demo)“ springst du durch Freigabe und Termin.',

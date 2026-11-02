@@ -1,5 +1,5 @@
 // Welches Backend läuft. Heute: Dateispeicher. Hier wird später die Datenbank eingesetzt
-// (Anbieter entscheidet Lennart, Entscheidung 21).
+// (Anbieter entscheidet Lennart, Entscheidung 30).
 import path from 'node:path';
 
 import { FileCaseStore } from './fileStore';

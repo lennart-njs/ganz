@@ -12,7 +12,10 @@ const f = de.file.event;
 function stepTitle(e: CaseEvent): string | undefined {
   const guide = getGuide(String(e.payload.guideId));
   const n = Number(e.payload.step);
-  return guide && n ? f.step(n, guide.steps[n - 1]?.t ?? '') : undefined;
+  if (!guide || !n) return undefined;
+  const s = guide.steps[n - 1];
+  // In der Fallakte steht die Seite der Gebrauchsanweisung (Entscheidung 20)
+  return s?.src ? f.stepPage(n, s.t, s.src.page) : f.step(n, s?.t ?? '');
 }
 
 export function eventLabel(e: CaseEvent): string {
@@ -22,7 +25,10 @@ export function eventLabel(e: CaseEvent): string {
   switch (e.type) {
     case 'anleitung_gestartet':
       detail = getGuide(String(p.guideId))
-        ? f.guide(getGuide(String(p.guideId))?.title ?? '')
+        ? de.common.dot(
+            f.guide(getGuide(String(p.guideId))?.title ?? ''),
+            getGuide(String(p.guideId))?.sourceDocument ?? '',
+          )
         : undefined;
       break;
     case 'schritt_erledigt':
@@ -51,7 +57,8 @@ export function eventLabel(e: CaseEvent): string {
       detail = [
         f.decision[p.result as keyof typeof f.decision],
         f.by[p.actor as keyof typeof f.by],
-        demoConfig.insurer.shortName,
+        demoConfig.insurers.find((i) => i.name === e.actor.name)?.shortName ??
+          demoConfig.insurer.shortName,
       ]
         .filter(Boolean)
         .join(' · ');

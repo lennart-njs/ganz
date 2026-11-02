@@ -1,4 +1,4 @@
-// Katalog auf dem Server (Entscheidung 15). Liest freigegebene Einträge aus server/guides/catalog/*.json.
+// Katalog auf dem Server (Entscheidung 24). Liest freigegebene Einträge aus server/guides/catalog/*.json.
 // Entwürfe aus dem Import liegen in server/guides/drafts/ und zählen erst nach der Freigabe
 // (scripts/guides-approve.mjs verschiebt sie hierher). Nur auf dem Server, nie im App-Bundle.
 import fs from 'node:fs';

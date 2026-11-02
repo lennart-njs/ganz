@@ -36,7 +36,7 @@ async function portalToken() {
   const res = await login(
     req('/api/v1/portal/anmelden', {
       method: 'POST',
-      json: { email: demoConfig.dealer.portalUser, password: 'demo' },
+      json: { email: demoConfig.dealers[0]!.portalUser!, password: 'demo' },
     }),
   );
   return ((await res.json()) as { token: string }).token;
@@ -49,7 +49,7 @@ beforeEach(() => {
 });
 afterEach(() => setCaseStore(undefined));
 
-describe('Demo-Backend: Fall an den Händler (Entscheidung 19)', () => {
+describe('Demo-Backend: Fall an den Händler (Entscheidung 28)', () => {
   test('ganzer Weg: teilen, im Portal sehen, Rückfrage, in der App abrufen, widerrufen', async () => {
     const shared = await share(req('/api/v1/faelle', { method: 'POST', json: { file: file() } }));
     expect(shared.status).toBe(200);
@@ -126,7 +126,7 @@ describe('Demo-Backend: Fall an den Händler (Entscheidung 19)', () => {
     const bad = await login(
       req('/api/v1/portal/anmelden', {
         method: 'POST',
-        json: { email: demoConfig.dealer.portalUser, password: 'falsch' },
+        json: { email: demoConfig.dealers[0]!.portalUser!, password: 'falsch' },
       }),
     );
     expect(bad.status).toBe(401);

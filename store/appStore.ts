@@ -7,6 +7,7 @@ import { demoConfig } from '@/config/demo.config';
 import { de } from '@/i18n/de';
 import { caseAppliance, caseCategory, findingPattern } from '@/lib/appliance';
 import { registerCatalogEntry } from '@/lib/guideCatalog';
+import { caseService, insurerName, insurerShortName } from '@/lib/service';
 import { notifications } from '@/services/notifications';
 import {
   applyCommand,
@@ -45,7 +46,7 @@ import type {
 
 import { defaultEnv, type StoreEnv } from './env';
 
-export const STORE_KEY = 'ganz-app';
+export const STORE_KEY = 'machs-app';
 export const STORE_VERSION = 1;
 
 /** Einstellungen für Pitch und Tests. Steuerung im Profil (Schritt 13). */
@@ -86,8 +87,6 @@ export interface AppData {
   /** Lokale Mitteilungen: erst nach dem Systemdialog, der nach „Termin anfragen“ kommt */
   notifications: NotificationSetting;
   household?: Household;
-  /** Antwort aus dem Onboarding: Wo gekauft? Gilt für die Geräte, die im Onboarding dazukommen. */
-  onboardingDealer?: PartnerRef;
   persons: Person[];
   contracts: Contract[];
   devices: Device[];
@@ -102,9 +101,9 @@ export interface AppData {
   videoSessions: VideoSession[];
   /** Gespräche mit dem Reparatur-Assistenten, je Fall */
   chatMessages: ChatMessage[];
-  /** Freigegebene Katalog-Einträge vom Server (Entscheidung 15). Der Demo-Eintrag ist eingebaut. */
+  /** Freigegebene Katalog-Einträge vom Server (Entscheidung 24). Der Demo-Eintrag ist eingebaut. */
   guideCatalog: GuideCatalogEntry[];
-  /** Fälle, die an den Händler gesendet wurden (Entscheidung 19), je Fall */
+  /** Fälle, die an den Händler gesendet wurden (Entscheidung 28), je Fall */
   shares: Record<Id, CaseShare>;
   nextCaseNumber: number;
 }
@@ -133,8 +132,6 @@ export interface AppActions {
   /** Legt Haushalt und Person beim ersten Start an. Idempotent. */
   ensureHousehold: () => Person;
   completeOnboarding: () => void;
-  /** Onboarding: Händler, bei dem das Gerät gekauft wurde. undefined: woanders oder unbekannt. */
-  setOnboardingDealer: (dealer: PartnerRef | undefined) => void;
   /** Freigegebenen Katalog-Eintrag aufnehmen. Entwürfe werden ignoriert. */
   addCatalogEntry: (entry: GuideCatalogEntry) => void;
   /** Fall an den Händler: Bestätigung speichern (lit. b). Senden übernimmt useShareSync. */
@@ -145,6 +142,10 @@ export interface AppActions {
   /** Legt den Vertrag aus der Konfiguration an (nach erfolgreicher Prüfung). */
   linkContract: (via: Contract['linkedVia']) => Contract;
   addDevice: (input: NewDevice) => Device;
+  /** Versicherung zum Gerät: Versicherer aus der Liste und Police-Nr. (Entscheidung 16) */
+  linkPolicy: (input: { deviceId: Id; insurerId: string; policyNumber: string }) => Contract;
+  /** Ohne Versicherung: Händler, bei dem das Gerät gekauft wurde. undefined: weiß ich nicht. */
+  setDeviceDealer: (deviceId: Id, dealerId: string | undefined) => void;
   setDemo: (patch: Partial<DemoSettings>) => void;
   createCase: (input: { deviceId: Id; entry: CaseEntry; problemLabel: string }) => Case;
   runCommand: (caseId: Id, command: CaseCommand, options?: CommandOptions) => Case;
@@ -276,17 +277,15 @@ export function createAppStore(storage: StateStorage = AsyncStorage, env: StoreE
 
           completeOnboarding: () => set({ onboardingDone: true }),
 
-          setOnboardingDealer: (dealer) => set({ onboardingDealer: dealer }),
-
           shareWithDealer: (caseId, textVersion) => {
             const c = get().cases[caseId];
             const device = get().devices.find((d) => d.id === c?.deviceId);
-            if (!c || !device?.purchasedFrom) return undefined;
+            if (!c || !device?.soldBy) return undefined;
             const consent = get().grantConsent({
               caseId,
               purpose: 'weitergabe_haendler',
               legalBasis: 'vertrag',
-              recipient: device.purchasedFrom,
+              recipient: device.soldBy,
               dataCategories: [...de.consentData.haendler],
               textVersion,
             });
@@ -370,13 +369,8 @@ export function createAppStore(storage: StateStorage = AsyncStorage, env: StoreE
 
           addDevice: (input) => {
             person();
-            const s = get();
-            // Im Onboarding gilt die Antwort auf „Wo hast du es gekauft?“
-            const purchasedFrom =
-              input.purchasedFrom ?? (s.onboardingDone ? undefined : s.onboardingDealer);
             const device: Device = {
               ...input,
-              ...(purchasedFrom ? { purchasedFrom } : {}),
               id: env.newId('geraet'),
               householdId: get().household?.id ?? '',
               createdAt: env.now(),
@@ -390,6 +384,54 @@ export function createAppStore(storage: StateStorage = AsyncStorage, env: StoreE
               ),
             }));
             return device;
+          },
+
+          linkPolicy: ({ deviceId, insurerId, policyNumber }) => {
+            const p = person();
+            const now = env.now();
+            const cfg = demoConfig;
+            const isDemoInsurer = insurerId === cfg.insurer.id;
+            const insurer = isDemoInsurer
+              ? cfg.insurer
+              : (cfg.insurers.find((i) => i.id === insurerId) ?? cfg.insurer);
+            const contract: Contract = {
+              id: env.newId('vertrag'),
+              householdId: get().household?.id ?? '',
+              kind: isDemoInsurer ? cfg.contract.kind : 'geraeteversicherung',
+              provider: { id: insurer.id, kind: 'versicherer', name: insurer.name },
+              productName: isDemoInsurer ? cfg.contract.productName : de.coverage.productDefault,
+              contractNumber: policyNumber.trim(),
+              policyholderId: p.id,
+              validFrom: cfg.contract.validFrom,
+              validUntil: cfg.contract.validUntil,
+              deductible: get().demo.deductible,
+              coveredDeviceIds: [deviceId],
+              linkedVia: 'vertragsnummer',
+              linkedAt: now,
+            };
+            set((s) => ({
+              contracts: [...s.contracts, contract],
+              devices: s.devices.map((d) =>
+                d.id === deviceId ? { ...d, contractId: contract.id } : d,
+              ),
+            }));
+            return contract;
+          },
+
+          setDeviceDealer: (deviceId, dealerId) => {
+            const dealer = demoConfig.dealers.find((d) => d.id === dealerId);
+            set((s) => ({
+              devices: s.devices.map((d) =>
+                d.id === deviceId
+                  ? {
+                      ...d,
+                      soldBy: dealer
+                        ? { id: dealer.id, kind: 'haendler', name: dealer.name }
+                        : undefined,
+                    }
+                  : d,
+              ),
+            }));
           },
 
           setDemo: (patch) =>
@@ -700,14 +742,14 @@ export function createAppStore(storage: StateStorage = AsyncStorage, env: StoreE
             if (!canStartVideoCall(get().consents, c.reportedBy, caseId)) {
               throw new ConsentRequiredError('weitergabe_fachkraft');
             }
-            const cfg = demoConfig;
-            const partner = cfg.partners.find((p) => p.id === cfg.expert.partnerId)!;
+            const { expert } = caseService(get(), caseId);
+            const partner = expert.partner;
             const now = env.now();
             const session: VideoSession = {
               id: env.newId('video'),
               caseId,
               expert: {
-                name: cfg.expert.name,
+                name: expert.name,
                 provider: { id: partner.id, kind: 'betrieb', name: partner.name },
               },
               requestedAt: now,
@@ -766,7 +808,8 @@ export function createAppStore(storage: StateStorage = AsyncStorage, env: StoreE
           setFinding: (caseId, option, by) => {
             const cfg = demoConfig;
             const c = getCase(caseId);
-            const actorName = by === 'fachkraft' ? cfg.expert.name : cfg.partners[0]!.name;
+            const svc = caseService(get(), caseId);
+            const actorName = by === 'fachkraft' ? svc.expert.name : svc.partners[0]!.name;
             const d = get().addDiagnosis({
               caseId,
               photoIds: [],
@@ -855,7 +898,7 @@ export function createAppStore(storage: StateStorage = AsyncStorage, env: StoreE
             if (kind === 'ersatzteil_versand' && pumpOrSensor) {
               throw new Error(`${partName} bestellt und baut immer der Betrieb ein`);
             }
-            const partner = demoConfig.partners.find((p) => p.id === partnerId);
+            const partner = caseService(get(), caseId).partners.find((p) => p.id === partnerId);
             if (!partner) throw new Error(`Betrieb nicht gefunden: ${partnerId}`);
             let c = getCase(caseId);
             if (selfPay && canTransition(c.status, 'selbst_zahlen')) {
@@ -914,7 +957,7 @@ export function createAppStore(storage: StateStorage = AsyncStorage, env: StoreE
             const c = get().cases[caseId];
             if (!c) return false;
             const booking = activeBooking(get(), caseId);
-            const insurer = cfg.insurer.shortName;
+            const insurer = insurerShortName(get(), caseId);
             const partner = booking?.provider.name ?? '';
             const notify = (msg: { title: string; body: string }) => {
               if (get().notifications === 'erlaubt')
@@ -930,7 +973,7 @@ export function createAppStore(storage: StateStorage = AsyncStorage, env: StoreE
               const approve = get().demo.claimScenario === 'freigeben';
               const quote = get().quotes.find((q) => q.id === c.quoteId);
               get().runCommand(caseId, approve ? 'freigabe_erteilt' : 'freigabe_abgelehnt', {
-                actor: { kind: 'versicherer', name: cfg.insurer.name },
+                actor: { kind: 'versicherer', name: insurerName(get(), caseId) },
                 decisionActor: 'mensch',
                 approvedAmount: approve ? quote?.repair.total : undefined,
               });
@@ -1099,8 +1142,7 @@ export function createAppStore(storage: StateStorage = AsyncStorage, env: StoreE
           },
 
           // Die Darstellung ist eine Einstellung des Telefons, kein Demo-Stand
-          reset: () =>
-            set({ ...initialData, onboardingDealer: undefined, appearance: get().appearance }),
+          reset: () => set({ ...initialData, appearance: get().appearance }),
         };
       },
       {
@@ -1120,7 +1162,6 @@ export function createAppStore(storage: StateStorage = AsyncStorage, env: StoreE
           demo: s.demo,
           notifications: s.notifications,
           household: s.household,
-          onboardingDealer: s.onboardingDealer,
           persons: s.persons,
           contracts: s.contracts,
           devices: s.devices,

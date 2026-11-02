@@ -177,7 +177,7 @@ describe('Barrierefreiheit: jedes Bedienteil hat Rolle, Label und 44 pt', () => 
     expect(check(route)).toEqual([]);
   });
 
-  test.each(['/willkommen', '/haendler', '/schutz', '/geraet-bestaetigen', '/typenschild'])(
+  test.each(['/willkommen', '/schutz', '/geraet-bestaetigen', '/typenschild'])(
     'Onboarding %s',
     async (route) => {
       useAppStore.getState().reset();

@@ -1,19 +1,21 @@
 {
   "expo": {
-    "name": "ganz",
-    "slug": "ganz",
+    "name": "mach’s",
+    "slug": "machs",
     "version": "0.1.0",
     "orientation": "portrait",
-    "scheme": "ganz",
+    "scheme": "machs",
     "userInterfaceStyle": "automatic",
     "ios": {
-      "supportsTablet": false
+      "supportsTablet": false,
+      "bundleIdentifier": "io.machs.app"
     },
     "android": {
       "predictiveBackGestureEnabled": false
     },
     "web": {
-      "output": "server"
+      "output": "server",
+      "favicon": "./assets/brand/icon.png"
     },
     "plugins": [
       "expo-router",
@@ -21,11 +23,12 @@
       [
         "expo-camera",
         {
-          "cameraPermission": "ganz nutzt die Kamera für Fotos von Display, Typenschild und Bauteil. Die Fotos bleiben in deinem Fall.",
+          "cameraPermission": "mach’s nutzt die Kamera für Fotos von Display, Typenschild und Bauteil. Die Fotos bleiben in deinem Fall.",
           "microphonePermission": false,
           "recordAudioAndroid": false
         }
       ]
-    ]
+    ],
+    "icon": "./assets/brand/icon.png"
   }
 }

@@ -11,7 +11,7 @@ import {
   replySchemaFor,
   type ChatTurn,
 } from '@/lib/chat/prompt';
-import { findCatalogEntry } from '@/lib/guideCatalog';
+import { findCatalogEntry, guidesForDevice } from '@/lib/guideCatalog';
 import { loadApprovedCatalog } from '@/server/guides/catalogStore';
 
 const MODEL = 'claude-opus-5-5';
@@ -58,13 +58,14 @@ export async function POST(request: Request): Promise<Response> {
   // Nur geprüfte Anleitungen für genau dieses Gerät, aus dem Katalog des Servers (Entscheidung 15)
   loadApprovedCatalog();
   const ctx = input.context;
-  const entry = findCatalogEntry({
+  const device = {
     manufacturerId: ctx.manufacturerId,
     category: ctx.category,
     model: ctx.device,
     materialNumber: ctx.materialNumber,
-  });
-  const guides = entry?.guides ?? [];
+  };
+  const entry = findCatalogEntry(device);
+  const guides = guidesForDevice(device);
   const guideIds = guides.map((g) => g.id);
 
   try {
@@ -99,7 +100,7 @@ export async function POST(request: Request): Promise<Response> {
       .filter((b): b is Anthropic.Beta.BetaTextBlock => b.type === 'text')
       .map((b) => b.text)
       .join('');
-    const reply = parseReply(text, guideIds);
+    const reply = parseReply(text, { category: ctx.category, guideIds });
     if (!reply) return json({ error: 'format' }, 502);
     return json(reply);
   } catch (error) {

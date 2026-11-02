@@ -1,4 +1,4 @@
-// Hält geteilte Fälle mit dem Backend gleich (Entscheidung 19, 20):
+// Hält geteilte Fälle mit dem Backend gleich (Entscheidung 28, 29):
 // sendet die Akte nach jeder Änderung, holt Antworten des Händlers ab und meldet den Widerruf.
 import { useEffect } from 'react';
 import { AppState } from 'react-native';

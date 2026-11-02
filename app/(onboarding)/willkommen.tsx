@@ -10,7 +10,12 @@ export default function Willkommen() {
     <Screen
       footer={
         <ActionBar>
-          <Button label={t.start} size="lg" fullWidth onPress={() => router.push('/haendler')} />
+          <Button
+            label={t.start}
+            size="lg"
+            fullWidth
+            onPress={() => router.push('/geraet-anlegen')}
+          />
           <Text variant="meta" align="center">
             {t.testPhase}
           </Text>

@@ -1,4 +1,4 @@
-// Holt für Geräte ohne Anleitung den freigegebenen Katalog-Eintrag vom Server (Entscheidung 15).
+// Holt für Geräte ohne Anleitung den freigegebenen Katalog-Eintrag vom Server (Entscheidung 24).
 // Gefundene Einträge bleiben im Speicher der App, damit die Anleitung auch offline läuft.
 import { useEffect } from 'react';
 

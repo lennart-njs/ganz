@@ -220,7 +220,65 @@ Annahmen, die ich beim Bauen getroffen habe. Jede lässt sich ändern.
 - **Stift:** an der ersten Antwort, solange der Fall noch keinen Fortschritt hat. Er führt zurück zu „Problem melden“ mit demselben Fall. An der Schadenmeldung nie.
 - **Ein Fall ohne Inhalt** verschwindet, wenn man das Gespräch verlässt. Mit „Später weitermachen“ bleibt er.
 
-## Anleitung im Gespräch (02.11.2026, Entscheidung 16)
+## Demo für Fründ (02.11.2026)
+
+### Anleitungen aus Herstellerunterlagen
+
+- **Quelle je Schritt:** Jeder Schritt in `data/modelGuides.ts` trägt Seite und Originaltext (`src`) der Gebrauchsanweisung. Die App zeigt unter dem Schritt „Quelle: …, Seite …“.
+- **Du-Form:** Die Gebrauchsanweisungen siezen, die App duzt. Den Schritttext übernehme ich in die Du-Form und ändere sonst nur das Nötigste: Sätze aus Tabellen werden zu ganzen Sätzen, Verweise wie „(siehe Kapitel …)“ entfallen, weil der verwiesene Abschnitt selbst als Schritt folgt. Kein neuer Inhalt.
+- **Warnhinweise** bleiben vollständig und stehen als Achtung-Box vor dem Schritttext. Aus „rufen Sie den Miele Kundendienst“ wird „kontaktiere den Kundendienst“, weil in der Demo der Händler-Kundendienst übernimmt.
+- **Auswahl der Anleitungen:** nur Störungen, die die Gebrauchsanweisung ausdrücklich dem Haushalt zuweist (Siebe, Ablaufpumpe, Zulaufsieb, Neustart). Alles, wofür die Anleitung den Kundendienst nennt (Wasserschutzsystem, Umwälzpumpe, Fehler F mit Defekt), führt zu „Hilfe holen“.
+- **Symbole im Display:** Die Miele G 5833 SC zeigt Fehler über Kontrollanzeigen mit Symbolen, die im PDF-Text fehlen. Die Meldungen heißen darum „Kontrollanzeige Ablauf blinkt“ und „Kontrollanzeige Zulauf blinkt“.
+- **Modellbezeichnung:** Die Miele-Anleitung trägt den Titel „G 5833 SC“, die Fundstelle bei Manualslib nennt „G 5843“. Beides findet die Suche.
+- **Fotos:** Schritte zur Pumpe zeigen den Platzhalter „pumpe“, bis Markenfotos da sind.
+- **Gerätekatalog** (`data/catalog.ts`): die drei Modelle und die WKB 130 der ersten Demo. Andere Waschmaschinen bekommen weiter die Anleitungen der Demo, andere Geschirrspüler keine.
+- **Reparatur-Assistent:** Die App schickt die Ids der Anleitungen mit, die zum Gerät passen. Der Server lässt nur diese als Vorschlag durch.
+
+### Werte für Fründ (bitte prüfen)
+
+- **Preise (Beispielwerte):** unverändert 189 € für Original-Laugenpumpe, Anfahrt und Arbeit, Ersatzgerät 899 €. Die App zeigt „Teil und Arbeit“ als eine Summe. Eine Aufteilung nach Anfahrt, Arbeit und Teil kommt erst, wenn Fründ eigene Preise nennt.
+- **Zeitfenster des Kundendiensts:** Mo 8–12 Uhr, Di 12–16 Uhr, Mi 8–12 Uhr, Fr 9–13 Uhr. Die Bürozeit von Herrn Fründ (Fr 9–17 Uhr) betrifft den Termin, nicht den Kundendienst.
+- **Haushalt** in Bad Oeynhausen (Eidinghausen), Beispieladresse.
+
+### Gerät anlegen und Händler-Kundendienst
+
+- **Neuer Einstieg:** Onboarding und „Gerät hinzufügen“ beginnen mit dem Gerätekatalog (durchsuchbar), danach „Versicherung vorhanden?“. Typenschild-Scan und manuelle Eingabe bleiben als Weg für Geräte außerhalb des Katalogs. Die alten Screens „Schutz verknüpfen“ (Vertragsnummer oder Händler-Code) bleiben für Tests und Profil erreichbar, das Onboarding nutzt sie nicht mehr.
+- **Police-Nr.:** Die Demo prüft sie nicht gegen einen Versicherer. Jede nicht leere Nummer wird gespeichert. Produkt beim Kranich-Vertrag wie bisher „Garantieverlängerung“, bei anderen Versicherern „Geräteversicherung“.
+- **Versicherer-Liste:** erfundene Namen in `demoConfig.insurers`. Der Versicherer aus `demoConfig.insurer` steht immer oben und bleibt die Quelle für Whitelabel.
+- **Händler-Liste:** Fründ (DEMO) und drei erfundene Händler. Nur Fründ hat einen eigenen Kundendienst.
+- **Händler mit Kundendienst:** Ohne Versicherung und mit Händler Fründ übernimmt „Fründ Kundendienst (DEMO)“ Videocall, Befund und Termin. Fachkraft „Markus T.“ (erfunden). Der Kundendienst steht als einziger Betrieb zur Wahl, mit der Kennzeichnung „Kundendienst deines Händlers“, ohne Aussage zur Herstellerautorisierung.
+- **Kosten ohne Versicherung:** wie bisher „Du zahlst“ mit „Zahlungspflichtig buchen“. Kein Schadenfall, kein Versicherer im Gespräch.
+- **Händler unbekannt** oder ohne Kundendienst: Fachkraft und Betriebe aus der Konfiguration wie bisher.
+
+### Umstellung auf mach’s (Entscheidung 15)
+
+- **Farben** aus `tokens.json` des mach’s-Designsystems in `theme/palette.ts`. Weißer Grund, graue Flächen (`sunken`) für Karten, Gruppen und Felder. Blaumann-Blau für Primary Button, Links, Auswahl, Fortschritt und Fokus.
+- **Schrift:** Systemschrift für Text, Schibsted Grotesk 700 nur für Wortmarke und große Überschriften (`display`, `h1`). Fließtext 17 pt wie in iOS.
+- **Buttons** sind Kapseln. Secondary getönt (accent-soft, Text in accent, ohne Rahmen). Links in accent.
+- **Achtung-Box** weiß mit Tinten-Rahmen statt dunklem Block.
+- **Name** „mach’s“ in allen Texten, im App-Namen und im Reparatur-Assistenten. Repo, Slug und Ordner heißen weiter „ganz“.
+- **Nachgezogen (03.11.2026, Entscheidung 22):** Wortmarke aus `machs-wortmarke-schwarz.svg` (über `react-native-svg`, Farbe aus dem Theme), App-Icon „m’“ aus `machs-app-icon-1024.png`, Slug und Scheme `machs`, Paketname `machs`, Speicherschlüssel `machs-app` (alte Daten aus der ganz-Version werden nicht übernommen). `design-system/` ist jetzt das mach’s-Designsystem mit Logos, das ganz-System liegt unter `reference/ganz-design-system/`.
+- **Keine Rahmen und Linien** mehr an Suchpille, Listenzeilen, Auswahlkarten, Chips, Eingabefeldern, Aktionsleiste, Disclosure und FactList. Gefüllte graue Flächen (Radius 16) und Abstand ordnen. Rahmen bleiben nur bei der Achtung-Box, dem Fokus- und Fehlerring von Feldern und den Auswahl-Kreisen.
+- **Bleibt bei „ganz“:** der Repo-Name `lennart-njs/ganz` und der Ordner. Ein Umbenennen auf GitHub ist Lennarts Entscheidung.
+- **Tab-Icons** bleiben Lucide statt SF Symbols. Das Designsystem nennt SF Symbols für iOS; mit Expo Go ohne eigenes Build ist Lucide der einfachere Weg.
+
+### Entschlacken (Entscheidung 20)
+
+- **Anleitungsschritt:** Fortschritt, Schritttitel, Achtung (falls vorhanden), Text, Werkzeug als eine Zeile. Die Quelle steht nur im ersten Schritt („Aus der Gebrauchsanweisung Miele G 5833 SC“). Seite je Schritt und Quelle der Anleitung stehen in der Fallakte.
+- **Keine Foto-Platzhalter:** `PhotoFrame` zeigt ohne Foto nichts. Gerätekarten sind graue Zeilen ohne Bild. Kommen echte Fotos, erscheinen sie wieder.
+- **Hilfe holen:** ein Satz, wer was sieht und dass nichts aufgenommen wird. Datenliste, Protokoll, Screenshot-Einwilligung und Rechtsgrundlage unter „Details“. Die Bestätigung vor der Weitergabe bleibt der Tap auf „Videocall starten“.
+- **Kosten:** eine große Zahl, darunter klein Ersatzgerät und Ersparnis. Doppelte Sätze („Befund aufgenommen“, „kein Schutz verknüpft“) entfallen.
+- **Gespräch:** mach’s spricht ohne Absenderzeile, nur der Reparatur-Assistent trägt einen Namen. Nachrichten in 20 pt statt 22 pt.
+- **Demo:** Hinweise, Demo-Knöpfe und „Beispielwerte“ sind standardmäßig aus (Entscheidung 21). Freigabe und Termin laufen per Timer weiter. Profil → 7-mal auf die Versionsnummer → „Hinweise“ schaltet sie an.
+
+### Einklappbare Abschnitte (Entscheidung 23)
+
+- **Baustein** `components/ds/Section.tsx`: Titel, eine Zeile Zusammenfassung, Pfeil. Der Kopf ist ein Button mit `expanded`-Zustand für VoiceOver und TalkBack. Der Zustand wird nicht gespeichert, jede Seite öffnet eingeklappt.
+- **Gerätedetail:** Status, Schutz, Pflege, Anleitungen, Fälle, Kundendienst, Gerät. „Anleitungen“ listet jetzt die Probleme aus der Gebrauchsanweisung statt eines zweiten „Problem melden“. Die Aktionsleiste zeigt nur noch „Problem melden“. Bei Geräten mit Händler-Kundendienst entfällt die Hotline des Herstellers auch hier.
+- **Profil:** Du, Schutz, Weitergaben und Einwilligungen, Freiwillig, Darstellung, Datenschutz.
+- **Fälle:** „Offen“ und „Abgeschlossen“ mit Anzahl. **Fallakte:** Überblick, Weitergaben, Verlauf.
+- **Nicht eingeklappt:** Startseite (Suchpille und Geräte), Gespräch eines Falls, Anleitung. Das sind keine Übersichten, sondern Arbeitsflächen.
+## Anleitung im Gespräch (02.11.2026, Entscheidung 25)
 
 - **Jeder Schritt ist eine Nachricht** von ganz mit Karte (Fortschritt, Bild, Warnhinweis vor dem Text, Werkzeug, Quelle). Ältere Schritte bleiben im Verlauf, kleiner und ohne Bild.
 - **Antworten unten:** „Erledigt“ und „Geht nicht“, im letzten Schritt einer Störung „Läuft wieder“ und „Läuft noch nicht“, bei Pflege „Fertig“, bei „nicht selbst lösbar“ nur „Hilfe holen“.
@@ -230,7 +288,7 @@ Annahmen, die ich beim Bauen getroffen habe. Jede lässt sich ändern.
 - **Großansicht:** Die bisherige Vollbild-Anleitung bleibt unter „Details“ am aktuellen Schritt. Dort gilt weiter: Zurück geht einen Schritt zurück.
 - **Erinnerung:** Steht nach dem Schritt schon ein Gespräch mit dem Assistenten, sagt ganz unten noch einmal, bei welchem Schritt du bist.
 
-## Foto an den Reparatur-Assistenten (02.11.2026, Entscheidung 17)
+## Foto an den Reparatur-Assistenten (02.11.2026, Entscheidung 26)
 
 - **Kamera im Eingabefeld** des Gesprächs. Sie öffnet `fall/[id]/foto-frage` (nur Aufnahme in der App, kein Galerie-Import). Danach hängt das Foto am Eingabefeld, bis du sendest oder es entfernst. Ohne eigenen Text geht „Mache ich das so richtig?“ mit.
 - **Verkleinert auf 1.280 px** (längste Kante, JPEG, Qualität 0,7) mit `expo-image-manipulator`. Das base64-Bild liegt nur im Arbeitsspeicher, bis die Antwort da ist. Es kommt nicht in den gespeicherten Zustand. Der Server reicht es an Claude weiter und speichert es nicht.
@@ -241,16 +299,15 @@ Annahmen, die ich beim Bauen getroffen habe. Jede lässt sich ändern.
 - **Beispielfoto im Browser:** Ohne echtes Bild geht nur der Text mit. Die Blase zeigt „Beispielfoto“.
 - **Foto in der Fallakte:** Das Foto hat den Zweck `frage`. Es zählt zu den Fotos des Falls, steht im Gespräch aber an der Nachricht und nicht als eigene Zeile.
 
-## Händler zuerst im Onboarding (02.11.2026, Entscheidung 22)
+## Erst Händler, dann Versicherung (02.11.2026, Entscheidung 31)
 
-- **Reihenfolge:** Willkommen → „Wo hast du das Gerät gekauft?“ → „Hast du zusätzlich eine Versicherung?“ → Gerät bestätigen. Auf der Versicherungs-Seite heißt der zweite Button „Nein, keine Versicherung“ statt „Später“. Nachträglich verknüpfen geht wie bisher über Profil oder Gerät.
-- **Auswahl:** die Händler aus der Konfiguration, „Woanders“ und „Weiß ich nicht mehr“. Nur ein bekannter Händler wird gespeichert.
-- **Beispiel-Händler „Elektro Albers“, Code `EA-2023`.** In ENTSCHEIDUNGEN stand noch `[HÄNDLER]` und `[CODE]`. Für das Händlerportal brauchte die Demo einen lesbaren Namen. Beides ist fiktiv und steht nur in `config/demo.config.ts`. Zweiter Beispiel-Händler: „Technikhaus Nord“.
-- **`Device.purchasedFrom`:** Geräte, die im Onboarding dazukommen (Vertrag bestätigt oder Typenschild), bekommen den gewählten Händler. Später hinzugefügte Geräte fragen noch nicht danach. Das Gerätedetail zeigt „Gekauft bei“.
+- **Reihenfolge beim Anlegen eines Geräts:** Gerät wählen oder Typenschild → „Wo hast du es gekauft?“ (Händlerliste, durchsuchbar, oder „Weiß ich nicht mehr“) → „Zusätzlich eine Versicherung?“ → bei Ja Versicherer und Police-Nr. Gilt im Onboarding und beim späteren Hinzufügen (`components/app/DeviceSetup.tsx`).
+- **Händler bleibt am Gerät,** auch mit Versicherung (`Device.soldBy`). Den Kundendienst des Händlers (Fründ) gibt es weiter nur ohne Versicherung, wie in Entscheidung 16. Mit Versicherung prüft der Versicherer die Kosten.
+- **Fall an den Händler** ist in beiden Fällen möglich, sobald Hilfe nötig ist.
 
-## Katalog der Anleitungen (02.11.2026, Entscheidung 15)
+## Katalog der Anleitungen (02.11.2026, Entscheidung 24)
 
-- **Ein Eintrag je Gebrauchsanweisung** (`GuideCatalogEntry` in `model/types.ts`): Hersteller, Gerätetyp, Modelle, Materialnummern, Quelle, Freigabe (`entwurf`, `freigegeben`, `zurueckgezogen`) und die Anleitungen. Schritte haben jetzt eine Seitenangabe (`page`).
+- **Ein Eintrag je Gebrauchsanweisung** (`GuideCatalogEntry` in `model/types.ts`): Hersteller, Gerätetyp, Modelle, Materialnummern, Quelle, Freigabe (`entwurf`, `freigegeben`, `zurueckgezogen`) und die Anleitungen. Schritte tragen Seite und Originaltext (`src`), wie die Anleitungen aus Entscheidung 18.
 - **Treffer** zuerst über die Materialnummer vom Typenschild, sonst über Hersteller, Gerätetyp und Modell (ohne Leerzeichen, Punkte, Bindestriche). Die Demo-Anleitungen gelten deshalb nur noch für die WKB 130, nicht mehr für jede Waschmaschine. Ein anderes Modell ohne Eintrag geht direkt zu Hilfe holen.
 - **Demo-Eintrag** `miele-wkb130` ist eingebaut und kommt aus `data/guides.ts`. `npm run guides:check` prüft ihn weiter wörtlich gegen die Demo.
 - **Server:** `server/guides/catalog/*.json` sind die freigegebenen Einträge, `server/guides/drafts/` die Entwürfe. `GET /api/guides?hersteller=…&kategorie=…&modell=…&material=…` gibt nur Freigegebenes zurück.
@@ -260,7 +317,7 @@ Annahmen, die ich beim Bauen getroffen habe. Jede lässt sich ändern.
 - **Freigabe:** `npm run guides:approve -- <id> --von "Name, Firma"` verschiebt den Entwurf in den Katalog. Mit Abweichungen nur mit `--trotzdem`. Später gehört das in ein Hersteller-Portal mit Anmeldung.
 - **Noch offen:** Bilder zu den Schritten (Seitenausschnitte aus dem PDF), Sicherheitsbestätigungen wie „Der Wasserhahn ist zu“ für importierte Anleitungen (heute nur für die Demo in `lib/guideMeta.ts`), Lizenz und Updates je Herstellerversion.
 
-## Fall an den Händler (02.11.2026, Entscheidungen 19 und 20)
+## Fall an den Händler (02.11.2026, Entscheidungen 28 und 29)
 
 - **Wann das Angebot kommt:** Sobald Hilfe nötig ist (Hilfe geholt, Anleitung ging nicht, Kostenvoranschlag, Freigabe offen oder abgelehnt) und das Gerät einen bekannten Händler hat. Ein Tap zeigt zuerst, was der Händler sieht, erst „Ja, senden“ gibt weiter. Grundlage ist die angefragte Leistung (lit. b), wie beim Versicherer.
 - **Abgleich:** Die App sendet die Akte nach jeder Änderung am Fall neu und holt alle 15 Sekunden (und beim Zurückkehren in die App) die Antworten des Händlers. Ohne Netz versucht sie es beim nächsten Mal.

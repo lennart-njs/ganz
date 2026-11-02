@@ -1,24 +1,29 @@
 // Beispielfälle für das Händlerportal (Demo). Namen und Preise aus config/demo.config.ts.
 import { demoConfig } from '@/config/demo.config';
-import { GUIDE_SOURCE, guides } from '@/data/guides';
+import { findModel, manufacturers } from '@/data/catalog';
+import { getGuide } from '@/lib/guideCatalog';
 import { de } from '@/i18n/de';
 import { caseStatusLabel } from '@/lib/caseView';
 import { SHARE_FORMAT_VERSION, type SharedCaseRecord } from '@/model/sharing';
 import type { CaseEvent } from '@/model/types';
 
 const cfg = demoConfig;
-const dealer = { id: cfg.dealer.id, kind: 'haendler' as const, name: cfg.dealer.name };
 
 const ago = (days: number, hours = 0) =>
   new Date(Date.now() - days * 86_400_000 - hours * 3_600_000).toISOString();
 
 export function seedRecords(): SharedCaseRecord[] {
   return cfg.portalExamples.map((x, i) => {
+    const d = cfg.dealers.find((y) => y.id === x.dealerId) ?? cfg.dealers[0]!;
+    const dealer = { id: d.id, kind: 'haendler' as const, name: d.name };
+    const model = findModel({ manufacturerId: x.manufacturerId, model: x.model });
     const created = ago(x.daysAgo, 2);
     const shared = ago(x.daysAgo, 1);
     const washing = x.category === 'waschmaschine';
     const a = de.appliance[x.category];
-    const ablauf = guides.ablauf;
+    const ablauf = getGuide(model?.patterns.ablauf ?? 'ablauf')!;
+    // Abbruch im vorletzten Schritt, wie bei „Geht nicht“
+    const stop = Math.max(0, ablauf.steps.length - 2);
     const problem = washing ? ablauf.title : (a.symptoms[0]?.label ?? '');
     const status = washing ? ('in_reparatur' as const) : ('eskaliert' as const);
     const timeline = [
@@ -58,7 +63,7 @@ export function seedRecords(): SharedCaseRecord[] {
             type: 'haendler_angenommen',
             at: ago(x.daysAgo - 1),
             actor: { kind: 'haendler', id: dealer.id, name: dealer.name },
-            payload: { by: cfg.dealer.portalUser },
+            payload: { by: ('portalUser' in d && d.portalUser) || d.name },
           },
         ]
       : [];
@@ -74,12 +79,12 @@ export function seedRecords(): SharedCaseRecord[] {
         isExample: true,
         customer: { name: x.customer, address: x.address },
         device: {
-          manufacturer: cfg.manufacturer.name,
+          manufacturer: manufacturers[x.manufacturerId] ?? x.manufacturerId,
           model: x.model,
           category: x.category,
           categoryLabel: de.deviceCategory[x.category],
           purchaseDate: x.purchaseDate,
-          purchasedFrom: dealer,
+          soldBy: dealer,
         },
         case: {
           status,
@@ -103,10 +108,10 @@ export function seedRecords(): SharedCaseRecord[] {
         guide: washing
           ? {
               title: ablauf.title,
-              source: GUIDE_SOURCE,
+              source: model?.manual ?? ablauf.sourceDocument,
               total: ablauf.steps.length,
-              completed: ablauf.steps.slice(0, 4).map((st) => st.t),
-              abortedAt: { step: 5, title: ablauf.steps[4]?.t ?? '' },
+              completed: ablauf.steps.slice(0, stop).map((st) => st.t),
+              abortedAt: { step: stop + 1, title: ablauf.steps[stop]?.t ?? '' },
               note: 'Pumpenflügel klemmt',
               outcome: 'geht_nicht',
             }

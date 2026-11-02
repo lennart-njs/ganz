@@ -1,4 +1,4 @@
-// App → Backend: Fallakte nach deiner Bestätigung teilen oder aktualisieren (Entscheidung 19).
+// App → Backend: Fallakte nach deiner Bestätigung teilen oder aktualisieren (Entscheidung 28).
 // Beim ersten Mal gibt der Server ein Token zurück. Nur wer es kennt, darf den Fall ändern,
 // widerrufen und die Antworten des Händlers lesen.
 import { getCaseStore } from '@/server/backend';

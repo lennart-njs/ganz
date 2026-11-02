@@ -154,16 +154,16 @@ describe('Server-Route des Reparatur-Assistenten', () => {
       suggestion: 'anleitung',
       guideId: 'ablauf',
     });
-    expect(parseReply(raw, [])).toEqual({
+    expect(parseReply(raw, 'kuehlschrank')).toEqual({
       reply: 'Probier die Anleitung.',
       suggestion: 'keine',
       guideId: '',
       assessment: 'keine',
     });
     expect(
-      parseReply('{"reply":"x","suggestion":"anleitung","guideId":"gibtsnicht"}', ['ablauf']),
+      parseReply('{"reply":"x","suggestion":"anleitung","guideId":"gibtsnicht"}', 'waschmaschine'),
     ).toMatchObject({ suggestion: 'keine' });
-    expect(parseReply('kein json', ['ablauf'])).toBeNull();
+    expect(parseReply('kein json', 'waschmaschine')).toBeNull();
   });
 
   test('Ablehnung, Abbruch und Fehler des Dienstes', async () => {
@@ -271,7 +271,10 @@ describe('Foto an den Assistenten (Entscheidung 17)', () => {
     );
     expect(text).toContain('Achtung im Schritt: Restwasser');
     expect(STABLE_SYSTEM).toContain('nie „das ist sicher“');
-    const parsed = parseReply(JSON.stringify({ reply: 'x', suggestion: 'keine', guideId: '' }), []);
+    const parsed = parseReply(
+      JSON.stringify({ reply: 'x', suggestion: 'keine', guideId: '' }),
+      'waschmaschine',
+    );
     expect(parsed?.assessment).toBe('keine');
   });
 });

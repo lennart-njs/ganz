@@ -1,4 +1,4 @@
-// ganz – gemeinsames Datenmodell (App, später Backend und Dashboards)
+// mach’s – gemeinsames Datenmodell (App, später Backend und Dashboards)
 // Quelle: docs/BUILD_PLAN.md Abschnitt 3. Feldbeschreibungen für Dashboards: docs/DATA_MODEL.md (Schritt 14).
 // Zeitangaben: ISO 8601 mit Zeitzone. Beträge: Cent (ganzzahlig).
 
@@ -74,11 +74,11 @@ export interface Device {
   materialNumber?: string; // vom Typenschild
   serialNumber?: string; // Fabrik-Nr. vom Typenschild
   purchaseDate?: ISODateTime;
-  /** Händler, bei dem das Gerät gekauft wurde (Entscheidung 22). Erste Adresse bei Gewährleistung. */
-  purchasedFrom?: PartnerRef;
   purchaseProofPhotoId?: Id;
   contractId?: Id;
-  identifiedBy: 'typenschild_scan' | 'manuell' | 'vertrag';
+  /** Händler, bei dem das Gerät gekauft wurde. Bleibt, wenn zusätzlich eine Versicherung dazukommt (Entscheidung 25). */
+  soldBy?: PartnerRef;
+  identifiedBy: 'typenschild_scan' | 'manuell' | 'vertrag' | 'katalog';
   createdAt: ISODateTime;
 }
 
@@ -176,7 +176,7 @@ export type CaseEventType =
   | 'abgebrochen'
   | 'assistent_gefragt'
   | 'status_geaendert'
-  // Händler (Entscheidung 19, 20): kommen aus dem Händlerportal zurück in den Fall
+  // Händler (Entscheidung 28, 29): kommen aus dem Händlerportal zurück in den Fall
   | 'haendler_angenommen'
   | 'haendler_rueckfrage'
   | 'haendler_entscheidung'
@@ -240,8 +240,8 @@ export interface GuideStep {
   tool?: string;
   w?: string; // Warnhinweis – wörtlich
   img?: string; // Schlüssel des Fotos
-  /** Seite in der Gebrauchsanweisung (Katalog, Entscheidung 15) */
-  page?: number;
+  /** Seite und Originaltext der Gebrauchsanweisung (Anleitungen außerhalb der Demo) */
+  src?: { page: number; text: string };
 }
 
 export interface Guide {
@@ -254,7 +254,7 @@ export interface Guide {
   steps: GuideStep[];
 }
 
-// ---------- Katalog der Anleitungen (Entscheidung 15) ----------
+// ---------- Katalog der Anleitungen (Entscheidung 24) ----------
 
 export type GuideReviewStatus = 'entwurf' | 'freigegeben' | 'zurueckgezogen';
 
@@ -338,7 +338,7 @@ export interface ChatMessage {
   guideId?: string;
   /** Foto zur Frage (Photo mit purpose 'frage'). Das Bild selbst bleibt auf dem Gerät. */
   photoId?: Id;
-  /** Einschätzung des Assistenten zu diesem Foto (Entscheidung 17) */
+  /** Einschätzung des Assistenten zu diesem Foto (Entscheidung 26) */
   assessment?: 'passt' | 'passt_nicht' | 'unklar';
 }
 

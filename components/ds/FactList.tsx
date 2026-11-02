@@ -1,7 +1,6 @@
 import { StyleSheet, View } from 'react-native';
 
 import { de } from '@/i18n/de';
-import { useTheme } from '@/theme';
 
 import { Text } from './Text';
 import { useLargeText } from './useLargeText';
@@ -18,7 +17,6 @@ interface FactListProps {
 
 /** Zwei Spalten: Label grau, Wert stark. Bei großer Schrift untereinander. */
 export function FactList({ items, dense, ruled, labelShare = 0.38 }: FactListProps) {
-  const theme = useTheme();
   const stacked = useLargeText();
   return (
     <View style={!ruled && { gap: 8 }}>
@@ -30,10 +28,7 @@ export function FactList({ items, dense, ruled, labelShare = 0.38 }: FactListPro
           style={[
             stacked ? styles.stacked : styles.row,
             ruled && {
-              paddingVertical: 10,
-              borderTopWidth: StyleSheet.hairlineWidth,
-              borderBottomWidth: i === items.length - 1 ? StyleSheet.hairlineWidth : 0,
-              borderColor: theme.colors.borderSubtle,
+              paddingVertical: 8,
             },
           ]}
         >

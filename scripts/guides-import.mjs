@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Import einer Gebrauchsanweisung in den Katalog (Entscheidung 15). Ergebnis ist immer ein ENTWURF.
+// Import einer Gebrauchsanweisung in den Katalog (Entscheidung 24). Ergebnis ist immer ein ENTWURF.
 // Erst nach der Prüfung durch einen Menschen gibt scripts/guides-approve.mjs ihn frei.
 //
 // Aufruf:
@@ -164,7 +164,7 @@ async function main() {
         d: s.d,
         ...(s.w ? { w: s.w } : {}),
         ...(s.tool ? { tool: s.tool } : {}),
-        page: s.page,
+        src: { page: s.page, text: s.d },
       })),
     })),
   };

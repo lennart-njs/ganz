@@ -36,10 +36,8 @@ export function NavRow({
         styles.row,
         {
           minHeight: theme.size.controlLg,
-          borderRadius: theme.radius.sm,
-          backgroundColor: tone === 'white' ? theme.colors.surfaceCard : theme.colors.surfaceMuted,
-          borderColor: pressed ? theme.colors.textStrong : theme.colors.borderDefault,
-          borderWidth: tone === 'white' ? 1 : 0,
+          borderRadius: theme.radius.group,
+          backgroundColor: pressed ? theme.colors.borderSubtle : theme.colors.surfaceCard,
         },
       ]}
     >

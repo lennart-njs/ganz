@@ -11,9 +11,9 @@ import { syncShare } from '@/store/useShareSync';
 const APP = './app';
 const tap = (name: string | RegExp) => fireEvent.press(screen.getByRole('button', { name }));
 const dealer = {
-  id: demoConfig.dealer.id,
+  id: demoConfig.dealers[0]!.id,
   kind: 'haendler' as const,
-  name: demoConfig.dealer.name,
+  name: demoConfig.dealers[0]!.name,
 };
 const backend = services.backend as jest.Mocked<typeof services.backend>;
 
@@ -28,7 +28,7 @@ function setup(withDealer = true) {
     model: 'WKB 130',
     identifiedBy: 'vertrag',
     contractId: useAppStore.getState().contracts[0]!.id,
-    ...(withDealer ? { purchasedFrom: dealer } : {}),
+    ...(withDealer ? { soldBy: dealer } : {}),
   });
   const c = s.createCase({ deviceId: device.id, entry: 'symptom', problemLabel: 'Wasserablauf' });
   s.escalate(c.id);
@@ -42,7 +42,7 @@ beforeEach(() => {
   backend.revoke.mockClear();
 });
 
-describe('Fall an den Händler (Entscheidung 19)', () => {
+describe('Fall an den Händler (Entscheidung 28)', () => {
   test('erst sehen, was der Händler bekommt, dann mit einem Tap senden', async () => {
     const caseId = setup();
     await renderRouter(APP, { initialUrl: `/fall/${caseId}` });
@@ -77,7 +77,7 @@ describe('Fall an den Händler (Entscheidung 19)', () => {
       caseId,
       recipient: dealer,
       customer: { name: demoConfig.household.displayName },
-      device: { model: 'WKB 130', purchasedFrom: dealer },
+      device: { model: 'WKB 130', soldBy: dealer },
     });
     expect(file.timeline.length).toBeGreaterThan(2);
     const sent = JSON.stringify(file);

@@ -1,10 +1,10 @@
 // Termin anfragen: gemeinsam für das Formular (termin.tsx) und das Gespräch (schaden.tsx).
-import { demoConfig } from '@/config/demo.config';
 import { de } from '@/i18n/de';
 import { formatEuro } from '@/i18n/format';
 import type { Id } from '@/model/types';
 import { notifications } from '@/services/notifications';
 import { useAppStore, type AppData } from '@/store/appStore';
+import { insurerShortName } from '@/lib/service';
 
 /** Was die Nutzerin selbst zahlt: nichts, die Selbstbeteiligung oder die ganze Reparatur */
 export function amountToPay(s: AppData, caseId: Id, selfPay: boolean, diagnosis = false): number {
@@ -20,7 +20,7 @@ export function costsLine(s: AppData, caseId: Id, selfPay: boolean, diagnosis = 
   const t = de.appointment;
   if (diagnosis) return t.costsDiagnosis;
   if (selfPay) return t.costsSelf(formatEuro(amountToPay(s, caseId, true)));
-  return t.costsClaim(demoConfig.insurer.shortName, formatEuro(s.demo.deductible));
+  return t.costsClaim(insurerShortName(s, caseId), formatEuro(s.demo.deductible));
 }
 
 /** Fragt den Termin an. Der Systemdialog für Mitteilungen kommt erst jetzt, beim ersten Bedarf (Review 4.1). */

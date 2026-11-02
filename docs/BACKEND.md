@@ -1,6 +1,6 @@
 # Backend und Händlerportal
 
-Stand: 02.11.2026 · Entscheidungen 19 bis 21 · Typen: `model/sharing.ts`, Schnittstelle: `server/backend/types.ts`
+Stand: 02.11.2026 · Entscheidungen 28 bis 21 · Typen: `model/sharing.ts`, Schnittstelle: `server/backend/types.ts`
 
 ## Wofür
 
@@ -20,9 +20,9 @@ Widerruf im Profil ─DELETE /api/v1/faelle/:id (Token)─▶ Personendaten weg
 
 ## Heute (Demo)
 
-- **Backend** sind API-Routen im Expo-Dev-Server (`app/api/v1/…`), wie schon der Reparatur-Assistent. Speicher ist eine JSON-Datei `.data/ganz-backend.json` (`server/backend/fileStore.ts`, nicht im Git). Beim ersten Start legt er zwei Beispielfälle an (`config/demo.config.ts` → `portalExamples`), damit das Portal ohne Telefon etwas zeigt.
+- **Backend** sind API-Routen im Expo-Dev-Server (`app/api/v1/…`), wie schon der Reparatur-Assistent. Speicher ist eine JSON-Datei `.data/ganz-backend.json` (Dateiname bleibt, wie Repo und Ordner) (`server/backend/fileStore.ts`, nicht im Git). Beim ersten Start legt er zwei Beispielfälle für Fründ an (`config/demo.config.ts` → `portalExamples`), damit das Portal ohne Telefon etwas zeigt.
 - **Portal** ist eine eigene Web-App in `portal/` (Next.js). Sie spricht nur über die API mit dem Backend, nie direkt mit dem Speicher.
-- **Anmeldung im Portal** mit dem Demo-Konto aus der Konfiguration (`dealer.portalUser`), Passwort `demo` (änderbar mit `PORTAL_DEMO_PASSWORD`). Die Sitzung ist ein signiertes Token mit 8 Stunden Laufzeit (`PORTAL_SESSION_SECRET`).
+- **Anmeldung im Portal** mit dem Demo-Konto des Händlers aus der Konfiguration (`dealers[].portalUser`, Fründ: `demo@fruend.example`), Passwort `demo` (änderbar mit `PORTAL_DEMO_PASSWORD`). Die Sitzung ist ein signiertes Token mit 8 Stunden Laufzeit (`PORTAL_SESSION_SECRET`).
 
 ## Regeln, die das Backend durchsetzt
 
@@ -32,7 +32,7 @@ Widerruf im Profil ─DELETE /api/v1/faelle/:id (Token)─▶ Personendaten weg
 - **Widerruf löscht Personendaten.** Danach bleiben Fallnummer, Empfänger und Zeitpunkte. Das Portal zeigt „Weitergabe widerrufen“.
 - **Nicht in der Akte:** das Gespräch mit dem Reparatur-Assistenten, Fotos zu Fragen an ihn, die Vertragsnummer.
 - **Händler-Aktionen** werden `CaseEvent` mit `actor.kind = 'haendler'` und den Typen `haendler_angenommen`, `haendler_rueckfrage`, `haendler_entscheidung`, `haendler_betrieb`, `haendler_status`. Die App übernimmt nur solche Ereignisse und nur für den richtigen Fall.
-- **Kein freier Chat** mit dem Händler (Entscheidung 20). Rückfragen haben bis zu vier Antworten als Buttons.
+- **Kein freier Chat** mit dem Händler (Entscheidung 29). Rückfragen haben bis zu vier Antworten als Buttons.
 
 ## Was die Akte enthält
 

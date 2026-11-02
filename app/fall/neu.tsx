@@ -7,10 +7,9 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BotSays, QuickReplies, UserSaid, type Reply } from '@/components/app/Conversation';
 import { DemoHint } from '@/components/app/DemoHint';
 import { AppHeader, Button, Screen, Text, TextField } from '@/components/ds';
-import { deviceHasGuides, getGuide } from '@/lib/guideCatalog';
-import type { GuideId } from '@/data/guides';
+import { getGuide } from '@/lib/guideCatalog';
 import { de } from '@/i18n/de';
-import { appliance } from '@/lib/appliance';
+import { appliance, deviceGuides } from '@/lib/appliance';
 import { chatLimits } from '@/lib/chat/limits';
 import { hasProgress } from '@/lib/caseView';
 import { deviceTitle } from '@/lib/devices';
@@ -29,7 +28,7 @@ const PHOTO = 'foto';
 const ADD_DEVICE = 'neues-geraet';
 
 /**
- * Problem melden: der Anfang des Fall-Gesprächs. ganz fragt nach Gerät und Problem, die Antworten
+ * Problem melden: der Anfang des Fall-Gesprächs. mach’s fragt nach Gerät und Problem, die Antworten
  * stehen unten, eigene Worte gehen direkt an den Reparatur-Assistenten (Entscheidung 12).
  * Sobald es einen Fall gibt, geht es im Gespräch des Falls weiter. Pro Gerät gibt es einen
  * offenen Fall (Entscheidung 13). Kein Link nach außen.
@@ -116,7 +115,8 @@ export default function ProblemMelden() {
     );
   }
 
-  const guided = deviceHasGuides(device);
+  const set = deviceGuides(device);
+  const guided = !!set;
   const a = appliance(device?.category);
   const truncated = (s: string) => (s.length > 60 ? `${s.slice(0, 57)}…` : s);
 
@@ -149,7 +149,9 @@ export default function ProblemMelden() {
       toThread(id);
       return;
     }
-    const guide = getGuide(key);
+    const problem = set?.problems.find((x) => x.id === key);
+    if (!problem) return;
+    const guide = getGuide(problem.guideId);
     if (!guide) return;
     const id = caseFor('symptom', guide.title);
     store.getState().startGuide(id, guide.id);
@@ -157,10 +159,10 @@ export default function ProblemMelden() {
   };
 
   const pickMessage = (key: string) => {
-    const m = de.displayMessages.find((x) => x.guideId === key);
+    const m = set?.messages.find((x) => x.code === key);
     if (!m) return;
     const id = caseFor('meldung', m.code);
-    reportDisplayMessage(id, m.guideId as GuideId, m.code);
+    reportDisplayMessage(id, m.guideId, m.code);
     toThread(id);
   };
 
@@ -213,12 +215,21 @@ export default function ProblemMelden() {
     ];
   } else if (step === 'meldung') {
     onPick = pickMessage;
-    replies = de.displayMessages.map((m) => ({ key: m.guideId, label: m.code, sub: m.hint }));
+    replies = (set?.messages ?? []).map((m) => ({ key: m.code, label: m.code, sub: m.hint }));
   } else {
     replies = [
       { key: PHOTO, label: t.photo, sub: t.photoSub },
-      ...(guided
-        ? de.problems.map((p) => ({ key: p.id, label: p.label, sub: p.sub }))
+      ...(set && set.messages.length > 0
+        ? [
+            {
+              key: 'meldung',
+              label: de.problems[0]!.label,
+              sub: set.care ? de.problems[0]!.sub : messagesSub(set.messages),
+            },
+          ]
+        : []),
+      ...(set
+        ? set.problems.map((p) => ({ key: p.id, label: p.label, sub: p.sub }))
         : a.symptoms.map((p) => ({ key: p.id, label: p.label, sub: p.sub }))),
     ];
   }
@@ -295,13 +306,17 @@ export default function ProblemMelden() {
   );
 }
 
+/** „z. B. Wasserablauf, Waterproof, Fehler F“: die ersten drei Meldungen des Geräts */
+function messagesSub(messages: { code: string }[]): string {
+  return de.common.example([...new Set(messages.map((m) => m.code))].slice(0, 3).join(', '));
+}
+
 const styles = StyleSheet.create({
   inputBar: {
     flexDirection: 'row',
     alignItems: 'flex-end',
     gap: 8,
     paddingTop: 10,
-    borderTopWidth: StyleSheet.hairlineWidth,
   },
   input: { flex: 1 },
 });

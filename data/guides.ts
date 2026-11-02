@@ -1,5 +1,6 @@
 // Anleitungen für die Miele WKB 130, wörtlich aus guides() in reference/demo-v1.0/Main.dc.html.
 // Inhalte nicht umformulieren (CLAUDE.md). Prüfung: npm run guides:check
+import { modelGuides, type ModelGuideId } from '@/data/modelGuides';
 import type { Guide } from '@/model/types';
 
 export const GUIDE_SOURCE = 'Gebrauchsanweisung WKB 130, M.-Nr. 10 162 440';
@@ -7,7 +8,7 @@ export const GUIDE_SOURCE = 'Gebrauchsanweisung WKB 130, M.-Nr. 10 162 440';
 /** Schlüssel der Schrittfotos. Bis die Markenfotos da sind: beschriftete Platzhalter. */
 export type GuideImage = 'fehler' | 'pumpe';
 
-export type GuideId =
+export type DemoGuideId =
   | 'zulauf'
   | 'ablauf'
   | 'tuer'
@@ -22,7 +23,7 @@ export type GuideId =
   | 'hygiene'
   | 'einspuel';
 
-export const guides: Record<GuideId, Guide> = {
+export const demoGuides: Record<DemoGuideId, Guide> = {
   zulauf: {
     id: 'zulauf',
     kind: 'stoerung',
@@ -311,3 +312,8 @@ export const guides: Record<GuideId, Guide> = {
     ],
   },
 };
+
+export type GuideId = DemoGuideId | ModelGuideId;
+
+/** Alle Anleitungen: die aus der Demo (WKB 130) und die aus weiteren Gebrauchsanweisungen */
+export const guides: Record<GuideId, Guide> = { ...demoGuides, ...modelGuides };

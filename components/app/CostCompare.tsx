@@ -13,48 +13,34 @@ interface CostCompareProps {
   focus?: 'repair' | 'replacement';
 }
 
-/** Reparatur gegen Ersatzgerät. Die Ersparnis ist berechnet und als „dieser Fall“ beschriftet (B-48). */
+/**
+ * Eine Zahl groß, der Vergleich klein darunter (mach’s: „Ein Ding ist groß“, Entscheidung 20).
+ * Die Ersparnis ist berechnet und als „dieser Fall“ beschriftet (B-48).
+ */
 export function CostCompare({ quote, focus = 'repair' }: CostCompareProps) {
   const theme = useTheme();
   const hints = useAppStore((s) => s.demo.hints);
-  const box = (on: boolean) => [
-    styles.box,
-    {
-      borderRadius: theme.radius.media,
-      backgroundColor: theme.colors.surfaceCard,
-      borderColor: on ? theme.colors.textStrong : theme.colors.borderDefault,
-      borderWidth: on ? 2 : 1,
-    },
-  ];
+  const repair = focus === 'repair';
+  const label = repair ? de.costs.repair : de.costs.replacement;
+  const sub = repair ? de.costs.repairSub : de.costs.replacementSub;
+  const amount = formatEuro(repair ? quote.repair.total : quote.replacement.total);
   return (
     <View style={styles.wrap}>
-      <View style={styles.row}>
-        <View
-          style={box(focus === 'repair')}
-          accessible
-          accessibilityLabel={de.a11y.fact(de.costs.repair, formatEuro(quote.repair.total))}
-        >
-          <Text variant="meta">{de.costs.repair}</Text>
-          <Text variant="h1">{formatEuro(quote.repair.total)}</Text>
-          <Text variant="caption">{de.costs.repairSub}</Text>
-        </View>
-        <View
-          style={box(focus === 'replacement')}
-          accessible
-          accessibilityLabel={de.a11y.fact(
-            de.costs.replacement,
-            formatEuro(quote.replacement.total),
-          )}
-        >
-          <Text variant="meta">{de.costs.replacement}</Text>
-          <Text variant="h1" tone={focus === 'replacement' ? 'strong' : 'muted'}>
-            {formatEuro(quote.replacement.total)}
-          </Text>
-          <Text variant="caption">{de.costs.replacementSub}</Text>
-        </View>
+      <View
+        style={[
+          styles.box,
+          { backgroundColor: theme.colors.surfaceCard, borderRadius: theme.radius.group },
+        ]}
+        accessible
+        accessibilityLabel={de.a11y.fact(label, amount)}
+      >
+        <Text variant="meta">{de.common.dot(label, sub)}</Text>
+        <Text variant="display">{amount}</Text>
       </View>
-      {focus === 'repair' ? (
-        <Text variant="labelStrong">{de.costs.saving(formatEuro(quote.saving))}</Text>
+      {repair ? (
+        <Text variant="meta">
+          {de.costs.compareNew(formatEuro(quote.replacement.total), formatEuro(quote.saving))}
+        </Text>
       ) : null}
       {quote.isExample && hints ? <Text variant="caption">{de.common.exampleValues}</Text> : null}
     </View>
@@ -63,6 +49,5 @@ export function CostCompare({ quote, focus = 'repair' }: CostCompareProps) {
 
 const styles = StyleSheet.create({
   wrap: { gap: 8 },
-  row: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
-  box: { flexGrow: 1, flexBasis: 140, padding: 16, gap: 4 },
+  box: { padding: 16, gap: 2 },
 });

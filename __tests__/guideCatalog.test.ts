@@ -33,7 +33,9 @@ const dryer = (status: GuideCatalogEntry['review']['status']): GuideCatalogEntry
       title: 'Flusensieb reinigen',
       code: 'Flusen',
       sourceDocument: 'Gebrauchsanweisung TWB 140 (Beispiel)',
-      steps: [{ t: 'Tür öffnen', d: 'Öffne die Tür.', page: 31 }],
+      steps: [
+        { t: 'Tür öffnen', d: 'Öffne die Tür.', src: { page: 31, text: 'Öffnen Sie die Tür.' } },
+      ],
     },
   ],
 });
@@ -42,13 +44,13 @@ const device = { manufacturerId: 'miele', category: 'trockner' as const, model: 
 
 afterEach(() => resetCatalog());
 
-describe('Katalog der Anleitungen (Entscheidung 15)', () => {
+describe('Katalog der Anleitungen (Entscheidung 24)', () => {
   test('ein Entwurf zählt nicht, erst die Freigabe macht die Anleitung sichtbar', () => {
     expect(registerCatalogEntry(dryer('entwurf'))).toBe(false);
     expect(deviceHasGuides(device)).toBe(false);
     expect(registerCatalogEntry(dryer('freigegeben'))).toBe(true);
     expect(deviceHasGuides(device)).toBe(true);
-    expect(getGuide('miele-twb140/flusensieb')?.steps[0]?.page).toBe(31);
+    expect(getGuide('miele-twb140/flusensieb')?.steps[0]?.src?.page).toBe(31);
   });
 
   test('zurückgezogen entfernt den Eintrag wieder', () => {
@@ -57,10 +59,17 @@ describe('Katalog der Anleitungen (Entscheidung 15)', () => {
     expect(findCatalogEntry(device)).toBeUndefined();
   });
 
-  test('der Demo-Eintrag gilt nur für die WKB 130, nicht für jede Waschmaschine', () => {
-    const base = { manufacturerId: 'miele', category: 'waschmaschine' as const };
-    expect(deviceHasGuides({ ...base, model: 'WKB 130' })).toBe(true);
-    expect(deviceHasGuides({ ...base, model: 'W1 Classic' })).toBe(false);
+  test('Modelle aus dem Gerätekatalog haben ihren eigenen Eintrag, andere Geräte keinen', () => {
+    expect(
+      findCatalogEntry({ manufacturerId: 'miele', category: 'geschirrspueler', model: 'G 5833 SC' })
+        ?.id,
+    ).toBe('miele-g5833sc');
+    expect(
+      deviceHasGuides({ manufacturerId: 'miele', category: 'waschmaschine', model: 'WKB 130' }),
+    ).toBe(true);
+    expect(deviceHasGuides({ manufacturerId: 'bosch', category: 'kuehlschrank', model: 'X' })).toBe(
+      false,
+    );
   });
 
   test('die Prüfung verlangt Quelle, Freigabe mit Namen und Schritte mit Text', () => {

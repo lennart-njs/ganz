@@ -9,7 +9,7 @@ import { prepareChatImage } from '@/lib/chat/photo';
 import { useAppStore } from '@/store/appStore';
 
 /**
- * Foto für den Reparatur-Assistenten (Entscheidung 17). Nur Aufnahme in der App.
+ * Foto für den Reparatur-Assistenten (Entscheidung 26). Nur Aufnahme in der App.
  * Danach geht es zurück ins Gespräch, das Foto hängt am Eingabefeld.
  */
 export default function FotoFrage() {

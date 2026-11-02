@@ -1,4 +1,4 @@
-// Bausteine für Gespräche: ganz fragt eine Sache nach der anderen, Antworten stehen unten.
+// Bausteine für Gespräche: mach’s fragt eine Sache nach der anderen, Antworten stehen unten.
 // Angelehnt an das Chat-Muster aus dem Designsystem (ChatBubble), mit Antwort-Buttons statt Formular.
 import type { ReactNode } from 'react';
 import {
@@ -18,7 +18,10 @@ import { useTheme } from '@/theme';
 
 const t = de.talk;
 
-/** Nachricht von ganz oder vom Assistenten: großer Text ohne Blase, über der ersten Zeile der Absender */
+/**
+ * Nachricht von mach’s oder vom Assistenten: Text ohne Blase. Einen Absender zeigt nur der
+ * Reparatur-Assistent, mach’s spricht ohne Namen (Entscheidung 20).
+ */
 export function BotSays({
   lines,
   sender = true,
@@ -37,8 +40,8 @@ export function BotSays({
   const theme = useTheme();
   return (
     <View style={styles.bot}>
-      {sender ? (
-        <Text variant="meta" style={{ fontFamily: theme.fontFamily.semibold }}>
+      {sender && name !== de.app.name ? (
+        <Text variant="meta" style={{ fontWeight: theme.fontWeight.semibold }}>
           {name}
         </Text>
       ) : null}
@@ -118,7 +121,8 @@ export function UserSaid({
         style={[
           styles.bubble,
           {
-            backgroundColor: theme.colors.surfaceInverse,
+            // mach’s: keine dunklen Flächen, die eigene Antwort ist blau wie eine Auswahl
+            backgroundColor: theme.colors.actionPrimary,
             borderTopLeftRadius: theme.radius.lg,
             borderTopRightRadius: theme.radius.lg,
             borderBottomLeftRadius: theme.radius.lg,
@@ -133,11 +137,11 @@ export function UserSaid({
             resizeMode="cover"
           />
         ) : photoUri === '' ? (
-          <Text variant="meta" tone="onInverse">
+          <Text variant="meta" tone="onPrimary">
             {de.chat.photoDemo}
           </Text>
         ) : null}
-        <Text variant="bodyLg" tone="onInverse">
+        <Text variant="bodyLg" tone="onPrimary">
           {text}
         </Text>
       </View>
@@ -187,19 +191,20 @@ export function QuickReplies({
       style={[
         styles.replies,
         {
-          backgroundColor: theme.colors.surfaceMuted,
-          borderTopColor: theme.colors.borderDefault,
+          // mach’s: weißer Grund, jede Antwort eine graue Fläche, Abstand statt Linien
+          backgroundColor: theme.colors.bgPage,
           paddingBottom: safeBottom && !footer ? Math.max(insets.bottom, 8) : 0,
         },
       ]}
     >
       <ScrollView
         style={{ maxHeight: height * 0.5 }}
+        contentContainerStyle={{ paddingHorizontal: theme.gutter, gap: 8, paddingBottom: 8 }}
         bounces={false}
         accessibilityRole="list"
         accessibilityLabel={label}
       >
-        {replies.map((r, i) => (
+        {replies.map((r) => (
           <Pressable
             key={r.key}
             accessibilityRole="button"
@@ -208,10 +213,9 @@ export function QuickReplies({
             style={({ pressed }) => [
               styles.reply,
               {
-                paddingHorizontal: theme.gutter,
-                borderTopWidth: i === 0 ? 0 : StyleSheet.hairlineWidth,
-                borderTopColor: theme.colors.borderDefault,
-                backgroundColor: pressed ? theme.colors.surfaceCard : 'transparent',
+                paddingHorizontal: 16,
+                borderRadius: theme.radius.group,
+                backgroundColor: pressed ? theme.colors.borderSubtle : theme.colors.surfaceCard,
               },
             ]}
           >
@@ -219,7 +223,7 @@ export function QuickReplies({
               <Text variant="labelStrong">{r.label}</Text>
               {r.sub ? <Text variant="meta">{r.sub}</Text> : null}
             </View>
-            <Icon name="forward" size={18} color="textMuted" />
+            <Icon name="forward" size={18} color="actionPrimary" />
           </Pressable>
         ))}
       </ScrollView>
@@ -241,13 +245,13 @@ const styles = StyleSheet.create({
   bubble: { maxWidth: '80%', paddingHorizontal: 16, paddingVertical: 12, flexShrink: 1, gap: 8 },
   photo: { width: 200, height: 150 },
   typing: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  replies: { borderTopWidth: StyleSheet.hairlineWidth },
+  replies: { paddingTop: 8 },
   reply: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
-    minHeight: 60,
-    paddingVertical: 12,
+    minHeight: 56,
+    paddingVertical: 10,
   },
   replyText: { flex: 1, gap: 2 },
 });

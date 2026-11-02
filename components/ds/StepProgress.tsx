@@ -20,7 +20,8 @@ export function StepProgress({ total, current }: { total: number; current: numbe
           style={[
             styles.segment,
             {
-              backgroundColor: i <= current ? theme.colors.textStrong : theme.colors.borderDefault,
+              backgroundColor:
+                i <= current ? theme.colors.actionPrimary : theme.colors.borderDefault,
             },
           ]}
         />

@@ -128,7 +128,7 @@ function Preview() {
         </Card>
         <NavRow title={s.navTitle} sub={s.navSub} onPress={() => setToast(s.navTitle)} />
         <NavRow title={s.navTitle} tone="muted" onPress={() => setToast(s.navTitle)} />
-        <PhotoFrame label={s.photoLabel} />
+        <PhotoFrame label={s.photoLabel} placeholder />
         <InfoBox tone="achtung">{s.warning}</InfoBox>
         <InfoBox>{s.info}</InfoBox>
         <ConfidenceLabel level="hoch" />

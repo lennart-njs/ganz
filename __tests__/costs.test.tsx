@@ -69,7 +69,7 @@ describe('Kosten und Schadenmeldung', () => {
     await renderRouter(APP, { initialUrl: `/fall/${id}/kosten` });
     expect(screen.getByText(de.costs.payerValue('Kranich'))).toBeTruthy();
     expect(screen.getByText(de.costs.ifRejectedValue)).toBeTruthy();
-    expect(screen.getByText(de.costs.saving('710 €'))).toBeTruthy();
+    expect(screen.getByText(de.costs.compareNew('899 €', '710 €'))).toBeTruthy();
   });
 
   test('die Fallakte-Vorschau zeigt, was an den Versicherer geht', async () => {

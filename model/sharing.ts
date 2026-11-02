@@ -1,5 +1,5 @@
 // Geteilte Fallakte: was ein Empfänger (heute der Händler) nach deiner Bestätigung bekommt.
-// Gleiches Format für App, Backend und Händlerportal (Entscheidung 19, docs/BACKEND.md).
+// Gleiches Format für App, Backend und Händlerportal (Entscheidung 28, docs/BACKEND.md).
 // Nicht dabei: das Gespräch mit dem Reparatur-Assistenten und die Vertragsnummer.
 import type {
   Address,
@@ -47,7 +47,7 @@ export interface SharedCaseFile {
     materialNumber?: string;
     serialNumber?: string;
     purchaseDate?: ISODateTime;
-    purchasedFrom?: PartnerRef;
+    soldBy?: PartnerRef;
   };
   /** Zusätzlicher Schutz, ohne Vertragsnummer */
   protection?: { provider: string; product: string; validUntil: ISODateTime };

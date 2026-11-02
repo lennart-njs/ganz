@@ -1,4 +1,4 @@
-// Katalog der Anleitungen vom eigenen Server (app/api/guides+api.ts, Entscheidung 15).
+// Katalog der Anleitungen vom eigenen Server (app/api/guides+api.ts, Entscheidung 24).
 import { validateCatalogEntry, type DeviceKey } from '@/lib/guideCatalog';
 import type { GuideCatalogEntry } from '@/model/types';
 

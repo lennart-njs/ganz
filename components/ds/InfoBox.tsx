@@ -8,7 +8,7 @@ import { Icon } from './Icon';
 import { Text } from './Text';
 
 interface InfoBoxProps {
-  /** 'achtung' für Sicherheitshinweise: dunkler Block, Dreieck und Wort, steht vor dem Schritttext (B-51) */
+  /** 'achtung' für Sicherheitshinweise: weiß mit Tinten-Rahmen, Dreieck und Wort, vor dem Schritttext (B-51, mach’s) */
   tone?: 'info' | 'achtung';
   children: ReactNode;
 }
@@ -23,19 +23,20 @@ export function InfoBox({ tone = 'info', children }: InfoBoxProps) {
         styles.box,
         {
           borderRadius: theme.radius.lg,
-          backgroundColor: warn ? theme.colors.surfaceInverse : theme.colors.surfaceMuted,
+          backgroundColor: warn ? theme.colors.bgPage : theme.colors.surfaceMuted,
         },
+        warn && { borderWidth: 1.5, borderColor: theme.colors.textStrong },
       ]}
     >
       {warn ? (
         <View style={styles.head}>
-          <Icon name="warning" size={20} color="textOnInverse" />
-          <Text variant="labelStrong" tone="onInverse">
+          <Icon name="warning" size={20} color="textStrong" />
+          <Text variant="labelStrong" tone="strong">
             {de.ds.attention}
           </Text>
         </View>
       ) : null}
-      <Text variant="body" tone={warn ? 'onInverse' : 'body'}>
+      <Text variant="body" tone={warn ? 'strong' : 'body'}>
         {children}
       </Text>
     </View>

@@ -1,4 +1,4 @@
-// Fallakte für den Händler bauen (Entscheidung 19). Nur nach deiner Bestätigung, nur dieser Fall.
+// Fallakte für den Händler bauen (Entscheidung 28). Nur nach deiner Bestätigung, nur dieser Fall.
 // Nicht dabei: das Gespräch mit dem Reparatur-Assistenten, die Vertragsnummer, Fotos zu Fragen an ihn.
 import { ImageManipulator, SaveFormat } from 'expo-image-manipulator';
 
@@ -92,7 +92,7 @@ export function buildSharedCaseFile(
       materialNumber: device.materialNumber,
       serialNumber: device.serialNumber,
       purchaseDate: device.purchaseDate,
-      purchasedFrom: device.purchasedFrom,
+      soldBy: device.soldBy,
     },
     protection: contract
       ? {

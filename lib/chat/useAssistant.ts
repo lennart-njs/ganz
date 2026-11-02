@@ -12,7 +12,7 @@ import { chatContext, hasChatConsent, hasPhotoConsent, PHOTO_CONSENT_SINCE } fro
 import { chatLimits } from './limits';
 import { chatImage, releaseChatImage } from './photo';
 
-/** Neue Fassung: Fotos stehen im Hinweis (Entscheidung 17) */
+/** Neue Fassung: Fotos stehen im Hinweis (Entscheidung 26) */
 export const CONSENT_TEXT_VERSION = PHOTO_CONSENT_SINCE;
 
 /** Bei diesen Fehlern lohnt ein zweiter Versuch. Sonst wird die Nachricht zur Notiz. */

@@ -10,12 +10,12 @@ import type { Tenant } from './types';
 const SESSION_HOURS = 8;
 const secret = process.env.PORTAL_SESSION_SECRET ?? crypto.randomBytes(32).toString('hex');
 
-const accounts = [
-  {
-    email: demoConfig.dealer.portalUser,
-    tenant: { kind: 'haendler' as const, id: demoConfig.dealer.id, name: demoConfig.dealer.name },
-  },
-];
+/** Ein Demo-Konto je Händler mit `portalUser` (config/demo.config.ts) */
+const accounts = demoConfig.dealers.flatMap((d) =>
+  'portalUser' in d && d.portalUser
+    ? [{ email: d.portalUser, tenant: { kind: 'haendler' as const, id: d.id, name: d.name } }]
+    : [],
+);
 
 const sign = (data: string) => crypto.createHmac('sha256', secret).update(data).digest('base64url');
 

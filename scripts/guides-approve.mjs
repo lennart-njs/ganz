@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Freigabe eines Entwurfs aus dem Import (Entscheidung 15). Erst danach zeigt die App die Anleitung.
+// Freigabe eines Entwurfs aus dem Import (Entscheidung 24). Erst danach zeigt die App die Anleitung.
 // Aufruf: node scripts/guides-approve.mjs <id> --von "Name, Firma" [--trotzdem]
 // --trotzdem: auch wenn der Import Texte nicht wörtlich im PDF gefunden hat (nach eigener Prüfung).
 import fs from 'node:fs';

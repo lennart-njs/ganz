@@ -20,7 +20,7 @@ export default function TabsLayout() {
       screenOptions={{
         headerShown: false,
         sceneStyle: { backgroundColor: theme.colors.bgPage },
-        tabBarActiveTintColor: theme.colors.textStrong,
+        tabBarActiveTintColor: theme.colors.actionPrimary,
         tabBarInactiveTintColor: theme.colors.textMuted,
         tabBarStyle: {
           backgroundColor: theme.colors.bgPage,
@@ -29,7 +29,7 @@ export default function TabsLayout() {
           paddingTop: 4,
           paddingBottom: insets.bottom + 8,
         },
-        tabBarLabelStyle: { fontFamily: theme.fontFamily.medium, fontSize: 12, lineHeight: 16 },
+        tabBarLabelStyle: { fontWeight: theme.fontWeight.medium, fontSize: 11, lineHeight: 14 },
         // Wie im System: Tab-Beschriftungen wachsen nicht mit. Langes Drücken zeigt sie groß (iOS).
         tabBarAllowFontScaling: false,
       }}

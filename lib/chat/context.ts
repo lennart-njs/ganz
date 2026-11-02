@@ -3,6 +3,7 @@ import { getGuide } from '@/lib/guideCatalog';
 import type { GuideId } from '@/data/guides';
 import { de } from '@/i18n/de';
 import { latestDiagnosis, latestGuideRun } from '@/lib/caseView';
+import { deviceGuides } from '@/lib/appliance';
 import { getManufacturer } from '@/lib/devices';
 import type { Id } from '@/model/types';
 import type { AppData } from '@/store/appStore';
@@ -38,6 +39,7 @@ export function chatContext(s: AppData, caseId: Id): ChatContext | undefined {
           }
         : undefined,
     hasProtection: !!device.contractId,
+    guideIds: guideIdsFor(device),
   };
 }
 
@@ -46,7 +48,7 @@ export function hasChatConsent(s: AppData): boolean {
   return s.consents.some((k) => k.purpose === 'chat_assistent' && !k.revokedAt);
 }
 
-/** Erste Fassung des Hinweises, in der Fotos stehen (Entscheidung 17) */
+/** Erste Fassung des Hinweises, in der Fotos stehen (Entscheidung 26) */
 export const PHOTO_CONSENT_SINCE = '2026-11-1';
 
 /** Deckt die Einwilligung auch Fotos ab? Ältere Fassungen nannten Fotos nicht. */
@@ -54,4 +56,17 @@ export function hasPhotoConsent(s: AppData): boolean {
   return s.consents.some(
     (k) => k.purpose === 'chat_assistent' && !k.revokedAt && k.textVersion >= PHOTO_CONSENT_SINCE,
   );
+}
+
+/** Anleitungen aus der Gebrauchsanweisung des Geräts, ohne Doppelte */
+function guideIdsFor(device: Parameters<typeof deviceGuides>[0]): string[] {
+  const set = deviceGuides(device);
+  if (!set) return [];
+  return [
+    ...new Set([
+      ...set.problems.map((p) => p.guideId),
+      ...set.messages.map((m) => m.guideId),
+      ...(set.care ? de.maintenance.map((m) => m.guideId) : []),
+    ]),
+  ];
 }

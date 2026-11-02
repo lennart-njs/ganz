@@ -9,6 +9,26 @@ export interface PartnerConfig {
   /** vom Hersteller autorisiert, sonst freie Werkstatt */
   authorized: boolean;
   distanceKm: number;
+  /** Kundendienst des Händlers, bei dem das Gerät gekauft wurde */
+  dealerService?: boolean;
+}
+
+export interface InsurerConfig {
+  id: string;
+  name: string;
+  shortName: string;
+}
+
+export interface DealerConfig {
+  id: string;
+  name: string;
+  shortName: string;
+  /** Standorte oder „Onlinehandel“, als Unterzeile in der Liste */
+  place: string;
+  /** Eigener Kundendienst des Händlers. Die Fachkraft übernimmt Videocall und Befund. */
+  service?: { name: string; distanceKm: number; expert: string };
+  /** Demo-Login im Händlerportal (portal/). Passwort aus PORTAL_DEMO_PASSWORD, Standard „demo“. */
+  portalUser?: string;
 }
 
 export const demoConfig = {
@@ -18,8 +38,8 @@ export const demoConfig = {
   demo: {
     /** Demo-Modus: Steuerung über die Geste im Profil, Hinweise, Beispieldaten */
     enabled: true,
-    /** Schließbare Tipps im Demo-Modus */
-    hints: true,
+    /** Schließbare Tipps im Demo-Modus. Aus für den Pitch (Entscheidung 21), an über die Demo-Steuerung. */
+    hints: false,
   },
 
   insurer: {
@@ -31,38 +51,72 @@ export const demoConfig = {
 
   /** Händler, bei dem das Demo-Gerät gekauft wurde. Name und Code sind Beispielwerte. */
   dealer: {
-    id: 'albers',
-    name: 'Elektro Albers',
+    id: 'haendler',
+    name: '[HÄNDLER]',
     /** Händler-Code zum Verknüpfen des Schutzes */
-    code: 'EA-2023',
-    /** Demo-Login im Händlerportal (portal/). Kein echtes Passwort. */
-    portalUser: 'demo@elektro-albers.example',
+    code: '[CODE]',
   },
 
+  /**
+   * Versicherer zur Auswahl beim Anlegen eines Geräts (Entscheidung 16). Alle erfunden.
+   * Der erste ist der Versicherer aus `insurer`.
+   */
+  insurers: [
+    { id: 'kranich', name: 'Kranich Versicherung', shortName: 'Kranich' },
+    { id: 'lerche', name: 'Lerche Versicherung', shortName: 'Lerche' },
+    { id: 'eichenhof', name: 'Eichenhof Assekuranz', shortName: 'Eichenhof' },
+    { id: 'nordlicht', name: 'Nordlicht Versicherung', shortName: 'Nordlicht' },
+    { id: 'weserland', name: 'Weserland Versicherung', shortName: 'Weserland' },
+  ] satisfies InsurerConfig[],
+
+  /**
+   * Händler zur Auswahl, wenn keine Versicherung vorhanden ist (Entscheidung 16).
+   * Fründ mit echtem Namen, ohne Demo-Kennzeichnung (Entscheidung 21). Alle anderen erfunden.
+   * Händler mit `service` haben einen eigenen Kundendienst, der den Fall übernimmt.
+   */
+  dealers: [
+    {
+      id: 'fruend',
+      name: 'Fründ Elektrogeräte AG',
+      shortName: 'Fründ',
+      place: 'Löhne, Bad Oeynhausen, Minden',
+      service: { name: 'Fründ Kundendienst', distanceKm: 3.1, expert: 'Markus T.' },
+      portalUser: 'demo@fruend.example',
+    },
+    { id: 'lindemann', name: 'Elektro Lindemann', shortName: 'Lindemann', place: 'Bielefeld' },
+    { id: 'kuechenwelt', name: 'Küchenwelt Nord', shortName: 'Küchenwelt', place: 'Herford' },
+    {
+      id: 'technikhaus',
+      name: 'Technikhaus Online',
+      shortName: 'Technikhaus',
+      place: 'Onlinehandel',
+    },
+  ] satisfies DealerConfig[],
   /** Beispielfälle im Händlerportal, damit es ohne Telefon etwas zeigt. Alles fiktiv. */
   portalExamples: [
     {
       caseId: 'GS-24790',
+      dealerId: 'fruend',
       customer: 'Robin K.',
-      address: { street: 'Musterweg 3', zip: '12047', city: 'Berlin' },
-      model: 'G 7100',
+      address: { street: 'Musterweg 3', zip: '32584', city: 'Löhne' },
+      manufacturerId: 'bosch',
+      model: 'SMI4EAS24E',
       category: 'geschirrspueler' as DeviceCategory,
       purchaseDate: '2025-02-10T00:00:00+01:00',
       daysAgo: 1,
     },
     {
       caseId: 'GS-24802',
+      dealerId: 'fruend',
       customer: 'Alex M.',
-      address: { street: 'Probestraße 8', zip: '10967', city: 'Berlin' },
-      model: 'WKB 130',
+      address: { street: 'Probestraße 8', zip: '32423', city: 'Minden' },
+      manufacturerId: 'miele',
+      model: 'WQ 1000 WPS',
       category: 'waschmaschine' as DeviceCategory,
       purchaseDate: '2024-11-20T00:00:00+01:00',
       daysAgo: 3,
     },
   ],
-
-  /** Weitere Händler zur Auswahl im Onboarding. Beispielwerte. */
-  otherDealers: [{ id: 'technikhaus-nord', name: 'Technikhaus Nord' }],
 
   manufacturer: {
     id: 'miele',
@@ -94,7 +148,7 @@ export const demoConfig = {
 
   household: {
     displayName: 'Sam',
-    address: { street: 'Beispielstraße 12', zip: '12043', city: 'Berlin' },
+    address: { street: 'Beispielstraße 12', zip: '32549', city: 'Bad Oeynhausen' },
   },
 
   partners: [
@@ -119,7 +173,8 @@ export const demoConfig = {
     replacement: 89900 as Cents,
   },
 
-  slots: ['Mo vormittags', 'Di nachmittags', 'Mi vormittags', 'Do abends'],
+  /** Zeitfenster für die Fründ-Demo (Annahme, ANNAHMEN „Werte für Fründ“) */
+  slots: ['Mo, 8–12 Uhr', 'Di, 12–16 Uhr', 'Mi, 8–12 Uhr', 'Fr, 9–13 Uhr'],
 
   /** Sichtbare Fallnummer. GS-24817 ist auch im Versicherer-Portal der Demo. */
   caseNumber: { prefix: 'GS-', start: 24817 },

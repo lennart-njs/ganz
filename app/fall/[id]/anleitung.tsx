@@ -1,7 +1,7 @@
 import * as Haptics from 'expo-haptics';
 import { usePreventRemove } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { StyleSheet } from 'react-native';
 
 import { DemoHint } from '@/components/app/DemoHint';
 import { CaseScreen, useCaseId } from '@/components/app/CaseScreen';
@@ -10,7 +10,6 @@ import {
   ActionBar,
   Button,
   Checkbox,
-  Icon,
   InfoBox,
   PhotoFrame,
   Sheet,
@@ -27,7 +26,6 @@ import { latestGuideRun } from '@/lib/caseView';
 import { getManufacturer } from '@/lib/devices';
 import { guideEnding, guideTools, SAFETY_CONFIRM } from '@/lib/guideMeta';
 import { useAppStore } from '@/store/appStore';
-import { useTheme } from '@/theme';
 
 const t = de.guide;
 
@@ -36,7 +34,6 @@ const t = de.guide;
  * Schritt zurück (B-05). „Geht nicht“ in jedem Schritt (B-06). Warnhinweise vor dem Text (B-51).
  */
 export default function Anleitung() {
-  const theme = useTheme();
   const caseId = useCaseId();
   const state = useAppStore();
   const c = state.cases[caseId];
@@ -173,7 +170,7 @@ export default function Anleitung() {
           {toast ? <Toast message={toast} style={styles.toast} /> : null}
           <ActionBar
             meta={noSelfBar ? t.noSelf : de.a11y.stepOf(step + 1, guide.steps.length)}
-            sub={noSelfBar ? t.noSelfSub(manufacturer) : t.source(manufacturer)}
+            sub={noSelfBar ? t.noSelfSub(manufacturer) : undefined}
           >
             {actions}
           </ActionBar>
@@ -183,31 +180,26 @@ export default function Anleitung() {
       <DemoHint id="anleitung" />
       <StepProgress total={guide.steps.length} current={step} />
       {current.img ? (
-        <PhotoFrame label={t.images[current.img as keyof typeof t.images] ?? current.t} />
+        <PhotoFrame
+          label={
+            current.src ? current.t : (t.images[current.img as keyof typeof t.images] ?? current.t)
+          }
+        />
       ) : null}
-      <Text variant="meta">{guide.title}</Text>
+      {step === 0 ? (
+        <Text variant="meta">{t.sourceShort(guide.sourceDocument.split(',')[0]!)}</Text>
+      ) : null}
       <Text variant="h1" accessibilityRole="header">
         {current.t}
       </Text>
       {current.w ? <InfoBox tone="achtung">{current.w}</InfoBox> : null}
       <Text variant="bodyLg">{current.d}</Text>
 
-      {current.tool ? (
-        <View
-          style={[styles.tool, { borderColor: theme.colors.borderSubtle }]}
-          accessible
-          accessibilityLabel={de.a11y.fact(t.youNeed, current.tool)}
-        >
-          <Icon name="forward" size={18} color="textMuted" />
-          <View style={styles.toolText}>
-            <Text variant="meta">{t.youNeed}</Text>
-            <Text variant="label">{current.tool}</Text>
-          </View>
-        </View>
-      ) : null}
-
-      {step === 0 && guide.steps.length > 1 ? (
-        <InfoBox>{tools.length ? de.result.tools(tools.join(', ')) : de.result.noTools}</InfoBox>
+      {/* Werkzeug: im ersten Schritt alles für die Anleitung, danach nur, was dieser Schritt braucht */}
+      {step === 0 && tools.length ? (
+        <Text variant="meta">{de.result.tools(tools.join(', '))}</Text>
+      ) : step > 0 && current.tool ? (
+        <Text variant="meta">{de.result.tools(current.tool)}</Text>
       ) : null}
 
       {confirmKey ? (
@@ -226,8 +218,6 @@ export default function Anleitung() {
           {appliance(device?.category).runsAgain}
         </Text>
       ) : null}
-
-      <Text variant="caption">{t.sourceDocument(guide.sourceDocument)}</Text>
 
       <Button
         label={de.chat.askStep}
@@ -257,8 +247,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 14,
     paddingVertical: 14,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderBottomWidth: StyleSheet.hairlineWidth,
   },
   toolText: { flex: 1 },
   question: { marginTop: 8 },

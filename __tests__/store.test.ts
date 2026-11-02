@@ -1,5 +1,6 @@
 import type { StateStorage } from 'zustand/middleware';
 
+import { demoConfig } from '@/config/demo.config';
 import { ConsentRequiredError } from '@/model/caseMachine';
 import { createAppStore, selectCaseEvents, selectOpenCases } from '@/store/appStore';
 import type { StoreEnv } from '@/store/env';
@@ -88,6 +89,6 @@ describe('Store', () => {
     const b = store.getState().ensureHousehold();
     expect(a.id).toBe(b.id);
     expect(a.role).toBe('versicherungsnehmer');
-    expect(store.getState().household?.address?.city).toBe('Berlin');
+    expect(store.getState().household?.address?.city).toBe(demoConfig.household.address.city);
   });
 });
