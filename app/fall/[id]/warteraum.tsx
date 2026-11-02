@@ -5,6 +5,7 @@ import { ActivityIndicator, StyleSheet, View } from 'react-native';
 import { CaseScreen, useCaseId } from '@/components/app/CaseScreen';
 import { Button, Text } from '@/components/ds';
 import { demoConfig } from '@/config/demo.config';
+import { caseService } from '@/lib/service';
 import { de } from '@/i18n/de';
 import { canStartVideoCall } from '@/model/caseMachine';
 import { services } from '@/services';
@@ -24,6 +25,9 @@ export default function Warteraum() {
     return !!c && canStartVideoCall(s.consents, c.reportedBy, caseId);
   });
   const hints = useAppStore((s) => s.demo.hints);
+  // Die Fachkraft der Sitzung, sonst die des Falls
+  const fallback = useAppStore((s) => caseService(s, caseId).expert.name);
+  const expertName = session?.expert.name ?? fallback;
   const skip = useRef<() => void>(undefined);
   const resolved = useRef(false);
 
@@ -59,7 +63,7 @@ export default function Warteraum() {
       <View style={styles.center}>
         <ActivityIndicator color={theme.colors.textStrong} size="large" />
         <Text variant="h1" align="center" accessibilityRole="header">
-          {t.title(demoConfig.expert.name)}
+          {t.title(expertName)}
         </Text>
         <Text variant="body" align="center">
           {t.text}

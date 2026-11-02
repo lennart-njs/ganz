@@ -236,6 +236,16 @@ Annahmen, die ich beim Bauen getroffen habe. Jede lässt sich ändern.
 
 ### Werte für Fründ (bitte prüfen)
 
-- **Preise (Beispielwerte):** Anfahrt 39 €, Arbeit 55 €, Original-Laugenpumpe 95 €, zusammen 189 € wie in der ersten Demo. Ersatzgerät 899 €.
+- **Preise (Beispielwerte):** unverändert 189 € für Original-Laugenpumpe, Anfahrt und Arbeit, Ersatzgerät 899 €. Die App zeigt „Teil und Arbeit“ als eine Summe. Eine Aufteilung nach Anfahrt, Arbeit und Teil kommt erst, wenn Fründ eigene Preise nennt.
 - **Zeitfenster des Kundendiensts:** Mo 8–12 Uhr, Di 12–16 Uhr, Mi 8–12 Uhr, Fr 9–13 Uhr. Die Bürozeit von Herrn Fründ (Fr 9–17 Uhr) betrifft den Termin, nicht den Kundendienst.
-- **Haushalt** in Bad Oeynhausen-Eidinghausen, Beispieladresse.
+- **Haushalt** in Bad Oeynhausen (Eidinghausen), Beispieladresse.
+
+### Gerät anlegen und Händler-Kundendienst
+
+- **Neuer Einstieg:** Onboarding und „Gerät hinzufügen“ beginnen mit dem Gerätekatalog (durchsuchbar), danach „Versicherung vorhanden?“. Typenschild-Scan und manuelle Eingabe bleiben als Weg für Geräte außerhalb des Katalogs. Die alten Screens „Schutz verknüpfen“ (Vertragsnummer oder Händler-Code) bleiben für Tests und Profil erreichbar, das Onboarding nutzt sie nicht mehr.
+- **Police-Nr.:** Die Demo prüft sie nicht gegen einen Versicherer. Jede nicht leere Nummer wird gespeichert. Produkt beim Kranich-Vertrag wie bisher „Garantieverlängerung“, bei anderen Versicherern „Geräteversicherung“.
+- **Versicherer-Liste:** erfundene Namen in `demoConfig.insurers`. Der Versicherer aus `demoConfig.insurer` steht immer oben und bleibt die Quelle für Whitelabel.
+- **Händler-Liste:** Fründ (DEMO) und drei erfundene Händler. Nur Fründ hat einen eigenen Kundendienst.
+- **Händler mit Kundendienst:** Ohne Versicherung und mit Händler Fründ übernimmt „Fründ Kundendienst (DEMO)“ Videocall, Befund und Termin. Fachkraft „Markus T.“ (erfunden). Der Kundendienst steht als einziger Betrieb zur Wahl, mit der Kennzeichnung „Kundendienst deines Händlers“, ohne Aussage zur Herstellerautorisierung.
+- **Kosten ohne Versicherung:** wie bisher „Du zahlst“ mit „Zahlungspflichtig buchen“. Kein Schadenfall, kein Versicherer im Gespräch.
+- **Händler unbekannt** oder ohne Kundendienst: Fachkraft und Betriebe aus der Konfiguration wie bisher.

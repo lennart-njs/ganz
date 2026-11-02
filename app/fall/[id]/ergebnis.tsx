@@ -5,7 +5,6 @@ import { DemoHint } from '@/components/app/DemoHint';
 import { CaseScreen, useCaseId } from '@/components/app/CaseScreen';
 import { backToThread } from '@/components/nav/leaveCase';
 import { ActionBar, Button, Card, ConfidenceLabel, FactList, InfoBox, Text } from '@/components/ds';
-import { demoConfig } from '@/config/demo.config';
 import { guides, type GuideId } from '@/data/guides';
 import { de } from '@/i18n/de';
 import { formatEuro } from '@/i18n/format';
@@ -14,6 +13,7 @@ import { deviceTitle, getManufacturer } from '@/lib/devices';
 import type { ErrorPattern } from '@/services';
 import { useAppStore } from '@/store/appStore';
 import { useTheme } from '@/theme';
+import { insurerShortName } from '@/lib/service';
 
 const t = de.result;
 
@@ -108,7 +108,7 @@ export default function Ergebnis() {
         </Card>
         <InfoBox>
           {contract
-            ? de.help.costNote(demoConfig.insurer.shortName, formatEuro(state.demo.deductible))
+            ? de.help.costNote(insurerShortName(state, caseId), formatEuro(state.demo.deductible))
             : de.help.costNoteNoContract}
         </InfoBox>
         <Button label={de.chat.entry} variant="link" onPress={() => backToThread(caseId)} />
@@ -185,7 +185,7 @@ export default function Ergebnis() {
 
       <InfoBox>
         {contract
-          ? t.costNote(demoConfig.insurer.shortName, formatEuro(state.demo.deductible))
+          ? t.costNote(insurerShortName(state, caseId), formatEuro(state.demo.deductible))
           : t.costNoteNoContract}
       </InfoBox>
 

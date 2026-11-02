@@ -50,7 +50,8 @@ export function eventLabel(e: CaseEvent): string {
       detail = [
         f.decision[p.result as keyof typeof f.decision],
         f.by[p.actor as keyof typeof f.by],
-        demoConfig.insurer.shortName,
+        demoConfig.insurers.find((i) => i.name === e.actor.name)?.shortName ??
+          demoConfig.insurer.shortName,
       ]
         .filter(Boolean)
         .join(' · ');

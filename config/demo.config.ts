@@ -9,6 +9,8 @@ export interface PartnerConfig {
   /** vom Hersteller autorisiert, sonst freie Werkstatt */
   authorized: boolean;
   distanceKm: number;
+  /** Kundendienst des Händlers, bei dem das Gerät gekauft wurde */
+  dealerService?: boolean;
 }
 
 export interface InsurerConfig {
@@ -23,8 +25,8 @@ export interface DealerConfig {
   shortName: string;
   /** Standorte oder „Onlinehandel“, als Unterzeile in der Liste */
   place: string;
-  /** Eigener Kundendienst des Händlers */
-  service?: { name: string; distanceKm: number };
+  /** Eigener Kundendienst des Händlers. Die Fachkraft übernimmt Videocall und Befund. */
+  service?: { name: string; distanceKm: number; expert: string };
 }
 
 export const demoConfig = {
@@ -75,7 +77,7 @@ export const demoConfig = {
       name: 'Fründ Elektrogeräte AG (DEMO)',
       shortName: 'Fründ (DEMO)',
       place: 'Löhne, Bad Oeynhausen, Minden',
-      service: { name: 'Fründ Kundendienst (DEMO)', distanceKm: 3.1 },
+      service: { name: 'Fründ Kundendienst (DEMO)', distanceKm: 3.1, expert: 'Markus T.' },
     },
     { id: 'lindemann', name: 'Elektro Lindemann', shortName: 'Lindemann', place: 'Bielefeld' },
     { id: 'kuechenwelt', name: 'Küchenwelt Nord', shortName: 'Küchenwelt', place: 'Herford' },
@@ -117,7 +119,7 @@ export const demoConfig = {
 
   household: {
     displayName: 'Sam',
-    address: { street: 'Beispielstraße 12', zip: '12043', city: 'Berlin' },
+    address: { street: 'Beispielstraße 12', zip: '32549', city: 'Bad Oeynhausen' },
   },
 
   partners: [
@@ -142,7 +144,8 @@ export const demoConfig = {
     replacement: 89900 as Cents,
   },
 
-  slots: ['Mo vormittags', 'Di nachmittags', 'Mi vormittags', 'Do abends'],
+  /** Zeitfenster für die Fründ-Demo (Annahme, ANNAHMEN „Werte für Fründ“) */
+  slots: ['Mo, 8–12 Uhr', 'Di, 12–16 Uhr', 'Mi, 8–12 Uhr', 'Fr, 9–13 Uhr'],
 
   /** Sichtbare Fallnummer. GS-24817 ist auch im Versicherer-Portal der Demo. */
   caseNumber: { prefix: 'GS-', start: 24817 },

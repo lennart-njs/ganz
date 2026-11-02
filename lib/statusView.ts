@@ -1,11 +1,11 @@
 // Fall-Status als Überschrift, Text, Zeitstrahl und nächste Aktion. Alles aus einer Quelle: Case und CaseEvent (B-33).
 import type { TimelineItem } from '@/components/ds';
-import { demoConfig } from '@/config/demo.config';
 import { de } from '@/i18n/de';
 import { formatDateTime } from '@/i18n/format';
 import { caseAppliance } from '@/lib/appliance';
 import type { Case } from '@/model/types';
 import { activeBooking, selectCaseEvents, type AppData } from '@/store/appStore';
+import { insurerShortName } from '@/lib/service';
 
 export type NextAction = 'abschluss' | 'kosten' | 'fallakte';
 
@@ -18,7 +18,7 @@ export interface StatusView {
 
 export function statusView(s: AppData, c: Case): StatusView {
   const t = de.status;
-  const insurer = demoConfig.insurer.shortName;
+  const insurer = insurerShortName(s, c.id);
   const booking = activeBooking(s, c.id);
   const a = caseAppliance(s, c.id);
   const events = selectCaseEvents(s, c.id);

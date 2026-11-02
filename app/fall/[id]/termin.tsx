@@ -20,6 +20,7 @@ import { demoConfig } from '@/config/demo.config';
 import { de } from '@/i18n/de';
 import { formatDecimal } from '@/i18n/format';
 import { getManufacturer } from '@/lib/devices';
+import { partnerKind, serviceFor } from '@/lib/service';
 import { caseAppliance } from '@/lib/appliance';
 import { amountToPay, costsLine, requestAppointment } from '@/lib/booking';
 import { useAppStore } from '@/store/appStore';
@@ -40,7 +41,7 @@ export default function Termin() {
   const quote = state.quotes.find((q) => q.id === c?.quoteId);
   const device = state.devices.find((d) => d.id === c?.deviceId);
   const address = state.household?.address;
-  const partners = demoConfig.partners;
+  const partners = serviceFor(device).partners;
   const [partnerId, setPartnerId] = useState(partners[0]?.id);
   const [slot, setSlot] = useState<string>();
   const [toast, setToast] = useState<string>();
@@ -96,7 +97,7 @@ export default function Termin() {
               key={p.id}
               title={p.name}
               sub={de.common.dot(
-                p.authorized ? de.partner.authorized(manufacturer) : de.partner.independent,
+                partnerKind(p, manufacturer),
                 de.partner.distance(formatDecimal(p.distanceKm)),
               )}
               selected={partnerId === p.id}

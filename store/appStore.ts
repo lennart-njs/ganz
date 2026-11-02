@@ -6,6 +6,7 @@ import { createJSONStorage, persist, type StateStorage } from 'zustand/middlewar
 import { demoConfig } from '@/config/demo.config';
 import { de } from '@/i18n/de';
 import { caseAppliance, caseCategory, findingPattern } from '@/lib/appliance';
+import { caseService, insurerName, insurerShortName } from '@/lib/service';
 import { notifications } from '@/services/notifications';
 import {
   applyCommand,
@@ -306,8 +307,10 @@ export function createAppStore(storage: StateStorage = AsyncStorage, env: StoreE
             const p = person();
             const now = env.now();
             const cfg = demoConfig;
-            const insurer = cfg.insurers.find((i) => i.id === insurerId) ?? cfg.insurers[0]!;
-            const isDemoInsurer = insurer.id === cfg.insurer.id;
+            const isDemoInsurer = insurerId === cfg.insurer.id;
+            const insurer = isDemoInsurer
+              ? cfg.insurer
+              : (cfg.insurers.find((i) => i.id === insurerId) ?? cfg.insurer);
             const contract: Contract = {
               id: env.newId('vertrag'),
               householdId: get().household?.id ?? '',
@@ -656,14 +659,14 @@ export function createAppStore(storage: StateStorage = AsyncStorage, env: StoreE
             if (!canStartVideoCall(get().consents, c.reportedBy, caseId)) {
               throw new ConsentRequiredError('weitergabe_fachkraft');
             }
-            const cfg = demoConfig;
-            const partner = cfg.partners.find((p) => p.id === cfg.expert.partnerId)!;
+            const { expert } = caseService(get(), caseId);
+            const partner = expert.partner;
             const now = env.now();
             const session: VideoSession = {
               id: env.newId('video'),
               caseId,
               expert: {
-                name: cfg.expert.name,
+                name: expert.name,
                 provider: { id: partner.id, kind: 'betrieb', name: partner.name },
               },
               requestedAt: now,
@@ -722,7 +725,8 @@ export function createAppStore(storage: StateStorage = AsyncStorage, env: StoreE
           setFinding: (caseId, option, by) => {
             const cfg = demoConfig;
             const c = getCase(caseId);
-            const actorName = by === 'fachkraft' ? cfg.expert.name : cfg.partners[0]!.name;
+            const svc = caseService(get(), caseId);
+            const actorName = by === 'fachkraft' ? svc.expert.name : svc.partners[0]!.name;
             const d = get().addDiagnosis({
               caseId,
               photoIds: [],
@@ -811,7 +815,7 @@ export function createAppStore(storage: StateStorage = AsyncStorage, env: StoreE
             if (kind === 'ersatzteil_versand' && pumpOrSensor) {
               throw new Error(`${partName} bestellt und baut immer der Betrieb ein`);
             }
-            const partner = demoConfig.partners.find((p) => p.id === partnerId);
+            const partner = caseService(get(), caseId).partners.find((p) => p.id === partnerId);
             if (!partner) throw new Error(`Betrieb nicht gefunden: ${partnerId}`);
             let c = getCase(caseId);
             if (selfPay && canTransition(c.status, 'selbst_zahlen')) {
@@ -870,7 +874,7 @@ export function createAppStore(storage: StateStorage = AsyncStorage, env: StoreE
             const c = get().cases[caseId];
             if (!c) return false;
             const booking = activeBooking(get(), caseId);
-            const insurer = cfg.insurer.shortName;
+            const insurer = insurerShortName(get(), caseId);
             const partner = booking?.provider.name ?? '';
             const notify = (msg: { title: string; body: string }) => {
               if (get().notifications === 'erlaubt')
@@ -886,7 +890,7 @@ export function createAppStore(storage: StateStorage = AsyncStorage, env: StoreE
               const approve = get().demo.claimScenario === 'freigeben';
               const quote = get().quotes.find((q) => q.id === c.quoteId);
               get().runCommand(caseId, approve ? 'freigabe_erteilt' : 'freigabe_abgelehnt', {
-                actor: { kind: 'versicherer', name: cfg.insurer.name },
+                actor: { kind: 'versicherer', name: insurerName(get(), caseId) },
                 decisionActor: 'mensch',
                 approvedAmount: approve ? quote?.repair.total : undefined,
               });

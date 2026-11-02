@@ -256,6 +256,7 @@ export const de = {
   partner: {
     authorized: (manufacturer: string) => `${manufacturer}-autorisiert`,
     independent: 'Freie Werkstatt',
+    dealerService: 'Kundendienst deines Händlers',
     distance: (km: string) => `${km} km`,
   },
 

@@ -179,7 +179,12 @@ export function DeviceSetup({ onBack, onDone, deviceId, onSkip }: DeviceSetupPro
   }
 
   if (phase === 'insurer') {
-    const found = demoConfig.insurers.filter((i) => matches(query, i.name, i.shortName));
+    // Der Versicherer aus der Konfiguration steht oben, die Liste ergänzt ihn
+    const insurers = [
+      demoConfig.insurer,
+      ...demoConfig.insurers.filter((i) => i.id !== demoConfig.insurer.id),
+    ];
+    const found = insurers.filter((i) => matches(query, i.name, i.shortName));
     return (
       <Screen
         header={header}
@@ -192,7 +197,7 @@ export function DeviceSetup({ onBack, onDone, deviceId, onSkip }: DeviceSetupPro
         <Text variant="h1" accessibilityRole="header">
           {t.insurerTitle}
         </Text>
-        {search(t.insurerSearch, t.insurerPlaceholder(demoConfig.insurers[0]!.shortName))}
+        {search(t.insurerSearch, t.insurerPlaceholder(demoConfig.insurer.shortName))}
         <View style={styles.list} accessibilityRole="radiogroup">
           {found.map((i) => (
             <SelectCard

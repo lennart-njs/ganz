@@ -33,6 +33,7 @@ import { chatLimits } from '@/lib/chat/limits';
 import { retryableChatErrors, useAssistant } from '@/lib/chat/useAssistant';
 import { hasProgress } from '@/lib/caseView';
 import { deviceTitle, getManufacturer } from '@/lib/devices';
+import { insurerShortName, partnerKind, serviceFor } from '@/lib/service';
 import { guideTools } from '@/lib/guideMeta';
 import { toDiagnosis } from '@/lib/diagnosis';
 import type { CaseEvent, Diagnosis } from '@/model/types';
@@ -139,11 +140,12 @@ export default function FallGespraech() {
   const device = state.devices.find((d) => d.id === c.deviceId);
   const contract = state.contracts.find((k) => k.id === device?.contractId);
   const a = caseAppliance(state, caseId);
-  const insurer = demoConfig.insurer.shortName;
-  const expert = demoConfig.expert.name;
+  const insurer = insurerShortName(state, caseId);
+  const svc = serviceFor(device);
+  const expert = svc.expert.name;
   const manufacturer = device ? getManufacturer(device.manufacturerId).name : '';
   const service = device ? getManufacturer(device.manufacturerId).serviceContact : undefined;
-  const helpPartner = demoConfig.partners.find((p) => p.id === demoConfig.expert.partnerId)!;
+  const helpPartner = svc.expert.partner;
   const diagnoses = c.diagnosisIds
     .map((id) => state.diagnoses.find((d) => d.id === id))
     .filter((d): d is Diagnosis => !!d);
@@ -852,16 +854,16 @@ export default function FallGespraech() {
     }
     if (onSite)
       tail.push(<UserSaid key="vorort" text={t.onSite} onEdit={() => setOnSite(false)} />);
-    const partner = demoConfig.partners.find((p) => p.id === partnerId);
+    const partner = svc.partners.find((p) => p.id === partnerId);
     tail.push(<BotSays key="wer" lines={[onSite ? t.diagnosisAsk : de.appointment.titleRepair]} />);
     if (!partner) {
-      for (const p of demoConfig.partners) {
+      for (const p of svc.partners) {
         reply(
           `betrieb-${p.id}`,
           p.name,
           () => setPartnerId(p.id),
           de.common.dot(
-            p.authorized ? de.partner.authorized(manufacturer) : de.partner.independent,
+            partnerKind(p, manufacturer),
             de.partner.distance(formatDecimal(p.distanceKm)),
           ),
         );
