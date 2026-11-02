@@ -132,7 +132,6 @@ export function DeviceScan({ onBack, onDone }: DeviceScanProps) {
         <Text variant="h1" accessibilityRole="header">
           {deviceTitle(data)}
         </Text>
-        <Text variant="body">{de.scan.recognizedText}</Text>
         <Card>
           <FactList items={facts} />
         </Card>
@@ -159,7 +158,6 @@ export function DeviceScan({ onBack, onDone }: DeviceScanProps) {
         <View style={styles.chips} accessibilityRole="radiogroup">
           <ChoiceChip label={demoConfig.manufacturer.name} selected onPress={() => undefined} />
         </View>
-        <Text variant="meta">{de.scan.manufacturerHint}</Text>
         <Text variant="meta" tone="muted">
           {de.scan.category}
         </Text>

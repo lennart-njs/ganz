@@ -97,7 +97,6 @@ export default function Ergebnis() {
         <Text variant="h1" accessibilityRole="header">
           {t.noGuideTitle}
         </Text>
-        <Text variant="bodyLg">{t.noGuideText}</Text>
         <Card>
           <FactList
             items={[
@@ -170,7 +169,6 @@ export default function Ergebnis() {
       <Text variant="h1" accessibilityRole="header">
         {t.headline[pattern]}
       </Text>
-      <Text variant="bodyLg">{t.selfHelp}</Text>
       <Card>
         <FactList items={facts} ruled />
         <View style={styles.confidence}>

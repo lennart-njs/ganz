@@ -351,3 +351,13 @@ Durchgesehen: alle Stellen, an denen sich in der App etwas bewegt. Grundsatz aus
 - **Hinweis** (z. B. „Bitte bestätige zuerst …“): blendet ruhig ein. Er verschwindet weiter ohne Übergang, das steuert der Bildschirm, der ihn zeigt.
 - **„Bewegung reduzieren“** (iOS und Android) gilt jetzt überall: Bildschirmwechsel, Sheets, Menü, Abschnitte und das automatische Scrollen im Gespräch laufen dann ohne Animation. Vorher wurde die Einstellung nirgends beachtet.
 - **Unverändert, weil passend:** Bildschirmwechsel des Systems, Farbwechsel beim Drücken, Ladekreise, Fortschritt der Fehlererkennung (eine Zeile alle 650 ms, wird angesagt), Haptik bei „Erledigt“ und beim Auslöser.
+
+## Erklärtexte raus (02.11.2026)
+
+Lennart: „Überall Erklärtexte entfernen. App und Webseite müssen selbsterklärend sein.“
+
+- **Regel:** Sätze, die erklären, wie die Oberfläche funktioniert oder was als Nächstes passiert, sind raus. Es bleiben Fakten (Preise, Zeiten, Namen), Sicherheitshinweise, Fehlermeldungen und alles rechtlich Nötige (wer welche Daten sieht, Rechtsgrundlage, „Kosten prüft …“, Folgen einer Ablehnung).
+- **Entfernt** u. a.: Willkommenstext, „Prüf die Angaben …“, „Das lässt sich meist selbst lösen …“, „Wähl unten, was passt.“, „Am schnellsten geht es im Videocall …“, Unterzeilen im Plus-Menü und bei „Versicherung vorhanden?“, Leerzustände in Geräte und Fälle, „Hier siehst du, wer welche Daten bekommen hat …“, der Hinweis zum Ökodesign-Recht im Gespräch (bleibt in „Details“ zum Termin) und „Im Prototyp gibt es einen Hersteller.“
+- **Gekürzt** auf das Nötige: Kamera-Hilfe („Typenschild ganz in den Rahmen.“), Fehlermeldungen beim Foto, Abschlussmeldungen, Kamera-Erlaubnis.
+- **Bleibt bewusst:** Einwilligungs- und Weitergabetexte (DSGVO), „Kosten prüft …“ (keine Kostenzusage), „Computerprogramm, kein Mensch“ beim Assistenten (Entscheidung 6), Folgen einer Ablehnung in „Details“ zu den Kosten.
+- **B-37:** Der Leerzustand der Fälle verspricht nichts mehr zur Weitergabe, er hat jetzt nur noch die Überschrift.

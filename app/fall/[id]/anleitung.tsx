@@ -226,7 +226,6 @@ export default function Anleitung() {
       />
 
       <Sheet visible={notWorking} onClose={() => setNotWorking(false)} title={t.notWorkingTitle}>
-        <Text variant="body">{t.notWorkingText}</Text>
         <TextField
           label={t.noteLabel}
           placeholder={t.notePlaceholder}

@@ -387,7 +387,7 @@ export default function FallGespraech() {
 
   // Rückfragen und Antworten
   for (const e of of('rueckfrage_gestellt')) {
-    add(e.at, e.id, <BotSays lines={[de.question.wasser]} hint={de.question.text} />);
+    add(e.at, e.id, <BotSays lines={[de.question.wasser]} />);
   }
   for (const e of of('rueckfrage_beantwortet')) {
     const q = String(e.payload.question);
@@ -444,18 +444,14 @@ export default function FallGespraech() {
       continue;
     }
     if (d.errorPattern === 'ohne_anleitung') {
-      add(
-        d.createdAt,
-        d.id,
-        <BotSays lines={[de.result.noGuideTitle]} hint={de.result.noGuideText} />,
-      );
+      add(d.createdAt, d.id, <BotSays lines={[de.result.noGuideTitle]} />);
       continue;
     }
     const pattern = d.errorPattern as keyof typeof de.result.headline;
     add(
       d.createdAt,
       d.id,
-      <BotSays lines={[de.result.headline[pattern] ?? '']} hint={de.result.selfHelp}>
+      <BotSays lines={[de.result.headline[pattern] ?? '']}>
         <View style={styles.full}>
           <Card>
             <FactList
@@ -679,7 +675,6 @@ export default function FallGespraech() {
         lines={[
           ok ? de.status.headline.freigegeben(insurer) : de.status.headline.abgelehnt(insurer),
         ]}
-        hint={ok ? undefined : de.costs.rejectedText}
       />,
     );
   }
@@ -1091,11 +1086,6 @@ export default function FallGespraech() {
               </Card>
             </View>
             {c.status === 'freigabe_noetig' ? <InfoBox>{de.appointment.pending}</InfoBox> : null}
-            {!onSite ? (
-              <Text variant="body">
-                {de.appointment.ecoDesign(a.finding.partAcc, demoConfig.ecoDesignDeliveryDays)}
-              </Text>
-            ) : null}
             <Text variant="meta">{de.appointment.shares}</Text>
           </BotSays>,
         );
@@ -1163,7 +1153,7 @@ export default function FallGespraech() {
       'vor-ort',
       t.onSite,
       () => setOnSite(true),
-      viaDealer ? t.onSiteSubDealer(helpPartner.name) : t.onSiteSub,
+      viaDealer ? t.onSiteSubDealer(helpPartner.name) : undefined,
     );
     if (service && !viaDealer) {
       reply(
@@ -1334,7 +1324,6 @@ export default function FallGespraech() {
         onClose={() => setNotWorking(false)}
         title={de.guide.notWorkingTitle}
       >
-        <Text variant="body">{de.guide.notWorkingText}</Text>
         <TextField
           label={de.guide.noteLabel}
           placeholder={de.guide.notePlaceholder}

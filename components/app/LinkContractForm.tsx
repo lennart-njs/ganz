@@ -32,7 +32,7 @@ export function LinkContractForm({
   onLinked,
   onSkip,
   title = t.linkTitle,
-  text = t.linkText,
+  text,
   skipLabel = de.common.later,
 }: LinkContractFormProps) {
   const linkContract = useAppStore((s) => s.linkContract);
@@ -81,7 +81,7 @@ export function LinkContractForm({
       <Text variant="h1" accessibilityRole="header">
         {title}
       </Text>
-      <Text variant="body">{text}</Text>
+      {text ? <Text variant="body">{text}</Text> : null}
       <SegmentedControl
         accessibilityLabel={t.viaLabel}
         options={[
@@ -109,7 +109,6 @@ export function LinkContractForm({
         returnKeyType="done"
         onSubmitEditing={submit}
       />
-      {onSkip ? <Text variant="meta">{t.laterHint}</Text> : null}
     </Screen>
   );
 }

@@ -27,7 +27,6 @@ export default function Willkommen() {
       <Text variant="display" accessibilityRole="header">
         {t.welcomeTitle}
       </Text>
-      <Text variant="bodyLg">{t.welcomeText}</Text>
       {/* Datenschutzhinweis nach Art. 13 DSGVO, eingeklappt */}
       <Disclosure title={t.privacyTitle}>
         <Text variant="body">{t.privacyText}</Text>

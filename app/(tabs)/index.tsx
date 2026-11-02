@@ -52,9 +52,6 @@ export default function Geraete() {
         {devices.length === 0 ? (
           <Card>
             <Text variant="title">{de.home.emptyTitle}</Text>
-            <Text variant="body" style={styles.gap}>
-              {de.home.emptyText}
-            </Text>
             <Button
               label={de.home.addDevice}
               icon="add"
@@ -88,10 +85,9 @@ export default function Geraete() {
           {
             key: 'geraet',
             label: de.home.addDevice,
-            sub: de.home.addDeviceSub,
             onPress: () => router.push('/geraet/neu'),
           },
-          { key: 'problem', label: de.home.searchTitle, sub: de.home.reportSub, onPress: report },
+          { key: 'problem', label: de.home.searchTitle, onPress: report },
         ]}
       />
     </View>

@@ -82,11 +82,12 @@ describe('Fälle', () => {
     expect(open).toBeDefined();
   });
 
-  test('ohne Fälle: Leerzustand mit Hinweis, wer sie sieht (B-37)', async () => {
+  test('ohne Fälle: schlichter Leerzustand ohne Versprechen zur Weitergabe (B-37)', async () => {
     useAppStore.getState().reset();
     useAppStore.setState({ onboardingDone: true });
     await renderRouter(APP, { initialUrl: '/faelle' });
-    expect(screen.getByText(de.cases.emptyText)).toBeTruthy();
+    expect(screen.getByText(de.cases.emptyTitle)).toBeTruthy();
+    expect(screen.queryByText(/Nachweis/)).toBeNull();
   });
 });
 

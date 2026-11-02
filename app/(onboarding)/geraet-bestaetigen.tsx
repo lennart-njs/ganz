@@ -57,7 +57,6 @@ export default function GeraetBestaetigen() {
         <Text variant="h1" accessibilityRole="header">
           {t.firstDeviceTitle}
         </Text>
-        <Text variant="body">{t.firstDeviceText}</Text>
       </Screen>
     );
   }

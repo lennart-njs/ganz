@@ -171,12 +171,10 @@ export function DeviceSetup({ onBack, onDone, deviceId, onSkip }: DeviceSetupPro
         <Text variant="h1" accessibilityRole="header">
           {t.coverageTitle}
         </Text>
-        <Text variant="body">{t.coverageText(device ? deviceTitle(device) : '')}</Text>
         <View style={styles.list}>
-          <NavRow title={t.insured} sub={t.insuredSub} onPress={() => go('insurer')} />
+          <NavRow title={t.insured} onPress={() => go('insurer')} />
           <NavRow
             title={t.notInsured}
-            sub={t.notInsuredSub}
             onPress={() => onDone(useAppStore.getState().devices.find((d) => d.id === device!.id)!)}
           />
         </View>
@@ -220,7 +218,6 @@ export function DeviceSetup({ onBack, onDone, deviceId, onSkip }: DeviceSetupPro
         </View>
         <TextField
           label={t.policyLabel}
-          hint={t.policyHint}
           placeholder={de.common.example(demoConfig.contract.number)}
           value={policy}
           onChangeText={(v) => {
@@ -254,7 +251,6 @@ export function DeviceSetup({ onBack, onDone, deviceId, onSkip }: DeviceSetupPro
       <Text variant="h1" accessibilityRole="header">
         {t.dealerTitle}
       </Text>
-      <Text variant="body">{t.dealerText}</Text>
       {search(t.dealerSearch, t.dealerPlaceholder(demoConfig.dealers[0]!.place.split(',')[0]!))}
       <View style={styles.list} accessibilityRole="radiogroup">
         {dealers.map((d) => (
@@ -272,7 +268,6 @@ export function DeviceSetup({ onBack, onDone, deviceId, onSkip }: DeviceSetupPro
         {dealers.length === 0 ? <Text variant="body">{t.nothingFound}</Text> : null}
         <SelectCard
           title={t.dealerUnknown}
-          sub={t.dealerUnknownSub}
           selected={dealerId === UNKNOWN}
           onPress={() => {
             setDealerId(UNKNOWN);

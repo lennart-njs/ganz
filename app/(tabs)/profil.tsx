@@ -130,7 +130,6 @@ export default function Profil() {
         title={t.consents}
         summary={t.consentsCount(caseConsents.filter((c) => !c.revokedAt).length)}
       >
-        <Text variant="body">{t.consentsText}</Text>
         {caseConsents.length === 0 ? <Text variant="meta">{t.noConsents}</Text> : null}
         {caseConsents.map((c) => (
           <Card key={c.id} padding={16}>
@@ -168,7 +167,7 @@ export default function Profil() {
         />
         <Checkbox
           label={t.notifications}
-          sub={state.notifications === 'abgelehnt' ? t.notificationsDenied : t.notificationsSub}
+          sub={state.notifications === 'abgelehnt' ? t.notificationsDenied : undefined}
           checked={state.notifications === 'erlaubt'}
           onChange={toggleNotifications}
         />

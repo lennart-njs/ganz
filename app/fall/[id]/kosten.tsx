@@ -75,7 +75,6 @@ export default function Kosten() {
         <Text variant="h1" accessibilityRole="header">
           {t.rejectedTitle(insurer)}
         </Text>
-        <Text variant="bodyLg">{t.rejectedText}</Text>
         <CostCompare quote={quote} />
       </CaseScreen>
     );

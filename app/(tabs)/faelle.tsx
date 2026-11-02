@@ -50,9 +50,6 @@ export default function Faelle() {
       {all.length === 0 ? (
         <Card>
           <Text variant="title">{t.emptyTitle}</Text>
-          <Text variant="body" style={styles.gap}>
-            {t.emptyText}
-          </Text>
           <Button
             label={t.report}
             variant="secondary"

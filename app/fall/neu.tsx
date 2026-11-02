@@ -275,10 +275,7 @@ export default function ProblemMelden() {
         <BotSays
           sender={askDevice}
           lines={[g.whatsUp]}
-          hint={de.common.sentences(
-            guided ? g.whatsUpHint : g.whatsUpNoGuides,
-            de.thread.inputHint,
-          )}
+          hint={guided ? undefined : g.whatsUpNoGuides}
         />
       ) : null}
 

@@ -336,8 +336,6 @@ export const de = {
   onboarding: {
     welcomePhoto: 'Waschmaschine in einer Küche',
     welcomeTitle: 'Reparatur, die mit einem Foto beginnt.',
-    welcomeText:
-      'mach’s erkennt, was deinem Haushaltsgerät fehlt, führt dich durch einfache Reparaturen und holt einen Fachbetrieb, wenn es nicht selbst geht.',
     privacyTitle: 'Was mit deinen Daten passiert',
     privacyText:
       'mach’s speichert Fotos, Gerätedaten und den Verlauf deiner Fälle auf diesem Gerät. Weitergegeben wird nur, was du vorher bestätigst: an die Fachkraft, den Betrieb oder deinen Versicherer. Jede Einwilligung kannst du im Profil widerrufen.',
@@ -361,8 +359,6 @@ export const de = {
     empty: 'Gib zuerst eine Nummer ein.',
     checking: 'Wird geprüft',
     link: 'Schutz verknüpfen',
-    laterHint:
-      'Ohne Schutz funktioniert mach’s auch. Reparaturen zahlst du dann selbst und siehst den Preis vorher.',
     linked: (product: string, insurer: string) => `${product} bei ${insurer} verknüpft.`,
     confirmTitle: 'Ist das dein Gerät?',
     confirmText: (insurer: string) => `Dieses Gerät steht in deinem Vertrag bei ${insurer}.`,
@@ -370,7 +366,6 @@ export const de = {
     otherDevice: 'Anderes Gerät',
     otherDeviceSub: 'Typenschild fotografieren',
     firstDeviceTitle: 'Füg dein erstes Gerät hinzu.',
-    firstDeviceText: 'Am schnellsten mit einem Foto vom Typenschild.',
     addDevice: 'Gerät hinzufügen',
     skipDevice: 'Später hinzufügen',
   },
@@ -381,30 +376,24 @@ export const de = {
     searchLabel: 'Gerät suchen',
     searchPlaceholder: 'Hersteller oder Modell, z. B. G 5833',
     catalogSub: (category: string) => `${category} · Anleitungen aus der Gebrauchsanweisung`,
-    noMatch: 'Kein Gerät gefunden. Fotografier das Typenschild oder trag es selbst ein.',
+    noMatch: 'Kein Gerät gefunden.',
     scan: 'Typenschild fotografieren',
     manual: 'Anderes Gerät eintragen',
     coverageTitle: 'Zusätzlich eine Versicherung?',
-    coverageText: (device: string) => `Zum Beispiel eine Garantieverlängerung für ${device}.`,
     insured: 'Ja, Versicherung vorhanden',
-    insuredSub: 'Versicherer wählen und Police-Nr. eintragen',
     notInsured: 'Nein, keine Versicherung',
-    notInsuredSub: 'Händler oder Fachbetrieb kümmern sich',
     insurerTitle: 'Wähl deinen Versicherer.',
     insurerSearch: 'Versicherer suchen',
     insurerPlaceholder: (example: string) => `Name, z. B. ${example}`,
     policyLabel: 'Police-Nr.',
-    policyHint: 'Steht auf deinem Versicherungsschein.',
     policyEmpty: 'Gib zuerst die Police-Nr. ein.',
     pickInsurerFirst: 'Wähl zuerst deinen Versicherer.',
     savePolicy: 'Versicherung speichern',
     dealerTitle: 'Wo hast du es gekauft?',
-    dealerText: 'Hat der Händler einen eigenen Kundendienst, kümmert er sich um deinen Fall.',
     dealerSearch: 'Händler suchen',
     dealerPlaceholder: (example: string) => `Name oder Ort, z. B. ${example}`,
     dealerService: (place: string, service: string) => `${place} · Kundendienst: ${service}`,
     dealerUnknown: 'Weiß ich nicht mehr',
-    dealerUnknownSub: 'Dann holen wir einen Fachbetrieb in deiner Nähe',
     pickDealerFirst: 'Wähl zuerst einen Händler oder „Weiß ich nicht mehr“.',
     saveDealer: 'Weiter',
     nothingFound: 'Nichts gefunden. Prüf die Schreibweise.',
@@ -425,16 +414,12 @@ export const de = {
     myDevices: 'Deine Geräte',
     protectionActive: 'Geräteschutz aktiv',
     addDevice: 'Gerät hinzufügen',
-    addDeviceSub: 'Aus der Liste oder per Typenschild',
     emptyTitle: 'Noch kein Gerät',
-    emptyText:
-      'Füg dein erstes Gerät hinzu. Dann führt dich mach’s bei Problemen Schritt für Schritt.',
     openCase: 'Offener Fall',
     caseNumber: (id: string) => `Fall ${id}`,
     openCaseLabel: (id: string) => `Offener Fall · Fall ${id}`,
     continueCase: 'Weitermachen',
     addMenu: 'Hinzufügen',
-    reportSub: 'Foto, Meldung oder Symptom',
   },
 
   deviceStatus: {
@@ -469,7 +454,7 @@ export const de = {
     casesCount: (n: number) => (n === 1 ? '1 Fall' : `${n} Fälle`),
     casesCountShared: (n: number) =>
       n === 0 ? 'Nichts weitergegeben' : n === 1 ? '1 Weitergabe' : `${n} Weitergaben`,
-    noProtectionText: 'Reparaturen zahlst du selbst. Den Preis siehst du vorher.',
+    noProtectionText: 'Reparaturen zahlst du selbst.',
     deviceFacts: {
       manufacturer: 'Hersteller',
       model: 'Modell',
@@ -479,8 +464,7 @@ export const de = {
       purchased: 'Gekauft',
     },
     guideSource: (source: string) => `Aus der ${source}`,
-    noGuides:
-      'Für dieses Gerät gibt es noch keine Anleitungen. Bei einem Problem hilft dir der Reparatur-Assistent oder eine Fachkraft.',
+    noGuides: 'Noch keine Anleitungen.',
     noCases: 'Noch keine Fälle zu diesem Gerät.',
     serviceSub: (phone: string, free: boolean) => (free ? `${phone} · kostenfrei` : phone),
     notFound: 'Dieses Gerät gibt es nicht mehr.',
@@ -494,12 +478,10 @@ export const de = {
     manual: 'Manuell eingeben',
     reading: 'Typenschild wird gelesen',
     recognized: 'Erkannt',
-    recognizedText: 'Prüf die Angaben. Stimmt etwas nicht, kannst du es ändern.',
     accept: 'Gerät übernehmen',
     edit: 'Angaben ändern',
     notRecognizedTitle: 'Wir konnten das Typenschild nicht lesen.',
-    notRecognizedText:
-      'Achte auf gutes Licht und halte das Schild ganz in den Rahmen. Oder gib die Angaben selbst ein.',
+    notRecognizedText: 'Mehr Licht, Schild ganz in den Rahmen.',
     retry: 'Noch einmal fotografieren',
     formTitle: 'Gerät eingeben',
     manufacturer: 'Hersteller',
@@ -509,13 +491,12 @@ export const de = {
     serialNumber: 'Fabrik-Nr. (optional)',
     modelRequired: 'Gib das Modell ein.',
     save: 'Gerät speichern',
-    manufacturerHint: 'Im Prototyp gibt es einen Hersteller.',
   },
 
   camera: {
     permissionTitle: 'mach’s braucht deine Kamera.',
     permissionText:
-      'Damit fotografierst du Display, Typenschild oder Bauteil. Die Fotos bleiben in deinem Fall. Aus der Galerie laden geht nicht, damit jedes Foto als Nachweis zählt.',
+      'Für Fotos von Display, Typenschild oder Bauteil. Die Fotos bleiben in deinem Fall.',
     allow: 'Kamera erlauben',
     deniedTitle: 'Die Kamera ist nicht erlaubt.',
     deniedText:
@@ -528,9 +509,9 @@ export const de = {
     modesLabel: 'Was fotografierst du?',
     modes: { display: 'Display', typenschild: 'Typenschild', bauteil: 'Bauteil' },
     help: {
-      display: 'Halte das Display in den Rahmen. Wir lesen die Meldung.',
-      typenschild: 'Halte das Typenschild ganz in den Rahmen. Wir erkennen Modell und Baujahr.',
-      bauteil: 'Zeig das Bauteil oder den Schaden. Wir erkennen Teil und sichtbare Schäden.',
+      display: 'Display in den Rahmen.',
+      typenschild: 'Typenschild ganz in den Rahmen.',
+      bauteil: 'Bauteil oder Schaden zeigen.',
     },
     preview: 'Kamerabild',
     failed: 'Das Foto hat nicht geklappt. Versuch es noch einmal.',
@@ -539,7 +520,7 @@ export const de = {
   problem: {
     title: 'Was ist los?',
     photo: 'Foto machen',
-    photoSub: 'Intelligente Fehlererkennung für Display, Typenschild oder Bauteil',
+    photoSub: 'Display, Typenschild oder Bauteil',
     describe: 'Oder beschreib es so, wie du es am Telefon erzählen würdest:',
     other: 'Etwas anderes',
     otherSub: 'Beschreib es in eigenen Worten',
@@ -549,7 +530,7 @@ export const de = {
     otherTooShort: 'Schreib bitte ein paar Worte dazu.',
     getHelp: 'Hilfe holen',
     photoLabel: 'Foto',
-    noDevice: 'Füg zuerst ein Gerät hinzu. Dann führt mach’s dich durch die Lösung.',
+    noDevice: 'Füg zuerst ein Gerät hinzu.',
     forDevice: (name: string) => `Für ${name}`,
   },
 
@@ -581,14 +562,13 @@ export const de = {
     },
     lineDone: (line: string) => `${line}: erledigt`,
     blurryTitle: 'Das Foto ist unscharf.',
-    blurryText: 'Halte das Telefon ruhig und sorg für gutes Licht. Dann mach bitte ein neues Foto.',
+    blurryText: 'Ruhig halten, mehr Licht.',
     newPhoto: 'Neues Foto',
     photo: 'Dein Foto',
   },
 
   question: {
     title: 'Eine Frage noch',
-    text: 'Das Foto passt zu zwei Ursachen. Deine Antwort hilft uns, die richtige Anleitung zu finden.',
     wasser: 'Was passiert, wenn das Programm abbricht?',
     answers: {
       ablauf: 'Wasser bleibt in der Trommel',
@@ -611,7 +591,6 @@ export const de = {
       laugenpumpe_blockiert: 'Wahrscheinlich blockiert etwas die Laugenpumpe.',
       wasserzulauf: 'Wahrscheinlich kommt zu wenig Wasser an.',
     },
-    selfHelp: 'Das lässt sich meist selbst lösen. Wir führen dich Schritt für Schritt durch.',
     component: {
       wasserablauf: 'Laugenfilter / Laugenpumpe',
       laugenpumpe_blockiert: 'Laugenpumpe',
@@ -638,14 +617,11 @@ export const de = {
     doesNotFit: 'Passt nicht',
     helpInstead: 'Lieber gleich Hilfe holen',
     deviceTitle: 'Gerät erkannt',
-    deviceText:
-      'Das Typenschild sagt uns, welches Gerät es ist. Für die Fehlersuche brauchen wir ein Foto vom Display oder vom Bauteil.',
+    deviceText: 'Jetzt ein Foto vom Display oder vom Bauteil.',
     photoDisplay: 'Display fotografieren',
     describe: 'Problem beschreiben',
     missing: 'Noch kein Ergebnis.',
     noGuideTitle: 'Dafür gibt es noch keine Anleitung zum Selbermachen.',
-    noGuideText:
-      'Dein Foto liegt in der Fallakte. Eine Fachkraft schaut es sich im Videocall an und muss nichts doppelt fragen.',
     getHelp: 'Hilfe holen',
   },
 
@@ -668,8 +644,6 @@ export const de = {
     confirm: { waterproof: 'Der Wasserhahn ist zu' },
     confirmFirst: (what: string) => `Bitte bestätige zuerst: ${what}.`,
     notWorkingTitle: 'Was klappt nicht?',
-    notWorkingText:
-      'Kein Problem. Wir holen Hilfe. Die Fachkraft sieht, bis wohin du gekommen bist.',
     noteLabel: 'Notiz für die Fachkraft (optional)',
     notePlaceholder: 'z. B. Der Filter lässt sich nicht drehen.',
     missing: 'Diese Anleitung gibt es nicht mehr.',
@@ -722,7 +696,7 @@ export const de = {
 
   waiting: {
     title: (expert: string) => `Wir verbinden dich mit ${expert}${expert.endsWith('.') ? '' : '.'}`,
-    text: 'Bleib in der Nähe des Geräts. Die Fachkraft sieht deine Fallakte schon.',
+    text: 'Bleib in der Nähe des Geräts.',
     estimate: 'Geschätzte Wartezeit: 1 Minute',
     skip: 'Wartezeit überspringen (Demo)',
     noExpertTitle: 'Gerade ist keine Fachkraft frei.',
@@ -818,8 +792,6 @@ export const de = {
     noContractText: 'Für dieses Gerät ist kein Schutz verknüpft. Du zahlst die Reparatur selbst.',
     toAppointment: 'Weiter zum Termin',
     rejectedTitle: (insurer: string) => `${insurer} übernimmt die Kosten nicht.`,
-    rejectedText:
-      'Du entscheidest, wie es weitergeht. Der Kostenvoranschlag bleibt in deiner Fallakte.',
     rejectedSelfPay: (amount: string) => `Reparatur selbst zahlen (${amount})`,
     keepQuote: 'Kostenvoranschlag behalten',
     closeCase: 'Fall schließen',
@@ -936,10 +908,8 @@ export const de = {
   finish: {
     photo: 'Abschlussfoto vom Betrieb',
     solvedTitle: 'Wieder ganz.',
-    solvedText:
-      'Du hast es selbst repariert. Der Fall liegt in deinen Fällen, falls das Problem wiederkommt.',
-    solvedCallText:
-      'Im Videocall gelöst. Der Fall liegt in deinen Fällen, falls das Problem wiederkommt.',
+    solvedText: 'Du hast es selbst repariert.',
+    solvedCallText: 'Im Videocall gelöst.',
     repairedTitle: 'Repariert.',
     runsAgain: 'Läuft wieder',
     stillBroken: 'Problem besteht weiter',
@@ -952,7 +922,6 @@ export const de = {
     open: 'Offen',
     closed: 'Abgeschlossen',
     emptyTitle: 'Noch keine Fälle',
-    emptyText: 'Jeder Fall wird hier gespeichert. Du entscheidest, wer ihn sieht.',
     report: 'Problem melden',
     rowSub: (device: string, status: string, date: string) => `${device} · ${status} · ${date}`,
   },
@@ -1003,8 +972,7 @@ export const de = {
       addDevice: 'Anderes Gerät hinzufügen',
       whatsUp: 'Was ist los?',
       whatsUpHint: 'Wähl unten, was passt.',
-      whatsUpNoGuides:
-        'Wähl unten, was passt. Für dieses Gerät holen wir dir gleich eine Fachkraft dazu.',
+      whatsUpNoGuides: 'Für dieses Gerät holt dir mach’s eine Fachkraft dazu.',
       whichMessage: 'Was steht im Display?',
       describe: 'Beschreib es so, wie du es am Telefon erzählen würdest.',
       next: 'Danke. Wie soll es weitergehen?',
@@ -1069,10 +1037,9 @@ export const de = {
     findingOk: 'Passt, weiter',
     findingWrong: 'Stimmt nicht',
     findingWrongAnswer: 'Der Befund stimmt nicht',
-    findingWrongText:
-      'Danke, dass du es sagst. Wir holen noch einmal Hilfe. Die Fachkraft sieht, was du gesagt hast.',
+    findingWrongText: 'Wir holen noch einmal Hilfe.',
     findingQuestion: 'Befund',
-    solvedInCall: 'Im Call gelöst. Der Fall liegt in deinen Fällen, falls das Problem wiederkommt.',
+    solvedInCall: 'Im Call gelöst.',
     replacementNext: (insurer: string) =>
       `${insurer} meldet sich zum Ersatzgerät, sobald die Prüfung fertig ist.`,
     bookingAnswer: (slot: string, partner: string) => `Termin anfragen: ${slot} · ${partner}`,
@@ -1093,7 +1060,6 @@ export const de = {
     newProblem: 'Neues Problem melden',
     newProblemReason: 'Neues Problem gemeldet',
     inputLabel: 'Schreib dem Reparatur-Assistenten',
-    inputHint: 'Oder beschreib es in eigenen Worten.',
     noteFallback:
       'Der Assistent ist gerade nicht erreichbar. Deine Nachricht geht als Notiz an die Fachkraft.',
     noteQuestion: 'Notiz an die Fachkraft',
@@ -1146,7 +1112,7 @@ export const de = {
     fileCount: (n: number) => (n === 1 ? '1 Nachricht' : `${n} Nachrichten`),
     // Foto im Gespräch (Entscheidung 26)
     photoButton: 'Foto für den Assistenten aufnehmen',
-    photoHelp: 'Halte die Kamera auf die Stelle, um die es geht. Mit Licht und nah dran.',
+    photoHelp: 'Nah dran, mit Licht.',
     photoAttached: 'Foto angehängt',
     photoRemove: 'Foto entfernen',
     photoDefault: 'Mache ich das so richtig?',
@@ -1178,7 +1144,7 @@ export const de = {
       storniert: 'Storniert',
     },
     offer: (dealer: string) => `Fall an ${dealer} senden`,
-    offerSub: 'Dort gekauft. Der Händler prüft Gewährleistung oder Kulanz.',
+    offerSub: 'Gewährleistung oder Kulanz',
     confirmTitle: (dealer: string) => `Das sieht ${dealer}`,
     confirmText:
       'Nur diesen Fall. Nicht dabei sind dein Gespräch mit dem Reparatur-Assistenten und deine Vertragsnummer.',
@@ -1324,8 +1290,6 @@ export const de = {
     protection: 'Schutz',
     linkProtection: 'Schutz verknüpfen',
     consents: 'Weitergaben und Einwilligungen',
-    consentsText:
-      'Hier siehst du, wer welche Daten bekommen hat. Du kannst jede Weitergabe so einfach widerrufen, wie du sie bestätigt hast.',
     noConsents: 'Noch keine Weitergaben.',
     basis: { vertrag: 'Für deine Anfrage', einwilligung: 'Einwilligung' },
     consentLine: (recipient: string, basis: string, date: string) =>
@@ -1338,7 +1302,6 @@ export const de = {
     manufacturerCaseSub:
       'Mit Gerät und Seriennummer, damit der Hersteller Fehler besser versteht. Ohne dein Ja gehen nur Zahlen ohne Personenbezug an den Hersteller.',
     notifications: 'Mitteilungen zum Fall-Status',
-    notificationsSub: 'Wenn sich bei Freigabe oder Termin etwas ändert.',
     notificationsDenied: 'In den Einstellungen deines Telefons ausgeschaltet.',
     appearance: 'Darstellung',
     consentsCount: (n: number) => (n === 0 ? 'Keine aktiv' : n === 1 ? '1 aktiv' : `${n} aktiv`),
@@ -1393,7 +1356,7 @@ export const de = {
 
   closeCase: {
     title: 'Fall schließen',
-    text: 'Dein Fortschritt bleibt gespeichert. Du findest den Fall unter „Geräte“ und „Fälle“.',
+    text: 'Dein Fortschritt bleibt gespeichert.',
     later: 'Später weitermachen',
     cancel: 'Fall abbrechen',
     reasonTitle: 'Warum brichst du ab?',
