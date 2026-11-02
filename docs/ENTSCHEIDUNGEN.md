@@ -31,6 +31,19 @@ Lennart: „Die Formular/Chat logik macht noch nicht richtig sinn. Das muss ein 
 13. **Ein offener Fall pro Gerät:** Ein neuer Versuch ohne Fortschritt ersetzt den alten Fall. Mit Fortschritt fragt ganz: „Weitermachen“ oder „Neues Problem melden“ (der alte Fall wird dann abgebrochen).
 14. **Befund:** Die Fachkraft entscheidet. Du bestätigst mit „Passt, weiter“ oder sagst „Stimmt nicht“.
 
+## Anleitungen, Fotos und Händler (02.11.2026)
+
+Lennart: „Wie können wir es so umgestalten, dass ich nicht jede Anleitung händisch hinterlegen muss … außerdem fehlt uns noch das Händlerportal/Backend, oder?“ Antworten auf den Vorschlag:
+
+15. **Anleitungs-Katalog:** Anleitungen kommen aus einem Katalog auf dem Server, je Material- oder Modellnummer. Eine Pipeline zieht sie einmal je Modell aus der Gebrauchsanweisung des Herstellers, wörtlich und mit Seitenangabe. Ein Mensch gibt jede Anleitung frei, bevor die App sie zeigt (z. B. der Hersteller in einer Partnerschaft). Keine Anleitungen, die erst im Moment der Frage entstehen. Ohne geprüfte Anleitung darf der Assistent aus der Gebrauchsanweisung zitieren, zeigt aber keine Schritte; danach Hilfe holen. Die Inhalte liefert der Hersteller unter Lizenz, er bekommt dafür die Daten zu Abbrüchen.
+16. **Anleitung im Gespräch:** Die Schritt-für-Schritt-Anleitung läuft im Fall-Gespräch. Jeder Schritt ist eine Nachricht, „Erledigt“ und „Geht nicht“ stehen als Antworten unten. Der Stift an „Erledigt“ geht einen Schritt zurück. Die Vollbild-Ansicht bleibt als „Details“. Ändert Entscheidung 11 für die Anleitung.
+17. **Foto an den Reparatur-Assistenten:** Im Eingabefeld gibt es eine Kamera. Das Foto geht mit dem aktuellen Schritt an den Assistenten („Soll ich das so machen?“). Er schätzt ein: passt, passt nicht oder unklar, und sagt nie „das ist sicher“. Sieht er Wasser an Strom, beschädigte Kabel oder ein offenes Gehäuse, schlägt er sofort Hilfe vor. Die Einwilligung nennt Fotos ausdrücklich. Der Server speichert die Bilder nicht.
+18. **Anleitungen wörtlich aus der Hersteller-Quelle** statt aus der Demo. `npm run guides:check` prüft weiter die Demo-Anleitungen im Katalog.
+19. **Händler sieht Einzelfälle:** Der Händler sieht die volle Fallakte, aber nur nach ausdrücklicher Bestätigung je Fall („Fall an … senden“). Ersetzt den Satz „Der Händler bekommt keine Einzelfälle“ in `DATA_MODEL.md`.
+20. **Rückfragen des Händlers** kommen als Ereignisse mit Antwort-Buttons ins Fall-Gespräch. Kein freier Chat mit dem Händler, Entscheidung 6 bleibt.
+21. **Händlerportal:** Web-App unter der Domain der Webseite (z. B. `portal.ganz.de`), im selben Repo als zweite App (`portal/`). Für die Demo mit Beispieldaten und Demo-Login, gebaut gegen eine Backend-Schnittstelle, damit es später mit echtem Backend weiterläuft. **Backend-Anbieter entscheidet Lennart später.**
+22. **Onboarding:** Zuerst „Wo hast du das Gerät gekauft?“ (Händler), dann „Hast du zusätzlich eine Versicherung oder Garantieverlängerung?“. Passt zu B-41 „Zuerst der Händler“.
+
 ## Offene Fragen aus REVIEW Abschnitt 9
 
 1. **Rechtsgrundlage je Datenfluss:** Vorschlag übernehmen. Angefragte Leistungen (Videocall, Termin, Schadenmeldung) = Art. 6 Abs. 1 lit. b DSGVO mit Bestätigung vor jeder Weitergabe. Einwilligung (lit. a) nur für Screenshots im Call, Einzelfall-Daten an Hersteller und Mitteilungen.

@@ -23,11 +23,12 @@ Die App erzeugt heute alle Daten lokal (Store `store/appStore.ts`). Ein spätere
 | Betrieb (Auftrag) | „Termin anfragen“ / „Zahlungspflichtig buchen“ | `weitergabe_betrieb` | lit. b |
 | Hersteller (Einzelfall) | Profil: „Einzelfälle an … weitergeben“ | `hersteller_einzelfall` | lit. a |
 | Anbieter des Reparatur-Assistenten (Auftragsverarbeiter) | „Einverstanden“ vor der ersten Nachricht | `chat_assistent` | lit. a |
+| Händler (Einzelfall) | „Fall an … senden“ im Gespräch | `weitergabe_haendler` | lit. b |
 | Hersteller (aggregiert) | immer | – | ohne Personenbezug |
 
-Der Reparatur-Assistent bekommt je Nachricht nur Gerät, Modell, Problem, Ergebnis, Stand der Anleitung und das Gespräch, keine Fotos, keine Adresse und keine Vertragsnummer (`lib/chat/context.ts`). Das Gespräch liegt als `ChatMessage` im Fall. Kein Dashboard liest es, die Fallakte zeigt nur die Zahl der Nachrichten.
+Der Reparatur-Assistent bekommt je Nachricht nur Gerät, Modell, Problem, Ergebnis, den aktuellen Schritt der Anleitung wörtlich und das Gespräch, keine Adresse und keine Vertragsnummer (`lib/chat/context.ts`). Ein Foto geht nur mit, wenn du es im Gespräch selbst aufnimmst (Entscheidung 17). Der Server speichert es nicht, im Gespräch steht nur „Foto“. Das Gespräch liegt als `ChatMessage` im Fall. Kein Dashboard liest es, die Fallakte zeigt nur die Zahl der Nachrichten.
 
-Der Händler bekommt keine Einzelfälle. Er sieht nur Zahlen zu Verträgen, die über ihn verknüpft wurden (`Contract.linkedVia = 'haendler_code'`, `Contract.soldBy`).
+Der Händler sieht einen Einzelfall erst, wenn du ihn im Gespräch an ihn sendest (Entscheidung 19). Dann bekommt er die Fallakte: Name und Kontakt, Gerät mit Typenschild, Kaufdatum und Beleg, Problem, Fotos mit Zeitstempel, Ergebnis, Anleitung bis zum Abbruch, Befund, Kosten, Termin und Zeitstrahl. Ohne Bestätigung sieht er nur Zahlen zu Geräten und Verträgen, die über ihn laufen (`Device.purchasedFrom`, `Contract.soldBy`). Seine Antworten (Fall angenommen, Rückfrage, Entscheidung, Betrieb, Status) kommen als `CaseEvent` mit `actor.kind = 'haendler'` zurück in die App. Das Gespräch mit dem Reparatur-Assistenten liest er nicht.
 
 ## 3. Felder je Dashboard
 
@@ -165,4 +166,4 @@ Ereignisse, die ein Dashboard besonders braucht:
 - Löschfristen je Datenkategorie, auch für `ChatMessage`
 - Das Gespräch des Falls ist eine Ansicht auf `CaseEvent` und `ChatMessage`, kein eigener Speicher. Neu ist das Ereignis `rueckfrage_gestellt` (Rückfrage der Fehlererkennung mit Foto und Modus).
 - Auftragsverarbeitungsvertrag mit dem Anbieter des Reparatur-Assistenten, Serverstandort, Rate-Limit und Anmeldung für die Route `/api/chat`
-- Mandantentrennung für Versicherer und Händler im Backend
+- Mandantentrennung für Versicherer und Händler im Backend. Die Demo-Schnittstelle dafür steht in `server/` und `portal/`, siehe `docs/BACKEND.md`.
