@@ -13,7 +13,9 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { de } from '@/i18n/de';
 import { useTheme } from '@/theme';
 
+import { Rise } from './Rise';
 import { Text } from './Text';
+import { useReduceMotion } from './useReduceMotion';
 
 interface SheetProps {
   visible: boolean;
@@ -22,15 +24,19 @@ interface SheetProps {
   children: ReactNode;
 }
 
-/** Bottom Sheet. Tippen auf den Hintergrund, die Android-Zurück-Taste und VoiceOver-Escape schließen es. */
+/**
+ * Bottom Sheet. Tippen auf den Hintergrund, die Android-Zurück-Taste und VoiceOver-Escape schließen es.
+ * Der Hintergrund blendet nur ein, das Blatt steigt dabei auf (nicht der ganze Bildschirm gleitet).
+ */
 export function Sheet({ visible, onClose, title, children }: SheetProps) {
   const theme = useTheme();
   const insets = useSafeAreaInsets();
+  const reduce = useReduceMotion();
   return (
     <Modal
       visible={visible}
       transparent
-      animationType="slide"
+      animationType={reduce ? 'none' : 'fade'}
       onRequestClose={onClose}
       statusBarTranslucent
       navigationBarTranslucent
@@ -45,7 +51,7 @@ export function Sheet({ visible, onClose, title, children }: SheetProps) {
           accessibilityLabel={de.a11y.close}
           onPress={onClose}
         />
-        <View
+        <Rise
           accessibilityViewIsModal
           onAccessibilityEscape={onClose}
           style={[
@@ -70,7 +76,7 @@ export function Sheet({ visible, onClose, title, children }: SheetProps) {
             </Text>
             {children}
           </ScrollView>
-        </View>
+        </Rise>
       </KeyboardAvoidingView>
     </Modal>
   );

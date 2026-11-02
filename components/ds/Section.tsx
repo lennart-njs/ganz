@@ -4,7 +4,8 @@ import { Pressable, StyleSheet, View } from 'react-native';
 import { de } from '@/i18n/de';
 import { useTheme } from '@/theme';
 
-import { Icon } from './Icon';
+import { animateLayout } from './animateLayout';
+import { ExpandChevron } from './ExpandChevron';
 import { Text } from './Text';
 
 interface SectionProps {
@@ -30,7 +31,10 @@ export function Section({ title, summary, initiallyOpen = false, children }: Sec
         accessibilityLabel={summary ? de.a11y.withSub(title, summary) : title}
         accessibilityHint={open ? de.ds.collapse : de.ds.expand}
         accessibilityState={{ expanded: open }}
-        onPress={() => setOpen((o) => !o)}
+        onPress={() => {
+          animateLayout();
+          setOpen((o) => !o);
+        }}
         style={({ pressed }) => [
           styles.head,
           {
@@ -46,9 +50,7 @@ export function Section({ title, summary, initiallyOpen = false, children }: Sec
           </Text>
           {summary && !open ? <Text variant="meta">{summary}</Text> : null}
         </View>
-        <View style={open && styles.rotated}>
-          <Icon name="expand" size={22} color="textMuted" />
-        </View>
+        <ExpandChevron open={open} size={22} />
       </Pressable>
       {open ? <View style={styles.body}>{children}</View> : null}
     </View>
@@ -59,6 +61,5 @@ const styles = StyleSheet.create({
   wrap: {},
   head: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 8 },
   text: { flex: 1, gap: 2 },
-  rotated: { transform: [{ rotate: '180deg' }] },
   body: { gap: 12, paddingTop: 4, paddingBottom: 8 },
 });

@@ -340,3 +340,14 @@ Annahmen, die ich beim Bauen getroffen habe. Jede lässt sich ändern.
 - **Gewährleistung** als Chip: zwei Jahre ab Kaufdatum, nur zur Orientierung.
 - **Sitzung:** httpOnly-Cookie, `Secure`, sobald das Portal über HTTPS läuft. Das Portal spricht nur über die API mit dem Backend.
 - **Expo bündelt jede API-Route einzeln.** Darum liegt das Sitzungs-Geheimnis der Demo im Datenordner (`.data/portal-secret`, in echt `PORTAL_SESSION_SECRET`), und der Dateispeicher liest bei jedem Zugriff frisch.
+
+## Animationen (02.11.2026)
+
+Durchgesehen: alle Stellen, an denen sich in der App etwas bewegt. Grundsatz aus dem Designsystem: ruhig und kurz, keine Federn, keine Skalierung beim Drücken. Werte in `theme/tokens.ts` → `motion` (Einblenden 200 ms, Aufsteigen 260 ms, Aufklappen 220 ms).
+
+- **Sheets** („Geht nicht“ u. a.): Vorher glitt der ganze Bildschirm samt Abdunklung von unten herein. Jetzt blendet die Abdunklung ein und nur das Blatt steigt auf.
+- **Plus-Menü:** Offen liegt an der Stelle des Plus ein X über der Abdunklung, das Menü steigt darüber auf. Vorher blieb das Plus unter der Abdunklung liegen.
+- **Einklappbare Abschnitte und „Details“:** klappen sanft auf und zu, der Pfeil dreht sich mit. Vorher sprang beides.
+- **Hinweis** (z. B. „Bitte bestätige zuerst …“): blendet ruhig ein. Er verschwindet weiter ohne Übergang, das steuert der Bildschirm, der ihn zeigt.
+- **„Bewegung reduzieren“** (iOS und Android) gilt jetzt überall: Bildschirmwechsel, Sheets, Menü, Abschnitte und das automatische Scrollen im Gespräch laufen dann ohne Animation. Vorher wurde die Einstellung nirgends beachtet.
+- **Unverändert, weil passend:** Bildschirmwechsel des Systems, Farbwechsel beim Drücken, Ladekreise, Fortschritt der Fehlererkennung (eine Zeile alle 650 ms, wird angesagt), Haptik bei „Erledigt“ und beim Auslöser.

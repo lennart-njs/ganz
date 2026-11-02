@@ -3,7 +3,8 @@ import { Pressable, StyleSheet, View } from 'react-native';
 
 import { useTheme } from '@/theme';
 
-import { Icon } from './Icon';
+import { animateLayout } from './animateLayout';
+import { ExpandChevron } from './ExpandChevron';
 import { Text } from './Text';
 
 interface DisclosureProps {
@@ -22,15 +23,16 @@ export function Disclosure({ title, children, initiallyOpen = false }: Disclosur
         accessibilityRole="button"
         accessibilityLabel={title}
         accessibilityState={{ expanded: open }}
-        onPress={() => setOpen((o) => !o)}
+        onPress={() => {
+          animateLayout();
+          setOpen((o) => !o);
+        }}
         style={[styles.head, { minHeight: theme.size.controlLg }]}
       >
         <Text variant="labelStrong" style={styles.title}>
           {title}
         </Text>
-        <View style={open && styles.rotated}>
-          <Icon name="expand" size={20} color="textMuted" />
-        </View>
+        <ExpandChevron open={open} size={20} />
       </Pressable>
       {open ? <View style={styles.body}>{children}</View> : null}
     </View>
@@ -41,6 +43,5 @@ const styles = StyleSheet.create({
   wrap: {},
   head: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 10 },
   title: { flex: 1 },
-  rotated: { transform: [{ rotate: '180deg' }] },
   body: { paddingBottom: 14 },
 });

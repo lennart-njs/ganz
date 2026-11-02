@@ -34,6 +34,21 @@ export const radius = {
   pill: 999,
 } as const;
 
+/**
+ * Bewegung: ruhig und kurz, keine Federn, keine Skalierung beim Drücken (Designsystem „Bewegung“).
+ * Bei „Bewegung reduzieren“ gibt es keine Übergänge (useReduceMotion).
+ */
+export const motion = {
+  /** Ein- und Ausblenden */
+  fade: 200,
+  /** Sheet und Menü steigen auf */
+  rise: 260,
+  /** Abschnitte auf- und zuklappen */
+  layout: 220,
+  /** Weg, um den ein Sheet oder Menü beim Einblenden aufsteigt */
+  riseDistance: 24,
+} as const;
+
 export const size = {
   /** Mindestgröße jeder Trefferfläche (WCAG 2.5.8, HIG) */
   hitMin: 44,
@@ -94,7 +109,3 @@ export type TypeRoleName = keyof typeof typeRoles;
 
 /** Obergrenze für Dynamic Type (200 %) */
 export const maxFontScale = 2;
-
-export const motion = {
-  fade: 200,
-} as const;

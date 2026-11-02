@@ -45,7 +45,15 @@ module.exports = defineConfig([
   expoConfig,
   prettierRecommended,
   {
-    ignores: ['dist/*', '.expo/*', 'design-system/*', 'reference/*', 'portal/*', 'website/*', 'expo-env.d.ts'],
+    ignores: [
+      'dist/*',
+      '.expo/*',
+      'design-system/*',
+      'reference/*',
+      'portal/*',
+      'website/*',
+      'expo-env.d.ts',
+    ],
   },
   {
     files: ['**/*.{js,jsx,ts,tsx}'],

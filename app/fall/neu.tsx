@@ -5,7 +5,7 @@ import type { KeyboardAwareScrollViewRef } from 'react-native-keyboard-controlle
 import { ChatInput } from '@/components/app/ChatInput';
 import { BotSays, QuickReplies, UserSaid, type Reply } from '@/components/app/Conversation';
 import { DemoHint } from '@/components/app/DemoHint';
-import { AppHeader, Button, Screen, Text } from '@/components/ds';
+import { AppHeader, Button, Screen, Text, useReduceMotion } from '@/components/ds';
 import { getGuide } from '@/lib/guideCatalog';
 import { de } from '@/i18n/de';
 import { appliance, deviceGuides } from '@/lib/appliance';
@@ -51,6 +51,7 @@ export default function ProblemMelden() {
   const [replaceRunning, setReplaceRunning] = useState(false);
   const draft = useRef<Id | undefined>(resumed?.id);
   const scrollRef = useRef<KeyboardAwareScrollViewRef>(null);
+  const reduceMotion = useReduceMotion();
 
   // Ein Fall ohne Inhalt bleibt nicht liegen, wenn man „Problem melden“ verlässt.
   useEffect(() => {
@@ -60,9 +61,9 @@ export default function ProblemMelden() {
   }, [store]);
 
   useEffect(() => {
-    const id = setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 50);
+    const id = setTimeout(() => scrollRef.current?.scrollToEnd({ animated: !reduceMotion }), 50);
     return () => clearTimeout(id);
-  }, [step, deviceId]);
+  }, [step, deviceId, reduceMotion]);
 
   const running = device ? selectOpenCaseForDevice(state, device.id) : undefined;
   const runningWithProgress =

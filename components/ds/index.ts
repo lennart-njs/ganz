@@ -23,4 +23,7 @@ export { TextField } from './TextField';
 export { Timeline, type TimelineItem } from './Timeline';
 export { Toast } from './Toast';
 export { useLargeText } from './useLargeText';
+export { useReduceMotion } from './useReduceMotion';
+export { Rise } from './Rise';
+export { animateLayout } from './animateLayout';
 export { Wordmark } from './Wordmark';

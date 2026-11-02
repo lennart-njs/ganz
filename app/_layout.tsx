@@ -13,6 +13,7 @@ import { Appearance } from 'react-native';
 import { KeyboardProvider } from 'react-native-keyboard-controller';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
+import { useReduceMotion } from '@/components/ds';
 import { useAppStore } from '@/store/appStore';
 import { useCaseSimulation } from '@/store/useCaseSimulation';
 import { useGuideCatalogSync } from '@/store/useGuideCatalogSync';
@@ -29,6 +30,7 @@ function RootStack() {
   const theme = useTheme();
   const onboardingDone = useAppStore((s) => s.onboardingDone);
   useCaseSimulation();
+  const reduceMotion = useReduceMotion();
   useGuideCatalogSync();
   useShareSync();
   return (
@@ -38,6 +40,8 @@ function RootStack() {
         screenOptions={{
           headerShown: false,
           contentStyle: { backgroundColor: theme.colors.bgPage },
+          // Systemübergänge. Bei „Bewegung reduzieren“ ohne Animation.
+          animation: reduceMotion ? 'none' : 'default',
         }}
       >
         <Stack.Protected guard={!onboardingDone}>

@@ -25,6 +25,7 @@ import {
   StarRating,
   Text,
   TextField,
+  useReduceMotion,
 } from '@/components/ds';
 import { demoConfig } from '@/config/demo.config';
 import { getGuide, guidesForDevice } from '@/lib/guideCatalog';
@@ -76,6 +77,8 @@ export default function FallGespraech() {
   const c = state.cases[caseId];
   const assistant = useAssistant(caseId);
   const scrollRef = useRef<KeyboardAwareScrollViewRef>(null);
+  // Neue Nachrichten: sanft nach unten scrollen, bei „Bewegung reduzieren“ springen
+  const reduceMotion = useReduceMotion();
 
   // Wahl im laufenden Gespräch, bevor sie gespeichert wird
   const [screenshots, setScreenshots] = useState(false);
@@ -136,7 +139,7 @@ export default function FallGespraech() {
   const last = events.at(-1)?.id;
   const msgs = state.chatMessages.filter((m) => m.caseId === caseId);
   useEffect(() => {
-    const id = setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 80);
+    const id = setTimeout(() => scrollRef.current?.scrollToEnd({ animated: !reduceMotion }), 80);
     return () => clearTimeout(id);
   }, [
     last,
@@ -148,6 +151,7 @@ export default function FallGespraech() {
     onSite,
     partnerId,
     slot,
+    reduceMotion,
   ]);
 
   if (!c) {

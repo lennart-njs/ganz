@@ -1,8 +1,9 @@
 import { useEffect } from 'react';
-import { AccessibilityInfo, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
+import { AccessibilityInfo, StyleSheet, type StyleProp, type ViewStyle } from 'react-native';
 
-import { useTheme } from '@/theme';
+import { motion, useTheme } from '@/theme';
 
+import { Rise } from './Rise';
 import { Text } from './Text';
 
 interface ToastProps {
@@ -10,14 +11,16 @@ interface ToastProps {
   style?: StyleProp<ViewStyle>;
 }
 
-/** Kurze Bestätigung. Der Screenreader sagt sie an. */
+/** Kurze Bestätigung. Blendet ruhig ein, der Screenreader sagt sie an. */
 export function Toast({ message, style }: ToastProps) {
   const theme = useTheme();
   useEffect(() => {
     AccessibilityInfo.announceForAccessibility(message);
   }, [message]);
   return (
-    <View
+    <Rise
+      distance={8}
+      duration={motion.fade}
       accessibilityLiveRegion="polite"
       style={[
         styles.toast,
@@ -28,7 +31,7 @@ export function Toast({ message, style }: ToastProps) {
       <Text variant="body" tone="onInverse" align="center">
         {message}
       </Text>
-    </View>
+    </Rise>
   );
 }
 
