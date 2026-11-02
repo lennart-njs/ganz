@@ -1,5 +1,6 @@
 import { fireEvent, renderRouter, screen } from 'expo-router/testing-library';
 
+import { openAll } from '../test/sections';
 import { demoConfig } from '@/config/demo.config';
 import { de } from '@/i18n/de';
 import { eventLabel } from '@/lib/caseEvents';
@@ -73,6 +74,7 @@ describe('Fälle', () => {
   test('offene oben, abgeschlossene darunter, ein Tap öffnet die Fallakte', async () => {
     const { done, open } = fullHistory();
     const r = await renderRouter(APP, { initialUrl: '/faelle' });
+    await openAll();
     const json = JSON.stringify(screen.toJSON());
     expect(json.indexOf('Hygienewäsche 75 °C')).toBeLessThan(json.indexOf('Wasserablauf gestört'));
     await tap(/^Wasserablauf gestört/);
@@ -119,6 +121,7 @@ describe('Fallakte', () => {
     expected.forEach((type) => expect(types).toContain(type));
 
     await renderRouter(APP, { initialUrl: `/fall/${done}/fallakte` });
+    await openAll();
     for (const e of events) {
       expect(screen.getAllByText(eventLabel(e)).length).toBeGreaterThan(0);
     }
@@ -145,6 +148,7 @@ describe('Profil', () => {
   test('Einwilligungen lassen sich widerrufen, der Widerruf erzeugt ein Ereignis', async () => {
     const { done } = fullHistory();
     await renderRouter(APP, { initialUrl: '/profil' });
+    await openAll();
     const before = useAppStore.getState().consents.filter((c) => !c.revokedAt).length;
     expect(before).toBeGreaterThanOrEqual(3);
     const buttons = screen.getAllByRole('button', { name: de.profile.revoke });
@@ -164,6 +168,7 @@ describe('Profil', () => {
   test('Einzelfälle an den Hersteller nur mit eigener Einwilligung, widerrufbar', async () => {
     fullHistory();
     await renderRouter(APP, { initialUrl: '/profil' });
+    await openAll();
     const label = de.profile.manufacturerCase(demoConfig.manufacturer.name);
     const box = screen.getByRole('checkbox', { name: label });
     expect(box).not.toBeChecked();
@@ -184,8 +189,8 @@ describe('Profil', () => {
   test('zeigt Schutz und Datenschutz', async () => {
     fullHistory();
     await renderRouter(APP, { initialUrl: '/profil' });
+    await openAll();
     expect(screen.getAllByText(demoConfig.contract.number).length).toBeGreaterThan(0);
-    await tap(de.profile.privacy);
     expect(screen.getByText(de.profile.privacyText)).toBeTruthy();
   });
 });

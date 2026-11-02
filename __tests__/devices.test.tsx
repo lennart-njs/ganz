@@ -1,6 +1,7 @@
 import { Linking } from 'react-native';
 import { act, fireEvent, renderRouter, screen } from 'expo-router/testing-library';
 
+import { openAll } from '../test/sections';
 import { demoConfig } from '@/config/demo.config';
 import { de } from '@/i18n/de';
 import { useAppStore } from '@/store/appStore';
@@ -152,9 +153,9 @@ describe('Gerätedetail', () => {
     (demoConfig.manufacturer.serviceContact as { phone: string }).phone = '0800 11 22 333';
     const spy = jest.spyOn(Linking, 'openURL').mockResolvedValue(undefined);
     await renderRouter(APP, { initialUrl: `/geraet/${device.id}` });
-    const row = screen.getByRole('button', {
-      name: new RegExp(demoConfig.manufacturer.serviceContact.label),
-    });
+    await openAll();
+    // Die Zeile mit der Nummer, nicht der Abschnittskopf „Kundendienst“
+    const row = screen.getByRole('button', { name: /0800 11 22 333/ });
     expect(screen.getByText(/0800 11 22 333/)).toBeTruthy();
     await fireEvent.press(row);
     expect(spy).toHaveBeenCalledWith('tel:08001122333');
@@ -170,6 +171,7 @@ describe('Gerätedetail', () => {
       identifiedBy: 'manuell',
     });
     await renderRouter(APP, { initialUrl: `/geraet/${device.id}` });
+    await openAll();
     expect(screen.getByText(de.device.noProtection)).toBeTruthy();
     expect(screen.getByText(de.coverage.dealerUnknown)).toBeTruthy();
     await fireEvent.press(screen.getByRole('button', { name: de.coverage.change }));

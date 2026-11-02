@@ -1,8 +1,7 @@
 import Constants from 'expo-constants';
 import { router } from 'expo-router';
-import type { ReactNode } from 'react';
 import { useRef, useState } from 'react';
-import { Linking, Pressable, StyleSheet, View } from 'react-native';
+import { Linking, Pressable, StyleSheet } from 'react-native';
 
 import { DemoControlSheet } from '@/components/app/DemoControlSheet';
 import { DemoHint } from '@/components/app/DemoHint';
@@ -10,7 +9,7 @@ import {
   Button,
   Card,
   Checkbox,
-  Disclosure,
+  Section,
   FactList,
   NavRow,
   Screen,
@@ -24,17 +23,6 @@ import { notifications } from '@/services/notifications';
 import { selectContract, useAppStore, type Appearance } from '@/store/appStore';
 
 const t = de.profile;
-
-function Section({ title, children }: { title: string; children: ReactNode }) {
-  return (
-    <View style={styles.section}>
-      <Text variant="title" accessibilityRole="header">
-        {title}
-      </Text>
-      {children}
-    </View>
-  );
-}
 
 /** Profil: Person, Schutz, Weitergaben mit Widerruf (B-40), Datenschutz, Version */
 export default function Profil() {
@@ -99,7 +87,7 @@ export default function Profil() {
       </Text>
       <DemoHint id="profil" />
 
-      <Section title={t.person}>
+      <Section title={t.person} summary={person?.displayName}>
         <Card>
           <FactList
             items={[
@@ -117,7 +105,10 @@ export default function Profil() {
         </Card>
       </Section>
 
-      <Section title={t.protection}>
+      <Section
+        title={t.protection}
+        summary={contract ? contract.provider.name : de.device.noProtection}
+      >
         {contract ? (
           <Card>
             <FactList
@@ -135,7 +126,10 @@ export default function Profil() {
         )}
       </Section>
 
-      <Section title={t.consents}>
+      <Section
+        title={t.consents}
+        summary={t.consentsCount(caseConsents.filter((c) => !c.revokedAt).length)}
+      >
         <Text variant="body">{t.consentsText}</Text>
         {caseConsents.length === 0 ? <Text variant="meta">{t.noConsents}</Text> : null}
         {caseConsents.map((c) => (
@@ -160,7 +154,12 @@ export default function Profil() {
         ))}
       </Section>
 
-      <Section title={t.optional}>
+      <Section
+        title={t.optional}
+        summary={t.optionalCount(
+          [!!manufacturerConsent, state.notifications === 'erlaubt'].filter(Boolean).length,
+        )}
+      >
         <Checkbox
           label={t.manufacturerCase(demoConfig.manufacturer.name)}
           sub={t.manufacturerCaseSub}
@@ -175,7 +174,7 @@ export default function Profil() {
         />
       </Section>
 
-      <Section title={t.appearance}>
+      <Section title={t.appearance} summary={t.appearanceOptions[state.appearance]}>
         <SegmentedControl
           accessibilityLabel={t.appearance}
           options={(['system', 'hell', 'dunkel'] as Appearance[]).map((value) => ({
@@ -187,9 +186,9 @@ export default function Profil() {
         />
       </Section>
 
-      <Disclosure title={t.privacy}>
+      <Section title={t.privacy}>
         <Text variant="body">{t.privacyText}</Text>
-      </Disclosure>
+      </Section>
 
       {/* Versteckte Geste: 7-mal tippen öffnet die Demo-Steuerung (Review 3, Punkt 13) */}
       <Pressable
@@ -210,7 +209,6 @@ export default function Profil() {
 }
 
 const styles = StyleSheet.create({
-  section: { gap: 10, marginTop: 8 },
   gap: { marginTop: 8 },
   version: { minHeight: 44, justifyContent: 'center' },
 });

@@ -184,6 +184,7 @@ test('Pflege aus dem Gerätedetail startet einen Pflege-Fall', async () => {
   const device = useAppStore.getState().devices[0]!;
   const r = await renderRouter(APP, { initialUrl: `/geraet/${device.id}` });
   await act(async () => {});
+  await tap(new RegExp(`^${de.device.sections.maintenance}`));
   await tap(new RegExp(`^${de.maintenance[0]!.title}`));
   expect(r.getPathname()).toBe('/fall/GS-24817/anleitung');
   expect(useAppStore.getState().cases['GS-24817']).toMatchObject({ entry: 'pflege' });

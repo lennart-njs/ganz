@@ -270,3 +270,11 @@ Annahmen, die ich beim Bauen getroffen habe. Jede lässt sich ändern.
 - **Kosten:** eine große Zahl, darunter klein Ersatzgerät und Ersparnis. Doppelte Sätze („Befund aufgenommen“, „kein Schutz verknüpft“) entfallen.
 - **Gespräch:** mach’s spricht ohne Absenderzeile, nur der Reparatur-Assistent trägt einen Namen. Nachrichten in 20 pt statt 22 pt.
 - **Demo:** Hinweise, Demo-Knöpfe und „Beispielwerte“ sind standardmäßig aus (Entscheidung 21). Freigabe und Termin laufen per Timer weiter. Profil → 7-mal auf die Versionsnummer → „Hinweise“ schaltet sie an.
+
+### Einklappbare Abschnitte (Entscheidung 23)
+
+- **Baustein** `components/ds/Section.tsx`: Titel, eine Zeile Zusammenfassung, Pfeil. Der Kopf ist ein Button mit `expanded`-Zustand für VoiceOver und TalkBack. Der Zustand wird nicht gespeichert, jede Seite öffnet eingeklappt.
+- **Gerätedetail:** Status, Schutz, Pflege, Anleitungen, Fälle, Kundendienst, Gerät. „Anleitungen“ listet jetzt die Probleme aus der Gebrauchsanweisung statt eines zweiten „Problem melden“. Die Aktionsleiste zeigt nur noch „Problem melden“. Bei Geräten mit Händler-Kundendienst entfällt die Hotline des Herstellers auch hier.
+- **Profil:** Du, Schutz, Weitergaben und Einwilligungen, Freiwillig, Darstellung, Datenschutz.
+- **Fälle:** „Offen“ und „Abgeschlossen“ mit Anzahl. **Fallakte:** Überblick, Weitergaben, Verlauf.
+- **Nicht eingeklappt:** Startseite (Suchpille und Geräte), Gespräch eines Falls, Anleitung. Das sind keine Übersichten, sondern Arbeitsflächen.

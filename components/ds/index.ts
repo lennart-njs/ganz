@@ -6,6 +6,7 @@ export { Checkbox } from './Checkbox';
 export { ChoiceChip } from './ChoiceChip';
 export { ConfidenceLabel, type ConfidenceLevel } from './ConfidenceLabel';
 export { Disclosure } from './Disclosure';
+export { Section } from './Section';
 export { FactList, type Fact } from './FactList';
 export { Icon, type IconName } from './Icon';
 export { InfoBox } from './InfoBox';

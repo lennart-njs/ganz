@@ -1,8 +1,6 @@
-import { StyleSheet, View } from 'react-native';
-
 import { CaseFileCard } from '@/components/app/CaseFileCard';
 import { CaseScreen, useCaseId } from '@/components/app/CaseScreen';
-import { Card, Text, Timeline } from '@/components/ds';
+import { Card, Section, Text, Timeline } from '@/components/ds';
 import { de } from '@/i18n/de';
 import { formatDateTime } from '@/i18n/format';
 import { eventLabel } from '@/lib/caseEvents';
@@ -36,12 +34,11 @@ export default function Fallakte() {
       </Text>
       <Text variant="body">{t.status(caseStatusLabel(c.status))}</Text>
 
-      <CaseFileCard caseId={caseId} detail="voll" />
+      <Section title={t.overview}>
+        <CaseFileCard caseId={caseId} detail="voll" />
+      </Section>
 
-      <View style={styles.section}>
-        <Text variant="title" accessibilityRole="header">
-          {t.shared}
-        </Text>
+      <Section title={t.shared} summary={de.device.casesCountShared(consents.length)}>
         {consents.length === 0 ? (
           <Text variant="body">{t.none}</Text>
         ) : (
@@ -54,22 +51,15 @@ export default function Fallakte() {
             </Text>
           ))
         )}
-      </View>
+      </Section>
 
-      <View style={styles.section}>
-        <Text variant="title" accessibilityRole="header">
-          {t.history}
-        </Text>
+      <Section title={t.history} summary={t.eventsCount(events.length)}>
         <Card>
           <Timeline
             items={events.map((e) => ({ when: formatDateTime(e.at), what: eventLabel(e) }))}
           />
         </Card>
-      </View>
+      </Section>
     </CaseScreen>
   );
 }
-
-const styles = StyleSheet.create({
-  section: { gap: 8, marginTop: 8 },
-});

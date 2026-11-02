@@ -1,7 +1,7 @@
 import { router } from 'expo-router';
-import { StyleSheet, View } from 'react-native';
+import { StyleSheet } from 'react-native';
 
-import { Button, Card, NavRow, Screen, Text } from '@/components/ds';
+import { Button, Card, NavRow, Screen, Section, Text } from '@/components/ds';
 import { de } from '@/i18n/de';
 import { formatDateTime } from '@/i18n/format';
 import { caseStatusLabel, resumeHref } from '@/lib/caseView';
@@ -62,26 +62,19 @@ export default function Faelle() {
         </Card>
       ) : null}
       {open.length ? (
-        <View style={styles.section}>
-          <Text variant="title" accessibilityRole="header">
-            {t.open}
-          </Text>
+        <Section title={t.open} summary={de.device.casesCount(open.length)}>
           {open.map(row)}
-        </View>
+        </Section>
       ) : null}
       {closed.length ? (
-        <View style={styles.section}>
-          <Text variant="title" accessibilityRole="header">
-            {t.closed}
-          </Text>
+        <Section title={t.closed} summary={de.device.casesCount(closed.length)}>
           {closed.map(row)}
-        </View>
+        </Section>
       ) : null}
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  section: { gap: 8 },
   gap: { marginTop: 12 },
 });

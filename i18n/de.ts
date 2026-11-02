@@ -22,6 +22,8 @@ export const de = {
   },
   ds: {
     attention: 'Achtung',
+    expand: 'Aufklappen',
+    collapse: 'Zuklappen',
     confidence: 'Sicherheit',
     confidenceLabel: (level: string) => `Sicherheit: ${level}`,
     confidenceLevel: {
@@ -443,6 +445,10 @@ export const de = {
       number: 'Vertrag',
     },
     noProtection: 'Kein Schutz verknüpft',
+    count: (n: number) => (n === 1 ? '1 Anleitung' : `${n} Anleitungen`),
+    casesCount: (n: number) => (n === 1 ? '1 Fall' : `${n} Fälle`),
+    casesCountShared: (n: number) =>
+      n === 0 ? 'Nichts weitergegeben' : n === 1 ? '1 Weitergabe' : `${n} Weitergaben`,
     noProtectionText: 'Reparaturen zahlst du selbst. Den Preis siehst du vorher.',
     deviceFacts: {
       manufacturer: 'Hersteller',
@@ -937,6 +943,8 @@ export const de = {
     sharedLine: (recipient: string, date: string) => `${recipient} · ${date}`,
     revoked: (date: string) => `widerrufen am ${date}`,
     none: 'Noch nichts weitergegeben.',
+    overview: 'Überblick',
+    eventsCount: (n: number) => (n === 1 ? '1 Eintrag' : `${n} Einträge`),
     event: {
       step: (n: number, title: string) => `Schritt ${n}: ${title}`,
       stepPage: (n: number, title: string, page: number) =>
@@ -1137,6 +1145,8 @@ export const de = {
     notificationsSub: 'Wenn sich bei Freigabe oder Termin etwas ändert.',
     notificationsDenied: 'In den Einstellungen deines Telefons ausgeschaltet.',
     appearance: 'Darstellung',
+    consentsCount: (n: number) => (n === 0 ? 'Keine aktiv' : n === 1 ? '1 aktiv' : `${n} aktiv`),
+    optionalCount: (n: number) => (n === 0 ? 'Alles aus' : n === 1 ? '1 an' : `${n} an`),
     appearanceOptions: { system: 'Wie System', hell: 'Hell', dunkel: 'Dunkel' },
     privacy: 'Datenschutz',
     privacyText:

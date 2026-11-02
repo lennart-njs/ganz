@@ -1,6 +1,5 @@
 import { router, useLocalSearchParams } from 'expo-router';
-import type { ReactNode } from 'react';
-import { Linking, StyleSheet, View } from 'react-native';
+import { Linking } from 'react-native';
 
 import { OpenCaseCard } from '@/components/app/OpenCaseCard';
 import {
@@ -12,6 +11,7 @@ import {
   NavRow,
   PhotoFrame,
   Screen,
+  Section,
   Text,
 } from '@/components/ds';
 import { de } from '@/i18n/de';
@@ -19,20 +19,10 @@ import { formatDateTime, formatEuro, formatMonthYear } from '@/i18n/format';
 import { deviceGuides } from '@/lib/appliance';
 import { caseProgressLabel, caseStatusLabel, deviceStatusLabel, resumeHref } from '@/lib/caseView';
 import { deviceTitle, getManufacturer } from '@/lib/devices';
+import { dealerService } from '@/lib/service';
 import { selectDevice, selectOpenCaseForDevice, useAppStore } from '@/store/appStore';
 
 const t = de.device;
-
-function Section({ title, children }: { title: string; children: ReactNode }) {
-  return (
-    <View style={styles.section}>
-      <Text variant="title" accessibilityRole="header">
-        {title}
-      </Text>
-      {children}
-    </View>
-  );
-}
 
 export default function GeraetDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -73,7 +63,7 @@ export default function GeraetDetail() {
     <Screen
       header={<AppHeader title={title} onBack={() => router.back()} />}
       footer={
-        <ActionBar meta={deviceStatusLabel(state, device.id)} sub={title}>
+        <ActionBar>
           <Button label={t.reportProblem} onPress={report} />
         </ActionBar>
       }
@@ -83,7 +73,14 @@ export default function GeraetDetail() {
         {title}
       </Text>
 
-      <Section title={t.sections.status}>
+      <Section
+        title={t.sections.status}
+        summary={
+          openCase
+            ? de.common.dot(openCase.problemLabel, caseProgressLabel(state, openCase))
+            : deviceStatusLabel(state, device.id)
+        }
+      >
         {openCase ? (
           <OpenCaseCard
             caseId={openCase.id}
@@ -99,7 +96,14 @@ export default function GeraetDetail() {
         )}
       </Section>
 
-      <Section title={t.sections.protection}>
+      <Section
+        title={t.sections.protection}
+        summary={
+          contract
+            ? de.common.dot(contract.productName, contract.provider.name)
+            : de.common.dot(de.coverage.dealer, device.soldBy?.name ?? de.coverage.dealerUnknown)
+        }
+      >
         {contract ? (
           <Card>
             <FactList
@@ -130,7 +134,7 @@ export default function GeraetDetail() {
       </Section>
 
       {guideSet?.care ? (
-        <Section title={t.sections.maintenance}>
+        <Section title={t.sections.maintenance} summary={t.count(de.maintenance.length)}>
           {de.maintenance.map((m) => (
             <NavRow
               key={m.guideId}
@@ -151,16 +155,26 @@ export default function GeraetDetail() {
         </Section>
       ) : null}
 
-      <Section title={t.sections.guides}>
+      <Section
+        title={t.sections.guides}
+        summary={guideSet ? t.count(guideSet.problems.length) : t.noGuides}
+      >
         {guideSet ? (
-          <Text variant="meta">{t.guideSource(guideSet.source)}</Text>
+          <>
+            {guideSet.problems.map((p) => (
+              <NavRow key={p.id} title={p.label} sub={p.sub} onPress={report} />
+            ))}
+            <Text variant="meta">{t.guideSource(guideSet.source)}</Text>
+          </>
         ) : (
-          <Text variant="meta">{t.noGuides}</Text>
+          <Text variant="body">{t.noGuides}</Text>
         )}
-        <NavRow title={t.reportProblem} sub={de.home.searchSub} onPress={report} />
       </Section>
 
-      <Section title={t.sections.cases}>
+      <Section
+        title={t.sections.cases}
+        summary={cases.length ? t.casesCount(cases.length) : t.noCases}
+      >
         {cases.length === 0 ? (
           <Text variant="body">{t.noCases}</Text>
         ) : (
@@ -181,8 +195,9 @@ export default function GeraetDetail() {
         )}
       </Section>
 
-      {service ? (
-        <Section title={t.sections.service}>
+      {/* Mit Händler-Kundendienst keine Hotline des Herstellers (wie im Fall) */}
+      {service && !dealerService(device) ? (
+        <Section title={t.sections.service} summary={service.label}>
           {/* Nummer aus den Gerätedaten (B-21). Öffnet die Telefon-App. */}
           <NavRow
             title={service.label}
@@ -193,7 +208,10 @@ export default function GeraetDetail() {
         </Section>
       ) : null}
 
-      <Section title={t.sections.device}>
+      <Section
+        title={t.sections.device}
+        summary={de.common.dot(de.deviceCategory[device.category], device.model)}
+      >
         <Card>
           <FactList items={deviceFacts} />
         </Card>
@@ -201,7 +219,3 @@ export default function GeraetDetail() {
     </Screen>
   );
 }
-
-const styles = StyleSheet.create({
-  section: { gap: 10, marginTop: 8 },
-});
