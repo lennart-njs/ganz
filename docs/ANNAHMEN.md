@@ -324,3 +324,10 @@ Annahmen, die ich beim Bauen getroffen habe. Jede lässt sich ändern.
 - **Texte zu Entscheidungen** sagen keine Kosten zu („Wir kümmern uns um die Reparatur“). Was es kostet, steht in der Notiz des Händlers.
 - **Händler-Ereignisse** stehen im Gespräch mit dem Namen des Händlers als Absender und in der Fallakte im Zeitstrahl.
 - Details: `docs/BACKEND.md`.
+
+## Nach dem Test auf dem Handy (02.11.2026)
+
+- **Gerät wählen:** Unter „Wähl dein Gerät.“ nur das Suchfeld. Vorschläge erscheinen erst beim Tippen und passen zur Eingabe (Hersteller, Modell, Gerätetyp). „Anderes Gerät eintragen“ steht dann unter den Treffern, „Typenschild fotografieren“ bleibt unten.
+- **Offener Fall auf der Startseite** im mach’s-Look: helle Akzentfläche, Statuszeile mit Punkt, blauer Button „Weitermachen“ (statt schwarzer Block).
+- **Plus unten rechts** statt der Zeile „Gerät hinzufügen“. Es öffnet ein kleines Menü: „Gerät hinzufügen“ und „Was ist kaputt?“.
+- **Eingabefeld im Gespräch:** Senden ist ein Pfeil im Feld (wie in Messengern), kein eigener Button. Kamera links daneben. Der Platzhalter ist kurz, damit er ganz lesbar bleibt: „Frag den Assistenten“, während einer Anleitung „Frag zu Schritt 3“. Der Link „Frag den Assistenten zu diesem Schritt“ unter dem Schritt entfällt. Gleiches Feld in „Problem melden“.

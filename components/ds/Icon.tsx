@@ -4,6 +4,7 @@ import {
   ChevronDown,
   ChevronLeft,
   ChevronRight,
+  ArrowUp,
   CircleUser,
   FolderOpen,
   House,
@@ -43,6 +44,8 @@ const icons = {
   search: Search,
   add: Plus,
   edit: Pencil,
+  /** Senden im Eingabefeld des Gesprächs */
+  send: ArrowUp,
 } as const;
 
 export type IconName = keyof typeof icons;

@@ -225,6 +225,9 @@ describe('Gerät anlegen: erst Händler, dann Versicherung (Entscheidung 16, 31)
 
   test('mit Versicherung: der Händler bleibt, dazu Versicherer und Police-Nr.', async () => {
     await renderRouter(APP, { initialUrl: '/geraet-anlegen' });
+    // Vorschläge erst beim Tippen
+    expect(screen.queryByRole('button', { name: /^Bosch SMI4EAS24E/ })).toBeNull();
+    await fireEvent.changeText(screen.getByLabelText(de.setup.searchLabel), 'bosch');
     await fireEvent.press(screen.getByRole('button', { name: /^Bosch SMI4EAS24E/ }));
     await fireEvent.press(screen.getByRole('radio', { name: /^Elektro Lindemann/ }));
     await fireEvent.press(screen.getByRole('button', { name: de.setup.saveDealer }));
@@ -243,5 +246,33 @@ describe('Gerät anlegen: erst Händler, dann Versicherung (Entscheidung 16, 31)
     expect(s.devices[0]?.contractId).toBe(s.contracts[0]?.id);
     expect(s.devices[0]?.soldBy).toMatchObject({ id: 'lindemann' });
     expect(s.contracts[0]?.provider.name).toBe(demoConfig.insurer.name);
+  });
+});
+
+describe('Gerät suchen und Plus auf der Startseite', () => {
+  test('ohne Eingabe keine Vorschläge, „miele“ zeigt alle Miele-Geräte', async () => {
+    await renderRouter(APP, { initialUrl: '/geraet-anlegen' });
+    expect(screen.queryByRole('button', { name: /^Miele/ })).toBeNull();
+    await fireEvent.changeText(screen.getByLabelText(de.setup.searchLabel), 'miele');
+    for (const m of [/^Miele G 5833 SC/, /^Miele WQ 1000 WPS/, /^Miele WKB 130/]) {
+      expect(screen.getByRole('button', { name: m })).toBeTruthy();
+    }
+    expect(screen.queryByRole('button', { name: /^Bosch/ })).toBeNull();
+  });
+
+  test('das Plus öffnet ein Menü mit „Gerät hinzufügen“', async () => {
+    useAppStore.setState({ onboardingDone: true });
+    useAppStore.getState().addDevice({
+      manufacturerId: 'miele',
+      category: 'waschmaschine',
+      model: 'WKB 130',
+      identifiedBy: 'manuell',
+    });
+    const r = await renderRouter(APP, { initialUrl: '/' });
+    await fireEvent.press(screen.getByRole('button', { name: de.home.addMenu }));
+    await fireEvent.press(
+      screen.getByRole('menuitem', { name: new RegExp(`^${de.home.addDevice}`) }),
+    );
+    expect(r.getPathname()).toBe('/geraet/neu');
   });
 });

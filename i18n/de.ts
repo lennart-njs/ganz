@@ -378,8 +378,6 @@ export const de = {
   /** Gerät anlegen: Gerät wählen, dann Versicherung oder Händler (Entscheidung 16) */
   setup: {
     pickTitle: 'Wähl dein Gerät.',
-    pickText:
-      'Für diese Geräte kennen wir die Gebrauchsanweisung und führen dich Schritt für Schritt.',
     searchLabel: 'Gerät suchen',
     searchPlaceholder: 'Hersteller oder Modell, z. B. G 5833',
     catalogSub: (category: string) => `${category} · Anleitungen aus der Gebrauchsanweisung`,
@@ -435,6 +433,8 @@ export const de = {
     caseNumber: (id: string) => `Fall ${id}`,
     openCaseLabel: (id: string) => `Offener Fall · Fall ${id}`,
     continueCase: 'Weitermachen',
+    addMenu: 'Hinzufügen',
+    reportSub: 'Foto, Meldung oder Symptom',
   },
 
   deviceStatus: {
@@ -1138,6 +1138,9 @@ export const de = {
     entrySub: 'Beschreib es, der Assistent fragt nach',
     entryLabel: 'Frage an den Reparatur-Assistenten',
     askStep: 'Frag den Assistenten zu diesem Schritt',
+    /** Platzhalter im Eingabefeld: hier antwortet der Reparatur-Assistent. Kurz, damit er ganz lesbar bleibt. */
+    placeholder: 'Frag den Assistenten',
+    placeholderStep: (step: number) => `Frag zu Schritt ${step}`,
     stepDraft: (step: number, title: string) => `Ich hänge bei Schritt ${step}: ${title}. `,
     fileTitle: 'Reparatur-Assistent',
     fileCount: (n: number) => (n === 1 ? '1 Nachricht' : `${n} Nachrichten`),

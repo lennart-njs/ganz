@@ -121,7 +121,9 @@ export function DeviceSetup({ onBack, onDone, deviceId, onSkip }: DeviceSetupPro
   );
 
   if (phase === 'pick') {
-    const found = searchCatalog(query, (c) => de.deviceCategory[c]);
+    // Vorschläge erst beim Tippen, passend zur Eingabe (z. B. „miele“: alle Miele-Geräte)
+    const typed = query.trim().length > 0;
+    const found = typed ? searchCatalog(query, (c) => de.deviceCategory[c]) : [];
     return (
       <Screen
         header={header}
@@ -142,7 +144,6 @@ export function DeviceSetup({ onBack, onDone, deviceId, onSkip }: DeviceSetupPro
         <Text variant="h1" accessibilityRole="header">
           {t.pickTitle}
         </Text>
-        <Text variant="body">{t.pickText}</Text>
         {search(t.searchLabel, t.searchPlaceholder)}
         <View style={styles.list}>
           {found.map((m) => (
@@ -153,12 +154,12 @@ export function DeviceSetup({ onBack, onDone, deviceId, onSkip }: DeviceSetupPro
               onPress={() => pickModel(m)}
             />
           ))}
-          {found.length === 0 ? (
+          {typed && found.length === 0 ? (
             <Text variant="body" accessibilityLiveRegion="polite">
               {t.noMatch}
             </Text>
           ) : null}
-          <NavRow title={t.manual} tone="muted" onPress={() => go('scan')} />
+          {typed ? <NavRow title={t.manual} tone="muted" onPress={() => go('scan')} /> : null}
         </View>
       </Screen>
     );

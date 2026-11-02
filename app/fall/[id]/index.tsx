@@ -3,18 +3,11 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { Linking, StyleSheet, View } from 'react-native';
 import type { KeyboardAwareScrollViewRef } from 'react-native-keyboard-controller';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { CaseFileCard } from '@/components/app/CaseFileCard';
+import { ChatInput } from '@/components/app/ChatInput';
 import { CaseScreen, useCaseId } from '@/components/app/CaseScreen';
-import {
-  BotSays,
-  IconButton,
-  QuickReplies,
-  Typing,
-  UserSaid,
-  type Reply,
-} from '@/components/app/Conversation';
+import { BotSays, QuickReplies, Typing, UserSaid, type Reply } from '@/components/app/Conversation';
 import { CostCompare } from '@/components/app/CostCompare';
 import { DemoHint } from '@/components/app/DemoHint';
 import { GuideStepCard } from '@/components/app/GuideStepCard';
@@ -51,7 +44,6 @@ import { toDiagnosis } from '@/lib/diagnosis';
 import type { CaseEvent, Diagnosis } from '@/model/types';
 import { services, type FindingOption, type PhotoMode, type QuestionAnswer } from '@/services';
 import { activeBooking, nextSimulationDue, selectCaseEvents, useAppStore } from '@/store/appStore';
-import { useTheme } from '@/theme';
 
 const t = de.thread;
 const CONSENT_TEXT_VERSION = '2026-10-1';
@@ -73,8 +65,6 @@ const answers: QuestionAnswer[] = ['ablauf', 'zulauf', 'unklar'];
  * Der Verlauf entsteht aus dem gespeicherten Fall, er übersteht also jeden Neustart.
  */
 export default function FallGespraech() {
-  const theme = useTheme();
-  const insets = useSafeAreaInsets();
   const caseId = useCaseId();
   const params = useLocalSearchParams<{
     weiter?: string;
@@ -536,16 +526,7 @@ export default function FallGespraech() {
                 question={isLast && ending === 'stoerung' ? a.runsAgain : undefined}
               />
             </View>
-            {active ? (
-              <View style={styles.links}>
-                <Button
-                  label={de.chat.askStep}
-                  variant="link"
-                  onPress={() => setInput(de.chat.stepDraft(x.step + 1, guide.steps[x.step]!.t))}
-                />
-                {details('anleitung')}
-              </View>
-            ) : null}
+            {active ? <View style={styles.links}>{details('anleitung')}</View> : null}
           </BotSays>,
         );
       } else if (x.kind === 'erledigt') {
@@ -1296,26 +1277,28 @@ export default function FallGespraech() {
   }
 
   const closed = c.status === 'erledigt' || c.status === 'abgebrochen';
+  // Laufende Anleitung: Der Platzhalter lädt zur Frage zum aktuellen Schritt ein (statt eines Links)
+  const stepNow = run && !run.endedAt && c.status === 'selbsthilfe' ? run.currentStep + 1 : 0;
   const inputBar = closed ? undefined : (
-    <View
-      style={[
-        styles.inputBar,
-        {
-          paddingBottom: Math.max(insets.bottom, 12) + 8,
-          paddingHorizontal: theme.gutter,
-          borderTopColor: theme.colors.borderSubtle,
-          backgroundColor: theme.colors.bgPage,
-        },
-      ]}
-    >
-      <IconButton
-        icon="camera"
-        label={de.chat.photoButton}
-        disabled={assistant.pending}
-        onPress={() => router.push(`/fall/${caseId}/foto-frage`)}
-      />
-      <View style={styles.inputField}>
-        {attachedPhoto ? (
+    <ChatInput
+      label={t.inputLabel}
+      placeholder={stepNow ? de.chat.placeholderStep(stepNow) : de.chat.placeholder}
+      value={input}
+      error={inputError}
+      onChangeText={(v) => {
+        setInput(v);
+        setInputError(undefined);
+      }}
+      onSend={sendInput}
+      sendLabel={de.chat.send}
+      canSend={(!!input.trim() || !!attached) && !assistant.pending}
+      camera={{
+        label: de.chat.photoButton,
+        disabled: assistant.pending,
+        onPress: () => router.push(`/fall/${caseId}/foto-frage`),
+      }}
+      above={
+        attachedPhoto ? (
           <View style={styles.attached}>
             <Text variant="meta">{de.chat.photoAttached}</Text>
             <Button
@@ -1324,27 +1307,9 @@ export default function FallGespraech() {
               onPress={() => setAttached(undefined)}
             />
           </View>
-        ) : null}
-        <TextField
-          label={t.inputLabel}
-          labelHidden
-          placeholder={a.otherPlaceholder}
-          multiline
-          rows={1}
-          value={input}
-          error={inputError}
-          onChangeText={(v) => {
-            setInput(v);
-            setInputError(undefined);
-          }}
-        />
-      </View>
-      <Button
-        label={de.chat.send}
-        disabled={(!input.trim() && !attached) || assistant.pending}
-        onPress={sendInput}
-      />
-    </View>
+        ) : undefined
+      }
+    />
   );
 
   const footer = replies.length ? (
@@ -1390,13 +1355,6 @@ const styles = StyleSheet.create({
   stack: { gap: 8 },
   items: { marginTop: 8, gap: 2 },
   gapTop: { marginTop: 8 },
-  inputBar: {
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-    gap: 8,
-    paddingTop: 10,
-  },
-  inputField: { flex: 1 },
   links: { flexDirection: 'row', flexWrap: 'wrap', columnGap: 16 },
   attached: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
 });

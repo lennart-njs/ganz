@@ -167,7 +167,7 @@ describe('Reparatur-Assistent', () => {
     );
   });
 
-  test('zum Schritt: Entwurf mit dem Schritt im Eingabefeld', async () => {
+  test('während der Anleitung lädt das Eingabefeld zur Frage zum Schritt ein', async () => {
     setup();
     const s = useAppStore.getState();
     const device = s.devices[0]!;
@@ -177,16 +177,14 @@ describe('Reparatur-Assistent', () => {
       problemLabel: 'Wasserablauf gestört',
     });
     s.startGuide(c.id, 'ablauf');
-    const r = await renderRouter(APP, { initialUrl: `/fall/${c.id}` });
+    await renderRouter(APP, { initialUrl: `/fall/${c.id}` });
     await act(async () => {
       jest.runOnlyPendingTimers();
     });
-    // Die Frage zum Schritt bleibt im Gespräch, der Entwurf steht im Eingabefeld
-    await tap(t.askStep);
-    expect(r.getPathname()).toBe(`/fall/${c.id}`);
-    expect(screen.getByLabelText(de.thread.inputLabel).props.value).toBe(
-      t.stepDraft(1, guides.ablauf.steps[0]!.t),
-    );
+    // Kein eigener Link mehr: der Platzhalter sagt es, Senden steckt im Feld
+    expect(screen.queryByRole('button', { name: t.askStep })).toBeNull();
+    expect(screen.getByPlaceholderText(t.placeholderStep(1))).toBeTruthy();
+    expect(screen.getByRole('button', { name: t.send })).toBeDisabled();
   });
 
   test('Foto zum Schritt: Bild geht mit, die Einschätzung steht unter der Antwort', async () => {

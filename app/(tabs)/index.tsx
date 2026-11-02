@@ -1,11 +1,12 @@
 import { router } from 'expo-router';
 import { StyleSheet, View } from 'react-native';
 
+import { AddMenu } from '@/components/app/AddMenu';
 import { DemoHint } from '@/components/app/DemoHint';
 import { DeviceCard } from '@/components/app/DeviceCard';
 import { OpenCaseCard } from '@/components/app/OpenCaseCard';
 import { SearchPill } from '@/components/app/SearchPill';
-import { Button, Card, NavRow, Screen, Text, Wordmark } from '@/components/ds';
+import { Button, Card, Screen, Text, Wordmark } from '@/components/ds';
 import { de } from '@/i18n/de';
 import { formatMonthYear } from '@/i18n/format';
 import { caseProgressLabel, deviceStatusLabel, resumeHref } from '@/lib/caseView';
@@ -25,69 +26,81 @@ export default function Geraete() {
         : router.push('/fall/neu');
 
   return (
-    <Screen>
-      <Wordmark size={26} />
-      <DemoHint id="home" />
-      <SearchPill onPress={report} />
+    <View style={styles.root}>
+      <Screen>
+        <Wordmark size={26} />
+        <DemoHint id="home" />
+        <SearchPill onPress={report} />
 
-      {openCases.map((c) => (
-        <OpenCaseCard
-          key={c.id}
-          caseId={c.id}
-          title={c.problemLabel}
-          detail={caseProgressLabel(state, c)}
-          onContinue={() => {
-            if (c.pausedAt) state.resumeCase(c.id);
-            router.push(resumeHref(state, c));
-          }}
-        />
-      ))}
-
-      <Text variant="h1" accessibilityRole="header" style={styles.section}>
-        {de.home.myDevices}
-      </Text>
-
-      {devices.length === 0 ? (
-        <Card>
-          <Text variant="title">{de.home.emptyTitle}</Text>
-          <Text variant="body" style={styles.gap}>
-            {de.home.emptyText}
-          </Text>
-          <Button
-            label={de.home.addDevice}
-            icon="add"
-            style={styles.gap}
-            onPress={() => router.push('/geraet/neu')}
+        {openCases.map((c) => (
+          <OpenCaseCard
+            key={c.id}
+            caseId={c.id}
+            title={c.problemLabel}
+            detail={caseProgressLabel(state, c)}
+            onContinue={() => {
+              if (c.pausedAt) state.resumeCase(c.id);
+              router.push(resumeHref(state, c));
+            }}
           />
-        </Card>
-      ) : (
-        <View style={styles.list}>
-          {devices.map((d) => (
-            <DeviceCard
-              key={d.id}
-              title={deviceTitle(d)}
-              meta={
-                d.purchaseDate
-                  ? de.device.meta(de.deviceCategory[d.category], formatMonthYear(d.purchaseDate))
-                  : de.deviceCategory[d.category]
-              }
-              status={deviceStatusLabel(state, d.id)}
-              protectedBy={!!d.contractId}
-              onPress={() => router.push(`/geraet/${d.id}`)}
+        ))}
+
+        <Text variant="h1" accessibilityRole="header" style={styles.section}>
+          {de.home.myDevices}
+        </Text>
+
+        {devices.length === 0 ? (
+          <Card>
+            <Text variant="title">{de.home.emptyTitle}</Text>
+            <Text variant="body" style={styles.gap}>
+              {de.home.emptyText}
+            </Text>
+            <Button
+              label={de.home.addDevice}
+              icon="add"
+              style={styles.gap}
+              onPress={() => router.push('/geraet/neu')}
             />
-          ))}
-          <NavRow
-            title={de.home.addDevice}
-            sub={de.home.addDeviceSub}
-            onPress={() => router.push('/geraet/neu')}
-          />
-        </View>
-      )}
-    </Screen>
+          </Card>
+        ) : (
+          <View style={styles.list}>
+            {devices.map((d) => (
+              <DeviceCard
+                key={d.id}
+                title={deviceTitle(d)}
+                meta={
+                  d.purchaseDate
+                    ? de.device.meta(de.deviceCategory[d.category], formatMonthYear(d.purchaseDate))
+                    : de.deviceCategory[d.category]
+                }
+                status={deviceStatusLabel(state, d.id)}
+                protectedBy={!!d.contractId}
+                onPress={() => router.push(`/geraet/${d.id}`)}
+              />
+            ))}
+          </View>
+        )}
+        {/* Platz für das Plus unten rechts */}
+        <View style={styles.fabSpace} />
+      </Screen>
+      <AddMenu
+        items={[
+          {
+            key: 'geraet',
+            label: de.home.addDevice,
+            sub: de.home.addDeviceSub,
+            onPress: () => router.push('/geraet/neu'),
+          },
+          { key: 'problem', label: de.home.searchTitle, sub: de.home.reportSub, onPress: report },
+        ]}
+      />
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  root: { flex: 1 },
+  fabSpace: { height: 72 },
   section: { marginTop: 12 },
   list: { gap: 20 },
   gap: { marginTop: 12 },

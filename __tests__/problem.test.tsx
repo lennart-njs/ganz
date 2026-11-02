@@ -63,14 +63,11 @@ describe('Taps bis zur ersten Hilfe (Review 5.1)', () => {
 describe('Eigene Worte (B-54)', () => {
   test('gehen an den Reparatur-Assistenten, ohne Einwilligung als Notiz an die Fachkraft', async () => {
     const r = await renderRouter(APP, { initialUrl: '/fall/neu' });
-    await fireEvent.changeText(
-      screen.getByPlaceholderText(de.appliance.waschmaschine.otherPlaceholder),
-      'Ja',
-    );
+    await fireEvent.changeText(screen.getByPlaceholderText(de.chat.placeholder), 'Ja');
     await tap(de.chat.send);
     expect(screen.getByText(de.problem.otherTooShort)).toBeTruthy();
     await fireEvent.changeText(
-      screen.getByPlaceholderText(de.appliance.waschmaschine.otherPlaceholder),
+      screen.getByPlaceholderText(de.chat.placeholder),
       'Die Maschine riecht verbrannt.',
     );
     await tap(de.chat.send);

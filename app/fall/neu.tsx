@@ -1,12 +1,11 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
-import { StyleSheet, View } from 'react-native';
 import type { KeyboardAwareScrollViewRef } from 'react-native-keyboard-controller';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { ChatInput } from '@/components/app/ChatInput';
 import { BotSays, QuickReplies, UserSaid, type Reply } from '@/components/app/Conversation';
 import { DemoHint } from '@/components/app/DemoHint';
-import { AppHeader, Button, Screen, Text, TextField } from '@/components/ds';
+import { AppHeader, Button, Screen, Text } from '@/components/ds';
 import { getGuide } from '@/lib/guideCatalog';
 import { de } from '@/i18n/de';
 import { appliance, deviceGuides } from '@/lib/appliance';
@@ -16,7 +15,6 @@ import { deviceTitle } from '@/lib/devices';
 import { reportDisplayMessage } from '@/lib/problem';
 import type { CaseEntry, Id } from '@/model/types';
 import { selectOpenCaseForDevice, useAppStore } from '@/store/appStore';
-import { useTheme } from '@/theme';
 
 const t = de.problem;
 const g = de.talk.problem;
@@ -34,8 +32,6 @@ const ADD_DEVICE = 'neues-geraet';
  * offenen Fall (Entscheidung 13). Kein Link nach außen.
  */
 export default function ProblemMelden() {
-  const theme = useTheme();
-  const insets = useSafeAreaInsets();
   const params = useLocalSearchParams<{ geraet?: string; fall?: string }>();
   const store = useAppStore;
   const state = useAppStore();
@@ -236,34 +232,19 @@ export default function ProblemMelden() {
 
   const inputBar =
     step === 'geraet' || runningWithProgress ? undefined : (
-      <View
-        style={[
-          styles.inputBar,
-          {
-            paddingHorizontal: theme.gutter,
-            paddingBottom: Math.max(insets.bottom, 12) + 8,
-            borderTopColor: theme.colors.borderSubtle,
-            backgroundColor: theme.colors.bgPage,
-          },
-        ]}
-      >
-        <View style={styles.input}>
-          <TextField
-            label={de.thread.inputLabel}
-            labelHidden
-            placeholder={a.otherPlaceholder}
-            error={textError}
-            multiline
-            rows={1}
-            value={text}
-            onChangeText={(v) => {
-              setText(v);
-              setTextError(undefined);
-            }}
-          />
-        </View>
-        <Button label={de.chat.send} disabled={!text.trim()} onPress={submitText} />
-      </View>
+      <ChatInput
+        label={de.thread.inputLabel}
+        placeholder={de.chat.placeholder}
+        error={textError}
+        value={text}
+        onChangeText={(v) => {
+          setText(v);
+          setTextError(undefined);
+        }}
+        onSend={submitText}
+        sendLabel={de.chat.send}
+        canSend={!!text.trim()}
+      />
     );
 
   return (
@@ -310,13 +291,3 @@ export default function ProblemMelden() {
 function messagesSub(messages: { code: string }[]): string {
   return de.common.example([...new Set(messages.map((m) => m.code))].slice(0, 3).join(', '));
 }
-
-const styles = StyleSheet.create({
-  inputBar: {
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-    gap: 8,
-    paddingTop: 10,
-  },
-  input: { flex: 1 },
-});
