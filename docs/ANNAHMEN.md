@@ -247,3 +247,15 @@ Annahmen, die ich beim Bauen getroffen habe. Jede lässt sich ändern.
 - **Auswahl:** die Händler aus der Konfiguration, „Woanders“ und „Weiß ich nicht mehr“. Nur ein bekannter Händler wird gespeichert.
 - **Beispiel-Händler „Elektro Albers“, Code `EA-2023`.** In ENTSCHEIDUNGEN stand noch `[HÄNDLER]` und `[CODE]`. Für das Händlerportal brauchte die Demo einen lesbaren Namen. Beides ist fiktiv und steht nur in `config/demo.config.ts`. Zweiter Beispiel-Händler: „Technikhaus Nord“.
 - **`Device.purchasedFrom`:** Geräte, die im Onboarding dazukommen (Vertrag bestätigt oder Typenschild), bekommen den gewählten Händler. Später hinzugefügte Geräte fragen noch nicht danach. Das Gerätedetail zeigt „Gekauft bei“.
+
+## Katalog der Anleitungen (02.11.2026, Entscheidung 15)
+
+- **Ein Eintrag je Gebrauchsanweisung** (`GuideCatalogEntry` in `model/types.ts`): Hersteller, Gerätetyp, Modelle, Materialnummern, Quelle, Freigabe (`entwurf`, `freigegeben`, `zurueckgezogen`) und die Anleitungen. Schritte haben jetzt eine Seitenangabe (`page`).
+- **Treffer** zuerst über die Materialnummer vom Typenschild, sonst über Hersteller, Gerätetyp und Modell (ohne Leerzeichen, Punkte, Bindestriche). Die Demo-Anleitungen gelten deshalb nur noch für die WKB 130, nicht mehr für jede Waschmaschine. Ein anderes Modell ohne Eintrag geht direkt zu Hilfe holen.
+- **Demo-Eintrag** `miele-wkb130` ist eingebaut und kommt aus `data/guides.ts`. `npm run guides:check` prüft ihn weiter wörtlich gegen die Demo.
+- **Server:** `server/guides/catalog/*.json` sind die freigegebenen Einträge, `server/guides/drafts/` die Entwürfe. `GET /api/guides?hersteller=…&kategorie=…&modell=…&material=…` gibt nur Freigegebenes zurück.
+- **App:** Für Geräte ohne Anleitung fragt die App einmal pro Start beim Server nach und speichert den Eintrag (läuft dann auch offline). Ids importierter Anleitungen haben die Form `<eintrag>/<anleitung>`, damit sie über den Katalog eindeutig sind.
+- **Reparatur-Assistent:** bekommt nur noch den Katalog des Geräts im Fall, als eigenen gecachten Block. Er kann nur Anleitungen dieses Geräts vorschlagen. Ohne Eintrag: „keine geprüfte Anleitung“, Vorschlag ist dann Hilfe.
+- **Import:** `npm run guides:import -- <pdf> --id … --hersteller … --kategorie … --modell …` schickt das PDF an Claude (strukturierte Ausgabe, Aufwand hoch) und schreibt einen Entwurf. Danach prüft `pdftotext`, ob jeder Text wörtlich im PDF steht, und listet Abweichungen.
+- **Freigabe:** `npm run guides:approve -- <id> --von "Name, Firma"` verschiebt den Entwurf in den Katalog. Mit Abweichungen nur mit `--trotzdem`. Später gehört das in ein Hersteller-Portal mit Anmeldung.
+- **Noch offen:** Bilder zu den Schritten (Seitenausschnitte aus dem PDF), Sicherheitsbestätigungen wie „Der Wasserhahn ist zu“ für importierte Anleitungen (heute nur für die Demo in `lib/guideMeta.ts`), Lizenz und Updates je Herstellerversion.

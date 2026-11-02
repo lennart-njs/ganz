@@ -6,7 +6,7 @@ import { CaseScreen, useCaseId } from '@/components/app/CaseScreen';
 import { backToThread } from '@/components/nav/leaveCase';
 import { ActionBar, Button, Card, ConfidenceLabel, FactList, InfoBox, Text } from '@/components/ds';
 import { demoConfig } from '@/config/demo.config';
-import { guides, type GuideId } from '@/data/guides';
+import { getGuide } from '@/lib/guideCatalog';
 import { de } from '@/i18n/de';
 import { formatEuro } from '@/i18n/format';
 import { latestDiagnosis } from '@/lib/caseView';
@@ -117,7 +117,7 @@ export default function Ergebnis() {
   }
 
   const pattern = diagnosis.errorPattern as ErrorPattern;
-  const guide = guides[diagnosis.guideId as GuideId];
+  const guide = getGuide(diagnosis.guideId);
   if (!guide) {
     return (
       <CaseScreen title={de.screens.ergebnis}>

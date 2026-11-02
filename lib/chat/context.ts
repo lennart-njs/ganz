@@ -1,5 +1,6 @@
 // Was der Reparatur-Assistent über den Fall erfährt. Bewusst ohne Adresse, Fotos und Vertragsnummer.
-import { guides, type GuideId } from '@/data/guides';
+import { getGuide } from '@/lib/guideCatalog';
+import type { GuideId } from '@/data/guides';
 import { de } from '@/i18n/de';
 import { latestDiagnosis, latestGuideRun } from '@/lib/caseView';
 import { getManufacturer } from '@/lib/devices';
@@ -14,12 +15,14 @@ export function chatContext(s: AppData, caseId: Id): ChatContext | undefined {
   if (!c || !device) return undefined;
   const result = latestDiagnosis(s, c, 'fehlererkennung') ?? latestDiagnosis(s, c, 'nutzerangabe');
   const run = latestGuideRun(s, c);
-  const guide = run ? guides[run.guideId as GuideId] : undefined;
+  const guide = run ? getGuide(run.guideId) : undefined;
   return {
     category: device.category,
     categoryLabel: de.deviceCategory[device.category],
     device: device.model,
     manufacturer: getManufacturer(device.manufacturerId).name,
+    manufacturerId: device.manufacturerId,
+    ...(device.materialNumber ? { materialNumber: device.materialNumber } : {}),
     problem: c.problemLabel,
     result: result?.component,
     displayMessage: result?.displayMessage,

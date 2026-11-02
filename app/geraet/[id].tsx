@@ -14,10 +14,9 @@ import {
   Screen,
   Text,
 } from '@/components/ds';
-import { GUIDE_SOURCE } from '@/data/guides';
 import { de } from '@/i18n/de';
 import { formatDateTime, formatEuro, formatMonthYear } from '@/i18n/format';
-import { hasGuides } from '@/lib/appliance';
+import { deviceHasGuides, findCatalogEntry } from '@/lib/guideCatalog';
 import { caseProgressLabel, caseStatusLabel, deviceStatusLabel, resumeHref } from '@/lib/caseView';
 import { deviceTitle, getManufacturer } from '@/lib/devices';
 import { selectDevice, selectOpenCaseForDevice, useAppStore } from '@/store/appStore';
@@ -122,7 +121,7 @@ export default function GeraetDetail() {
         )}
       </Section>
 
-      {hasGuides(device.category) ? (
+      {deviceHasGuides(device) ? (
         <Section title={t.sections.maintenance}>
           {de.maintenance.map((m) => (
             <NavRow
@@ -145,8 +144,10 @@ export default function GeraetDetail() {
       ) : null}
 
       <Section title={t.sections.guides}>
-        {hasGuides(device.category) ? (
-          <Text variant="meta">{t.guideSource(GUIDE_SOURCE)}</Text>
+        {deviceHasGuides(device) ? (
+          <Text variant="meta">
+            {t.guideSource(findCatalogEntry(device)?.document.title ?? '')}
+          </Text>
         ) : (
           <Text variant="meta">{t.noGuides}</Text>
         )}

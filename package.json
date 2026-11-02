@@ -14,7 +14,9 @@
     "format:check": "prettier --check .",
     "test": "jest",
     "check": "npm run typecheck && npm run lint && npm run format:check && npm test",
-    "guides:check": "jest __tests__/guides.test.ts"
+    "guides:check": "jest __tests__/guides.test.ts",
+    "guides:import": "node scripts/guides-import.mjs",
+    "guides:approve": "node scripts/guides-approve.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^1.3.0",

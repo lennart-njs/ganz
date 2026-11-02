@@ -56,6 +56,20 @@ Eigene Worte: Unten ins Feld schreiben. Der Reparatur-Assistent antwortet im sel
 
 Versicherer, Händler, Hersteller, Betriebe, Fachkraft, Preise und Zeitfenster stehen nur in `config/demo.config.ts`. Ein Wechsel dort ändert alle Texte. Alle Werte sind Beispielwerte.
 
+## Anleitungen aus dem Katalog
+
+Die App zeigt nur geprüfte Anleitungen für genau das Modell (Materialnummer oder Modell). Neue Modelle kommen aus der Gebrauchsanweisung des Herstellers:
+
+```bash
+npm run guides:import -- anleitung.pdf --id miele-twb140 --hersteller miele --kategorie trockner --modell "TWB 140" --material "12 345 678"
+```
+
+```bash
+npm run guides:approve -- miele-twb140 --von "Name, Firma"
+```
+
+Der Import braucht `ANTHROPIC_API_KEY` in der Umgebung und schreibt einen Entwurf nach `server/guides/drafts/`. Er meldet jeden Text, der nicht wörtlich im PDF steht. Erst die Freigabe legt ihn nach `server/guides/catalog/`. Dann liefert ihn `GET /api/guides`, und der Reparatur-Assistent kennt ihn.
+
 ## Prüfen
 
 ```bash
@@ -76,7 +90,8 @@ Lint-Regeln: keine Hex-Farben außerhalb von `theme/`, kein Text außerhalb von 
 - `store/` – Zustand mit Speicherung auf dem Gerät, Simulation für Freigabe und Betrieb
 - `services/` – Schnittstellen zum späteren Backend, heute Mock-Services. Der Chat spricht mit `app/api/chat+api.ts`
 - `config/demo.config.ts` – Beispielwerte für den Pitch
-- `data/guides.ts` – Anleitungen, wörtlich aus der Demo
+- `data/guides.ts` – Anleitungen, wörtlich aus der Demo (eingebauter Katalog-Eintrag)
+- `lib/guideCatalog.ts` – Katalog der Anleitungen, `server/guides/` – freigegebene Einträge und Entwürfe
 - `i18n/de.ts` – alle Texte
 - `docs/` – Review, Bauplan, Entscheidungen, Annahmen, Befunde, Datenmodell
 - `design-system/` – ganz-Designsystem (verbindlich)

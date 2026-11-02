@@ -5,11 +5,14 @@ import Anthropic from '@anthropic-ai/sdk';
 import {
   STABLE_SYSTEM,
   caseSystem,
+  catalogSystem,
   parseReply,
   parseRequest,
-  replySchema,
+  replySchemaFor,
   type ChatTurn,
 } from '@/lib/chat/prompt';
+import { findCatalogEntry } from '@/lib/guideCatalog';
+import { loadApprovedCatalog } from '@/server/guides/catalogStore';
 
 const MODEL = 'claude-opus-5-5';
 
@@ -52,18 +55,38 @@ export async function POST(request: Request): Promise<Response> {
   const input = parseRequest(body);
   if (!input) return json({ error: 'ungueltig' }, 400);
 
+  // Nur geprüfte Anleitungen für genau dieses Gerät, aus dem Katalog des Servers (Entscheidung 15)
+  loadApprovedCatalog();
+  const ctx = input.context;
+  const entry = findCatalogEntry({
+    manufacturerId: ctx.manufacturerId,
+    category: ctx.category,
+    model: ctx.device,
+    materialNumber: ctx.materialNumber,
+  });
+  const guides = entry?.guides ?? [];
+  const guideIds = guides.map((g) => g.id);
+
   try {
     const response = await getClient().beta.messages.create({
       model: MODEL,
       max_tokens: 4000,
       // Kurze Chat-Antworten: wenig Aufwand reicht, Thinking bleibt adaptiv
-      output_config: { effort: 'low', format: { type: 'json_schema', schema: replySchema } },
+      output_config: {
+        effort: 'low',
+        format: { type: 'json_schema', schema: replySchemaFor(guideIds) },
+      },
       // Lehnt ein Sicherheitsfilter ab, versucht der Server es mit dem empfohlenen Ersatzmodell
       betas: ['server-side-fallback-2026-07-01'],
       fallbacks: 'default',
       system: [
-        // Regeln und Anleitungen sind für alle Fälle gleich und werden gecacht
+        // Regeln sind für alle Fälle gleich, der Katalog für alle Fälle desselben Modells: beides gecacht
         { type: 'text', text: STABLE_SYSTEM, cache_control: { type: 'ephemeral' } },
+        {
+          type: 'text',
+          text: catalogSystem(guides, entry?.document.title),
+          cache_control: { type: 'ephemeral' },
+        },
         { type: 'text', text: caseSystem(input.context) },
       ],
       messages: toMessages(input.messages),
@@ -76,7 +99,7 @@ export async function POST(request: Request): Promise<Response> {
       .filter((b): b is Anthropic.Beta.BetaTextBlock => b.type === 'text')
       .map((b) => b.text)
       .join('');
-    const reply = parseReply(text, input.context.category);
+    const reply = parseReply(text, guideIds);
     if (!reply) return json({ error: 'format' }, 502);
     return json(reply);
   } catch (error) {

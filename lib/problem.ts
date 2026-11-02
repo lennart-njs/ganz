@@ -1,5 +1,5 @@
 // Gemeinsame Schritte beim Melden eines Problems, genutzt im Gespräch und in der Liste der Meldungen.
-import { guides, type GuideId } from '@/data/guides';
+import type { GuideId } from '@/data/guides';
 import type { Id } from '@/model/types';
 import { useAppStore } from '@/store/appStore';
 
@@ -18,5 +18,5 @@ export function reportDisplayMessage(caseId: Id, guideId: GuideId, code: string)
     source: 'nutzerangabe',
     guideId,
   });
-  s.startGuide(caseId, guides[guideId].id);
+  s.startGuide(caseId, guideId);
 }

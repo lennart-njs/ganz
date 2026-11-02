@@ -52,3 +52,8 @@ jest.mock('expo-notifications', () => ({
   requestPermissionsAsync: jest.fn(async () => ({ granted: true, canAskAgain: true })),
   scheduleNotificationAsync: jest.fn(async () => 'id'),
 }));
+
+// Katalog vom Server: in Tests ohne Netz, damit fetch-Mocks nur den Assistenten betreffen
+jest.mock('@/services/guideService', () => ({
+  httpGuideService: { forDevice: jest.fn(async () => null) },
+}));

@@ -6,6 +6,7 @@ import { createJSONStorage, persist, type StateStorage } from 'zustand/middlewar
 import { demoConfig } from '@/config/demo.config';
 import { de } from '@/i18n/de';
 import { caseAppliance, caseCategory, findingPattern } from '@/lib/appliance';
+import { registerCatalogEntry } from '@/lib/guideCatalog';
 import { notifications } from '@/services/notifications';
 import {
   applyCommand,
@@ -31,6 +32,7 @@ import type {
   Contract,
   Device,
   Diagnosis,
+  GuideCatalogEntry,
   GuideRun,
   Household,
   Id,
@@ -100,6 +102,8 @@ export interface AppData {
   videoSessions: VideoSession[];
   /** Gespräche mit dem Reparatur-Assistenten, je Fall */
   chatMessages: ChatMessage[];
+  /** Freigegebene Katalog-Einträge vom Server (Entscheidung 15). Der Demo-Eintrag ist eingebaut. */
+  guideCatalog: GuideCatalogEntry[];
   nextCaseNumber: number;
 }
 
@@ -118,6 +122,8 @@ export interface AppActions {
   completeOnboarding: () => void;
   /** Onboarding: Händler, bei dem das Gerät gekauft wurde. undefined: woanders oder unbekannt. */
   setOnboardingDealer: (dealer: PartnerRef | undefined) => void;
+  /** Freigegebenen Katalog-Eintrag aufnehmen. Entwürfe werden ignoriert. */
+  addCatalogEntry: (entry: GuideCatalogEntry) => void;
   /** Legt den Vertrag aus der Konfiguration an (nach erfolgreicher Prüfung). */
   linkContract: (via: Contract['linkedVia']) => Contract;
   addDevice: (input: NewDevice) => Device;
@@ -204,6 +210,7 @@ export const initialData: AppData = {
   bookings: [],
   videoSessions: [],
   chatMessages: [],
+  guideCatalog: [],
   nextCaseNumber: demoConfig.caseNumber.start,
 };
 
@@ -251,6 +258,13 @@ export function createAppStore(storage: StateStorage = AsyncStorage, env: StoreE
           completeOnboarding: () => set({ onboardingDone: true }),
 
           setOnboardingDealer: (dealer) => set({ onboardingDealer: dealer }),
+
+          addCatalogEntry: (entry) => {
+            if (!registerCatalogEntry(entry)) return;
+            set((s) => ({
+              guideCatalog: [...s.guideCatalog.filter((e) => e.id !== entry.id), entry],
+            }));
+          },
 
           linkContract: (via) => {
             const p = person();
@@ -1028,6 +1042,8 @@ export function createAppStore(storage: StateStorage = AsyncStorage, env: StoreE
         // Neue Einstellungen ergänzen gespeicherte Stände, statt sie zu verlieren.
         merge: (persisted, current) => {
           const p = (persisted ?? {}) as Partial<AppData>;
+          // Gespeicherte Katalog-Einträge stehen sofort wieder zur Verfügung
+          p.guideCatalog?.forEach(registerCatalogEntry);
           return { ...current, ...p, demo: { ...current.demo, ...p.demo } };
         },
         partialize: (s): AppData => ({
@@ -1050,6 +1066,7 @@ export function createAppStore(storage: StateStorage = AsyncStorage, env: StoreE
           bookings: s.bookings,
           videoSessions: s.videoSessions,
           chatMessages: s.chatMessages,
+          guideCatalog: s.guideCatalog,
           nextCaseNumber: s.nextCaseNumber,
         }),
       },

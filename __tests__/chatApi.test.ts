@@ -2,7 +2,14 @@
  * @jest-environment node
  */
 import { POST } from '@/app/api/chat+api';
-import { STABLE_SYSTEM, caseSystem, parseReply, type ChatContext } from '@/lib/chat/prompt';
+import {
+  STABLE_SYSTEM,
+  caseSystem,
+  catalogSystem,
+  parseReply,
+  type ChatContext,
+} from '@/lib/chat/prompt';
+import { demoCatalogEntry, guidesForDevice } from '@/lib/guideCatalog';
 
 const mockCreate = jest.fn();
 
@@ -22,6 +29,7 @@ const context: ChatContext = {
   categoryLabel: 'Waschmaschine',
   device: 'WKB 130',
   manufacturer: 'Miele',
+  manufacturerId: 'miele',
   problem: 'Wasserablauf gestört',
   hasProtection: true,
 };
@@ -107,7 +115,21 @@ describe('Server-Route des Reparatur-Assistenten', () => {
       text: STABLE_SYSTEM,
       cache_control: { type: 'ephemeral' },
     });
-    expect(params.system[1].text).toBe(caseSystem(context));
+    // Katalog nur für dieses Gerät, eigener Cache-Block (Entscheidung 15)
+    const wkb = guidesForDevice({
+      manufacturerId: 'miele',
+      category: 'waschmaschine',
+      model: 'WKB 130',
+    });
+    expect(params.system[1]).toMatchObject({
+      text: catalogSystem(wkb, demoCatalogEntry.document.title),
+      cache_control: { type: 'ephemeral' },
+    });
+    expect(params.system[2].text).toBe(caseSystem(context));
+    expect(params.output_config.format.schema.properties.guideId.enum).toEqual([
+      '',
+      ...wkb.map((g) => g.id),
+    ]);
     expect(params.messages.map((m: { role: string }) => m.role)).toEqual([
       'user',
       'assistant',
@@ -116,8 +138,8 @@ describe('Server-Route des Reparatur-Assistenten', () => {
   });
 
   test('der feste Teil des Systemprompts hängt nicht vom Fall ab', () => {
-    // Alle Anleitungen stehen im festen Teil, der Fall nur im zweiten Block
-    expect(STABLE_SYSTEM).toContain('<anleitung id="ablauf"');
+    // Der feste Teil hat weder Anleitungen noch Fall. Die stehen in eigenen Blöcken.
+    expect(STABLE_SYSTEM).not.toContain('<anleitung');
     expect(STABLE_SYSTEM).not.toContain('<fall>');
     expect(caseSystem(context)).toContain('Waschmaschine, WKB 130 von Miele');
     // Keine Kostenzusage, keine Links, Hilfe bei Gefahr
@@ -132,16 +154,16 @@ describe('Server-Route des Reparatur-Assistenten', () => {
       suggestion: 'anleitung',
       guideId: 'ablauf',
     });
-    expect(parseReply(raw, 'kuehlschrank')).toEqual({
+    expect(parseReply(raw, [])).toEqual({
       reply: 'Probier die Anleitung.',
       suggestion: 'keine',
       guideId: '',
       assessment: 'keine',
     });
     expect(
-      parseReply('{"reply":"x","suggestion":"anleitung","guideId":"gibtsnicht"}', 'waschmaschine'),
+      parseReply('{"reply":"x","suggestion":"anleitung","guideId":"gibtsnicht"}', ['ablauf']),
     ).toMatchObject({ suggestion: 'keine' });
-    expect(parseReply('kein json', 'waschmaschine')).toBeNull();
+    expect(parseReply('kein json', ['ablauf'])).toBeNull();
   });
 
   test('Ablehnung, Abbruch und Fehler des Dienstes', async () => {
@@ -249,10 +271,44 @@ describe('Foto an den Assistenten (Entscheidung 17)', () => {
     );
     expect(text).toContain('Achtung im Schritt: Restwasser');
     expect(STABLE_SYSTEM).toContain('nie „das ist sicher“');
-    const parsed = parseReply(
-      JSON.stringify({ reply: 'x', suggestion: 'keine', guideId: '' }),
-      'waschmaschine',
-    );
+    const parsed = parseReply(JSON.stringify({ reply: 'x', suggestion: 'keine', guideId: '' }), []);
     expect(parsed?.assessment).toBe('keine');
+  });
+});
+
+describe('Katalog im Assistenten (Entscheidung 15)', () => {
+  test('für ein Gerät ohne geprüfte Anleitung: kein Katalog, keine Anleitung im Schema', async () => {
+    mockCreate.mockResolvedValueOnce(
+      answer({
+        reply: 'Ich hole dir Hilfe.',
+        suggestion: 'hilfe',
+        guideId: '',
+        assessment: 'keine',
+      }),
+    );
+    const res = await post({
+      context: {
+        ...context,
+        category: 'kuehlschrank',
+        categoryLabel: 'Kühlschrank',
+        device: 'K 7000',
+      },
+      messages: [{ role: 'haushalt', text: 'Er kühlt nicht.' }],
+    });
+    expect(res.status).toBe(200);
+    const params = mockCreate.mock.calls[0][0];
+    expect(params.system[1].text).toContain('keine geprüfte Anleitung');
+    expect(params.output_config.format.schema.properties.guideId.enum).toEqual(['']);
+  });
+
+  test('die Materialnummer vom Typenschild findet den Eintrag auch bei anderer Schreibweise', () => {
+    expect(
+      guidesForDevice({
+        manufacturerId: 'miele',
+        category: 'waschmaschine',
+        model: 'unbekannt',
+        materialNumber: '11450120',
+      }).length,
+    ).toBe(13);
   });
 });

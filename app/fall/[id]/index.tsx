@@ -34,10 +34,11 @@ import {
   TextField,
 } from '@/components/ds';
 import { demoConfig } from '@/config/demo.config';
-import { guides, type GuideId } from '@/data/guides';
+import { deviceHasGuides, getGuide, guidesForDevice } from '@/lib/guideCatalog';
+import type { GuideId } from '@/data/guides';
 import { de } from '@/i18n/de';
 import { formatDecimal, formatEuro } from '@/i18n/format';
-import { caseAppliance, hasGuides } from '@/lib/appliance';
+import { caseAppliance } from '@/lib/appliance';
 import { amountToPay, costsLine, requestAppointment } from '@/lib/booking';
 import { chatLimits } from '@/lib/chat/limits';
 import { retryableChatErrors, useAssistant } from '@/lib/chat/useAssistant';
@@ -227,7 +228,7 @@ export default function FallGespraech() {
     const s = useAppStore.getState();
     if (!(run && !run.endedAt && run.guideId === guideId)) {
       if (!c.guideRunIds.length && c.entry === 'freitext') {
-        s.updateCase(caseId, { problemLabel: guides[guideId as GuideId].title });
+        s.updateCase(caseId, { problemLabel: getGuide(guideId)?.title ?? '' });
       }
       s.startGuide(caseId, guideId);
     }
@@ -269,7 +270,7 @@ export default function FallGespraech() {
       escalate();
       return;
     }
-    s.updateCase(caseId, { problemLabel: guides[finding.guideId as GuideId].title });
+    s.updateCase(caseId, { problemLabel: getGuide(finding.guideId)?.title ?? '' });
     const photoId = question.payload.photoId as string | undefined;
     s.addDiagnosis(
       toDiagnosis(caseId, photoId ? [photoId] : [], question.payload.mode as PhotoMode, finding),
@@ -439,7 +440,7 @@ export default function FallGespraech() {
 
   // Anleitungen
   for (const r of runs) {
-    const guide = guides[r.guideId as GuideId];
+    const guide = getGuide(r.guideId);
     if (!guide) continue;
     const tools = guideTools(guide);
     add(
@@ -822,14 +823,9 @@ export default function FallGespraech() {
   const canHelp = canGuide || c.status === 'eskaliert';
   if (!assistant.pending && lastMsg?.role === 'assistent') {
     const sameGuideRunning = run && !run.endedAt && run.guideId === lastMsg.guideId;
-    if (
-      lastMsg.suggestion === 'anleitung' &&
-      canGuide &&
-      !sameGuideRunning &&
-      lastMsg.guideId &&
-      lastMsg.guideId in guides
-    ) {
-      const g = guides[lastMsg.guideId as GuideId];
+    // Nur Anleitungen, die es für dieses Gerät im Katalog gibt
+    const g = guidesForDevice(device).find((x) => x.id === lastMsg.guideId);
+    if (lastMsg.suggestion === 'anleitung' && canGuide && !sameGuideRunning && g) {
       reply('vorschlag-anleitung', de.chat.startGuide(g.title), () => openGuide(g.id));
     }
     if (lastMsg.suggestion === 'hilfe' && canHelp && c.status !== 'eskaliert') {
@@ -1101,7 +1097,7 @@ export default function FallGespraech() {
       );
     }
   } else if (c.status === 'selbsthilfe' && run && !run.endedAt) {
-    const g = guides[run.guideId as GuideId];
+    const g = getGuide(run.guideId);
     if (g) {
       const step = Math.min(run.currentStep, g.steps.length - 1);
       const isLast = step >= g.steps.length - 1;
@@ -1141,10 +1137,10 @@ export default function FallGespraech() {
     }
   } else if (c.status === 'offen' || c.status === 'selbsthilfe') {
     const d = diagnoses.findLast((x) => x.source === 'fehlererkennung');
-    const guide = d?.guideId ? guides[d.guideId as GuideId] : undefined;
+    const guide = d?.guideId ? getGuide(d.guideId) : undefined;
     if (d?.errorPattern === 'geraet_erkannt') {
       reply('foto', de.result.photoDisplay, () => router.push(`/fall/${caseId}/kamera`));
-    } else if (guide && hasGuides(device?.category)) {
+    } else if (guide && deviceHasGuides(device)) {
       reply(
         'anleitung',
         de.result.startGuide,

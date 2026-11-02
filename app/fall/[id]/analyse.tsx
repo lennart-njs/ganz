@@ -5,7 +5,7 @@ import { AccessibilityInfo, Image, StyleSheet, View } from 'react-native';
 import { CaseScreen, useCaseId } from '@/components/app/CaseScreen';
 import { backToThread } from '@/components/nav/leaveCase';
 import { ActionBar, Button, Icon, Text } from '@/components/ds';
-import { guides, type GuideId } from '@/data/guides';
+import { getGuide } from '@/lib/guideCatalog';
 import { de } from '@/i18n/de';
 import { caseCategory } from '@/lib/appliance';
 import { isPhotoMode, toDiagnosis } from '@/lib/diagnosis';
@@ -81,7 +81,7 @@ export default function Analyse() {
           backToThread(caseId);
           return;
         case 'ergebnis':
-          s.updateCase(caseId, { problemLabel: guides[result.guideId as GuideId].title });
+          s.updateCase(caseId, { problemLabel: getGuide(result.guideId)?.title ?? '' });
           s.addDiagnosis(toDiagnosis(caseId, photoIds, mode, result));
           backToThread(caseId);
       }

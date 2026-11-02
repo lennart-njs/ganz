@@ -7,9 +7,10 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BotSays, QuickReplies, UserSaid, type Reply } from '@/components/app/Conversation';
 import { DemoHint } from '@/components/app/DemoHint';
 import { AppHeader, Button, Screen, Text, TextField } from '@/components/ds';
-import { guides, type GuideId } from '@/data/guides';
+import { deviceHasGuides, getGuide } from '@/lib/guideCatalog';
+import type { GuideId } from '@/data/guides';
 import { de } from '@/i18n/de';
-import { appliance, hasGuides } from '@/lib/appliance';
+import { appliance } from '@/lib/appliance';
 import { chatLimits } from '@/lib/chat/limits';
 import { hasProgress } from '@/lib/caseView';
 import { deviceTitle } from '@/lib/devices';
@@ -115,7 +116,7 @@ export default function ProblemMelden() {
     );
   }
 
-  const guided = hasGuides(device?.category);
+  const guided = deviceHasGuides(device);
   const a = appliance(device?.category);
   const truncated = (s: string) => (s.length > 60 ? `${s.slice(0, 57)}…` : s);
 
@@ -148,7 +149,8 @@ export default function ProblemMelden() {
       toThread(id);
       return;
     }
-    const guide = guides[key as GuideId];
+    const guide = getGuide(key);
+    if (!guide) return;
     const id = caseFor('symptom', guide.title);
     store.getState().startGuide(id, guide.id);
     toThread(id);

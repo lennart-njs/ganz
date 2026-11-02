@@ -1,6 +1,7 @@
 // Ereignisse der Fallakte als lesbare Zeilen. Quelle ist immer CaseEvent (B-36).
 import { demoConfig } from '@/config/demo.config';
-import { guides, type GuideId } from '@/data/guides';
+import { getGuide } from '@/lib/guideCatalog';
+import type { GuideId } from '@/data/guides';
 import { de } from '@/i18n/de';
 import type { CaseEvent, CaseStatus, PhotoPurpose } from '@/model/types';
 
@@ -9,7 +10,7 @@ import { caseStatusLabel } from './caseView';
 const f = de.file.event;
 
 function stepTitle(e: CaseEvent): string | undefined {
-  const guide = guides[e.payload.guideId as GuideId];
+  const guide = getGuide(String(e.payload.guideId));
   const n = Number(e.payload.step);
   return guide && n ? f.step(n, guide.steps[n - 1]?.t ?? '') : undefined;
 }
@@ -20,8 +21,8 @@ export function eventLabel(e: CaseEvent): string {
   let detail: string | undefined;
   switch (e.type) {
     case 'anleitung_gestartet':
-      detail = guides[p.guideId as GuideId]
-        ? f.guide(guides[p.guideId as GuideId].title)
+      detail = getGuide(String(p.guideId))
+        ? f.guide(getGuide(String(p.guideId))?.title ?? '')
         : undefined;
       break;
     case 'schritt_erledigt':

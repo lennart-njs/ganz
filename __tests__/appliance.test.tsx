@@ -3,7 +3,8 @@ import * as path from 'path';
 import { fireEvent, renderRouter, screen } from 'expo-router/testing-library';
 
 import { de } from '@/i18n/de';
-import { appliance, findingPattern, hasGuides } from '@/lib/appliance';
+import { appliance, findingPattern } from '@/lib/appliance';
+import { deviceHasGuides } from '@/lib/guideCatalog';
 import { statusView } from '@/lib/statusView';
 import type { DeviceCategory } from '@/model/types';
 import { services } from '@/services';
@@ -30,7 +31,11 @@ describe('Texte je Gerätetyp', () => {
   test('jeder Gerätetyp hat eigene Texte, nur die Waschmaschine hat Anleitungen', () => {
     const categories = Object.keys(de.appliance) as DeviceCategory[];
     expect(categories.sort()).toEqual(Object.keys(de.deviceCategory).sort());
-    expect(categories.filter(hasGuides)).toEqual(['waschmaschine']);
+    expect(
+      categories.filter((category) =>
+        deviceHasGuides({ manufacturerId: 'miele', category, model: 'WKB 130' }),
+      ),
+    ).toEqual(['waschmaschine']);
     for (const c of categories.filter((x) => x !== 'waschmaschine')) {
       const a = appliance(c);
       expect(a.symptoms.length).toBeGreaterThan(3);

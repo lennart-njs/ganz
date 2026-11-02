@@ -228,11 +228,13 @@ export interface Diagnosis {
 // ---------- Anleitung ----------
 
 export interface GuideStep {
-  t: string; // Titel – wörtlich aus guides()
+  t: string; // Titel – wörtlich aus der Quelle
   d: string; // Text – wörtlich
   tool?: string;
   w?: string; // Warnhinweis – wörtlich
   img?: string; // Schlüssel des Fotos
+  /** Seite in der Gebrauchsanweisung (Katalog, Entscheidung 15) */
+  page?: number;
 }
 
 export interface Guide {
@@ -243,6 +245,38 @@ export interface Guide {
   noSelf?: boolean;
   sourceDocument: string; // „Gebrauchsanweisung WKB 130, M.-Nr. 10 162 440“
   steps: GuideStep[];
+}
+
+// ---------- Katalog der Anleitungen (Entscheidung 15) ----------
+
+export type GuideReviewStatus = 'entwurf' | 'freigegeben' | 'zurueckgezogen';
+
+/**
+ * Alle Anleitungen zu einer Gebrauchsanweisung. Gilt für die genannten Modelle und Materialnummern.
+ * Die App zeigt nur freigegebene Einträge.
+ */
+export interface GuideCatalogEntry {
+  id: string; // „miele-wkb130“
+  manufacturerId: Id;
+  category: DeviceCategory;
+  models: string[]; // „WKB 130“
+  materialNumbers: string[];
+  document: {
+    title: string; // „Gebrauchsanweisung WKB 130, M.-Nr. 10 162 440“
+    /** demo: aus guides() der Demo; hersteller: vom Hersteller unter Lizenz geliefert */
+    license: 'demo' | 'hersteller';
+    pages?: number;
+  };
+  review: {
+    status: GuideReviewStatus;
+    /** Wer freigegeben hat, z. B. „Miele Kundendienst“ */
+    by?: string;
+    at?: ISODateTime;
+    note?: string;
+  };
+  /** Wie der Eintrag entstand: von Hand oder per Import aus dem PDF */
+  origin: 'manuell' | 'import';
+  guides: Guide[];
 }
 
 export interface GuideRun {

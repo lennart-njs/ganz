@@ -19,7 +19,8 @@ import {
   TextField,
   Toast,
 } from '@/components/ds';
-import { guides, type GuideId } from '@/data/guides';
+import { getGuide } from '@/lib/guideCatalog';
+import type { GuideId } from '@/data/guides';
 import { de } from '@/i18n/de';
 import { appliance } from '@/lib/appliance';
 import { latestGuideRun } from '@/lib/caseView';
@@ -40,7 +41,7 @@ export default function Anleitung() {
   const state = useAppStore();
   const c = state.cases[caseId];
   const run = c ? latestGuideRun(state, c) : undefined;
-  const guide = run ? guides[run.guideId as GuideId] : undefined;
+  const guide = run ? getGuide(run.guideId) : undefined;
   const device = state.devices.find((d) => d.id === c?.deviceId);
   const [notWorking, setNotWorking] = useState(false);
   const [note, setNote] = useState('');

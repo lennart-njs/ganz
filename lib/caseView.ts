@@ -2,7 +2,8 @@
 import type { Href } from 'expo-router';
 
 import { demoConfig } from '@/config/demo.config';
-import { guides, type GuideId } from '@/data/guides';
+import { getGuide } from '@/lib/guideCatalog';
+import type { GuideId } from '@/data/guides';
 import { de } from '@/i18n/de';
 import type { Case, CaseStatus, Diagnosis, GuideRun } from '@/model/types';
 import { selectOpenCaseForDevice, type AppData } from '@/store/appStore';
@@ -26,7 +27,7 @@ export function deviceStatusLabel(s: AppData, deviceId: string): string {
 export function caseProgressLabel(s: AppData, c: Case): string {
   const run = latestGuideRun(s, c);
   if (c.status === 'selbsthilfe' && run && !run.endedAt) {
-    const guide = guides[run.guideId as GuideId];
+    const guide = getGuide(run.guideId);
     if (guide) return de.a11y.stepOf(run.currentStep + 1, guide.steps.length);
   }
   return caseStatusLabel(c.status);
@@ -71,7 +72,7 @@ export interface GuideSummary {
 export function guideSummary(s: AppData, c: Case): GuideSummary | undefined {
   const run = latestGuideRun(s, c);
   if (!run) return undefined;
-  const guide = guides[run.guideId as GuideId];
+  const guide = getGuide(run.guideId);
   if (!guide) return undefined;
   const completed = [...run.completedSteps].sort((a, b) => a - b);
   return {

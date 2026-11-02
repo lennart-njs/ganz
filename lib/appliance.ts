@@ -9,11 +9,6 @@ export function appliance(category?: DeviceCategory): ApplianceTexts {
   return de.appliance[category ?? 'waschmaschine'];
 }
 
-/** Die Anleitungen aus der Demo stammen aus der Gebrauchsanweisung einer Waschmaschine. */
-export function hasGuides(category?: DeviceCategory): boolean {
-  return (category ?? 'waschmaschine') === 'waschmaschine';
-}
-
 /** Gerätetyp eines Falls */
 export function caseCategory(s: Pick<AppData, 'cases' | 'devices'>, caseId: Id) {
   const c = s.cases[caseId];
