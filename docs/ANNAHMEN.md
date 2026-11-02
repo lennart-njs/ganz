@@ -219,3 +219,23 @@ Annahmen, die ich beim Bauen getroffen habe. Jede lässt sich ändern.
 - **Befund:** Die Empfehlung der Fachkraft kommt aus `services.video.finding()`. „Passt, weiter“ speichert sie. „Stimmt nicht“ speichert deinen Widerspruch und bietet Hilfe neu an.
 - **Stift:** an der ersten Antwort, solange der Fall noch keinen Fortschritt hat. Er führt zurück zu „Problem melden“ mit demselben Fall. An der Schadenmeldung nie.
 - **Ein Fall ohne Inhalt** verschwindet, wenn man das Gespräch verlässt. Mit „Später weitermachen“ bleibt er.
+
+## Demo für Fründ (02.11.2026)
+
+### Anleitungen aus Herstellerunterlagen
+
+- **Quelle je Schritt:** Jeder Schritt in `data/modelGuides.ts` trägt Seite und Originaltext (`src`) der Gebrauchsanweisung. Die App zeigt unter dem Schritt „Quelle: …, Seite …“.
+- **Du-Form:** Die Gebrauchsanweisungen siezen, die App duzt. Den Schritttext übernehme ich in die Du-Form und ändere sonst nur das Nötigste: Sätze aus Tabellen werden zu ganzen Sätzen, Verweise wie „(siehe Kapitel …)“ entfallen, weil der verwiesene Abschnitt selbst als Schritt folgt. Kein neuer Inhalt.
+- **Warnhinweise** bleiben vollständig und stehen als Achtung-Box vor dem Schritttext. Aus „rufen Sie den Miele Kundendienst“ wird „kontaktiere den Kundendienst“, weil in der Demo der Händler-Kundendienst übernimmt.
+- **Auswahl der Anleitungen:** nur Störungen, die die Gebrauchsanweisung ausdrücklich dem Haushalt zuweist (Siebe, Ablaufpumpe, Zulaufsieb, Neustart). Alles, wofür die Anleitung den Kundendienst nennt (Wasserschutzsystem, Umwälzpumpe, Fehler F mit Defekt), führt zu „Hilfe holen“.
+- **Symbole im Display:** Die Miele G 5833 SC zeigt Fehler über Kontrollanzeigen mit Symbolen, die im PDF-Text fehlen. Die Meldungen heißen darum „Kontrollanzeige Ablauf blinkt“ und „Kontrollanzeige Zulauf blinkt“.
+- **Modellbezeichnung:** Die Miele-Anleitung trägt den Titel „G 5833 SC“, die Fundstelle bei Manualslib nennt „G 5843“. Beides findet die Suche.
+- **Fotos:** Schritte zur Pumpe zeigen den Platzhalter „pumpe“, bis Markenfotos da sind.
+- **Gerätekatalog** (`data/catalog.ts`): die drei Modelle und die WKB 130 der ersten Demo. Andere Waschmaschinen bekommen weiter die Anleitungen der Demo, andere Geschirrspüler keine.
+- **Reparatur-Assistent:** Die App schickt die Ids der Anleitungen mit, die zum Gerät passen. Der Server lässt nur diese als Vorschlag durch.
+
+### Werte für Fründ (bitte prüfen)
+
+- **Preise (Beispielwerte):** Anfahrt 39 €, Arbeit 55 €, Original-Laugenpumpe 95 €, zusammen 189 € wie in der ersten Demo. Ersatzgerät 899 €.
+- **Zeitfenster des Kundendiensts:** Mo 8–12 Uhr, Di 12–16 Uhr, Mi 8–12 Uhr, Fr 9–13 Uhr. Die Bürozeit von Herrn Fründ (Fr 9–17 Uhr) betrifft den Termin, nicht den Kundendienst.
+- **Haushalt** in Bad Oeynhausen-Eidinghausen, Beispieladresse.

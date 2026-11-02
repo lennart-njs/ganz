@@ -64,3 +64,13 @@ Alles fiktiv und als Beispielwert gekennzeichnet.
 ## Gerät und Testumgebung
 - Testgerät im Pitch: [iPhone / Android] mit Expo Go
 - Fotos in `assets/photos/`: [ja / noch nicht – Platzhalter verwenden]
+
+## Demo für Fründ Elektrogeräte AG (02.11.2026)
+
+Termin: Freitag, 06.11.2026, 10 Uhr, online, mit Jan Philipp Fründ. Antworten von Lennart im Chat:
+
+15. **Name:** In der Demo heißt die App „mach’s“ (machs.io) und folgt dem mach’s-Designsystem (Artifact „mach’s“). Ersetzt die Regel „Name ganz“ für diese Demo.
+16. **Versicherung oder Händler:** Wer ein neues Gerät anlegt, wird gefragt: „Versicherung vorhanden?“ Ja: Versicherer aus einer Liste wählen und Police-Nr. eintragen. Nein: den Händler wählen, bei dem das Gerät gekauft wurde, ebenfalls aus einer Liste. Beide Listen sind per Eingabe durchsuchbar. Ohne Versicherung kommt im Fall kein Versicherer vor.
+17. **Fründ mit echtem Namen:** Fründ darf in der Demo mit echtem Namen erscheinen, immer mit dem Zusatz „(DEMO)“.
+18. **Anleitungen aus Gebrauchsanweisungen:** Lennart hat drei Gebrauchsanweisungen geschickt. Daraus werden Anleitungen: Miele G 5833 SC (Geschirrspüler), Bosch SMI4EAS24E (Geschirrspüler), Miele WQ 1000 WPS (Waschmaschine).
+19. **Push:** Push auf den Arbeitsbranch ist freigegeben, damit Lennart auf dem Handy testen kann. Kein PR ohne Anweisung.
