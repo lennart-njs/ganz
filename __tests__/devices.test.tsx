@@ -73,6 +73,7 @@ describe('Gerät hinzufügen', () => {
 
   test('der Scan lässt sich korrigieren', async () => {
     const r = await renderRouter(APP, { initialUrl: '/geraet/neu' });
+    await fireEvent.press(screen.getByRole('button', { name: de.setup.scan }));
     await fireEvent.press(screen.getByRole('button', { name: de.scan.takePhoto }));
     await fireEvent.press(screen.getByRole('button', { name: de.camera.shutter }));
     await flush();
@@ -84,12 +85,22 @@ describe('Gerät hinzufügen', () => {
     expect(device?.model).toBe('WKB 140');
     expect(device?.identifiedBy).toBe('typenschild_scan');
     expect(device?.materialNumber).toBe(demoConfig.device.typePlate.materialNumber);
+    // Danach die Frage nach der Versicherung
+    expect(screen.getByText(de.setup.coverageTitle)).toBeTruthy();
+    await fireEvent.press(
+      screen.getByRole('button', { name: new RegExp(`^${de.setup.notInsured}`) }),
+    );
+    await fireEvent.press(
+      screen.getByRole('radio', { name: new RegExp(`^${de.setup.dealerUnknown}`) }),
+    );
+    await fireEvent.press(screen.getByRole('button', { name: de.setup.saveDealer }));
     expect(r.getPathname()).toBe(`/geraet/${device?.id}`);
   });
 
   test('nicht erkannt: Hinweis und manuelle Eingabe', async () => {
     useAppStore.getState().setDemo({ scanScenario: 'nicht_erkannt' });
     await renderRouter(APP, { initialUrl: '/geraet/neu' });
+    await fireEvent.press(screen.getByRole('button', { name: de.setup.scan }));
     await fireEvent.press(screen.getByRole('button', { name: de.scan.takePhoto }));
     await fireEvent.press(screen.getByRole('button', { name: de.camera.shutter }));
     await flush();
@@ -111,6 +122,7 @@ describe('Gerät hinzufügen', () => {
     cameraMock.current = { granted: false, canAskAgain: false, status: 'denied' };
     const spy = jest.spyOn(Linking, 'openSettings').mockResolvedValue();
     await renderRouter(APP, { initialUrl: '/geraet/neu' });
+    await fireEvent.press(screen.getByRole('button', { name: de.setup.scan }));
     await fireEvent.press(screen.getByRole('button', { name: de.scan.takePhoto }));
     expect(screen.getByText(de.camera.deniedTitle)).toBeTruthy();
     await fireEvent.press(screen.getByRole('button', { name: de.camera.openSettings }));
@@ -120,6 +132,7 @@ describe('Gerät hinzufügen', () => {
   test('vor der ersten Frage erklärt die App, wofür sie die Kamera braucht', async () => {
     cameraMock.current = { granted: false, canAskAgain: true, status: 'undetermined' };
     await renderRouter(APP, { initialUrl: '/geraet/neu' });
+    await fireEvent.press(screen.getByRole('button', { name: de.setup.scan }));
     await fireEvent.press(screen.getByRole('button', { name: de.scan.takePhoto }));
     expect(screen.getByText(de.camera.permissionTitle)).toBeTruthy();
     expect(screen.getByRole('button', { name: de.camera.allow })).toBeTruthy();
@@ -158,8 +171,69 @@ describe('Gerätedetail', () => {
     });
     await renderRouter(APP, { initialUrl: `/geraet/${device.id}` });
     expect(screen.getByText(de.device.noProtection)).toBeTruthy();
-    await fireEvent.press(screen.getByRole('button', { name: de.onboarding.link }));
-    useAppStore.getState().linkContract('vertragsnummer');
-    expect(useAppStore.getState().devices[0]?.contractId).toBeDefined();
+    expect(screen.getByText(de.coverage.dealerUnknown)).toBeTruthy();
+    await fireEvent.press(screen.getByRole('button', { name: de.coverage.change }));
+    expect(screen.getByText(de.setup.coverageTitle)).toBeTruthy();
+    await fireEvent.press(screen.getByRole('button', { name: new RegExp(`^${de.setup.insured}`) }));
+    await fireEvent.press(screen.getByRole('radio', { name: 'Lerche Versicherung' }));
+    await fireEvent.changeText(screen.getByLabelText(de.setup.policyLabel), 'LV-123456');
+    await fireEvent.press(screen.getByRole('button', { name: de.setup.savePolicy }));
+    const s = useAppStore.getState();
+    expect(s.devices[0]?.contractId).toBe(s.contracts[0]?.id);
+    expect(s.contracts[0]).toMatchObject({
+      contractNumber: 'LV-123456',
+      provider: { name: 'Lerche Versicherung' },
+    });
+  });
+});
+
+describe('Gerät anlegen: Versicherung oder Händler (Entscheidung 16)', () => {
+  test('Onboarding: Gerät aus dem Katalog suchen, ohne Versicherung den Händler wählen', async () => {
+    const r = await renderRouter(APP, { initialUrl: '/geraet-anlegen' });
+    await fireEvent.changeText(screen.getByLabelText(de.setup.searchLabel), 'g5833');
+    expect(screen.queryByRole('button', { name: /Bosch SMI4EAS24E/ })).toBeNull();
+    await fireEvent.press(screen.getByRole('button', { name: /^Miele G 5833 SC/ }));
+    expect(screen.getByText(de.setup.coverageTitle)).toBeTruthy();
+    await fireEvent.press(
+      screen.getByRole('button', { name: new RegExp(`^${de.setup.notInsured}`) }),
+    );
+    // Ohne Auswahl kein Speichern
+    await fireEvent.press(screen.getByRole('button', { name: de.setup.saveDealer }));
+    expect(screen.getByText(de.setup.pickDealerFirst)).toBeTruthy();
+    await fireEvent.changeText(screen.getByLabelText(de.setup.dealerSearch), 'löhne');
+    expect(screen.queryByRole('radio', { name: /^Elektro Lindemann/ })).toBeNull();
+    await fireEvent.press(screen.getByRole('radio', { name: /^Fründ Elektrogeräte AG \(DEMO\)/ }));
+    await fireEvent.press(screen.getByRole('button', { name: de.setup.saveDealer }));
+    const s = useAppStore.getState();
+    expect(s.onboardingDone).toBe(true);
+    expect(s.contracts).toHaveLength(0);
+    expect(s.devices[0]).toMatchObject({
+      manufacturerId: 'miele',
+      model: 'G 5833 SC',
+      category: 'geschirrspueler',
+      identifiedBy: 'katalog',
+      soldBy: { id: 'fruend', kind: 'haendler' },
+    });
+    expect(r.getPathname()).toBe('/');
+  });
+
+  test('mit Versicherung: Versicherer suchen und Police-Nr. eintragen', async () => {
+    await renderRouter(APP, { initialUrl: '/geraet-anlegen' });
+    await fireEvent.press(screen.getByRole('button', { name: /^Bosch SMI4EAS24E/ }));
+    await fireEvent.press(screen.getByRole('button', { name: new RegExp(`^${de.setup.insured}`) }));
+    await fireEvent.changeText(screen.getByLabelText(de.setup.insurerSearch), 'kran');
+    expect(screen.queryByRole('radio', { name: 'Lerche Versicherung' })).toBeNull();
+    await fireEvent.press(screen.getByRole('radio', { name: 'Kranich Versicherung' }));
+    await fireEvent.press(screen.getByRole('button', { name: de.setup.savePolicy }));
+    expect(screen.getByText(de.setup.policyEmpty)).toBeTruthy();
+    await fireEvent.changeText(
+      screen.getByLabelText(de.setup.policyLabel),
+      demoConfig.contract.number,
+    );
+    await fireEvent.press(screen.getByRole('button', { name: de.setup.savePolicy }));
+    const s = useAppStore.getState();
+    expect(s.devices[0]?.contractId).toBe(s.contracts[0]?.id);
+    expect(s.devices[0]?.soldBy).toBeUndefined();
+    expect(s.contracts[0]?.provider.name).toBe(demoConfig.insurer.name);
   });
 });

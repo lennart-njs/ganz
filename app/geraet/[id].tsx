@@ -116,9 +116,17 @@ export default function GeraetDetail() {
           <>
             <Text variant="labelStrong">{t.noProtection}</Text>
             <Text variant="body">{t.noProtectionText}</Text>
-            <NavRow title={de.onboarding.link} onPress={() => router.push('/schutz-verknuepfen')} />
+            <Card>
+              <FactList
+                items={[[de.coverage.dealer, device.soldBy?.name ?? de.coverage.dealerUnknown]]}
+              />
+            </Card>
           </>
         )}
+        <NavRow
+          title={de.coverage.change}
+          onPress={() => router.push(`/schutz-verknuepfen?geraet=${device.id}`)}
+        />
       </Section>
 
       {guideSet?.care ? (

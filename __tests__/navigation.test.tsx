@@ -41,9 +41,7 @@ describe('Onboarding', () => {
     const r = await renderRouter(APP, { initialUrl: '/' });
     expect(r.getPathname()).toBe('/willkommen');
     await fireEvent.press(screen.getByRole('button', { name: de.onboarding.start }));
-    expect(r.getPathname()).toBe('/schutz');
-    await fireEvent.press(screen.getByRole('button', { name: de.common.later }));
-    expect(r.getPathname()).toBe('/geraet-bestaetigen');
+    expect(r.getPathname()).toBe('/geraet-anlegen');
     await fireEvent.press(screen.getByRole('button', { name: de.onboarding.skipDevice }));
     expect(r.getPathname()).toBe('/');
     expect(screen.getByRole('header', { name: de.home.myDevices })).toBeTruthy();

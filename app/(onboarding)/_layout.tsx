@@ -10,6 +10,7 @@ export default function OnboardingLayout() {
     >
       <Stack.Screen name="index" />
       <Stack.Screen name="willkommen" />
+      <Stack.Screen name="geraet-anlegen" />
       <Stack.Screen name="schutz" />
       <Stack.Screen name="geraet-bestaetigen" />
       <Stack.Screen name="typenschild" />

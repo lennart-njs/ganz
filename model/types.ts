@@ -76,7 +76,9 @@ export interface Device {
   purchaseDate?: ISODateTime;
   purchaseProofPhotoId?: Id;
   contractId?: Id;
-  identifiedBy: 'typenschild_scan' | 'manuell' | 'vertrag';
+  /** Händler, bei dem das Gerät gekauft wurde (ohne Versicherung, Entscheidung 16) */
+  soldBy?: PartnerRef;
+  identifiedBy: 'typenschild_scan' | 'manuell' | 'vertrag' | 'katalog';
   createdAt: ISODateTime;
 }
 

@@ -351,6 +351,53 @@ export const de = {
     skipDevice: 'Später hinzufügen',
   },
 
+  /** Gerät anlegen: Gerät wählen, dann Versicherung oder Händler (Entscheidung 16) */
+  setup: {
+    pickTitle: 'Wähl dein Gerät.',
+    pickText:
+      'Für diese Geräte kennen wir die Gebrauchsanweisung und führen dich Schritt für Schritt.',
+    searchLabel: 'Gerät suchen',
+    searchPlaceholder: 'Hersteller oder Modell, z. B. G 5833',
+    catalogSub: (category: string) => `${category} · Anleitungen aus der Gebrauchsanweisung`,
+    noMatch: 'Kein Gerät gefunden. Fotografier das Typenschild oder trag es selbst ein.',
+    scan: 'Typenschild fotografieren',
+    manual: 'Anderes Gerät eintragen',
+    coverageTitle: 'Versicherung vorhanden?',
+    coverageText: (device: string) =>
+      `Es geht um ${device}. Davon hängt ab, wer sich um Reparatur und Kosten kümmert.`,
+    insured: 'Ja, Versicherung vorhanden',
+    insuredSub: 'Versicherer wählen und Police-Nr. eintragen',
+    notInsured: 'Nein, keine Versicherung',
+    notInsuredSub: 'Händler wählen, bei dem du gekauft hast',
+    insurerTitle: 'Wähl deinen Versicherer.',
+    insurerSearch: 'Versicherer suchen',
+    insurerPlaceholder: (example: string) => `Name, z. B. ${example}`,
+    policyLabel: 'Police-Nr.',
+    policyHint: 'Steht auf deinem Versicherungsschein.',
+    policyEmpty: 'Gib zuerst die Police-Nr. ein.',
+    pickInsurerFirst: 'Wähl zuerst deinen Versicherer.',
+    savePolicy: 'Versicherung speichern',
+    dealerTitle: 'Wähl den Händler, bei dem du gekauft hast.',
+    dealerText: 'Hat der Händler einen eigenen Kundendienst, kümmert er sich um deinen Fall.',
+    dealerSearch: 'Händler suchen',
+    dealerPlaceholder: (example: string) => `Name oder Ort, z. B. ${example}`,
+    dealerService: (place: string, service: string) => `${place} · Kundendienst: ${service}`,
+    dealerUnknown: 'Weiß ich nicht mehr',
+    dealerUnknownSub: 'Dann holen wir einen Fachbetrieb in deiner Nähe',
+    pickDealerFirst: 'Wähl zuerst einen Händler oder „Weiß ich nicht mehr“.',
+    saveDealer: 'Händler speichern',
+    nothingFound: 'Nichts gefunden. Prüf die Schreibweise.',
+  },
+
+  coverage: {
+    productDefault: 'Geräteversicherung',
+    dealer: 'Gekauft bei',
+    dealerUnknown: 'Händler unbekannt',
+    insurer: 'Versichert bei',
+    policy: 'Police-Nr.',
+    change: 'Versicherung oder Händler ändern',
+  },
+
   home: {
     searchTitle: 'Was ist kaputt?',
     searchSub: 'Foto, Meldung oder Symptom',

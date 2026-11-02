@@ -11,6 +11,22 @@ export interface PartnerConfig {
   distanceKm: number;
 }
 
+export interface InsurerConfig {
+  id: string;
+  name: string;
+  shortName: string;
+}
+
+export interface DealerConfig {
+  id: string;
+  name: string;
+  shortName: string;
+  /** Standorte oder „Onlinehandel“, als Unterzeile in der Liste */
+  place: string;
+  /** Eigener Kundendienst des Händlers */
+  service?: { name: string; distanceKm: number };
+}
+
 export const demoConfig = {
   /** Alle Werte sind Beispielwerte und werden in der App so gekennzeichnet. */
   isExample: true,
@@ -35,6 +51,41 @@ export const demoConfig = {
     /** Händler-Code zum Verknüpfen des Schutzes */
     code: '[CODE]',
   },
+
+  /**
+   * Versicherer zur Auswahl beim Anlegen eines Geräts (Entscheidung 16). Alle erfunden.
+   * Der erste ist der Versicherer aus `insurer`.
+   */
+  insurers: [
+    { id: 'kranich', name: 'Kranich Versicherung', shortName: 'Kranich' },
+    { id: 'lerche', name: 'Lerche Versicherung', shortName: 'Lerche' },
+    { id: 'eichenhof', name: 'Eichenhof Assekuranz', shortName: 'Eichenhof' },
+    { id: 'nordlicht', name: 'Nordlicht Versicherung', shortName: 'Nordlicht' },
+    { id: 'weserland', name: 'Weserland Versicherung', shortName: 'Weserland' },
+  ] satisfies InsurerConfig[],
+
+  /**
+   * Händler zur Auswahl, wenn keine Versicherung vorhanden ist (Entscheidung 16).
+   * Fründ mit echtem Namen nur mit „(DEMO)“ (Entscheidung 17). Alle anderen erfunden.
+   * Händler mit `service` haben einen eigenen Kundendienst, der den Fall übernimmt.
+   */
+  dealers: [
+    {
+      id: 'fruend',
+      name: 'Fründ Elektrogeräte AG (DEMO)',
+      shortName: 'Fründ (DEMO)',
+      place: 'Löhne, Bad Oeynhausen, Minden',
+      service: { name: 'Fründ Kundendienst (DEMO)', distanceKm: 3.1 },
+    },
+    { id: 'lindemann', name: 'Elektro Lindemann', shortName: 'Lindemann', place: 'Bielefeld' },
+    { id: 'kuechenwelt', name: 'Küchenwelt Nord', shortName: 'Küchenwelt', place: 'Herford' },
+    {
+      id: 'technikhaus',
+      name: 'Technikhaus Online',
+      shortName: 'Technikhaus',
+      place: 'Onlinehandel',
+    },
+  ] satisfies DealerConfig[],
 
   manufacturer: {
     id: 'miele',

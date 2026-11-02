@@ -116,6 +116,10 @@ export interface AppActions {
   /** Legt den Vertrag aus der Konfiguration an (nach erfolgreicher Prüfung). */
   linkContract: (via: Contract['linkedVia']) => Contract;
   addDevice: (input: NewDevice) => Device;
+  /** Versicherung zum Gerät: Versicherer aus der Liste und Police-Nr. (Entscheidung 16) */
+  linkPolicy: (input: { deviceId: Id; insurerId: string; policyNumber: string }) => Contract;
+  /** Ohne Versicherung: Händler, bei dem das Gerät gekauft wurde. undefined: weiß ich nicht. */
+  setDeviceDealer: (deviceId: Id, dealerId: string | undefined) => void;
   setDemo: (patch: Partial<DemoSettings>) => void;
   createCase: (input: { deviceId: Id; entry: CaseEntry; problemLabel: string }) => Case;
   runCommand: (caseId: Id, command: CaseCommand, options?: CommandOptions) => Case;
@@ -296,6 +300,52 @@ export function createAppStore(storage: StateStorage = AsyncStorage, env: StoreE
               ),
             }));
             return device;
+          },
+
+          linkPolicy: ({ deviceId, insurerId, policyNumber }) => {
+            const p = person();
+            const now = env.now();
+            const cfg = demoConfig;
+            const insurer = cfg.insurers.find((i) => i.id === insurerId) ?? cfg.insurers[0]!;
+            const isDemoInsurer = insurer.id === cfg.insurer.id;
+            const contract: Contract = {
+              id: env.newId('vertrag'),
+              householdId: get().household?.id ?? '',
+              kind: isDemoInsurer ? cfg.contract.kind : 'geraeteversicherung',
+              provider: { id: insurer.id, kind: 'versicherer', name: insurer.name },
+              productName: isDemoInsurer ? cfg.contract.productName : de.coverage.productDefault,
+              contractNumber: policyNumber.trim(),
+              policyholderId: p.id,
+              validFrom: cfg.contract.validFrom,
+              validUntil: cfg.contract.validUntil,
+              deductible: get().demo.deductible,
+              coveredDeviceIds: [deviceId],
+              linkedVia: 'vertragsnummer',
+              linkedAt: now,
+            };
+            set((s) => ({
+              contracts: [...s.contracts, contract],
+              devices: s.devices.map((d) =>
+                d.id === deviceId ? { ...d, contractId: contract.id, soldBy: undefined } : d,
+              ),
+            }));
+            return contract;
+          },
+
+          setDeviceDealer: (deviceId, dealerId) => {
+            const dealer = demoConfig.dealers.find((d) => d.id === dealerId);
+            set((s) => ({
+              devices: s.devices.map((d) =>
+                d.id === deviceId
+                  ? {
+                      ...d,
+                      soldBy: dealer
+                        ? { id: dealer.id, kind: 'haendler', name: dealer.name }
+                        : undefined,
+                    }
+                  : d,
+              ),
+            }));
           },
 
           setDemo: (patch) =>
