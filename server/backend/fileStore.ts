@@ -53,8 +53,8 @@ export class FileCaseStore implements CaseStore {
 
   constructor(private readonly file: string) {}
 
+  /** Liest die Datei bei jedem Zugriff frisch: Jede API-Route hat ihre eigene Instanz. */
   private load(): Db {
-    if (this.db) return this.db;
     if (fs.existsSync(this.file)) {
       this.db = JSON.parse(fs.readFileSync(this.file, 'utf8')) as Db;
     } else {

@@ -10,3 +10,5 @@ tsconfig.json
 app.json
 portal/node_modules/
 portal/.next/
+portal/next-env.d.ts
+portal/*.tsbuildinfo

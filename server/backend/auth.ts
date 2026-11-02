@@ -2,13 +2,32 @@
 // Passwort aus PORTAL_DEMO_PASSWORD (Standard „demo“). Kein echtes Konto, kein echtes Passwort.
 // Später übernimmt das der Login des Backends, mit Rollen je Mitarbeiter.
 import crypto from 'node:crypto';
+import fs from 'node:fs';
+import path from 'node:path';
 
 import { demoConfig } from '@/config/demo.config';
 
 import type { Tenant } from './types';
 
 const SESSION_HOURS = 8;
-const secret = process.env.PORTAL_SESSION_SECRET ?? crypto.randomBytes(32).toString('hex');
+/**
+ * Geheimnis zum Signieren der Sitzung. Expo bündelt jede API-Route einzeln, darum liegt es für die
+ * Demo im Datenordner und gilt für alle Routen. In echt: PORTAL_SESSION_SECRET setzen.
+ */
+function sessionSecret(): string {
+  if (process.env.PORTAL_SESSION_SECRET) return process.env.PORTAL_SESSION_SECRET;
+  const dir = process.env.GANZ_DATA_DIR ?? path.join(process.cwd(), '.data');
+  const file = path.join(dir, 'portal-secret');
+  try {
+    return fs.readFileSync(file, 'utf8').trim();
+  } catch {
+    const fresh = crypto.randomBytes(32).toString('hex');
+    fs.mkdirSync(dir, { recursive: true });
+    fs.writeFileSync(file, fresh, { mode: 0o600 });
+    return fresh;
+  }
+}
+const secret = sessionSecret();
 
 /** Ein Demo-Konto je Händler mit `portalUser` (config/demo.config.ts) */
 const accounts = demoConfig.dealers.flatMap((d) =>

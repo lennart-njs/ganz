@@ -1283,6 +1283,7 @@ export const de = {
       answer: (a: string) => `Antwort: ${a}`,
     },
     actions: {
+      title: 'Antwort an die Kundschaft',
       accept: 'Fall annehmen',
       question: 'Rückfrage',
       questionPlaceholder: 'Haben Sie den Kaufbeleg noch?',

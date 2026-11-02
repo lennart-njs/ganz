@@ -331,3 +331,12 @@ Annahmen, die ich beim Bauen getroffen habe. Jede lässt sich ändern.
 - **Offener Fall auf der Startseite** im mach’s-Look: helle Akzentfläche, Statuszeile mit Punkt, blauer Button „Weitermachen“ (statt schwarzer Block).
 - **Plus unten rechts** statt der Zeile „Gerät hinzufügen“. Es öffnet ein kleines Menü: „Gerät hinzufügen“ und „Was ist kaputt?“.
 - **Eingabefeld im Gespräch:** Senden ist ein Pfeil im Feld (wie in Messengern), kein eigener Button. Kamera links daneben. Der Platzhalter ist kurz, damit er ganz lesbar bleibt: „Frag den Assistenten“, während einer Anleitung „Frag zu Schritt 3“. Der Link „Frag den Assistenten zu diesem Schritt“ unter dem Schritt entfällt. Gleiches Feld in „Problem melden“.
+
+## Händlerportal (02.11.2026, Entscheidung 30)
+
+- **Look von machs.io** (`css/site.css`, Stand 02.11.2026): weißer Grund, Flächen in Kreide und Blaumann-Hellblau, schwebende dunkle Kapsel als Navigation, Pill-Buttons, Karten mit großem Radius. Farben hell und dunkel in `theme/machs.ts`, Wortmarke und Schrift von machs.io in `portal/public/`.
+- **Keine Erklärtexte.** Bezeichnungen, Status-Chips und Aktionen müssen reichen. Gesiezt.
+- **Seiten:** Anmelden, Fälle (Filter Alle, Neu, In Bearbeitung, Abgeschlossen), Fallakte mit Aktionen rechts (Fall annehmen, Rückfrage mit Antworten zum Antippen, Entscheidung, Betrieb und Zeitfenster, Stand).
+- **Gewährleistung** als Chip: zwei Jahre ab Kaufdatum, nur zur Orientierung.
+- **Sitzung:** httpOnly-Cookie, `Secure`, sobald das Portal über HTTPS läuft. Das Portal spricht nur über die API mit dem Backend.
+- **Expo bündelt jede API-Route einzeln.** Darum liegt das Sitzungs-Geheimnis der Demo im Datenordner (`.data/portal-secret`, in echt `PORTAL_SESSION_SECRET`), und der Dateispeicher liest bei jedem Zugriff frisch.

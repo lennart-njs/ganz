@@ -83,6 +83,20 @@ npm run guides:approve -- miele-twb140 --von "Name, Firma"
 
 Der Import braucht `ANTHROPIC_API_KEY` in der Umgebung und schreibt einen Entwurf nach `server/guides/drafts/`. Er meldet jeden Text, der nicht wörtlich im PDF steht. Erst die Freigabe legt ihn nach `server/guides/catalog/`. Dann liefert ihn `GET /api/guides`, und der Reparatur-Assistent kennt ihn.
 
+## Händlerportal (machs.io)
+
+Web-App in `portal/` (Next.js), im Look von machs.io. Sie liest die Fälle, die Haushalte in der App an ihren Händler senden („Fall an … senden“), und schickt Antworten zurück ins Gespräch.
+
+```bash
+npx expo start
+```
+
+```bash
+cd portal && npm install && npm run dev
+```
+
+Dann http://localhost:3000 öffnen. Demo-Zugang: `demo@fruend.example`, Passwort `demo`. Das Portal holt die Daten vom laufenden Expo-Server (`GANZ_API_URL`, Standard `http://localhost:8081`). Ohne Telefon zeigt es zwei Beispielfälle. Rückfrage, Entscheidung, Betrieb und Stand erscheinen in der App beim nächsten Abruf (alle 15 Sekunden) im Gespräch des Falls. Details: `docs/BACKEND.md`.
+
 ## Prüfen
 
 ```bash

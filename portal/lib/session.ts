@@ -1,5 +1,5 @@
 // Sitzung im Portal: Token vom Backend in einem httpOnly-Cookie. Nur auf dem Server lesbar.
-import { cookies } from 'next/headers';
+import { cookies, headers } from 'next/headers';
 
 export const SESSION_COOKIE = 'machs_portal';
 
@@ -8,10 +8,13 @@ export async function sessionToken(): Promise<string | undefined> {
 }
 
 export async function setSession(token: string) {
+  // Secure, sobald das Portal über HTTPS läuft (z. B. portal.machs.io). Lokal in der Demo: HTTP.
+  const h = await headers();
+  const https = h.get('x-forwarded-proto') === 'https' || process.env.PORTAL_HTTPS === '1';
   (await cookies()).set(SESSION_COOKIE, token, {
     httpOnly: true,
     sameSite: 'lax',
-    secure: process.env.NODE_ENV === 'production',
+    secure: https,
     path: '/',
     maxAge: 8 * 3600,
   });
