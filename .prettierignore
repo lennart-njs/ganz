@@ -12,3 +12,4 @@ portal/node_modules/
 portal/.next/
 portal/next-env.d.ts
 portal/*.tsbuildinfo
+website/

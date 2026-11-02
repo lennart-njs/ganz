@@ -1,0 +1,61 @@
+# machs.io · nginx-Einstellungen (nur verwenden, wenn der Server nginx nutzt)
+# In den server-Block für machs.io kopieren. Zertifikatspfade anpassen.
+
+server {
+    listen 80;
+    listen [::]:80;
+    server_name machs.io www.machs.io;
+    return 301 https://machs.io$request_uri;
+}
+
+server {
+    listen 443 ssl http2;
+    listen [::]:443 ssl http2;
+    server_name www.machs.io;
+    # ssl_certificate     /etc/letsencrypt/live/machs.io/fullchain.pem;
+    # ssl_certificate_key /etc/letsencrypt/live/machs.io/privkey.pem;
+    return 301 https://machs.io$request_uri;
+}
+
+server {
+    listen 443 ssl http2;
+    listen [::]:443 ssl http2;
+    server_name machs.io;
+    # ssl_certificate     /etc/letsencrypt/live/machs.io/fullchain.pem;
+    # ssl_certificate_key /etc/letsencrypt/live/machs.io/privkey.pem;
+
+    root /var/www/machs.io;
+    index index.html;
+    error_page 404 /404.html;
+    charset utf-8;
+
+    # Sicherheits-Header. nginx vererbt add_header nicht in location-Blöcke,
+    # darum stehen sie in der Datei-Gruppe unten noch einmal.
+    set $csp "default-src 'self'; script-src 'self' 'sha256-pfgOMgfVZwm2ODyms34QYW9h8EwicylhV77q5LHK8c0='; style-src 'self'; img-src 'self'; font-src 'self'; connect-src 'none'; object-src 'none'; base-uri 'self'; form-action 'none'; frame-ancestors 'none'";
+    add_header Content-Security-Policy $csp always;
+    add_header X-Content-Type-Options "nosniff" always;
+    add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+    add_header Permissions-Policy "camera=(), microphone=(), geolocation=(), payment=()" always;
+    add_header X-Frame-Options "DENY" always;
+    add_header Strict-Transport-Security "max-age=31536000" always;
+    add_header Cache-Control "no-cache" always;
+
+    location ~* \.(css|js|woff2)$ {
+        add_header Content-Security-Policy $csp always;
+        add_header X-Content-Type-Options "nosniff" always;
+        add_header Cache-Control "public, max-age=31536000, immutable" always;
+    }
+
+    location ~* \.(png|svg)$ {
+        add_header Content-Security-Policy $csp always;
+        add_header X-Content-Type-Options "nosniff" always;
+        add_header Cache-Control "public, max-age=604800" always;
+    }
+
+    location / {
+        try_files $uri $uri/ =404;
+    }
+
+    gzip on;
+    gzip_types text/css application/javascript image/svg+xml text/plain application/xml;
+}
