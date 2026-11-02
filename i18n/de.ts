@@ -1229,7 +1229,12 @@ export const de = {
       failed: 'E-Mail oder Passwort falsch.',
       offline: 'Backend nicht erreichbar.',
     },
-    nav: { cases: 'Fälle', logout: 'Abmelden', label: 'Hauptnavigation' },
+    nav: {
+      cases: 'Fälle',
+      logout: 'Abmelden',
+      label: 'Hauptnavigation',
+      open: 'Navigation öffnen',
+    },
     list: {
       title: 'Fälle',
       empty: 'Keine Fälle.',

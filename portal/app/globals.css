@@ -91,17 +91,89 @@ textarea {
 }
 .pill {
   pointer-events: auto;
-  display: flex;
-  align-items: center;
-  gap: 2px;
+  position: relative;
   height: 56px;
-  padding: 6px 6px 6px 22px;
   border-radius: 28px;
   background: var(--pill);
   color: var(--on-pill);
   box-shadow: 0 18px 40px -22px var(--shadow);
   max-width: 100%;
+  overflow: hidden;
+  transition:
+    width 0.55s var(--ease-io),
+    box-shadow 0.3s ease;
+}
+.pill-row {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  height: 56px;
+  width: max-content;
+  padding: 6px 6px 6px 22px;
   white-space: nowrap;
+  transition: opacity 0.3s ease 0.15s;
+}
+/* Beim Runterscrollen wird die Kapsel zum Zeichen „m’“ (wie auf machs.io) */
+.pmark {
+  position: absolute;
+  left: 0;
+  top: 0;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  width: 56px;
+  height: 56px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: none;
+  color: var(--on-pill);
+  cursor: pointer;
+  opacity: 0;
+  pointer-events: none;
+  transition:
+    opacity 0.25s ease,
+    background-color 0.2s ease;
+}
+.pmark svg {
+  height: 19px;
+  width: auto;
+  display: block;
+  fill: currentColor;
+  transform: scale(0.6);
+  transition: transform 0.55s var(--ease-io);
+}
+.pmark .q {
+  fill: var(--on-pill-accent);
+}
+.pill.zeichen {
+  box-shadow: 0 14px 30px -18px var(--shadow);
+}
+.pill.zeichen .pill-row {
+  opacity: 0;
+  pointer-events: none;
+  transition-delay: 0s;
+}
+.pill.zeichen .pmark {
+  opacity: 1;
+  pointer-events: auto;
+  transition-delay: 0.2s, 0s;
+}
+.pill.zeichen .pmark svg {
+  transform: none;
+}
+@media (hover: hover) {
+  .pill.zeichen .pmark:hover {
+    background: var(--pill-2);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .pill,
+  .pill-row,
+  .pmark,
+  .pmark svg {
+    transition: none !important;
+  }
 }
 .pwm {
   display: flex;

@@ -21,6 +21,8 @@ export const machs = {
     pill2: '#2B2E33',
     onPill: '#F5F6F8',
     onPillMuted: '#A3A7AE',
+    /** Apostroph im Zeichen „m’“ auf der dunklen Kapsel */
+    onPillAccent: '#8AAEF5',
     paper: '#FFFFFF',
     line: '#E5E7EB',
     shadow: 'rgba(20,32,56,.16)',
@@ -46,6 +48,7 @@ export const machs = {
     pill2: '#E2E4E8',
     onPill: '#16181A',
     onPillMuted: '#5C5F66',
+    onPillAccent: '#1F4FA8',
     paper: '#1F2328',
     line: '#2C2F33',
     shadow: 'rgba(0,0,0,.55)',

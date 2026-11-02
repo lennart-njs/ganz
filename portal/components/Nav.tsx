@@ -2,7 +2,8 @@ import Link from 'next/link';
 
 import { de } from '@/i18n/de';
 
-import { Wordmark } from './Wordmark';
+import { NavPill } from './NavPill';
+import { Wordmark, zeichenSvg } from './Wordmark';
 
 const t = de.portal;
 
@@ -10,7 +11,7 @@ const t = de.portal;
 export function Nav({ dealer, current }: { dealer: string; current?: 'faelle' }) {
   return (
     <header className="pnav">
-      <nav className="pill" aria-label={t.nav.label}>
+      <NavPill label={t.nav.label} openLabel={t.nav.open} zeichen={zeichenSvg}>
         <Link className="pwm" href="/" aria-label={t.brand}>
           <Wordmark />
         </Link>
@@ -23,7 +24,7 @@ export function Nav({ dealer, current }: { dealer: string; current?: 'faelle' })
             {t.nav.logout}
           </button>
         </form>
-      </nav>
+      </NavPill>
     </header>
   );
 }
