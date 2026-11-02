@@ -257,4 +257,16 @@ Annahmen, die ich beim Bauen getroffen habe. Jede lässt sich ändern.
 - **Buttons** sind Kapseln. Secondary getönt (accent-soft, Text in accent, ohne Rahmen). Links in accent.
 - **Achtung-Box** weiß mit Tinten-Rahmen statt dunklem Block.
 - **Name** „mach’s“ in allen Texten, im App-Namen und im Reparatur-Assistenten. Repo, Slug und Ordner heißen weiter „ganz“.
-- **Noch nicht umgestellt:** Wortmarke als Pfad-Datei aus Assets › Logos (die App setzt sie aus der Schrift), App-Icon „m’“, Karten ohne Rahmen bei NavRow und SearchPill, Tab-Icons als SF Symbols. `design-system/` im Repo ist noch das ganz-Designsystem.
+- **Nachgezogen (03.11.2026, Entscheidung 22):** Wortmarke aus `machs-wortmarke-schwarz.svg` (über `react-native-svg`, Farbe aus dem Theme), App-Icon „m’“ aus `machs-app-icon-1024.png`, Slug und Scheme `machs`, Paketname `machs`, Speicherschlüssel `machs-app` (alte Daten aus der ganz-Version werden nicht übernommen). `design-system/` ist jetzt das mach’s-Designsystem mit Logos, das ganz-System liegt unter `reference/ganz-design-system/`.
+- **Keine Rahmen und Linien** mehr an Suchpille, Listenzeilen, Auswahlkarten, Chips, Eingabefeldern, Aktionsleiste, Disclosure und FactList. Gefüllte graue Flächen (Radius 16) und Abstand ordnen. Rahmen bleiben nur bei der Achtung-Box, dem Fokus- und Fehlerring von Feldern und den Auswahl-Kreisen.
+- **Bleibt bei „ganz“:** der Repo-Name `lennart-njs/ganz` und der Ordner. Ein Umbenennen auf GitHub ist Lennarts Entscheidung.
+- **Tab-Icons** bleiben Lucide statt SF Symbols. Das Designsystem nennt SF Symbols für iOS; mit Expo Go ohne eigenes Build ist Lucide der einfachere Weg.
+
+### Entschlacken (Entscheidung 20)
+
+- **Anleitungsschritt:** Fortschritt, Schritttitel, Achtung (falls vorhanden), Text, Werkzeug als eine Zeile. Die Quelle steht nur im ersten Schritt („Aus der Gebrauchsanweisung Miele G 5833 SC“). Seite je Schritt und Quelle der Anleitung stehen in der Fallakte.
+- **Keine Foto-Platzhalter:** `PhotoFrame` zeigt ohne Foto nichts. Gerätekarten sind graue Zeilen ohne Bild. Kommen echte Fotos, erscheinen sie wieder.
+- **Hilfe holen:** ein Satz, wer was sieht und dass nichts aufgenommen wird. Datenliste, Protokoll, Screenshot-Einwilligung und Rechtsgrundlage unter „Details“. Die Bestätigung vor der Weitergabe bleibt der Tap auf „Videocall starten“.
+- **Kosten:** eine große Zahl, darunter klein Ersatzgerät und Ersparnis. Doppelte Sätze („Befund aufgenommen“, „kein Schutz verknüpft“) entfallen.
+- **Gespräch:** mach’s spricht ohne Absenderzeile, nur der Reparatur-Assistent trägt einen Namen. Nachrichten in 20 pt statt 22 pt.
+- **Demo:** Hinweise, Demo-Knöpfe und „Beispielwerte“ sind standardmäßig aus (Entscheidung 21). Freigabe und Termin laufen per Timer weiter. Profil → 7-mal auf die Versionsnummer → „Hinweise“ schaltet sie an.

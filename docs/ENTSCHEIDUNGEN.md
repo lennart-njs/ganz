@@ -74,3 +74,11 @@ Termin: Freitag, 06.11.2026, 10 Uhr, online, mit Jan Philipp Fründ. Antworten v
 17. **Fründ mit echtem Namen:** Fründ darf in der Demo mit echtem Namen erscheinen, immer mit dem Zusatz „(DEMO)“.
 18. **Anleitungen aus Gebrauchsanweisungen:** Lennart hat drei Gebrauchsanweisungen geschickt. Daraus werden Anleitungen: Miele G 5833 SC (Geschirrspüler), Bosch SMI4EAS24E (Geschirrspüler), Miele WQ 1000 WPS (Waschmaschine).
 19. **Push:** Push auf den Arbeitsbranch ist freigegeben, damit Lennart auf dem Handy testen kann. Kein PR ohne Anweisung.
+
+## Nach dem ersten Test auf dem Handy (03.11.2026)
+
+Lennart: „Ich finde die App teilweise etwas chaotisch und überladen von Platzhaltern, zu viel Text, Quellinformationen etc.“
+
+20. **Schlicht:** Jeder Screen beantwortet eine Frage: ein großes Element, höchstens ein Satz Erklärung, eine Hauptaktion. Alles andere hinter „Details“ oder in der Fallakte. Keine Foto-Platzhalter. Die Quelle der Anleitung steht einmal im ersten Schritt, Seite und Originaltext in der Fallakte.
+21. **Keine Demo-Kennzeichnung:** Fründ erscheint ohne „(DEMO)“. Demo-Hinweise und „Beispielwerte“ sind für den Pitch aus und lassen sich über die Demo-Steuerung wieder anschalten. Ersetzt den Zusatz „(DEMO)“ aus Entscheidung 17.
+22. **Rebranding vollständig:** mach’s überall, Wortmarke und App-Icon aus den Logo-Dateien des Designsystems. Das ganz-Designsystem liegt nur noch als Referenz unter `reference/ganz-design-system/`.

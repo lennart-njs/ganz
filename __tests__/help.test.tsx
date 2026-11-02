@@ -80,8 +80,10 @@ describe('Hilfe holen', () => {
     const id = caseWithAbort();
     await renderRouter(APP, { initialUrl: `/fall/${id}` });
     const partner = demoConfig.partners[0]!.name;
+    // Ein Satz vorab, alles Weitere unter „Details“ (Entscheidung 20)
+    expect(screen.getByText(de.help.shareSummary(demoConfig.expert.name, partner))).toBeTruthy();
+    await tap(de.help.details);
     expect(screen.getByText(de.help.shareTitle(demoConfig.expert.name, partner))).toBeTruthy();
-    expect(screen.getByText(de.help.noRecording)).toBeTruthy();
     expect(screen.getByText(de.help.stepsDone(4, 7))).toBeTruthy();
     expect(screen.getByText(de.help.abortedAt(5, 'Pumpe freimachen'))).toBeTruthy();
     // Keine Kostenzusage, kein Schadenfall
@@ -93,6 +95,7 @@ describe('Hilfe holen', () => {
     const id = setup();
     useAppStore.getState().escalate(id);
     await renderRouter(APP, { initialUrl: `/fall/${id}` });
+    await tap(de.help.details);
     expect(screen.getByText(de.help.notStarted)).toBeTruthy();
   });
 
@@ -127,6 +130,7 @@ describe('Hilfe holen', () => {
   test('Screenshots nur mit eigener Einwilligung (lit. a)', async () => {
     const id = caseWithAbort();
     await renderRouter(APP, { initialUrl: `/fall/${id}` });
+    await tap(de.help.details);
     await fireEvent.press(screen.getByRole('checkbox', { name: de.help.screenshots }));
     await tap(new RegExp(`^${de.thread.callStart}`));
     await flush();

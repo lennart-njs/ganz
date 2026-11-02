@@ -114,6 +114,7 @@ describe('Whitelabel', () => {
 describe('Demo-Modus', () => {
   test('mit Hinweisen: Tipps, Demo-Knöpfe und Beispielwerte', async () => {
     const { caseId } = goldenCase();
+    useAppStore.getState().setDemo({ hints: true });
     await renderRouter(APP, { initialUrl: `/fall/${caseId}/kosten` });
     expect(screen.getByText(de.demoHints.kosten)).toBeTruthy();
     expect(screen.getByText(de.common.exampleValues)).toBeTruthy();
@@ -175,8 +176,9 @@ describe('Demo-Modus', () => {
     });
     expect(useAppStore.getState().contracts[0]?.deductible).toBe(5000);
 
+    // Für den Pitch sind die Hinweise aus (Entscheidung 21), die Steuerung schaltet sie an
     await fireEvent.press(screen.getByRole('checkbox', { name: de.demoControl.hints }));
-    expect(useAppStore.getState().demo.hints).toBe(false);
+    expect(useAppStore.getState().demo.hints).toBe(true);
   });
 
   test('„Offene Fälle einen Schritt weiter“ schaltet den Status', async () => {

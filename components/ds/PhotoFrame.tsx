@@ -19,15 +19,27 @@ interface PhotoFrameProps {
   ratio?: number;
   /** Kleine Vorschaubilder zeigen im Platzhalter keinen Text */
   compact?: boolean;
+  /** Platzhalter zeigen, wenn es kein Foto gibt (nur Galerie) */
+  placeholder?: boolean;
 }
 
 /** Unter dieser Höhe (iPhone SE, mini) werden große Fotos flacher, damit der Text sichtbar bleibt */
 const shortScreen = 760;
 
-/** Foto mit 12 px Radius. Ohne Foto: beschrifteter Platzhalter. */
-export function PhotoFrame({ label, source, ratio = 16 / 10, compact }: PhotoFrameProps) {
+/**
+ * Foto mit 12 px Radius. Ohne Foto zeigt die App nichts (Entscheidung 20): keine Platzhalter.
+ * `placeholder` erzwingt den beschrifteten Platzhalter, nur für die Galerie.
+ */
+export function PhotoFrame({
+  label,
+  source,
+  ratio = 16 / 10,
+  compact,
+  placeholder,
+}: PhotoFrameProps) {
   const theme = useTheme();
   const { height } = useWindowDimensions();
+  if (!source && !placeholder) return null;
   const aspectRatio = !compact && height < shortScreen ? Math.max(ratio, 2) : ratio;
   return (
     <View

@@ -10,7 +10,7 @@ const flush = async () => {
   for (let i = 0; i < 6; i++) await act(async () => {});
 };
 
-const SERVICE = 'Fründ Kundendienst (DEMO)';
+const SERVICE = 'Fründ Kundendienst';
 
 /** Geschirrspüler aus dem Katalog, ohne Versicherung, gekauft bei Fründ (Entscheidung 16) */
 function setup() {
@@ -41,7 +41,7 @@ describe('Händler statt Versicherer (Fründ-Demo)', () => {
     const run = s.guideRuns[c.guideRunIds[0]!]!;
     expect(run.guideId).toBe('g5833_ablauf');
     expect(r.getPathname()).toBe(`/fall/${c.id}/anleitung`);
-    expect(screen.getByText(/Gebrauchsanweisung Miele G 5833 SC.*Seite 72/)).toBeTruthy();
+    expect(screen.getByText(/^Aus der Gebrauchsanweisung Miele G 5833 SC$/)).toBeTruthy();
   });
 
   test('Fachkraft und Betrieb sind der Kundendienst des Händlers, kein Versicherer', async () => {

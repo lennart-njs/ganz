@@ -17,7 +17,8 @@ async function bookedCase(scenario: 'freigeben' | 'ablehnen' = 'freigeben') {
   const s = useAppStore.getState();
   s.reset();
   useAppStore.setState({ onboardingDone: true });
-  s.setDemo({ claimScenario: scenario });
+  // Demo-Knöpfe nur mit Hinweisen (für den Pitch aus, Entscheidung 21)
+  s.setDemo({ claimScenario: scenario, hints: true });
   s.linkContract('vertragsnummer');
   const device = s.addDevice({
     manufacturerId: 'miele',

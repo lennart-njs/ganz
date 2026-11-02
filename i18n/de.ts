@@ -628,6 +628,8 @@ export const de = {
     noSelf: 'Nicht selbst lösbar',
     noSelfSub: (manufacturer: string) => `laut Anleitung von ${manufacturer}`,
     youNeed: 'Du brauchst',
+    /** Einmal im ersten Schritt (Entscheidung 20). Seite und Originaltext stehen in der Fallakte. */
+    sourceShort: (document: string) => `Aus der ${document}`,
     beforeTitle: 'Bevor du anfängst',
     done: 'Erledigt',
     notWorking: 'Geht nicht',
@@ -667,6 +669,9 @@ export const de = {
     abortedAt: (step: number, title: string) => `Ging nicht bei Schritt ${step}: ${title}`,
     notStarted: 'Anleitung nicht gestartet',
     shareTitle: (expert: string, company: string) => `Das sieht ${expert} (${company})`,
+    shareSummary: (expert: string, company: string) =>
+      `${expert} (${company}) sieht Gerät, Fotos und deine erledigten Schritte. Keine Aufnahme.`,
+    details: 'Details',
     shareItems: [
       'Gerät und Modell',
       'Fotos aus diesem Fall',
@@ -765,6 +770,8 @@ export const de = {
     replacement: 'Ersatzgerät',
     replacementSub: 'vergleichbares Modell',
     saving: (amount: string) => `Ersparnis in diesem Fall: ${amount}`,
+    compareNew: (replacement: string, saving: string) =>
+      `Ein neues Gerät würde ${replacement} kosten. Ersparnis in diesem Fall: ${saving}.`,
     payer: 'Das zahlt',
     payerValue: (insurer: string) => `${insurer}, vorbehaltlich Freigabe`,
     payerSelf: 'Du selbst',
@@ -932,6 +939,8 @@ export const de = {
     none: 'Noch nichts weitergegeben.',
     event: {
       step: (n: number, title: string) => `Schritt ${n}: ${title}`,
+      stepPage: (n: number, title: string, page: number) =>
+        `Schritt ${n}: ${title} · Gebrauchsanweisung Seite ${page}`,
       guide: (title: string) => `Anleitung: ${title}`,
       outcome: {
         laeuft_wieder: 'Läuft wieder',
@@ -963,7 +972,7 @@ export const de = {
       forDevice: (name: string) => `Es geht um deine ${name}.`,
       addDevice: 'Anderes Gerät hinzufügen',
       whatsUp: 'Was ist los?',
-      whatsUpHint: 'Wähl unten, was passt. Am schnellsten geht es mit einem Foto.',
+      whatsUpHint: 'Wähl unten, was passt.',
       whatsUpNoGuides:
         'Wähl unten, was passt. Für dieses Gerät holen wir dir gleich eine Fachkraft dazu.',
       whichMessage: 'Was steht im Display?',
@@ -1054,7 +1063,7 @@ export const de = {
     newProblem: 'Neues Problem melden',
     newProblemReason: 'Neues Problem gemeldet',
     inputLabel: 'Schreib dem Reparatur-Assistenten',
-    inputHint: 'Frag etwas oder beschreib dein Problem in eigenen Worten.',
+    inputHint: 'Oder beschreib es in eigenen Worten.',
     noteFallback:
       'Der Assistent ist gerade nicht erreichbar. Deine Nachricht geht als Notiz an die Fachkraft.',
     noteQuestion: 'Notiz an die Fachkraft',

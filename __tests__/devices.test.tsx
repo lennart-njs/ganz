@@ -202,7 +202,7 @@ describe('Gerät anlegen: Versicherung oder Händler (Entscheidung 16)', () => {
     expect(screen.getByText(de.setup.pickDealerFirst)).toBeTruthy();
     await fireEvent.changeText(screen.getByLabelText(de.setup.dealerSearch), 'löhne');
     expect(screen.queryByRole('radio', { name: /^Elektro Lindemann/ })).toBeNull();
-    await fireEvent.press(screen.getByRole('radio', { name: /^Fründ Elektrogeräte AG \(DEMO\)/ }));
+    await fireEvent.press(screen.getByRole('radio', { name: /^Fründ Elektrogeräte AG/ }));
     await fireEvent.press(screen.getByRole('button', { name: de.setup.saveDealer }));
     const s = useAppStore.getState();
     expect(s.onboardingDone).toBe(true);

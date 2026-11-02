@@ -11,7 +11,10 @@ const f = de.file.event;
 function stepTitle(e: CaseEvent): string | undefined {
   const guide = guides[e.payload.guideId as GuideId];
   const n = Number(e.payload.step);
-  return guide && n ? f.step(n, guide.steps[n - 1]?.t ?? '') : undefined;
+  if (!guide || !n) return undefined;
+  const s = guide.steps[n - 1];
+  // In der Fallakte steht die Seite der Gebrauchsanweisung (Entscheidung 20)
+  return s?.src ? f.stepPage(n, s.t, s.src.page) : f.step(n, s?.t ?? '');
 }
 
 export function eventLabel(e: CaseEvent): string {
@@ -21,7 +24,10 @@ export function eventLabel(e: CaseEvent): string {
   switch (e.type) {
     case 'anleitung_gestartet':
       detail = guides[p.guideId as GuideId]
-        ? f.guide(guides[p.guideId as GuideId].title)
+        ? de.common.dot(
+            f.guide(guides[p.guideId as GuideId].title),
+            guides[p.guideId as GuideId].sourceDocument,
+          )
         : undefined;
       break;
     case 'schritt_erledigt':

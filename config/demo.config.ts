@@ -36,8 +36,8 @@ export const demoConfig = {
   demo: {
     /** Demo-Modus: Steuerung über die Geste im Profil, Hinweise, Beispieldaten */
     enabled: true,
-    /** Schließbare Tipps im Demo-Modus */
-    hints: true,
+    /** Schließbare Tipps im Demo-Modus. Aus für den Pitch (Entscheidung 21), an über die Demo-Steuerung. */
+    hints: false,
   },
 
   insurer: {
@@ -68,16 +68,16 @@ export const demoConfig = {
 
   /**
    * Händler zur Auswahl, wenn keine Versicherung vorhanden ist (Entscheidung 16).
-   * Fründ mit echtem Namen nur mit „(DEMO)“ (Entscheidung 17). Alle anderen erfunden.
+   * Fründ mit echtem Namen, ohne Demo-Kennzeichnung (Entscheidung 21). Alle anderen erfunden.
    * Händler mit `service` haben einen eigenen Kundendienst, der den Fall übernimmt.
    */
   dealers: [
     {
       id: 'fruend',
-      name: 'Fründ Elektrogeräte AG (DEMO)',
-      shortName: 'Fründ (DEMO)',
+      name: 'Fründ Elektrogeräte AG',
+      shortName: 'Fründ',
       place: 'Löhne, Bad Oeynhausen, Minden',
-      service: { name: 'Fründ Kundendienst (DEMO)', distanceKm: 3.1, expert: 'Markus T.' },
+      service: { name: 'Fründ Kundendienst', distanceKm: 3.1, expert: 'Markus T.' },
     },
     { id: 'lindemann', name: 'Elektro Lindemann', shortName: 'Lindemann', place: 'Bielefeld' },
     { id: 'kuechenwelt', name: 'Küchenwelt Nord', shortName: 'Küchenwelt', place: 'Herford' },

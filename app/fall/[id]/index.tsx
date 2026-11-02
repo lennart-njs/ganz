@@ -432,7 +432,7 @@ export default function FallGespraech() {
   // Hilfe holen
   for (const e of of('status_geaendert')) {
     if (e.payload.to !== 'eskaliert') continue;
-    add(e.at, e.id, <BotSays lines={[t.helpIntro]} hint={t.helpText} />);
+    add(e.at, e.id, <BotSays lines={[t.helpIntro]} />);
   }
   for (const e of of('problem_besteht_weiter')) {
     add(e.at, e.id, <UserSaid text={t.stillBroken} />);
@@ -493,12 +493,7 @@ export default function FallGespraech() {
     add(
       quote.createdAt,
       quote.id,
-      <BotSays
-        lines={[
-          ...(finding?.component ? [de.talk.claim.intro(finding.component)] : []),
-          replacement ? de.costs.titleReplacement : de.costs.title,
-        ]}
-      >
+      <BotSays lines={[replacement ? de.costs.titleReplacement : de.costs.title]}>
         <View style={styles.full}>
           <CostCompare quote={quote} focus={replacement ? 'replacement' : 'repair'} />
         </View>
@@ -826,7 +821,6 @@ export default function FallGespraech() {
     } else {
       tail.push(
         <BotSays key="kosten" sender={false} lines={[]}>
-          <Text variant="bodyLg">{de.costs.noContractText}</Text>
           <Text variant="title">
             {dealerService(device)
               ? de.talk.claim.askDealer(helpPartner.name)
@@ -952,15 +946,14 @@ export default function FallGespraech() {
     // Hilfe holen: wer welche Daten sieht, steht vor dem Call (B-19)
     tail.push(
       <BotSays key="hilfe" sender={false} lines={[]}>
-        {/* Was die Fachkraft vorab sieht: das echte Protokoll (B-22) */}
+        {/* Ein Satz: wer was sieht (B-19). Alles Weitere unter „Details“ (Entscheidung 20). */}
+        <Text variant="bodyLg">{de.help.shareSummary(expert, helpPartner.name)}</Text>
+        {contract ? (
+          <Text variant="meta">{de.help.costNote(insurer, formatEuro(state.demo.deductible))}</Text>
+        ) : null}
         <View style={styles.full}>
-          <CaseFileCard caseId={caseId} />
-        </View>
-        <View style={styles.full}>
-          <Card>
-            <Text variant="labelStrong" accessibilityRole="header">
-              {de.help.shareTitle(expert, helpPartner.name)}
-            </Text>
+          <Disclosure title={de.help.details}>
+            <Text variant="labelStrong">{de.help.shareTitle(expert, helpPartner.name)}</Text>
             <View style={styles.items}>
               {de.help.shareItems.map((item) => (
                 <Text key={item} variant="body">
@@ -968,27 +961,19 @@ export default function FallGespraech() {
                 </Text>
               ))}
             </View>
-            <Text variant="labelStrong" style={styles.gapTop}>
-              {de.help.noRecording}
-            </Text>
+            {/* Was die Fachkraft vorab sieht: das echte Protokoll (B-22) */}
+            <CaseFileCard caseId={caseId} />
+            <Checkbox
+              label={de.help.screenshots}
+              sub={de.help.screenshotsSub}
+              checked={screenshots}
+              onChange={setScreenshots}
+            />
             <Text variant="meta" style={styles.gapTop}>
               {de.help.legalBasis}
             </Text>
-          </Card>
+          </Disclosure>
         </View>
-        <View style={styles.full}>
-          <Checkbox
-            label={de.help.screenshots}
-            sub={de.help.screenshotsSub}
-            checked={screenshots}
-            onChange={setScreenshots}
-          />
-        </View>
-        <InfoBox>
-          {contract
-            ? de.help.costNote(insurer, formatEuro(state.demo.deductible))
-            : de.help.costNoteNoContract}
-        </InfoBox>
       </BotSays>,
     );
     reply('call', t.callStart, startCall, t.callSub);
@@ -1122,7 +1107,6 @@ const styles = StyleSheet.create({
     alignItems: 'flex-end',
     gap: 8,
     paddingTop: 10,
-    borderTopWidth: StyleSheet.hairlineWidth,
   },
   inputField: { flex: 1 },
 });
