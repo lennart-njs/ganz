@@ -1,5 +1,5 @@
 // Das Portal spricht nur über die API mit dem Backend (docs/BACKEND.md).
-// Heute: Expo-Dev-Server (GANZ_API_URL, Standard http://localhost:8081). Später: echtes Backend.
+// Heute: Expo-Dev-Server (GANZ_API_URL, Standard http://127.0.0.1:8081). Später: echtes Backend.
 import 'server-only';
 
 import { redirect } from 'next/navigation';
@@ -8,7 +8,7 @@ import type { RetailerAction, SharedCaseRecord } from '@/model/sharing';
 
 import { sessionToken } from './session';
 
-const BASE = process.env.GANZ_API_URL ?? 'http://localhost:8081';
+const BASE = process.env.GANZ_API_URL ?? 'http://127.0.0.1:8081';
 
 export interface TenantInfo {
   id: string;

@@ -95,7 +95,7 @@ npx expo start
 cd portal && npm install && npm run dev
 ```
 
-Dann http://localhost:3000 öffnen. Demo-Zugang: `demo@fruend.example`, Passwort `demo`. Das Portal holt die Daten vom laufenden Expo-Server (`GANZ_API_URL`, Standard `http://localhost:8081`). Ohne Telefon zeigt es zwei Beispielfälle. Rückfrage, Entscheidung, Betrieb und Stand erscheinen in der App beim nächsten Abruf (alle 15 Sekunden) im Gespräch des Falls. Details: `docs/BACKEND.md`.
+Dann http://localhost:3000 öffnen. Demo-Zugang: `demo@fruend.example`, Passwort `demo`. Das Portal holt die Daten vom laufenden Expo-Server (`GANZ_API_URL`, Standard `http://127.0.0.1:8081`). Ohne Telefon zeigt es zwei Beispielfälle. Rückfrage, Entscheidung, Betrieb und Stand erscheinen in der App beim nächsten Abruf (alle 15 Sekunden) im Gespräch des Falls. Details: `docs/BACKEND.md`.
 
 ## Prüfen
 
