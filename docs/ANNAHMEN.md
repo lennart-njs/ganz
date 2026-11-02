@@ -229,3 +229,14 @@ Annahmen, die ich beim Bauen getroffen habe. Jede lässt sich ändern.
 - **„Geht nicht“** öffnet wie bisher ein Sheet mit der Notiz für die Fachkraft.
 - **Großansicht:** Die bisherige Vollbild-Anleitung bleibt unter „Details“ am aktuellen Schritt. Dort gilt weiter: Zurück geht einen Schritt zurück.
 - **Erinnerung:** Steht nach dem Schritt schon ein Gespräch mit dem Assistenten, sagt ganz unten noch einmal, bei welchem Schritt du bist.
+
+## Foto an den Reparatur-Assistenten (02.11.2026, Entscheidung 17)
+
+- **Kamera im Eingabefeld** des Gesprächs. Sie öffnet `fall/[id]/foto-frage` (nur Aufnahme in der App, kein Galerie-Import). Danach hängt das Foto am Eingabefeld, bis du sendest oder es entfernst. Ohne eigenen Text geht „Mache ich das so richtig?“ mit.
+- **Verkleinert auf 1.280 px** (längste Kante, JPEG, Qualität 0,7) mit `expo-image-manipulator`. Das base64-Bild liegt nur im Arbeitsspeicher, bis die Antwort da ist. Es kommt nicht in den gespeicherten Zustand. Der Server reicht es an Claude weiter und speichert es nicht.
+- **Nur das Foto der letzten Nachricht** geht mit. Ältere Nachrichten mit Foto stehen mit „[Foto]“ im Verlauf. Der Server lehnt Fotos an älteren Nachrichten, andere Formate als JPEG und PNG und mehr als 5 Mio. base64-Zeichen ab.
+- **Kontext:** Der aktuelle Schritt geht wörtlich mit (Titel, Text, Warnhinweis, Werkzeug), damit der Assistent das Foto daran messen kann.
+- **Einschätzung:** Die Antwort hat ein Feld `assessment` (passt, passt nicht, unklar). Die App zeigt es klein unter der Antwort. Es ersetzt keine Bestätigung: „Erledigt“ tippst du selbst.
+- **Einwilligung:** Neue Fassung `2026-11-1` nennt Fotos. Wer vorher eingewilligt hat, wird beim ersten Foto noch einmal gefragt. Ohne Foto reicht die alte Einwilligung.
+- **Beispielfoto im Browser:** Ohne echtes Bild geht nur der Text mit. Die Blase zeigt „Beispielfoto“.
+- **Foto in der Fallakte:** Das Foto hat den Zweck `frage`. Es zählt zu den Fotos des Falls, steht im Gespräch aber an der Nachricht und nicht als eigene Zeile.

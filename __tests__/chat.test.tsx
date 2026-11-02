@@ -3,6 +3,7 @@ import { act, fireEvent, renderRouter, screen } from 'expo-router/testing-librar
 import { demoConfig } from '@/config/demo.config';
 import { guides } from '@/data/guides';
 import { de } from '@/i18n/de';
+import { setChatImageForTest } from '@/lib/chat/photo';
 import type { DeviceCategory } from '@/model/types';
 import { useAppStore } from '@/store/appStore';
 
@@ -186,6 +187,67 @@ describe('Reparatur-Assistent', () => {
     expect(screen.getByLabelText(de.thread.inputLabel).props.value).toBe(
       t.stepDraft(1, guides.ablauf.steps[0]!.t),
     );
+  });
+
+  test('Foto zum Schritt: Bild geht mit, die Einschätzung steht unter der Antwort', async () => {
+    const device = setup();
+    const s = useAppStore.getState();
+    const c = s.createCase({ deviceId: device.id, entry: 'symptom', problemLabel: 'Wasserablauf' });
+    s.startGuide(c.id, 'ablauf');
+    s.moveGuideStep(Object.keys(useAppStore.getState().guideRuns)[0]!, 'next');
+    s.grantConsent({
+      caseId: c.id,
+      purpose: 'chat_assistent',
+      legalBasis: 'einwilligung',
+      recipient: { id: 'anthropic', kind: 'dienstleister', name: 'Anthropic' },
+      dataCategories: [],
+      textVersion: '2026-11-1',
+    });
+    const photo = s.addPhoto({
+      caseId: c.id,
+      deviceId: device.id,
+      purpose: 'frage',
+      source: 'in_app_camera',
+      uri: 'file:///frage.jpg',
+    });
+    setChatImageForTest(photo.id, { mediaType: 'image/jpeg', data: 'aGFsbG8=' });
+    await renderRouter(APP, { initialUrl: `/fall/${c.id}?foto=${photo.id}` });
+    expect(screen.getByText(t.photoAttached)).toBeTruthy();
+    fetchMock.mockReturnValueOnce(
+      reply({
+        reply: 'Das sieht nach Schritt 2 aus.',
+        suggestion: 'keine',
+        guideId: '',
+        assessment: 'passt',
+      }),
+    );
+    // Ohne eigenen Text geht die Standardfrage mit
+    await tap(t.send);
+    await flush();
+    const body = JSON.parse(fetchMock.mock.calls[0][1].body);
+    expect(body.messages.at(-1)).toEqual({
+      role: 'haushalt',
+      text: t.photoDefault,
+      image: { mediaType: 'image/jpeg', data: 'aGFsbG8=' },
+    });
+    expect(body.context.guide.current.t).toBe(guides.ablauf.steps[1]!.t);
+    expect(screen.getByText(t.assessment.passt)).toBeTruthy();
+    expect(screen.queryByText(t.photoAttached)).toBeNull();
+    const msg = useAppStore.getState().chatMessages.find((m) => m.role === 'haushalt');
+    expect(msg?.photoId).toBe(photo.id);
+    // Der Fall läuft im Gespräch weiter
+    expect(screen.getByRole('button', { name: de.guide.done })).toBeTruthy();
+  });
+
+  test('der Kamera-Knopf öffnet die Aufnahme für den Assistenten', async () => {
+    const device = setup();
+    const c = useAppStore
+      .getState()
+      .createCase({ deviceId: device.id, entry: 'symptom', problemLabel: 'Wasserablauf' });
+    useAppStore.getState().startGuide(c.id, 'ablauf');
+    const r = await renderRouter(APP, { initialUrl: `/fall/${c.id}` });
+    await tap(t.photoButton);
+    expect(r.getPathname()).toBe(`/fall/${c.id}/foto-frage`);
   });
 
   test('die Oberfläche sagt nie „KI“ oder „AI“', () => {

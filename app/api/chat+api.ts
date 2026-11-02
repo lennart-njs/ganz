@@ -23,10 +23,21 @@ const json = (body: unknown, status = 200) =>
   Response.json(body, { status, headers: { 'Cache-Control': 'no-store' } });
 
 function toMessages(turns: ChatTurn[]): Anthropic.Beta.BetaMessageParam[] {
-  return turns.map((m) => ({
-    role: m.role === 'haushalt' ? 'user' : 'assistant',
-    content: m.text,
-  }));
+  return turns.map((m) =>
+    m.image
+      ? {
+          role: 'user',
+          // Bild vor dem Text. Der Server speichert es nicht.
+          content: [
+            {
+              type: 'image',
+              source: { type: 'base64', media_type: m.image.mediaType, data: m.image.data },
+            },
+            { type: 'text', text: m.text },
+          ],
+        }
+      : { role: m.role === 'haushalt' ? 'user' : 'assistant', content: m.text },
+  );
 }
 
 export async function POST(request: Request): Promise<Response> {

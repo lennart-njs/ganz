@@ -50,7 +50,7 @@ Der ganze Fall ist ein Gespräch. Die Antworten stehen unten, „Details“ zeig
 7. Betrieb und Zeitfenster wählen → „Termin anfragen“ → „Nächster Schritt (Demo)“ bis „Repariert“.
 8. „Läuft wieder“ → Sterne → „Fertig“ → Fall im Tab „Fälle“.
 
-Eigene Worte: Unten ins Feld schreiben. Der Reparatur-Assistent antwortet im selben Gespräch.
+Eigene Worte: Unten ins Feld schreiben. Der Reparatur-Assistent antwortet im selben Gespräch. Mit der Kamera links neben dem Feld geht ein Foto mit, z. B. zu einem Schritt: „Mache ich das so richtig?“. Der Assistent schätzt ein, ob es nach dem Schritt aussieht.
 
 ### Whitelabel
 

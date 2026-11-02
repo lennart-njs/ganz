@@ -19,22 +19,42 @@ export interface ChatContext {
   result?: string;
   displayMessage?: string;
   /** Laufende oder letzte Anleitung */
-  guide?: { id: string; title: string; step: number; total: number; ended?: string };
+  guide?: {
+    id: string;
+    title: string;
+    step: number;
+    total: number;
+    ended?: string;
+    /** Der aktuelle Schritt wörtlich, damit der Assistent ein Foto dazu einschätzen kann */
+    current?: { t: string; d: string; w?: string; tool?: string };
+  };
   hasProtection: boolean;
+}
+
+/** Foto im Gespräch (Entscheidung 17). Nur JPEG oder PNG, base64 ohne Präfix. */
+export interface ChatImage {
+  mediaType: 'image/jpeg' | 'image/png';
+  data: string;
 }
 
 export interface ChatTurn {
   role: 'haushalt' | 'assistent';
   text: string;
+  /** Nur an der letzten Nachricht des Haushalts. Ältere Fotos gehen nicht mehr mit. */
+  image?: ChatImage;
 }
 
 export type ChatSuggestion = 'keine' | 'anleitung' | 'hilfe';
+
+/** Einschätzung eines Fotos. keine: kein Foto oder keine Frage zum Foto. */
+export type ChatAssessment = 'keine' | 'passt' | 'passt_nicht' | 'unklar';
 
 export interface ChatReply {
   reply: string;
   suggestion: ChatSuggestion;
   /** Nur bei suggestion = 'anleitung', sonst leer */
   guideId: string;
+  assessment: ChatAssessment;
 }
 
 /** JSON-Schema für output_config.format. Die App zeigt den Vorschlag als Button. */
@@ -56,8 +76,14 @@ export const replySchema = {
       enum: ['', ...guideIds],
       description: 'Id der Anleitung bei suggestion = anleitung, sonst leer.',
     },
+    assessment: {
+      type: 'string',
+      enum: ['keine', 'passt', 'passt_nicht', 'unklar'],
+      description:
+        'Nur bei einem Foto in der letzten Nachricht: passt = sieht nach dem aktuellen Schritt aus, passt_nicht = weicht sichtbar ab, unklar = auf dem Foto nicht zu erkennen. Ohne Foto: keine.',
+    },
   },
-  required: ['reply', 'suggestion', 'guideId'],
+  required: ['reply', 'suggestion', 'guideId', 'assessment'],
   additionalProperties: false,
 } as const;
 
@@ -94,6 +120,13 @@ Was du tust:
 - Der Katalog gilt nur für die Waschmaschine. Bei anderen Geräten schlägst du nie eine Anleitung vor.
 - Wenn ein Handgriff Werkzeug, das Öffnen des Gehäuses, Arbeiten an Strom, Gas oder Kältemittel braucht, oder wenn du nach zwei, drei Fragen nicht weiterkommst: suggestion = hilfe. Dann übernimmt eine Fachkraft im Videocall, sie sieht den Fall und muss nichts doppelt fragen.
 
+Fotos:
+- Schickt dir jemand ein Foto, beziehst du es auf den aktuellen Schritt der Anleitung (steht im Fall unten), sonst auf das Problem. Beschreib kurz, was du siehst, und sag, ob es nach dem Schritt aussieht.
+- Du sagst nie „das ist sicher“ oder „das ist richtig so“. Höchstens „sieht nach Schritt 3 aus“ oder „das sieht anders aus als im Schritt beschrieben“.
+- Ist auf dem Foto nichts Eindeutiges zu erkennen: assessment = unklar, und bitte um ein neues Foto, näher dran, mit mehr Licht oder aus einem anderen Winkel.
+- Siehst du Wasser in der Nähe von Strom, beschädigte Kabel oder Stecker, Brandspuren oder ein geöffnetes Gehäuse: suggestion = hilfe, sag zuerst, was jetzt zu tun ist (Stecker ziehen, Wasserhahn zu), und beurteile den Schritt nicht weiter.
+- Personen, Ausweise oder Dokumente auf dem Foto beschreibst du nicht.
+
 Sicherheit geht vor:
 - Riecht es verbrannt, raucht es, sind Kabel oder Stecker beschädigt, steht Wasser in der Nähe von Strom: zuerst Stecker ziehen oder Sicherung aus, Wasserhahn zu, nichts weiter anfassen, dann suggestion = hilfe.
 - Vor jedem Handgriff im Gerät: ausschalten und Stecker ziehen. Bei heißem Wasser oder heißen Teilen: abkühlen lassen.
@@ -121,6 +154,15 @@ export function caseSystem(ctx: ChatContext): string {
     ctx.guide
       ? `Anleitung „${ctx.guide.title}“ (id ${ctx.guide.id}): Schritt ${ctx.guide.step} von ${ctx.guide.total}${ctx.guide.ended ? `, beendet mit „${ctx.guide.ended}“` : ''}.`
       : 'Noch keine Anleitung gestartet.',
+    ctx.guide?.current && !ctx.guide.ended
+      ? [
+          `Aktueller Schritt wörtlich: ${ctx.guide.current.t}: ${ctx.guide.current.d}`,
+          ctx.guide.current.w ? `Achtung im Schritt: ${ctx.guide.current.w}` : '',
+          ctx.guide.current.tool ? `Werkzeug im Schritt: ${ctx.guide.current.tool}` : '',
+        ]
+          .filter(Boolean)
+          .join('\n')
+      : '',
     ctx.hasProtection
       ? 'Der Haushalt hat einen Geräteschutz. Über Kosten entscheidet der Versicherer nach dem Befund.'
       : 'Kein Geräteschutz verknüpft. Den Preis sieht der Haushalt vor jeder Buchung.',
@@ -129,6 +171,7 @@ export function caseSystem(ctx: ChatContext): string {
 }
 
 const replyKeys = ['reply', 'suggestion', 'guideId'];
+const assessments: ChatAssessment[] = ['keine', 'passt', 'passt_nicht', 'unklar'];
 
 /** Prüft die Antwort des Modells. null: nicht verwendbar. */
 export function parseReply(raw: string, category: ChatContext['category']): ChatReply | null {
@@ -151,7 +194,9 @@ export function parseReply(raw: string, category: ChatContext['category']): Chat
     suggestion = 'keine';
   }
   if (suggestion !== 'anleitung') guideId = '';
-  return { reply, suggestion, guideId };
+  let assessment = o.assessment as ChatAssessment;
+  if (!assessments.includes(assessment)) assessment = 'keine';
+  return { reply, suggestion, guideId, assessment };
 }
 
 /** Prüft den Body einer Anfrage. Gibt null zurück, wenn etwas fehlt oder zu lang ist. */
@@ -170,6 +215,19 @@ export function parseRequest(body: unknown): { context: ChatContext; messages: C
       m.text.length <= chatLimits.chars,
   );
   if (!ok || messages[0]!.role !== 'haushalt' || messages.at(-1)!.role !== 'haushalt') return null;
+  // Ein Foto nur an der letzten Nachricht, nur JPEG oder PNG, höchstens etwa 3,75 MB
+  const images = messages.filter((m) => m.image !== undefined);
+  if (images.length > 1 || (images.length === 1 && !messages.at(-1)!.image)) return null;
+  const image = messages.at(-1)!.image;
+  if (
+    image &&
+    (!['image/jpeg', 'image/png'].includes(image.mediaType) ||
+      typeof image.data !== 'string' ||
+      image.data.length === 0 ||
+      image.data.length > chatLimits.imageChars ||
+      !/^[A-Za-z0-9+/=]+$/.test(image.data))
+  )
+    return null;
   const strings = [context.categoryLabel, context.device, context.manufacturer, context.problem];
   if (!strings.every((s) => typeof s === 'string' && s.length <= 200)) return null;
   return { context, messages };

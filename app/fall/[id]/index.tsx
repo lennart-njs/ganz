@@ -7,7 +7,14 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { CaseFileCard } from '@/components/app/CaseFileCard';
 import { CaseScreen, useCaseId } from '@/components/app/CaseScreen';
-import { BotSays, QuickReplies, Typing, UserSaid, type Reply } from '@/components/app/Conversation';
+import {
+  BotSays,
+  IconButton,
+  QuickReplies,
+  Typing,
+  UserSaid,
+  type Reply,
+} from '@/components/app/Conversation';
 import { CostCompare } from '@/components/app/CostCompare';
 import { DemoHint } from '@/components/app/DemoHint';
 import { GuideStepCard } from '@/components/app/GuideStepCard';
@@ -66,7 +73,12 @@ export default function FallGespraech() {
   const theme = useTheme();
   const insets = useSafeAreaInsets();
   const caseId = useCaseId();
-  const params = useLocalSearchParams<{ weiter?: string; frage?: string; entwurf?: string }>();
+  const params = useLocalSearchParams<{
+    weiter?: string;
+    frage?: string;
+    entwurf?: string;
+    foto?: string;
+  }>();
   const state = useAppStore();
   const c = state.cases[caseId];
   const assistant = useAssistant(caseId);
@@ -116,6 +128,14 @@ export default function FallGespraech() {
     setDraft(params.entwurf);
     setInput(params.entwurf);
   }
+  // Foto für den Assistenten: hängt am Eingabefeld, bis du sendest (Entscheidung 17)
+  const [photoParam, setPhotoParam] = useState<string>();
+  const [attached, setAttached] = useState<string>();
+  if (params.foto && params.foto !== photoParam) {
+    setPhotoParam(params.foto);
+    setAttached(params.foto);
+  }
+  const attachedPhoto = attached ? state.photos.find((p) => p.id === attached) : undefined;
 
   const events = c ? selectCaseEvents(state, caseId) : [];
   const last = events.at(-1)?.id;
@@ -290,15 +310,18 @@ export default function FallGespraech() {
   };
 
   const sendInput = () => {
-    const text = input.trim();
+    const text = input.trim() || (attached ? de.chat.photoDefault : '');
     if (!text) return;
     if (text.length > chatLimits.chars) {
       setInputError(de.chat.tooLong(chatLimits.chars));
       return;
     }
     setInput('');
-    assistant.send(text);
+    assistant.send(text, attached);
+    setAttached(undefined);
   };
+  const photoOf = (id: string | undefined) =>
+    id ? (state.photos.find((p) => p.id === id)?.uri ?? '') : undefined;
 
   // ---------- Verlauf ----------
 
@@ -337,7 +360,8 @@ export default function FallGespraech() {
   // Fotos
   for (const e of of('foto_aufgenommen')) {
     const purpose = e.payload.purpose as keyof typeof de.caseFile.photoPurpose;
-    if (purpose === 'abschluss' || purpose === 'schritt') continue;
+    // Fotos zur Frage stehen an der Nachricht an den Assistenten
+    if (purpose === 'abschluss' || purpose === 'schritt' || purpose === 'frage') continue;
     add(e.at, e.id, <UserSaid text={t.photo(de.caseFile.photoPurpose[purpose] ?? '')} />);
   }
 
@@ -705,9 +729,14 @@ export default function FallGespraech() {
       m.at,
       m.id,
       m.role === 'haushalt' ? (
-        <UserSaid text={m.text} />
+        <UserSaid text={m.text} photoUri={photoOf(m.photoId)} />
       ) : (
-        <BotSays name={de.chat.title} sender={msgs[i - 1]?.role !== 'assistent'} lines={[m.text]} />
+        <BotSays
+          name={de.chat.title}
+          sender={msgs[i - 1]?.role !== 'assistent'}
+          lines={[m.text]}
+          hint={m.assessment ? de.chat.assessment[m.assessment] : undefined}
+        />
       ),
     ),
   );
@@ -812,7 +841,7 @@ export default function FallGespraech() {
     // Einwilligung vor der ersten Nachricht an den Assistenten
     tail.push(
       <View key="consent" style={styles.stack}>
-        <UserSaid text={assistant.waiting} />
+        <UserSaid text={assistant.waiting.text} photoUri={photoOf(assistant.waiting.photoId)} />
         <BotSays name={de.chat.title} lines={[de.chat.consentTitle]}>
           <Text variant="bodyLg">{de.chat.consentText(demoConfig.assistant.name)}</Text>
           <Text variant="meta">{de.chat.consentBasis}</Text>
@@ -1166,7 +1195,23 @@ export default function FallGespraech() {
         },
       ]}
     >
+      <IconButton
+        icon="camera"
+        label={de.chat.photoButton}
+        disabled={assistant.pending}
+        onPress={() => router.push(`/fall/${caseId}/foto-frage`)}
+      />
       <View style={styles.inputField}>
+        {attachedPhoto ? (
+          <View style={styles.attached}>
+            <Text variant="meta">{de.chat.photoAttached}</Text>
+            <Button
+              label={de.chat.photoRemove}
+              variant="link"
+              onPress={() => setAttached(undefined)}
+            />
+          </View>
+        ) : null}
         <TextField
           label={t.inputLabel}
           labelHidden
@@ -1183,7 +1228,7 @@ export default function FallGespraech() {
       </View>
       <Button
         label={de.chat.send}
-        disabled={!input.trim() || assistant.pending}
+        disabled={(!input.trim() && !attached) || assistant.pending}
         onPress={sendInput}
       />
     </View>
@@ -1241,4 +1286,5 @@ const styles = StyleSheet.create({
   },
   inputField: { flex: 1 },
   links: { flexDirection: 'row', flexWrap: 'wrap', columnGap: 16 },
+  attached: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
 });

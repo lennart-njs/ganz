@@ -50,6 +50,7 @@ export const de = {
     problem: 'Problem melden',
     meldungen: 'Meldung im Display',
     kamera: 'Foto machen',
+    fotoFrage: 'Foto für den Assistenten',
     analyse: 'Intelligente Fehlererkennung',
     rueckfrage: 'Rückfrage',
     ergebnis: 'Ergebnis',
@@ -118,7 +119,13 @@ export const de = {
   consentData: {
     versicherer: ['Gerät', 'Fotos', 'Ergebnis', 'Schritte', 'Befund', 'Kosten'],
     betrieb: ['Gerät', 'Typenschild', 'Fotos', 'Befund', 'Schritte', 'Adresse'],
-    assistent: ['Deine Nachrichten', 'Gerät und Modell', 'Problem', 'Erledigte Schritte'],
+    assistent: [
+      'Deine Nachrichten',
+      'Fotos, die du im Gespräch aufnimmst',
+      'Gerät und Modell',
+      'Problem',
+      'Aktueller und erledigte Schritte',
+    ],
   },
 
   consentPurpose: {
@@ -696,6 +703,7 @@ export const de = {
       typenschild: 'Typenschild',
       bauteil: 'Bauteil',
       schritt: 'Schritt',
+      frage: 'Frage an den Assistenten',
       kaufbeleg: 'Kaufbeleg',
       abschluss: 'Abschluss',
     },
@@ -1017,7 +1025,7 @@ export const de = {
     who: 'Ein Computerprogramm, kein Mensch. Es kann sich irren. Bei Gefahr: Stecker ziehen und Hilfe holen.',
     consentTitle: 'Bevor du schreibst',
     consentText: (provider: string) =>
-      `Deine Nachrichten gehen zur Auswertung an ${provider}. Mit dabei sind Gerät, Modell, Problem und deine erledigten Schritte. Nicht dabei sind Fotos, Adresse und Vertragsnummer.`,
+      `Deine Nachrichten gehen zur Auswertung an ${provider}. Mit dabei sind Gerät, Modell, Problem, der Schritt, an dem du bist, und Fotos, die du hier im Gespräch aufnimmst. Fotos werden dort nicht gespeichert. Nicht dabei sind Adresse, Vertragsnummer und die Fotos aus der Fehlererkennung.`,
     consentBasis:
       'Freiwillig, mit deiner Einwilligung (Art. 6 Abs. 1 lit. a DSGVO). Du kannst sie im Profil widerrufen. Ohne Einwilligung hilft dir eine Fachkraft im Videocall.',
     consentAccept: 'Einverstanden',
@@ -1052,6 +1060,22 @@ export const de = {
     stepDraft: (step: number, title: string) => `Ich hänge bei Schritt ${step}: ${title}. `,
     fileTitle: 'Reparatur-Assistent',
     fileCount: (n: number) => (n === 1 ? '1 Nachricht' : `${n} Nachrichten`),
+    // Foto im Gespräch (Entscheidung 17)
+    photoButton: 'Foto für den Assistenten aufnehmen',
+    photoHelp: 'Halte die Kamera auf die Stelle, um die es geht. Mit Licht und nah dran.',
+    photoAttached: 'Foto angehängt',
+    photoRemove: 'Foto entfernen',
+    photoDefault: 'Mache ich das so richtig?',
+    photoPreparing: 'Foto wird vorbereitet',
+    photoLabel: 'Dein Foto',
+    photoDemo: 'Beispielfoto',
+    /** Steht vor älteren Nachrichten mit Foto, deren Bild nicht mehr mitgeht */
+    photoMarker: '[Foto]',
+    assessment: {
+      passt: 'Einschätzung: sieht nach dem Schritt aus',
+      passt_nicht: 'Einschätzung: sieht anders aus als im Schritt',
+      unklar: 'Einschätzung: auf dem Foto nicht zu erkennen',
+    },
   },
 
   profile: {

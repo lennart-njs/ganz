@@ -31,6 +31,7 @@ export function chatContext(s: AppData, caseId: Id): ChatContext | undefined {
             step: run.currentStep + 1,
             total: guide.steps.length,
             ended: run.outcome ? de.file.event.outcome[run.outcome] : undefined,
+            current: guide.steps[Math.min(run.currentStep, guide.steps.length - 1)],
           }
         : undefined,
     hasProtection: !!device.contractId,
@@ -40,4 +41,14 @@ export function chatContext(s: AppData, caseId: Id): ChatContext | undefined {
 /** Hat der Haushalt dem Reparatur-Assistenten zugestimmt (und nicht widerrufen)? */
 export function hasChatConsent(s: AppData): boolean {
   return s.consents.some((k) => k.purpose === 'chat_assistent' && !k.revokedAt);
+}
+
+/** Erste Fassung des Hinweises, in der Fotos stehen (Entscheidung 17) */
+export const PHOTO_CONSENT_SINCE = '2026-11-1';
+
+/** Deckt die Einwilligung auch Fotos ab? Ältere Fassungen nannten Fotos nicht. */
+export function hasPhotoConsent(s: AppData): boolean {
+  return s.consents.some(
+    (k) => k.purpose === 'chat_assistent' && !k.revokedAt && k.textVersion >= PHOTO_CONSENT_SINCE,
+  );
 }

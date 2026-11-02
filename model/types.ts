@@ -190,7 +190,7 @@ export interface CaseEvent {
 // ---------- Foto und Ergebnis ----------
 
 export type PhotoPurpose =
-  'display' | 'typenschild' | 'bauteil' | 'schritt' | 'kaufbeleg' | 'abschluss';
+  'display' | 'typenschild' | 'bauteil' | 'schritt' | 'frage' | 'kaufbeleg' | 'abschluss';
 
 export interface Photo {
   id: Id;
@@ -292,6 +292,10 @@ export interface ChatMessage {
   /** Vorschlag des Assistenten, als Button gezeigt */
   suggestion?: 'anleitung' | 'hilfe';
   guideId?: string;
+  /** Foto zur Frage (Photo mit purpose 'frage'). Das Bild selbst bleibt auf dem Gerät. */
+  photoId?: Id;
+  /** Einschätzung des Assistenten zu diesem Foto (Entscheidung 17) */
+  assessment?: 'passt' | 'passt_nicht' | 'unklar';
 }
 
 // ---------- Kosten und Buchung ----------

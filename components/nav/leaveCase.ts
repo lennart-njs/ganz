@@ -7,9 +7,9 @@ export function leaveCase() {
 }
 
 /** Zurück ins Gespräch des Falls. Vollbild-Schritte (Kamera, Anleitung, Call) schließen sich dabei. */
-export function backToThread(caseId: string, entwurf?: string) {
+export function backToThread(caseId: string, entwurf?: string, foto?: string) {
   router.dismissTo({
     pathname: '/fall/[id]',
-    params: entwurf ? { id: caseId, entwurf } : { id: caseId },
+    params: { id: caseId, ...(entwurf ? { entwurf } : {}), ...(foto ? { foto } : {}) },
   });
 }

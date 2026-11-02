@@ -92,6 +92,7 @@ describe('Server-Route des Reparatur-Assistenten', () => {
       reply: 'Das klingt nach dem Laugenfilter.',
       suggestion: 'anleitung',
       guideId: 'ablauf',
+      assessment: 'keine',
     });
     const params = mockCreate.mock.calls[0][0];
     expect(params).toMatchObject({
@@ -135,6 +136,7 @@ describe('Server-Route des Reparatur-Assistenten', () => {
       reply: 'Probier die Anleitung.',
       suggestion: 'keine',
       guideId: '',
+      assessment: 'keine',
     });
     expect(
       parseReply('{"reply":"x","suggestion":"anleitung","guideId":"gibtsnicht"}', 'waschmaschine'),
@@ -186,4 +188,71 @@ test('Schlüssel, SDK und Systemprompt bleiben auf dem Server', () => {
     );
   });
   expect(hits.map((f) => path.relative(root, f))).toEqual([]);
+});
+
+describe('Foto an den Assistenten (Entscheidung 17)', () => {
+  const image = { mediaType: 'image/jpeg', data: 'aGFsbG8=' };
+
+  test('das Foto der letzten Nachricht geht als Bild vor dem Text mit', async () => {
+    mockCreate.mockResolvedValueOnce(
+      answer({
+        reply: 'Sieht nach Schritt 3 aus.',
+        suggestion: 'keine',
+        guideId: '',
+        assessment: 'passt',
+      }),
+    );
+    const res = await post({
+      context,
+      messages: [{ role: 'haushalt', text: 'Mache ich das so richtig?', image }],
+    });
+    expect(res.status).toBe(200);
+    expect(await res.json()).toMatchObject({ assessment: 'passt' });
+    const sent = mockCreate.mock.calls[0][0];
+    expect(sent.messages[0].content).toEqual([
+      { type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: 'aGFsbG8=' } },
+      { type: 'text', text: 'Mache ich das so richtig?' },
+    ]);
+    expect(sent.output_config.format.schema.required).toContain('assessment');
+  });
+
+  test('Fotos an älteren Nachrichten, fremde Formate und Unsinn werden abgelehnt', async () => {
+    const bad = [
+      [
+        { role: 'haushalt', text: 'a', image },
+        { role: 'assistent', text: 'b' },
+        { role: 'haushalt', text: 'c' },
+      ],
+      [{ role: 'haushalt', text: 'a', image: { mediaType: 'image/gif', data: 'aGFsbG8=' } }],
+      [{ role: 'haushalt', text: 'a', image: { mediaType: 'image/jpeg', data: '<script>' } }],
+    ];
+    for (const messages of bad) {
+      const res = await post({ context, messages });
+      expect(res.status).toBe(400);
+    }
+    expect(mockCreate).not.toHaveBeenCalled();
+  });
+
+  test('der aktuelle Schritt steht wörtlich im Fall, eine fehlende Einschätzung wird „keine“', () => {
+    const text = caseSystem({
+      ...context,
+      guide: {
+        id: 'ablauf',
+        title: 'Wasserablauf gestört',
+        step: 3,
+        total: 7,
+        current: { t: 'Laugenfilter reinigen', d: 'Filter herausdrehen.', w: 'Restwasser' },
+      },
+    });
+    expect(text).toContain(
+      'Aktueller Schritt wörtlich: Laugenfilter reinigen: Filter herausdrehen.',
+    );
+    expect(text).toContain('Achtung im Schritt: Restwasser');
+    expect(STABLE_SYSTEM).toContain('nie „das ist sicher“');
+    const parsed = parseReply(
+      JSON.stringify({ reply: 'x', suggestion: 'keine', guideId: '' }),
+      'waschmaschine',
+    );
+    expect(parsed?.assessment).toBe('keine');
+  });
 });

@@ -43,6 +43,7 @@ export const httpChatService: ChatService = {
         reply: reply.reply,
         suggestion: reply.suggestion ?? 'keine',
         guideId: reply.guideId ?? '',
+        assessment: reply.assessment ?? 'keine',
       },
     };
   },
