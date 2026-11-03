@@ -70,7 +70,8 @@
         "displayName": "unit",
         "preset": "jest-expo/node",
         "testMatch": [
-          "<rootDir>/__tests__/model/**/*.test.ts"
+          "<rootDir>/__tests__/model/**/*.test.ts",
+          "<rootDir>/__tests__/build/**/*.test.ts"
         ]
       },
       {
@@ -89,7 +90,8 @@
           "/node_modules/",
           "/design-system/",
           "/reference/",
-          "<rootDir>/__tests__/model/"
+          "<rootDir>/__tests__/model/",
+          "<rootDir>/__tests__/build/"
         ],
         "fakeTimers": {
           "enableGlobally": true

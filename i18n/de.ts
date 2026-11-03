@@ -5,6 +5,18 @@ import type { DataCategory } from '@/model/policies/consentScopes';
 export const de = {
   app: {
     name: 'ganz',
+    // Die beiden Texte darunter liest Expo aus app.config.ts, ohne Bundler. Dort ist kein Import
+    // von dieser Datei möglich. app.config.ts nennt sie darum noch einmal, und
+    // __tests__/build/appConfig.test.ts prüft, dass beide gleich sind.
+    /** Name unter dem App-Icon je Build-Variante. So lassen sich Builds auf einem Telefon unterscheiden. */
+    variantName: {
+      development: 'ganz dev',
+      pitch: 'ganz pitch',
+      production: 'ganz',
+    },
+    /** Systemdialog vor dem ersten Foto (Plugin expo-camera) */
+    cameraPermission:
+      'ganz nutzt die Kamera für Fotos von Display, Typenschild und Bauteil. Die Fotos bleiben in deinem Fall.',
   },
   a11y: {
     back: 'Zurück',

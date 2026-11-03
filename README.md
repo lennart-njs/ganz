@@ -70,6 +70,24 @@ Eigene Worte: Unten ins Feld schreiben. Der Reparatur-Assistent antwortet im sel
 
 Versicherer, Händler, Hersteller, Betriebe, Fachkraft, Preise und Zeitfenster stehen nur in `config/demo.config.ts`. Ein Wechsel dort ändert alle Texte. Alle Werte sind Beispielwerte.
 
+## Build-Varianten
+
+`app.config.ts` kennt drei Varianten. `APP_VARIANT` wählt sie, ohne Wert gilt `development`. So läuft `npx expo start` mit Expo Go wie bisher.
+
+| Variante      | Name unter dem Icon | Bundle-ID und Paket | Update-Kanal  | Laufzeit                 |
+| ------------- | ------------------- | ------------------- | ------------- | ------------------------ |
+| `development` | ganz dev            | `de.ganz.app.dev`   | `development` | wie das SDK, für Expo Go |
+| `pitch`       | ganz pitch          | `de.ganz.app.pitch` | `pitch`       | Fingerprint              |
+| `production`  | ganz                | `de.ganz.app`       | `production`  | Fingerprint              |
+
+`de.ganz.app` ist ein Platzhalter. Lennart bestätigt die Kennung vor dem ersten Build, danach lässt sie sich nicht mehr ändern.
+
+```bash
+APP_VARIANT=pitch npx expo config --type public   # Konfiguration einer Variante ansehen
+```
+
+Ein unbekannter Wert bricht ab. Die Variante steht in jedem Build unter `extra.appVariant`, mit `EXPO_PUBLIC_APP_VARIANT` auch fest im Bundle.
+
 ## Prüfen
 
 ```bash
