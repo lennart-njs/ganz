@@ -12,6 +12,7 @@ import { requestAppointment } from '@/lib/booking';
 import type { Id } from '@/model/types';
 import { useAppStore } from '@/store/appStore';
 import { APP } from '@/test/app';
+import { unwrap } from '@/test/result';
 import {
   addWasher,
   caseAfterFinding,
@@ -131,7 +132,7 @@ async function costsWithFullCaseFile() {
     uri: '',
   });
   s.addChatMessage({ caseId: c.id, role: 'haushalt', text: 'Es steht Wasser in der Trommel.' });
-  const run = s.startGuide(c.id, 'ablauf');
+  const run = unwrap(s.startGuide(c.id, 'ablauf'));
   for (let i = 0; i < 4; i++) s.moveGuideStep(run.id, 'next');
   s.finishGuide(run.id, 'geht_nicht', 'Pumpenflügel klemmt');
   s.setFinding(c.id, 'reparatur', 'fachkraft');
@@ -267,7 +268,7 @@ async function noExpertAfterCall() {
     entry: 'meldung',
     problemLabel: 'Wasserablauf gestört',
   });
-  const run = s.startGuide(c.id, 'ablauf');
+  const run = unwrap(s.startGuide(c.id, 'ablauf'));
   for (let i = 0; i < 4; i++) s.moveGuideStep(run.id, 'next');
   s.finishGuide(run.id, 'geht_nicht');
   const r = await renderRouter(APP, { initialUrl: `/fall/${c.id}` });

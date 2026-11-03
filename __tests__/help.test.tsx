@@ -39,7 +39,7 @@ function setup() {
 function caseWithAbort() {
   const id = setup();
   const s = useAppStore.getState();
-  const run = s.startGuide(id, 'ablauf');
+  const run = unwrap(s.startGuide(id, 'ablauf'));
   for (let i = 0; i < 4; i++) s.moveGuideStep(run.id, 'next');
   s.finishGuide(run.id, 'geht_nicht', 'Pumpenflügel klemmt');
   return id;

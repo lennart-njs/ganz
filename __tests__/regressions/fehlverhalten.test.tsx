@@ -14,6 +14,7 @@ import { latestGuideRun } from '@/lib/caseView';
 import type { Id } from '@/model/types';
 import { activeBooking, useAppStore } from '@/store/appStore';
 import { APP } from '@/test/app';
+import { unwrap } from '@/test/result';
 import {
   addWasher,
   backToCostsAfterClaim,
@@ -83,7 +84,7 @@ async function deviceWithRunningGuide() {
     entry: 'symptom',
     problemLabel: guides.tuer.title,
   });
-  const run = s.startGuide(c.id, 'tuer');
+  const run = unwrap(s.startGuide(c.id, 'tuer'));
   s.moveGuideStep(run.id, 'next');
   const r = await renderRouter(APP, { initialUrl: `/geraet/${device.id}` });
   return { device, id: c.id, runId: run.id, r };
@@ -125,7 +126,7 @@ async function twoGuideCases() {
   start();
   const s = useAppStore.getState();
   const a = photoCase(addWasher().id, 'ablauf');
-  const runA = s.startGuide(a, 'ablauf');
+  const runA = unwrap(s.startGuide(a, 'ablauf'));
   for (let i = 0; i < 4; i++) s.moveGuideStep(runA.id, 'next');
   const b = s.createCase({
     deviceId: addWasher().id,

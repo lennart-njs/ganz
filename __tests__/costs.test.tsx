@@ -5,6 +5,7 @@ import { demoConfig } from '@/config/demo.config';
 import { de } from '@/i18n/de';
 import { useAppStore } from '@/store/appStore';
 import { APP } from '@/test/app';
+import { unwrap } from '@/test/result';
 
 const tap = (name: string | RegExp) => fireEvent.press(screen.getByRole('button', { name }));
 
@@ -33,7 +34,7 @@ function caseAfterFinding({ contract = true } = {}) {
     source: 'in_app_camera',
     uri: '',
   });
-  const run = s.startGuide(c.id, 'ablauf');
+  const run = unwrap(s.startGuide(c.id, 'ablauf'));
   for (let i = 0; i < 4; i++) s.moveGuideStep(run.id, 'next');
   s.finishGuide(run.id, 'geht_nicht');
   s.setFinding(c.id, 'reparatur', 'fachkraft');

@@ -7,6 +7,7 @@ import { de } from '@/i18n/de';
 import { services } from '@/services';
 import { useAppStore } from '@/store/appStore';
 import { APP } from '@/test/app';
+import { unwrap } from '@/test/result';
 
 const cameraMock = jest.requireMock('expo-camera').__permission;
 let taps = 0;
@@ -160,7 +161,7 @@ describe('Foto → Ergebnis', () => {
   test('Details → „Anleitung starten“ geht in der laufenden Anleitung weiter (B-05)', async () => {
     const r = await photoFlow('display');
     const s = useAppStore.getState();
-    const run = s.startGuide('GS-24817', 'ablauf');
+    const run = unwrap(s.startGuide('GS-24817', 'ablauf'));
     s.moveGuideStep(run.id, 'next');
     s.moveGuideStep(run.id, 'next');
     await act(async () => router.push('/fall/GS-24817/ergebnis'));

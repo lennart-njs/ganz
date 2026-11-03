@@ -4,6 +4,7 @@ import { create } from 'zustand';
 import { persist, type StateStorage } from 'zustand/middleware';
 
 import { demoConfig } from '@/config/demo.config';
+import { guides } from '@/data/guides';
 import { de } from '@/i18n/de';
 import { caseAppliance, caseCategory, findingPattern } from '@/lib/appliance';
 import { notifications } from '@/services/notifications';
@@ -167,7 +168,7 @@ export interface AppActions {
     entry: CaseEntry,
     problemLabel: string,
     options?: OpenCaseOptions,
-  ) => OpenCaseResult;
+  ) => Result<OpenCaseResult>;
   /**
    * Befehl der Status-Maschine. Erst die Prüfung, dann Fall und Ereignisse in einem set.
    * Verbotene Übergänge und fehlende Bestätigungen lehnt es ab, statt zu werfen.
@@ -180,14 +181,15 @@ export interface AppActions {
   setAppearance: (appearance: Appearance) => void;
   /** Nachricht im Chat. Eine Frage des Haushalts kommt als Ereignis in die Fallakte. */
   addChatMessage: (input: Omit<ChatMessage, 'id' | 'at'>) => ChatMessage;
-  addDiagnosis: (input: Omit<Diagnosis, 'id' | 'createdAt'>) => Diagnosis;
+  addDiagnosis: (input: Omit<Diagnosis, 'id' | 'createdAt'>) => Result<Diagnosis>;
   /** Foto aus der App-Kamera: Zeitstempel, Gerät, Zweck und Fall (B-16) */
   addPhoto: (input: Omit<Photo, 'id' | 'takenAt'>) => Photo;
   /**
    * Startet eine Anleitung. Aus „offen“ wechselt der Fall in die Selbsthilfe. Läuft dieselbe
-   * Anleitung schon, geht sie weiter. Eine andere offene Anleitung des Falls endet.
+   * Anleitung schon, geht sie weiter. Eine andere offene Anleitung des Falls endet. Eine neue
+   * Anleitung nur, wo die Regel anleitung_starten es erlaubt. Alles in einem set.
    */
-  startGuide: (caseId: Id, guideId: string) => GuideRun;
+  startGuide: (caseId: Id, guideId: string) => Result<GuideRun>;
   /** Hilfe holen, wenn der Status es erlaubt. Sonst abgelehnt, ohne Wirkung. */
   escalate: (caseId: Id) => Result<Case>;
   /**
@@ -237,21 +239,28 @@ export interface AppActions {
    * Ohne gültige Weitergabe für den Schritt passiert nichts, siehe simulationHold.
    */
   simulateNext: (caseId: Id) => boolean;
-  /** Abschluss nach der Reparatur: „Läuft wieder“ oder „Problem besteht weiter“ */
-  confirmRepair: (caseId: Id, works: boolean) => void;
+  /** Abschluss nach der Reparatur: „Läuft wieder“ oder „Problem besteht weiter“, nach den Regeln */
+  confirmRepair: (caseId: Id, works: boolean) => Result<Case>;
   rateBooking: (bookingId: Id, stars: 1 | 2 | 3 | 4 | 5) => void;
-  /** Befund der Fachkraft oder des Betriebs, bei Reparatur mit Kostenvoranschlag */
+  /** Befund der Fachkraft oder des Betriebs, bei Reparatur mit Kostenvoranschlag. Ein set. */
   setFinding: (
     caseId: Id,
     option: 'geloest' | 'reparatur' | 'ersatzgeraet',
     by: 'fachkraft' | 'betrieb',
-  ) => void;
+  ) => Result<Case>;
   /** Schritt erledigt oder Schritt zurück. Der Fortschritt bleibt gespeichert (B-05). */
   moveGuideStep: (runId: Id, direction: 'next' | 'back') => void;
   /** Sicherheitshinweis bestätigt, z. B. „Der Wasserhahn ist zu“ (Q-13) */
   confirmSafety: (runId: Id, step: number) => void;
-  /** Beendet die Anleitung. „Geht nicht“ speichert den Abbruchschritt und die Notiz (B-06). */
-  finishGuide: (runId: Id, outcome: NonNullable<GuideRun['outcome']>, note?: string) => void;
+  /**
+   * Beendet die Anleitung. „Geht nicht“ speichert den Abbruchschritt und die Notiz (B-06).
+   * Gelöst wird der Fall erledigt, sonst holt er Hilfe. Anleitung und Status in einem set.
+   */
+  finishGuide: (
+    runId: Id,
+    outcome: NonNullable<GuideRun['outcome']>,
+    note?: string,
+  ) => Result<GuideRun>;
   /** „Später weitermachen“, solange der Fall nicht abgeschlossen ist */
   pauseCase: (caseId: Id) => Result<Case>;
   resumeCase: (caseId: Id) => Result<Case>;
@@ -349,12 +358,6 @@ export function createAppStore(storage: StateStorage = AsyncStorage, env: StoreE
           return { consent, events };
         };
 
-        const getCase = (caseId: Id): Case => {
-          const c = get().cases[caseId];
-          if (!c) throw new Error(`Fall nicht gefunden: ${caseId}`);
-          return c;
-        };
-
         /** Anleitungen des Falls, die noch laufen */
         const openRuns = (caseId: Id): GuideRun[] =>
           (get().cases[caseId]?.guideRunIds ?? [])
@@ -364,33 +367,71 @@ export function createAppStore(storage: StateStorage = AsyncStorage, env: StoreE
         /**
          * Beendet Anleitungen, weil es mit einem anderen Problem weitergeht. Ohne Ergebnis
          * (outcome), erledigte Schritte bleiben. Ohne Schritt zählt das nicht als Fortschritt.
+         * Rechnet nur, schreiben tut der Aufrufer.
          */
+        const draftEndRuns = (runs: GuideRun[]) => {
+          const now = env.now();
+          return {
+            guideRuns: Object.fromEntries(runs.map((r) => [r.id, { ...r, endedAt: now }])),
+            events: runs.map((r): CaseEvent => ({
+              id: env.newId('ev'),
+              caseId: r.caseId,
+              type: 'anleitung_beendet',
+              at: now,
+              actor: householdActor(),
+              payload: {
+                guideRunId: r.id,
+                guideId: r.guideId,
+                step: r.currentStep + 1,
+                replaced: true,
+              },
+            })),
+          };
+        };
+
         const endRuns = (runs: GuideRun[]) => {
           if (!runs.length) return;
-          const now = env.now();
+          const ended = draftEndRuns(runs);
           set((s) => ({
-            guideRuns: {
-              ...s.guideRuns,
-              ...Object.fromEntries(runs.map((r) => [r.id, { ...r, endedAt: now }])),
-            },
-            events: [
-              ...s.events,
-              ...runs.map((r): CaseEvent => ({
-                id: env.newId('ev'),
-                caseId: r.caseId,
-                type: 'anleitung_beendet',
-                at: now,
-                actor: householdActor(),
-                payload: {
-                  guideRunId: r.id,
-                  guideId: r.guideId,
-                  step: r.currentStep + 1,
-                  replaced: true,
-                },
-              })),
-            ],
+            guideRuns: { ...s.guideRuns, ...ended.guideRuns },
+            events: [...s.events, ...ended.events],
           }));
         };
+
+        /**
+         * Ein Ergebnis oder Befund am Fall, ohne zu schreiben. Das Ereignis ergebnis_erkannt gibt
+         * es nur für die Fehlererkennung und eigene Angaben, Befunde haben befund_erstellt.
+         */
+        const draftDiagnosis = (c: Case, input: Omit<Diagnosis, 'id' | 'createdAt'>) => {
+          const d: Diagnosis = { ...input, id: env.newId('ergebnis'), createdAt: env.now() };
+          const ev: CaseEvent = {
+            id: env.newId('ev'),
+            caseId: c.id,
+            type: 'ergebnis_erkannt',
+            at: d.createdAt,
+            actor: d.source === 'fehlererkennung' ? { kind: 'system' } : householdActor(),
+            payload: {
+              diagnosisId: d.id,
+              mode: d.mode,
+              errorPattern: d.errorPattern,
+              confidence: d.confidence,
+              source: d.source,
+            },
+          };
+          const isResult = d.source === 'fehlererkennung' || d.source === 'nutzerangabe';
+          return {
+            diagnosis: d,
+            case: { ...c, diagnosisIds: [...c.diagnosisIds, d.id], updatedAt: d.createdAt },
+            events: isResult ? [ev] : [],
+          };
+        };
+
+        /** Ein Ereignis in der Fallakte, ohne zu schreiben */
+        const draftEvent = (input: Omit<CaseEvent, 'id' | 'at'>): CaseEvent => ({
+          ...input,
+          id: env.newId('ev'),
+          at: env.now(),
+        });
 
         return {
           ...initialData,
@@ -511,24 +552,27 @@ export function createAppStore(storage: StateStorage = AsyncStorage, env: StoreE
 
           openCaseFor: (deviceId, entry, problemLabel, options = {}) => {
             const plan = planOpenCase(get(), deviceId, options);
-            if (plan.art === 'frage_weitermachen') return { art: plan.art, caseId: plan.caseId };
+            if (plan.art === 'frage_weitermachen')
+              return ok({ art: plan.art, caseId: plan.caseId });
             if (plan.art === 'ersetzt') {
               // Der neue Versuch geht im selben Fall weiter, auch nach „Später weitermachen“
-              if (getCase(plan.caseId).pausedAt) get().resumeCase(plan.caseId);
+              if (get().cases[plan.caseId]?.pausedAt) get().resumeCase(plan.caseId);
               // Eine offene Anleitung bleibt nur, wenn es mit ihr weitergeht (R-06)
               endRuns(openRuns(plan.caseId).filter((r) => r.guideId !== options.guideId));
               get().updateCase(plan.caseId, { entry, problemLabel });
-              return { art: plan.art, caseId: plan.caseId };
+              return ok({ art: plan.art, caseId: plan.caseId });
             }
+            // Erst den laufenden Fall abbrechen. Geht das nicht, entsteht auch kein neuer.
             if (plan.cancel) {
-              get().runCommand(plan.cancel, 'abbrechen', {
+              const cancelled = get().runCommand(plan.cancel, 'abbrechen', {
                 cancelReason: de.thread.newProblemReason,
               });
+              if (!cancelled.ok) return cancelled;
             }
-            return {
+            return ok({
               art: plan.art,
               caseId: get().createCase({ deviceId, entry, problemLabel }).id,
-            };
+            });
           },
 
           runCommand: (caseId, command, options = {}) => {
@@ -573,33 +617,15 @@ export function createAppStore(storage: StateStorage = AsyncStorage, env: StoreE
           },
 
           addDiagnosis: (input) => {
-            const d: Diagnosis = { ...input, id: env.newId('ergebnis'), createdAt: env.now() };
-            const c = getCase(input.caseId);
-            const ev: CaseEvent = {
-              id: env.newId('ev'),
-              caseId: c.id,
-              type: 'ergebnis_erkannt',
-              at: d.createdAt,
-              actor: d.source === 'fehlererkennung' ? { kind: 'system' } : householdActor(),
-              payload: {
-                diagnosisId: d.id,
-                mode: d.mode,
-                errorPattern: d.errorPattern,
-                confidence: d.confidence,
-                source: d.source,
-              },
-            };
-            // Befunde von Fachkraft oder Betrieb haben ein eigenes Ereignis (befund_erstellt)
-            const isResult = d.source === 'fehlererkennung' || d.source === 'nutzerangabe';
+            const c = get().cases[input.caseId];
+            if (!c) return missingCase(input.caseId);
+            const draft = draftDiagnosis(c, input);
             set((s) => ({
-              diagnoses: [...s.diagnoses, d],
-              cases: {
-                ...s.cases,
-                [c.id]: { ...c, diagnosisIds: [...c.diagnosisIds, d.id], updatedAt: d.createdAt },
-              },
-              events: isResult ? [...s.events, ev] : s.events,
+              diagnoses: [...s.diagnoses, draft.diagnosis],
+              cases: { ...s.cases, [c.id]: draft.case },
+              events: [...s.events, ...draft.events],
             }));
-            return d;
+            return ok(draft.diagnosis);
           },
 
           addPhoto: (input) => {
@@ -641,12 +667,19 @@ export function createAppStore(storage: StateStorage = AsyncStorage, env: StoreE
           },
 
           startGuide: (caseId, guideId) => {
+            const before = get().cases[caseId];
+            if (!before) return missingCase(caseId);
+            if (!(guideId in guides))
+              return refuse({ code: 'unbekannt', what: 'anleitung', id: guideId });
             // Eine offene Anleitung derselben Art geht weiter, wo du warst (B-05, R-06)
             const running = openRuns(caseId);
             const same = running.find((r) => r.guideId === guideId);
-            if (same) return same;
+            if (same) return ok(same);
+            if (!can(selectCaseFacts(get(), caseId), 'anleitung_starten')) {
+              return refuse({ code: 'regel', action: 'anleitung_starten' });
+            }
             // Eine andere offene Anleitung endet. Es gibt nie zwei offene Anleitungen.
-            endRuns(running);
+            const ended = draftEndRuns(running);
             const now = env.now();
             const run: GuideRun = {
               id: env.newId('anleitung'),
@@ -656,34 +689,35 @@ export function createAppStore(storage: StateStorage = AsyncStorage, env: StoreE
               currentStep: 0,
               completedSteps: [],
             };
-            const before = getCase(caseId);
-            if (before.status === 'offen') {
-              get().runCommand(caseId, 'anleitung_starten');
-            }
-            const c = getCase(caseId);
+            // Aus „offen“ wechselt der Fall in die Selbsthilfe, das Ereignis nennt die Anleitung
+            const started = canTransition(before.status, 'anleitung_starten')
+              ? draftCommand(before, 'anleitung_starten')
+              : undefined;
+            if (started && !started.ok) return started;
+            const c = started?.value.case ?? before;
+            const events: CaseEvent[] = started
+              ? started.value.events.map((e) =>
+                  e.type === 'anleitung_gestartet'
+                    ? { ...e, payload: { ...e.payload, guideId, guideRunId: run.id } }
+                    : e,
+                )
+              : [
+                  {
+                    id: env.newId('ev'),
+                    caseId,
+                    type: 'anleitung_gestartet',
+                    at: now,
+                    actor: householdActor(),
+                    payload: { guideId, guideRunId: run.id },
+                  },
+                ];
+            // Beendete Anleitung, neue Anleitung, Status und Ereignisse in einem Schritt
             set((s) => ({
-              guideRuns: { ...s.guideRuns, [run.id]: run },
+              guideRuns: { ...s.guideRuns, ...ended.guideRuns, [run.id]: run },
               cases: { ...s.cases, [caseId]: { ...c, guideRunIds: [...c.guideRunIds, run.id] } },
-              events:
-                before.status === 'offen'
-                  ? s.events.map((e) =>
-                      e.caseId === caseId && e.type === 'anleitung_gestartet' && !e.payload.guideId
-                        ? { ...e, payload: { ...e.payload, guideId, guideRunId: run.id } }
-                        : e,
-                    )
-                  : [
-                      ...s.events,
-                      {
-                        id: env.newId('ev'),
-                        caseId,
-                        type: 'anleitung_gestartet',
-                        at: now,
-                        actor: householdActor(),
-                        payload: { guideId, guideRunId: run.id },
-                      },
-                    ],
+              events: [...s.events, ...ended.events, ...events],
             }));
-            return run;
+            return ok(run);
           },
 
           moveGuideStep: (runId, direction) => {
@@ -725,7 +759,10 @@ export function createAppStore(storage: StateStorage = AsyncStorage, env: StoreE
 
           finishGuide: (runId, outcome, note) => {
             const run = get().guideRuns[runId];
-            if (!run || run.endedAt) return;
+            if (!run) return refuse({ code: 'unbekannt', what: 'anleitung', id: runId });
+            if (run.endedAt) return refuse({ code: 'regel', action: 'anleitung_fortsetzen' });
+            const c = get().cases[run.caseId];
+            if (!c) return missingCase(run.caseId);
             const now = env.now();
             const step = run.currentStep;
             const done =
@@ -763,20 +800,22 @@ export function createAppStore(storage: StateStorage = AsyncStorage, env: StoreE
                 payload: { ...payload, outcome },
               },
             ];
+            // Gelöst: erledigt. Sonst Hilfe holen. Beides nur, wo die Status-Maschine es erlaubt.
+            const solved = outcome === 'laeuft_wieder' || outcome === 'fertig';
+            const command: CaseCommand = solved ? 'selbst_geloest' : 'hilfe_holen';
+            const next = canTransition(c.status, command)
+              ? draftCommand(c, command, {
+                  resolution: solved && c.entry === 'pflege' ? 'pflege_erledigt' : undefined,
+                })
+              : undefined;
+            if (next && !next.ok) return next;
+            // Anleitung, Ereignisse und Status in einem Schritt
             set((s) => ({
               guideRuns: { ...s.guideRuns, [runId]: ended },
-              events: [...s.events, ...events],
+              cases: next ? { ...s.cases, [c.id]: next.value.case } : s.cases,
+              events: [...s.events, ...events, ...(next?.value.events ?? [])],
             }));
-            const c = getCase(run.caseId);
-            if (outcome === 'laeuft_wieder' || outcome === 'fertig') {
-              if (canTransition(c.status, 'selbst_geloest')) {
-                get().runCommand(c.id, 'selbst_geloest', {
-                  resolution: c.entry === 'pflege' ? 'pflege_erledigt' : undefined,
-                });
-              }
-            } else {
-              get().escalate(c.id);
-            }
+            return ok(ended);
           },
 
           requestVideoCall: (caseId, confirm = {}) => {
@@ -903,9 +942,11 @@ export function createAppStore(storage: StateStorage = AsyncStorage, env: StoreE
 
           setFinding: (caseId, option, by) => {
             const cfg = demoConfig;
-            const c = getCase(caseId);
+            const c = get().cases[caseId];
+            if (!c) return missingCase(caseId);
             const actorName = by === 'fachkraft' ? cfg.expert.name : cfg.partners[0]!.name;
-            const d = get().addDiagnosis({
+            const appliance = caseAppliance(get(), caseId);
+            const finding = draftDiagnosis(c, {
               caseId,
               photoIds: [],
               mode: 'bauteil',
@@ -915,22 +956,30 @@ export function createAppStore(storage: StateStorage = AsyncStorage, env: StoreE
                   : option === 'ersatzgeraet'
                     ? 'ersatzgeraet_noetig'
                     : findingPattern(caseCategory(get(), caseId)),
-              component:
-                option === 'geloest' ? undefined : caseAppliance(get(), caseId).finding.component,
+              component: option === 'geloest' ? undefined : appliance.finding.component,
               confidence: 'hoch',
               confidenceScore: 1,
               source: by,
             });
-            get().addEvent({
+            const found = draftEvent({
               caseId,
               type: 'befund_erstellt',
               actor: { kind: by, name: actorName },
-              payload: { diagnosisId: d.id, option },
+              payload: { diagnosisId: finding.diagnosis.id, option },
             });
             if (option === 'geloest') {
-              if (canTransition(c.status, 'im_call_geloest'))
-                get().runCommand(caseId, 'im_call_geloest');
-              return;
+              // Im Call gelöst: erledigt, wo die Status-Maschine es erlaubt
+              const solved = canTransition(c.status, 'im_call_geloest')
+                ? draftCommand(finding.case, 'im_call_geloest')
+                : undefined;
+              if (solved && !solved.ok) return solved;
+              const after = solved?.value.case ?? finding.case;
+              set((s) => ({
+                diagnoses: [...s.diagnoses, finding.diagnosis],
+                cases: { ...s.cases, [caseId]: after },
+                events: [...s.events, ...finding.events, found, ...(solved?.value.events ?? [])],
+              }));
+              return ok(after);
             }
             const device = get().devices.find((x) => x.id === c.deviceId);
             const contract = get().contracts.find((k) => k.id === device?.contractId);
@@ -939,7 +988,7 @@ export function createAppStore(storage: StateStorage = AsyncStorage, env: StoreE
               caseId,
               createdBy: { kind: by, name: actorName },
               repair: {
-                partName: caseAppliance(get(), caseId).finding.component,
+                partName: appliance.finding.component,
                 originalPart: true,
                 parts: cfg.prices.repair.parts,
                 labor: cfg.prices.repair.labor,
@@ -952,11 +1001,7 @@ export function createAppStore(storage: StateStorage = AsyncStorage, env: StoreE
               isExample: cfg.isExample,
               createdAt: env.now(),
             });
-            set((s) => ({
-              quotes: [...s.quotes, quote],
-              cases: { ...s.cases, [caseId]: { ...getCase(caseId), quoteId: quote.id } },
-            }));
-            get().addEvent({
+            const offered = draftEvent({
               caseId,
               type: 'angebot_erstellt',
               actor: { kind: by, name: actorName },
@@ -967,6 +1012,15 @@ export function createAppStore(storage: StateStorage = AsyncStorage, env: StoreE
                 saving: quote.saving,
               },
             });
+            const after: Case = { ...finding.case, quoteId: quote.id };
+            // Befund, Kostenvoranschlag und Ereignisse in einem Schritt
+            set((s) => ({
+              diagnoses: [...s.diagnoses, finding.diagnosis],
+              quotes: [...s.quotes, quote],
+              cases: { ...s.cases, [caseId]: after },
+              events: [...s.events, ...finding.events, found, offered],
+            }));
+            return ok(after);
           },
 
           reportClaim: (caseId, textVersion) => {
@@ -1113,11 +1167,16 @@ export function createAppStore(storage: StateStorage = AsyncStorage, env: StoreE
             if (c.status === 'freigabe_noetig') {
               const approve = get().demo.claimScenario === 'freigeben';
               const quote = get().quotes.find((q) => q.id === c.quoteId);
-              get().runCommand(caseId, approve ? 'freigabe_erteilt' : 'freigabe_abgelehnt', {
-                actor: { kind: 'versicherer', name: cfg.insurer.name },
-                decisionActor: 'mensch',
-                approvedAmount: approve ? quote?.repair.total : undefined,
-              });
+              const decided = get().runCommand(
+                caseId,
+                approve ? 'freigabe_erteilt' : 'freigabe_abgelehnt',
+                {
+                  actor: { kind: 'versicherer', name: cfg.insurer.name },
+                  decisionActor: 'mensch',
+                  approvedAmount: approve ? quote?.repair.total : undefined,
+                },
+              );
+              if (!decided.ok) return false;
               notify();
               return true;
             }
@@ -1127,10 +1186,14 @@ export function createAppStore(storage: StateStorage = AsyncStorage, env: StoreE
               c.status === 'in_reparatur' ||
               (c.status === 'eskaliert' && booking.kind === 'vor_ort_diagnose');
             if (booking.status === 'angefragt' && confirmable) {
-              setBooking({ status: 'bestaetigt' });
               if (c.status === 'freigegeben') {
-                get().runCommand(caseId, 'termin_bestaetigt', { actor: betrieb });
+                // Erst der Status, dann die Buchung: Ohne Übergang bleibt alles, wie es ist
+                if (!get().runCommand(caseId, 'termin_bestaetigt', { actor: betrieb }).ok) {
+                  return false;
+                }
+                setBooking({ status: 'bestaetigt' });
               } else {
+                setBooking({ status: 'bestaetigt' });
                 get().addEvent({
                   caseId,
                   type: 'termin_bestaetigt',
@@ -1180,18 +1243,28 @@ export function createAppStore(storage: StateStorage = AsyncStorage, env: StoreE
           },
 
           confirmRepair: (caseId, works) => {
-            const c = getCase(caseId);
-            if (works) {
-              if (canTransition(c.status, 'repariert')) get().runCommand(caseId, 'repariert');
-              get().addEvent({
-                caseId,
-                type: 'abschluss_bestaetigt',
-                actor: householdActor(),
-                payload: {},
-              });
-            } else if (canTransition(c.status, 'problem_besteht_weiter')) {
-              get().runCommand(caseId, 'problem_besteht_weiter');
-            }
+            const c = get().cases[caseId];
+            if (!c) return missingCase(caseId);
+            const action = works ? 'reparatur_bestaetigen' : 'problem_besteht_weiter';
+            if (!can(selectCaseFacts(get(), caseId), action))
+              return refuse({ code: 'regel', action });
+            const result = draftCommand(c, works ? 'repariert' : 'problem_besteht_weiter');
+            if (!result.ok) return result;
+            const confirmed = works
+              ? [
+                  draftEvent({
+                    caseId,
+                    type: 'abschluss_bestaetigt',
+                    actor: householdActor(),
+                    payload: {},
+                  }),
+                ]
+              : [];
+            set((s) => ({
+              cases: { ...s.cases, [caseId]: result.value.case },
+              events: [...s.events, ...result.value.events, ...confirmed],
+            }));
+            return ok(result.value.case);
           },
 
           rateBooking: (bookingId, stars) => {

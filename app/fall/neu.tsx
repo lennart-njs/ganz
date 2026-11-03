@@ -87,9 +87,9 @@ export default function ProblemMelden() {
     options: OpenCaseOptions = openOptions,
   ) => {
     const r = store.getState().openCaseFor(device!.id, entry, problemLabel, options);
-    if (r.art === 'frage_weitermachen') return;
-    draft.current = r.caseId;
-    then(r.caseId);
+    if (!r.ok || r.value.art === 'frage_weitermachen') return;
+    draft.current = r.value.caseId;
+    then(r.value.caseId);
   };
 
   /** Weiter im Gespräch des Falls. Der Fall-Entwurf gehört dann dem Gespräch. */

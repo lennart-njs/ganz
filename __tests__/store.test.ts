@@ -106,7 +106,7 @@ describe('openCaseFor: ein offener Fall pro Gerät (Entscheidung Nr. 13)', () =>
 
   test('ohne offenen Fall: ein neuer Fall', () => {
     const { s } = setup();
-    const r = s().openCaseFor('d-1', 'symptom', 'Wäsche noch nass');
+    const r = unwrap(s().openCaseFor('d-1', 'symptom', 'Wäsche noch nass'));
     expect(r.art).toBe('neu');
     expect(s().cases[r.caseId]).toMatchObject({
       deviceId: 'd-1',
@@ -118,9 +118,9 @@ describe('openCaseFor: ein offener Fall pro Gerät (Entscheidung Nr. 13)', () =>
 
   test('ohne Fortschritt: derselbe Fall mit dem neuen Problem, auch nach einer Pause', () => {
     const { s } = setup();
-    const first = s().openCaseFor('d-1', 'symptom', 'Wäsche noch nass');
+    const first = unwrap(s().openCaseFor('d-1', 'symptom', 'Wäsche noch nass'));
     s().pauseCase(first.caseId);
-    const r = s().openCaseFor('d-1', 'foto', 'Foto vom Display');
+    const r = unwrap(s().openCaseFor('d-1', 'foto', 'Foto vom Display'));
     expect(r).toEqual({ art: 'ersetzt', caseId: first.caseId });
     expect(s().cases[r.caseId]).toMatchObject({ entry: 'foto', problemLabel: 'Foto vom Display' });
     expect(s().cases[r.caseId]?.pausedAt).toBeUndefined();
@@ -129,10 +129,10 @@ describe('openCaseFor: ein offener Fall pro Gerät (Entscheidung Nr. 13)', () =>
 
   test('mit Fortschritt: nichts ändert sich, ganz fragt', () => {
     const { s } = setup();
-    const first = s().openCaseFor('d-1', 'symptom', 'Wäsche noch nass');
+    const first = unwrap(s().openCaseFor('d-1', 'symptom', 'Wäsche noch nass'));
     s().runCommand(first.caseId, 'hilfe_holen');
     const before = s().events.length;
-    expect(s().openCaseFor('d-1', 'symptom', 'Tür geht nicht auf')).toEqual({
+    expect(unwrap(s().openCaseFor('d-1', 'symptom', 'Tür geht nicht auf'))).toEqual({
       art: 'frage_weitermachen',
       caseId: first.caseId,
     });
@@ -142,9 +142,11 @@ describe('openCaseFor: ein offener Fall pro Gerät (Entscheidung Nr. 13)', () =>
 
   test('„Neues Problem melden“: der alte Fall wird abgebrochen, dann gibt es einen neuen', () => {
     const { s } = setup();
-    const first = s().openCaseFor('d-1', 'symptom', 'Wäsche noch nass');
+    const first = unwrap(s().openCaseFor('d-1', 'symptom', 'Wäsche noch nass'));
     s().runCommand(first.caseId, 'hilfe_holen');
-    const r = s().openCaseFor('d-1', 'symptom', 'Tür geht nicht auf', { neuesProblem: true });
+    const r = unwrap(
+      s().openCaseFor('d-1', 'symptom', 'Tür geht nicht auf', { neuesProblem: true }),
+    );
     expect(r.art).toBe('neu');
     expect(r.caseId).not.toBe(first.caseId);
     expect(s().cases[first.caseId]).toMatchObject({
@@ -156,10 +158,12 @@ describe('openCaseFor: ein offener Fall pro Gerät (Entscheidung Nr. 13)', () =>
 
   test('in der Reparatur: kein Abbruch, kein Absturz, nur die Frage', () => {
     const { s } = setup();
-    const first = s().openCaseFor('d-1', 'symptom', 'Wäsche noch nass');
+    const first = unwrap(s().openCaseFor('d-1', 'symptom', 'Wäsche noch nass'));
     s().runCommand(first.caseId, 'hilfe_holen');
     s().runCommand(first.caseId, 'selbst_zahlen');
-    const r = s().openCaseFor('d-1', 'symptom', 'Tür geht nicht auf', { neuesProblem: true });
+    const r = unwrap(
+      s().openCaseFor('d-1', 'symptom', 'Tür geht nicht auf', { neuesProblem: true }),
+    );
     expect(r).toEqual({ art: 'frage_weitermachen', caseId: first.caseId });
     expect(s().cases[first.caseId]?.status).toBe('in_reparatur');
     expect(openOf(s, 'd-1')).toHaveLength(1);
@@ -167,7 +171,7 @@ describe('openCaseFor: ein offener Fall pro Gerät (Entscheidung Nr. 13)', () =>
 
   test('das Problem des eigenen Falls ändern („Passt nicht“): derselbe Fall, auch mit Foto', () => {
     const { s } = setup();
-    const first = s().openCaseFor('d-1', 'foto', 'Foto vom Display');
+    const first = unwrap(s().openCaseFor('d-1', 'foto', 'Foto vom Display'));
     s().addPhoto({
       caseId: first.caseId,
       deviceId: 'd-1',
@@ -175,8 +179,12 @@ describe('openCaseFor: ein offener Fall pro Gerät (Entscheidung Nr. 13)', () =>
       source: 'in_app_camera',
       uri: '',
     });
-    expect(s().openCaseFor('d-1', 'symptom', 'Tür geht nicht auf').art).toBe('frage_weitermachen');
-    const r = s().openCaseFor('d-1', 'symptom', 'Tür geht nicht auf', { aendern: first.caseId });
+    expect(unwrap(s().openCaseFor('d-1', 'symptom', 'Tür geht nicht auf')).art).toBe(
+      'frage_weitermachen',
+    );
+    const r = unwrap(
+      s().openCaseFor('d-1', 'symptom', 'Tür geht nicht auf', { aendern: first.caseId }),
+    );
     expect(r).toEqual({ art: 'ersetzt', caseId: first.caseId });
     expect(s().cases[r.caseId]).toMatchObject({ entry: 'symptom', photoIds: [expect.any(String)] });
     expect(openOf(s, 'd-1')).toHaveLength(1);
@@ -184,8 +192,8 @@ describe('openCaseFor: ein offener Fall pro Gerät (Entscheidung Nr. 13)', () =>
 
   test('ein anderes Gerät bleibt unberührt', () => {
     const { s } = setup();
-    const a = s().openCaseFor('d-1', 'symptom', 'Wäsche noch nass');
-    const b = s().openCaseFor('d-2', 'symptom', 'Tür geht nicht auf');
+    const a = unwrap(s().openCaseFor('d-1', 'symptom', 'Wäsche noch nass'));
+    const b = unwrap(s().openCaseFor('d-2', 'symptom', 'Tür geht nicht auf'));
     expect([a.art, b.art]).toEqual(['neu', 'neu']);
     expect(s().cases[a.caseId]?.problemLabel).toBe('Wäsche noch nass');
   });
@@ -195,7 +203,7 @@ describe('startGuide: nie zwei offene Anleitungen (B-05, R-06)', () => {
   const setup = () => {
     const store = createAppStore(memoryStorage(), testEnv());
     const s = () => store.getState();
-    const id = s().openCaseFor('d-1', 'symptom', 'Wäsche noch nass').caseId;
+    const id = unwrap(s().openCaseFor('d-1', 'symptom', 'Wäsche noch nass')).caseId;
     return { s, id };
   };
   const open = (s: () => ReturnType<ReturnType<typeof createAppStore>['getState']>, id: string) =>
@@ -203,9 +211,9 @@ describe('startGuide: nie zwei offene Anleitungen (B-05, R-06)', () => {
 
   test('dieselbe Anleitung geht weiter, wo du warst', () => {
     const { s, id } = setup();
-    const run = s().startGuide(id, 'nass');
+    const run = unwrap(s().startGuide(id, 'nass'));
     s().moveGuideStep(run.id, 'next');
-    const again = s().startGuide(id, 'nass');
+    const again = unwrap(s().startGuide(id, 'nass'));
     expect(again.id).toBe(run.id);
     expect(s().guideRuns[run.id]).toMatchObject({ currentStep: 1, completedSteps: [0] });
     expect(s().cases[id]?.guideRunIds).toEqual([run.id]);
@@ -213,9 +221,9 @@ describe('startGuide: nie zwei offene Anleitungen (B-05, R-06)', () => {
 
   test('eine andere Anleitung beendet die offene, die erledigten Schritte bleiben', () => {
     const { s, id } = setup();
-    const run = s().startGuide(id, 'nass');
+    const run = unwrap(s().startGuide(id, 'nass'));
     s().moveGuideStep(run.id, 'next');
-    const next = s().startGuide(id, 'tuer');
+    const next = unwrap(s().startGuide(id, 'tuer'));
     expect(open(s, id).map((r) => r.id)).toEqual([next.id]);
     expect(s().guideRuns[run.id]).toMatchObject({
       completedSteps: [0],
@@ -230,15 +238,15 @@ describe('startGuide: nie zwei offene Anleitungen (B-05, R-06)', () => {
 
   test('openCaseFor beim Ersetzen: eine offene Anleitung bleibt nur, wenn es mit ihr weitergeht', () => {
     const { s, id } = setup();
-    const run = s().startGuide(id, 'nass');
-    expect(s().openCaseFor('d-1', 'symptom', 'Wäsche noch nass', { guideId: 'nass' }).art).toBe(
-      'ersetzt',
-    );
+    const run = unwrap(s().startGuide(id, 'nass'));
+    expect(
+      unwrap(s().openCaseFor('d-1', 'symptom', 'Wäsche noch nass', { guideId: 'nass' })).art,
+    ).toBe('ersetzt');
     expect(open(s, id).map((r) => r.id)).toEqual([run.id]);
     s().openCaseFor('d-1', 'foto', 'Foto vom Display');
     expect(open(s, id)).toEqual([]);
     // Ohne erledigten Schritt ist das kein Fortschritt, der nächste Versuch ersetzt wieder
-    expect(s().openCaseFor('d-1', 'symptom', 'Tür geht nicht auf').art).toBe('ersetzt');
+    expect(unwrap(s().openCaseFor('d-1', 'symptom', 'Tür geht nicht auf')).art).toBe('ersetzt');
   });
 });
 
@@ -486,5 +494,124 @@ describe('Videocall und Rückruf: Bestätigung und Anfrage in einem Schritt', ()
         .slice(-2)
         .map((e) => e.type),
     ).toEqual(['weitergabe_bestaetigt', 'videocall_angefragt']);
+  });
+});
+
+describe('Anleitung, Befund und Abschluss: Result und ein Schritt', () => {
+  const setup = () => {
+    const store = createAppStore(memoryStorage(), testEnv());
+    const s = () => store.getState();
+    s().ensureHousehold();
+    const c = s().createCase({ deviceId: 'd-1', entry: 'foto', problemLabel: 'x' });
+    let writes = 0;
+    store.subscribe(() => {
+      writes += 1;
+    });
+    return { s, id: c.id, writes: () => writes };
+  };
+
+  test('eine Anleitung starten: Status, Anleitung und Ereignisse auf einmal', () => {
+    const { s, id, writes } = setup();
+    const run = unwrap(s().startGuide(id, 'ablauf'));
+    expect(writes()).toBe(1);
+    expect(s().cases[id]).toMatchObject({ status: 'selbsthilfe', guideRunIds: [run.id] });
+    expect(
+      selectCaseEvents(s(), id).find((e) => e.type === 'anleitung_gestartet')?.payload,
+    ).toEqual({ guideId: 'ablauf', guideRunId: run.id });
+  });
+
+  test('unbekannte Anleitung, unbekannter Fall und „eskaliert“ werden abgelehnt', () => {
+    const { s, id, writes } = setup();
+    expect(s().startGuide(id, 'gibt-es-nicht')).toEqual({
+      ok: false,
+      refusal: { code: 'unbekannt', what: 'anleitung', id: 'gibt-es-nicht' },
+    });
+    expect(s().startGuide('GS-99999', 'ablauf')).toEqual({
+      ok: false,
+      refusal: { code: 'unbekannt', what: 'fall', id: 'GS-99999' },
+    });
+    expect(writes()).toBe(0);
+    unwrap(s().escalate(id));
+    expect(s().startGuide(id, 'ablauf')).toEqual({
+      ok: false,
+      refusal: { code: 'regel', action: 'anleitung_starten' },
+    });
+    expect(s().guideRuns).toEqual({});
+  });
+
+  test('„Geht nicht“ beendet die Anleitung und holt Hilfe in einem Schritt, nur einmal', () => {
+    const { s, id, writes } = setup();
+    const run = unwrap(s().startGuide(id, 'ablauf'));
+    const ended = unwrap(s().finishGuide(run.id, 'geht_nicht', 'klemmt'));
+    expect(writes()).toBe(2);
+    expect(ended).toMatchObject({ outcome: 'geht_nicht', abortNote: 'klemmt' });
+    expect(s().cases[id]?.status).toBe('eskaliert');
+    expect(s().finishGuide(run.id, 'fertig')).toEqual({
+      ok: false,
+      refusal: { code: 'regel', action: 'anleitung_fortsetzen' },
+    });
+    expect(s().finishGuide('anleitung-x', 'fertig')).toEqual({
+      ok: false,
+      refusal: { code: 'unbekannt', what: 'anleitung', id: 'anleitung-x' },
+    });
+    expect(writes()).toBe(2);
+  });
+
+  test('der Befund schreibt Ergebnis, Kostenvoranschlag und Ereignisse auf einmal', () => {
+    const { s, id, writes } = setup();
+    unwrap(s().escalate(id));
+    const after = unwrap(s().setFinding(id, 'reparatur', 'fachkraft'));
+    expect(writes()).toBe(2);
+    expect(after.quoteId).toBe(s().quotes[0]?.id);
+    expect(after.diagnosisIds).toEqual([s().diagnoses[0]?.id]);
+    expect(
+      selectCaseEvents(s(), id)
+        .slice(-2)
+        .map((e) => e.type),
+    ).toEqual(['befund_erstellt', 'angebot_erstellt']);
+    expect(s().setFinding('GS-99999', 'geloest', 'fachkraft')).toEqual({
+      ok: false,
+      refusal: { code: 'unbekannt', what: 'fall', id: 'GS-99999' },
+    });
+  });
+
+  test('im Call gelöst: Befund und „erledigt“ auf einmal', () => {
+    const { s, id, writes } = setup();
+    unwrap(s().escalate(id));
+    expect(unwrap(s().setFinding(id, 'geloest', 'fachkraft')).status).toBe('erledigt');
+    expect(writes()).toBe(2);
+  });
+
+  test('„Läuft wieder“ nur nach der Reparatur, sonst abgelehnt', () => {
+    const { s, id, writes } = setup();
+    expect(s().confirmRepair(id, true)).toEqual({
+      ok: false,
+      refusal: { code: 'regel', action: 'reparatur_bestaetigen' },
+    });
+    expect(s().confirmRepair(id, false)).toEqual({
+      ok: false,
+      refusal: { code: 'regel', action: 'problem_besteht_weiter' },
+    });
+    expect(s().confirmRepair('GS-99999', true)).toEqual({
+      ok: false,
+      refusal: { code: 'unbekannt', what: 'fall', id: 'GS-99999' },
+    });
+    expect(writes()).toBe(0);
+  });
+
+  test('ein Ergebnis ohne Fall wird abgelehnt', () => {
+    const { s, writes } = setup();
+    expect(
+      s().addDiagnosis({
+        caseId: 'GS-99999',
+        photoIds: [],
+        mode: 'display',
+        errorPattern: 'wasserablauf',
+        confidence: 'hoch',
+        confidenceScore: 1,
+        source: 'fehlererkennung',
+      }),
+    ).toEqual({ ok: false, refusal: { code: 'unbekannt', what: 'fall', id: 'GS-99999' } });
+    expect(writes()).toBe(0);
   });
 });

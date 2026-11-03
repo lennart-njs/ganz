@@ -10,6 +10,7 @@ import { latestGuideRun } from '@/lib/caseView';
 import { useAppStore } from '@/store/appStore';
 import { APP } from '@/test/app';
 import { caseInRepair, photoCase } from '@/test/regressions';
+import { unwrap } from '@/test/result';
 
 let taps = 0;
 const tap = async (name: string | RegExp) => {
@@ -247,7 +248,7 @@ describe('Nie zwei offene Anleitungen (R-06)', () => {
       entry: 'symptom',
       problemLabel: guides.nass.title,
     });
-    const first = s.startGuide(c.id, 'nass');
+    const first = unwrap(s.startGuide(c.id, 'nass'));
     const r = await renderRouter(APP, { initialUrl: `/fall/${c.id}` });
     expect(screen.getByText(offer(guides.nass.title, guides.nass.steps.length))).toBeTruthy();
     await tap(de.talk.edit(guides.nass.title));

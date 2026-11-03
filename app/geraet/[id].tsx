@@ -135,15 +135,16 @@ export default function GeraetDetail() {
                 // „Problem melden“ zuerst, ob du dort weitermachen willst.
                 const st = useAppStore.getState();
                 const r = st.openCaseFor(device.id, 'pflege', m.title, { guideId: m.guideId });
-                if (r.art === 'frage_weitermachen') {
+                if (!r.ok) return;
+                if (r.value.art === 'frage_weitermachen') {
                   router.push({
                     pathname: '/fall/neu',
                     params: { geraet: device.id, pflege: m.guideId },
                   });
                   return;
                 }
-                st.startGuide(r.caseId, m.guideId);
-                router.push(`/fall/${r.caseId}?weiter=anleitung`);
+                const id = r.value.caseId;
+                if (st.startGuide(id, m.guideId).ok) router.push(`/fall/${id}?weiter=anleitung`);
               }}
             />
           ))}

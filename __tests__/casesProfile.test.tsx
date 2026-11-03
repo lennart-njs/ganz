@@ -36,7 +36,7 @@ function fullHistory() {
     source: 'in_app_camera',
     uri: '',
   });
-  const run = s.startGuide(c.id, 'ablauf');
+  const run = unwrap(s.startGuide(c.id, 'ablauf'));
   s.moveGuideStep(run.id, 'next');
   s.finishGuide(run.id, 'geht_nicht', 'klemmt');
   s.grantConsent({

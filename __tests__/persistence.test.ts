@@ -99,7 +99,7 @@ function playThrough(store: AppStore) {
     source: 'fehlererkennung',
     guideId: 'ablauf',
   });
-  const run = s().startGuide(a.id, 'ablauf');
+  const run = unwrap(s().startGuide(a.id, 'ablauf'));
   s().moveGuideStep(run.id, 'next');
   s().confirmSafety(run.id, 1);
   s().finishGuide(run.id, 'geht_nicht', 'Klappe klemmt');

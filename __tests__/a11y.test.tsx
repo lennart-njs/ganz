@@ -44,7 +44,7 @@ function world() {
     source: 'fehlererkennung',
     guideId: 'ablauf',
   });
-  const run = s.startGuide(c.id, 'ablauf');
+  const run = unwrap(s.startGuide(c.id, 'ablauf'));
   s.moveGuideStep(run.id, 'next');
   s.grantConsent({
     caseId: c.id,
@@ -59,7 +59,7 @@ function world() {
     entry: 'meldung',
     problemLabel: 'Wasserzulauf gestört',
   });
-  const g2 = s.startGuide(open.id, 'zulauf');
+  const g2 = unwrap(s.startGuide(open.id, 'zulauf'));
   s.moveGuideStep(g2.id, 'next');
   s.finishGuide(run.id, 'geht_nicht');
   const v = unwrap(s.requestVideoCall(c.id));
