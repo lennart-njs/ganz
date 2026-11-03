@@ -799,7 +799,12 @@ export const de = {
     costsApproved: (insurer: string, deductible: string) =>
       `${insurer} hat freigegeben · Selbstbeteiligung ${deductible}`,
     costsSelf: (amount: string) => `Du zahlst ${amount}`,
-    costsDiagnosis: 'Den Kostenvoranschlag siehst du vor der Reparatur.',
+    /**
+     * Vor-Ort-Diagnose: Den Besuch zahlt der Haushalt. Einen Preis gibt es noch nicht, also nennt
+     * der Betrieb ihn vorher. Kein Betrag, keine Zusage (payer.ts).
+     */
+    costsDiagnosis:
+      'Den Besuch zahlst du selbst. Den Preis nennt dir der Betrieb vor dem Termin. Den Kostenvoranschlag für die Reparatur siehst du danach.',
     pending: 'Der Termin ist vorbehaltlich Freigabe. Gibt es keine Freigabe, entscheidest du neu.',
     ecoDesign: (part: string, days: number) =>
       `Der Betrieb bekommt ${part} innerhalb von ${days} Arbeitstagen. So verlangt es das EU-Ökodesign-Recht.`,

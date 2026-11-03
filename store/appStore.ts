@@ -945,7 +945,19 @@ export function createAppStore(storage: StateStorage = AsyncStorage, env: StoreE
             const cfg = demoConfig;
             const c = get().cases[caseId];
             if (!c) return missingCase(caseId);
-            const actorName = by === 'fachkraft' ? cfg.expert.name : cfg.partners[0]!.name;
+            // Vor Ort schreibt der gebuchte Betrieb den Befund, nicht der erste aus der
+            // Konfiguration (R-10). Ohne Termin zur Vor-Ort-Diagnose gibt es keinen Befund vor Ort.
+            const visit =
+              by === 'betrieb'
+                ? selectCaseFacts(get(), caseId)?.bookings.vor_ort_diagnose
+                : undefined;
+            if (by === 'betrieb' && !visit) {
+              return refuse({ code: 'unbekannt', what: 'termin', id: caseId });
+            }
+            const actorName = visit ? visit.provider.name : cfg.expert.name;
+            const actor: CaseEvent['actor'] = visit
+              ? { kind: 'betrieb', id: visit.provider.id, name: actorName }
+              : { kind: 'fachkraft', name: actorName };
             const appliance = caseAppliance(get(), caseId);
             const finding = draftDiagnosis(c, {
               caseId,
@@ -965,7 +977,7 @@ export function createAppStore(storage: StateStorage = AsyncStorage, env: StoreE
             const found = draftEvent({
               caseId,
               type: 'befund_erstellt',
-              actor: { kind: by, name: actorName },
+              actor,
               payload: { diagnosisId: finding.diagnosis.id, option },
             });
             if (option === 'geloest') {
@@ -1005,7 +1017,7 @@ export function createAppStore(storage: StateStorage = AsyncStorage, env: StoreE
             const offered = draftEvent({
               caseId,
               type: 'angebot_erstellt',
-              actor: { kind: by, name: actorName },
+              actor,
               payload: {
                 quoteId: quote.id,
                 repair: quote.repair.total,

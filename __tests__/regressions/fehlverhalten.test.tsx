@@ -327,7 +327,8 @@ describe('R-10 Befund dem falschen Betrieb zugeschrieben', () => {
 
   // store/appStore.ts:675 (heute Zeile 684): setFinding nimmt für by='betrieb' immer
   // demoConfig.partners[0], nicht den gebuchten Betrieb.
-  test.failing('R-10 Befund und Kostenvoranschlag kommen vom gebuchten Betrieb', () => {
+  // Behoben: setFinding nimmt den Betrieb aus dem Termin zur Vor-Ort-Diagnose (Schritt 25).
+  test('R-10 Befund und Kostenvoranschlag kommen vom gebuchten Betrieb', () => {
     const { id, partner } = onSiteDiagnosisWithSecondPartner();
     const quote = useAppStore.getState().quotes.find((q) => q.id === caseOf(id).quoteId);
     expect(eventOf(id, 'befund_erstellt')?.actor.name).toBe(partner);

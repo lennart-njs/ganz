@@ -512,6 +512,59 @@ describe('Termin-Regeln im Store (model/policies/bookingRules.ts)', () => {
   });
 });
 
+describe('Befund vor Ort (R-10)', () => {
+  const setup = () => {
+    const store = createAppStore(memoryStorage(), testEnv());
+    const s = () => store.getState();
+    s().ensureHousehold();
+    const device = s().addDevice({
+      category: 'waschmaschine',
+      manufacturerId: demoConfig.manufacturer.id,
+      model: demoConfig.device.model,
+      identifiedBy: 'manuell',
+    });
+    const c = s().createCase({ deviceId: device.id, entry: 'symptom', problemLabel: 'x' });
+    unwrap(s().escalate(c.id));
+    return { store, s, id: c.id };
+  };
+
+  test('ohne Termin zur Vor-Ort-Diagnose schreibt kein Betrieb einen Befund', () => {
+    const { store, s, id } = setup();
+    const before = store.getState();
+    expect(s().setFinding(id, 'reparatur', 'betrieb')).toEqual({
+      ok: false,
+      refusal: { code: 'unbekannt', what: 'termin', id },
+    });
+    expect(store.getState()).toBe(before);
+  });
+
+  test('der gebuchte Betrieb schreibt Befund und Kostenvoranschlag, mit seiner Nummer', () => {
+    const { s, id } = setup();
+    const partner = demoConfig.partners[1]!;
+    unwrap(
+      s().requestBooking({
+        caseId: id,
+        kind: 'vor_ort_diagnose',
+        partnerId: partner.id,
+        slotLabel: demoConfig.slots[2]!,
+        selfPay: false,
+      }),
+    );
+    while (s().simulateNext(id));
+    const events = selectCaseEvents(s(), id);
+    for (const type of ['befund_erstellt', 'angebot_erstellt'] as const) {
+      expect(events.find((e) => e.type === type)?.actor).toEqual({
+        kind: 'betrieb',
+        id: partner.id,
+        name: partner.name,
+      });
+    }
+    const quote = s().quotes.find((q) => q.id === s().cases[id]?.quoteId);
+    expect(quote?.createdBy).toEqual({ kind: 'betrieb', name: partner.name });
+    expect(s().diagnoses.at(-1)?.source).toBe('betrieb');
+  });
+});
+
 describe('Videocall und Rückruf: Bestätigung und Anfrage in einem Schritt', () => {
   const partner = demoConfig.partners[0]!;
   const share = (caseId: string) => ({

@@ -326,3 +326,50 @@ describe('Zahler aus den Fakten: „Du zahlst“ nur, wenn der Haushalt zahlt', 
     expect(useAppStore.getState().cases[id]?.status).toBe('freigabe_noetig');
   });
 });
+
+describe('Vor-Ort-Diagnose: wer den Besuch zahlt', () => {
+  /** Nach „Hilfe holen“, ohne Kostenvoranschlag, mit oder ohne Schutz */
+  function escalated(contract: boolean) {
+    const s = useAppStore.getState();
+    s.reset();
+    useAppStore.setState({ onboardingDone: true });
+    if (contract) s.linkContract('vertragsnummer');
+    const device = s.addDevice({
+      manufacturerId: 'miele',
+      category: 'waschmaschine',
+      model: 'WKB 130',
+      identifiedBy: contract ? 'vertrag' : 'manuell',
+      contractId: useAppStore.getState().contracts[0]?.id,
+    });
+    const c = s.createCase({
+      deviceId: device.id,
+      entry: 'symptom',
+      problemLabel: 'Tür geht nicht auf',
+    });
+    unwrap(s.escalate(c.id));
+    return c.id;
+  }
+
+  test.each([
+    ['ohne Schutz', false],
+    ['mit Schutz', true],
+  ])(
+    '%s: du zahlst den Besuch, der Betrieb nennt den Preis vorher, kein Betrag',
+    async (_name, contract) => {
+      const id = escalated(contract);
+      await renderRouter(APP, { initialUrl: `/fall/${id}/termin?art=diagnose` });
+      expect(screen.getByRole('header', { name: de.appointment.titleDiagnosis })).toBeTruthy();
+      expect(screen.getByText(de.appointment.costsDiagnosis)).toBeTruthy();
+      expect(screen.queryByText(/€/)).toBeNull();
+      expect(screen.queryByText(de.appointment.costsClaim('Kranich', '0 €'))).toBeNull();
+      // Ohne Preis noch keine Zahlungspflicht: Der Preis kommt vor dem Termin
+      expect(screen.queryByRole('button', { name: de.appointment.requestPaid })).toBeNull();
+      await fireEvent.press(screen.getByRole('radio', { name: demoConfig.slots[2] }));
+      await tap(de.appointment.request);
+      expect(useAppStore.getState().bookings.at(-1)).toMatchObject({
+        kind: 'vor_ort_diagnose',
+        subjectToApproval: false,
+      });
+    },
+  );
+});
