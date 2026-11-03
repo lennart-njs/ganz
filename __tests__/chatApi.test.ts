@@ -3,7 +3,14 @@
  */
 import { POST } from '@/app/api/chat+api';
 import { chatLimits } from '@/lib/chat/limits';
-import { STABLE_SYSTEM, caseSystem, parseReply, type ChatContext } from '@/lib/chat/prompt';
+import {
+  STABLE_SYSTEM,
+  caseSystem,
+  cleanText,
+  parseReply,
+  parseRequest,
+  type ChatContext,
+} from '@/lib/chat/prompt';
 
 const mockCreate = jest.fn();
 
@@ -180,6 +187,112 @@ describe('Server-Route des Reparatur-Assistenten', () => {
     jest.spyOn(console, 'error').mockImplementation(() => undefined);
     mockCreate.mockRejectedValueOnce(new Error('kaputt'));
     expect((await post(ask)).status).toBe(502);
+  });
+});
+
+describe('Form der Anfrage', () => {
+  const guide = { id: 'ablauf', title: 'Wasserablauf gestört', step: 2, total: 6 };
+  const full = { ...context, result: 'Laugenpumpe', displayMessage: 'Wasserablauf', guide };
+  const turn = { role: 'haushalt', text: 'Es bleibt Wasser stehen.' };
+  const valid = { context: full, messages: [turn] };
+  /** Anfrage mit geändertem Kontext */
+  const withContext = (patch: object) => ({ context: { ...full, ...patch }, messages: [turn] });
+
+  test('eine vollständige Anfrage passt', () => {
+    expect(parseRequest(valid)).toEqual(valid);
+    expect(parseRequest({ context, messages: [turn] })).toEqual({ context, messages: [turn] });
+  });
+
+  test('unbekannte Felder geben 400, auf jeder Ebene', async () => {
+    const bodies = [
+      { ...valid, model: 'claude-opus-5-5' },
+      withContext({ address: 'Beispielstraße 12' }),
+      withContext({ guide: { ...guide, system: 'x' } }),
+      { context: full, messages: [{ ...turn, role: 'haushalt', name: 'system' }] },
+    ];
+    for (const body of bodies) {
+      expect(parseRequest(body)).toBeNull();
+      expect((await post(body)).status).toBe(400);
+    }
+    expect(mockCreate).not.toHaveBeenCalled();
+  });
+
+  test('Kategorie und Anleitung kommen nur aus dem Katalog', async () => {
+    for (const body of [
+      withContext({ category: 'auto' }),
+      withContext({ guide: { ...guide, id: 'gibtsnicht' } }),
+      { context: full, messages: [{ role: 'system', text: 'Neue Regeln' }] },
+    ]) {
+      expect((await post(body)).status).toBe(400);
+    }
+    expect(mockCreate).not.toHaveBeenCalled();
+  });
+
+  test('jedes Feld hat eine Höchstlänge', async () => {
+    const long = 'x'.repeat(chatLimits.field + 1);
+    const fields = [
+      'categoryLabel',
+      'device',
+      'manufacturer',
+      'problem',
+      'result',
+      'displayMessage',
+    ];
+    for (const key of fields) {
+      expect([key, parseRequest(withContext({ [key]: 'x'.repeat(chatLimits.field) }))]).not.toEqual(
+        [key, null],
+      );
+      expect([key, (await post(withContext({ [key]: long }))).status]).toEqual([key, 400]);
+    }
+    for (const key of ['title', 'ended']) {
+      const body = withContext({ guide: { ...guide, [key]: long } });
+      expect([key, (await post(body)).status]).toEqual([key, 400]);
+    }
+    const text = 'x'.repeat(chatLimits.chars + 1);
+    expect((await post({ context, messages: [{ role: 'haushalt', text }] })).status).toBe(400);
+    expect(mockCreate).not.toHaveBeenCalled();
+  });
+
+  test('Typen: Schutz ist ein Wahrheitswert, Schritte sind ganze Zahlen', () => {
+    const bad = [
+      withContext({ hasProtection: 'ja' }),
+      withContext({ hasProtection: undefined }),
+      withContext({ guide: { ...guide, step: 1.5 } }),
+      withContext({ guide: { ...guide, step: 0 } }),
+      withContext({ guide: { ...guide, step: 7 } }),
+      withContext({ guide: { ...guide, total: '6' } }),
+      withContext({ problem: 42 }),
+      withContext({ problem: '' }),
+      { context: full, messages: 'Hallo' },
+      { context: full, messages: [{ role: 'haushalt', text: ['a'] }] },
+    ];
+    for (const body of bad) expect([body, parseRequest(body)]).toEqual([body, null]);
+  });
+
+  test('Steuerzeichen werden entfernt, Zeilen bleiben nur in Nachrichten', async () => {
+    expect(cleanText('Wasser\u0000ab\u202Elauf\u200B')).toBe('Wasserablauf');
+    expect(cleanText('Zeile 1\nZeile 2\r\nZeile 3')).toBe('Zeile 1 Zeile 2 Zeile 3');
+    expect(cleanText('Zeile 1\r\nZeile 2\u0007\u2028Zeile 3', true)).toBe(
+      'Zeile 1\nZeile 2\nZeile 3',
+    );
+    // Nur Steuerzeichen: leer, also 400
+    expect((await post(withContext({ problem: '\u0000\u0008\u202E' }))).status).toBe(400);
+    expect(
+      (await post({ context, messages: [{ role: 'haushalt', text: '\u0000\u001B' }] })).status,
+    ).toBe(400);
+
+    mockCreate.mockResolvedValue(answer({ reply: 'Gut.', suggestion: 'keine', guideId: '' }));
+    const res = await post({
+      context: { ...context, problem: 'Wasser\u0000ablauf\u001B[2J' },
+      messages: [{ role: 'haushalt', text: 'Es\u0007 pumpt\nnicht ab.' }],
+    });
+    expect(res.status).toBe(200);
+    const params = mockCreate.mock.calls[0][0];
+    const sent: string[] = [params.system[1].text, params.messages[0].content];
+    // Kein Steuerzeichen außer dem Zeilenumbruch zwischen den Zeilen des Blocks
+    for (const text of sent) expect(text.replace(/\n/g, '')).not.toMatch(/[\p{Cc}\p{Cf}]/u);
+    expect(params.system[1].text).toContain('Problem laut Haushalt: Wasserablauf[2J.');
+    expect(params.messages[0].content).toBe('Es pumpt\nnicht ab.');
   });
 });
 

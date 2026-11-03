@@ -27,9 +27,9 @@ export function chatContext(s: AppData, caseId: Id): ChatContext | undefined {
     guide:
       run && guide
         ? {
-            id: guide.id,
+            id: run.guideId as GuideId,
             title: guide.title,
-            step: run.currentStep + 1,
+            step: Math.min(run.currentStep + 1, guide.steps.length),
             total: guide.steps.length,
             ended: run.outcome ? de.file.event.outcome[run.outcome] : undefined,
           }

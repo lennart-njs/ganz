@@ -500,3 +500,10 @@ Annahmen, die ich beim Bauen getroffen habe. Jede lässt sich ändern.
 - **Als Notiz speichern** legt die letzte eigene Nachricht als Notiz für die Fachkraft in die Fallakte, wie bei einem Fehler, der sich nicht wiederholen lässt. Danach sagt das Gespräch das mit einem Satz, und beide Wege verschwinden, damit nichts doppelt entsteht. Die Nachricht bleibt im Gespräch stehen. Die nächste eigene Nachricht geht wieder an den Assistenten, mit dem ganzen Gespräch.
 - **Nur ohne Netz:** Ist der Assistent ausgelastet oder der Dienst gestört, bleibt es bei „Noch einmal senden“ und „Hilfe holen“. Dort hilft meist ein zweiter Versuch nach kurzer Zeit. Ob die Notiz auch dort helfen soll, zeigt der Pitch.
 - **Stand nach Schritt 26:** R-14 und R-15 sind behoben, damit stehen alle 18 Rückfälle aus der Code-Review auf `test`. `docs/BEFUNDE.md` nennt das, B-53 ist wieder behoben. B-55 bleibt offen: Einen globalen Hinweis „Offline“ und gesperrte Wege ohne Netz gibt es noch nicht, nur den Weg im Gespräch mit dem Assistenten.
+
+## Schritt 27: Chat-Route härten
+
+- **Form der Anfrage als zod-Schema (`requestSchema` in `lib/chat/prompt.ts`):** `parseRequest` prüft jetzt jedes Feld. Die Kategorie kommt aus den vier Gerätearten, die Anleitung aus dem Katalog in `data/guides.ts`, Schritte sind ganze Zahlen ab 1 und nie größer als die Zahl der Schritte, `hasProtection` ist ein Wahrheitswert. Unbekannte Felder auf jeder Ebene geben 400, auch in einer Nachricht oder in der Anleitung.
+- **Höchstlängen:** 1.200 Zeichen je Nachricht wie bisher und 200 Zeichen je Feld im Kontext (`chatLimits.field`). Bisher galt die Grenze nur für vier Felder, Titel und Ergebnis waren offen.
+- **Steuerzeichen (`cleanText`):** Die Route entfernt Steuer- und Formatzeichen wie Escape-Folgen, Richtungswechsel und Zeichen ohne Breite. In einer Nachricht bleiben Zeilenumbruch und Tab, in einem Feld wird jeder Umbruch zu einem Leerzeichen. Die Länge zählt vor dem Entfernen. Bleibt danach nichts übrig, gibt es 400.
+- **Reihenfolge:** Ein volles Gespräch gibt weiter 413 `voll`, bevor das Schema prüft (Schritt 25). Sonst bekäme ein Gespräch mit 40 Nachrichten 400.

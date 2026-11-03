@@ -1,6 +1,8 @@
 // Systemprompt und Antwortformat des Reparatur-Assistenten.
 // Wird nur auf dem Server gelesen (app/api/chat+api.ts). Kein Text für die Oberfläche.
 // Die App importiert hier nur Typen, damit der Prompt nicht im App-Bundle landet.
+import { z } from 'zod';
+
 import { GUIDE_SOURCE, guides, type GuideId } from '@/data/guides';
 import type { Guide } from '@/model/types';
 
@@ -19,7 +21,7 @@ export interface ChatContext {
   result?: string;
   displayMessage?: string;
   /** Laufende oder letzte Anleitung */
-  guide?: { id: string; title: string; step: number; total: number; ended?: string };
+  guide?: { id: GuideId; title: string; step: number; total: number; ended?: string };
   hasProtection: boolean;
 }
 
@@ -154,23 +156,80 @@ export function parseReply(raw: string, category: ChatContext['category']): Chat
   return { reply, suggestion, guideId };
 }
 
-/** Prüft den Body einer Anfrage. Gibt null zurück, wenn etwas fehlt oder zu lang ist. */
+// ---------- Anfrage ----------
+
+/** Steuer- und Formatzeichen, etwa Richtungswechsel oder Zeichen ohne Breite */
+const CONTROL = /[\p{Cc}\p{Cf}\u2028\u2029]/gu;
+
+/**
+ * Entfernt Steuer- und Formatzeichen. In einer Nachricht bleiben Zeilenumbruch und Tab, in einem
+ * Feld werden alle Umbrüche zu Leerzeichen.
+ */
+export function cleanText(text: string, multiline = false): string {
+  const lines = multiline
+    ? text.replace(/\r\n?|[\u2028\u2029]/g, '\n')
+    : text.replace(/[\r\n\t\u2028\u2029]+/g, ' ');
+  return lines
+    .replace(CONTROL, (c) => (multiline && (c === '\n' || c === '\t') ? c : ''))
+    .replace(multiline ? /[ ]{2,}/g : /\s{2,}/g, ' ')
+    .trim();
+}
+
+/** Ein Feld in einer Zeile: höchstens max Zeichen, ohne Steuerzeichen, nicht leer */
+const field = (max = chatLimits.field) =>
+  z
+    .string()
+    .max(max)
+    .transform((s) => cleanText(s))
+    .pipe(z.string().min(1));
+
+const categories = ['waschmaschine', 'geschirrspueler', 'trockner', 'kuehlschrank'] as const;
+
+const contextSchema = z.strictObject({
+  category: z.enum(categories),
+  categoryLabel: field(),
+  device: field(),
+  manufacturer: field(),
+  problem: field(),
+  result: field().optional(),
+  displayMessage: field().optional(),
+  guide: z
+    .strictObject({
+      id: z.enum(guideIds),
+      title: field(),
+      step: z.int().min(1).max(100),
+      total: z.int().min(1).max(100),
+      ended: field().optional(),
+    })
+    .refine((g) => g.step <= g.total)
+    .optional(),
+  hasProtection: z.boolean(),
+});
+
+const turnSchema = z.strictObject({
+  role: z.enum(['haushalt', 'assistent']),
+  text: z
+    .string()
+    .max(chatLimits.chars)
+    .transform((s) => cleanText(s, true))
+    .pipe(z.string().min(1)),
+});
+
+/**
+ * Form einer Anfrage. Unbekannte Felder, fremde Kategorien und Anleitungen, zu lange Felder und
+ * falsche Typen lehnt die Route mit 400 ab. Ein Gespräch beginnt und endet mit dem Haushalt.
+ */
+export const requestSchema = z.strictObject({
+  context: contextSchema,
+  messages: z
+    .array(turnSchema)
+    .min(1)
+    .refine((m) => fitsRequest(m.length))
+    .refine((m) => m[0]?.role === 'haushalt' && m.at(-1)?.role === 'haushalt'),
+});
+
+/** Prüft den Body einer Anfrage und entfernt Steuerzeichen. null: Die Form stimmt nicht. */
 export function parseRequest(body: unknown): { context: ChatContext; messages: ChatTurn[] } | null {
-  if (!body || typeof body !== 'object') return null;
-  const { context, messages } = body as { context?: ChatContext; messages?: ChatTurn[] };
-  if (!context || typeof context !== 'object' || !Array.isArray(messages)) return null;
-  if (!['waschmaschine', 'geschirrspueler', 'trockner', 'kuehlschrank'].includes(context.category))
-    return null;
-  if (messages.length === 0 || !fitsRequest(messages.length)) return null;
-  const ok = messages.every(
-    (m) =>
-      (m.role === 'haushalt' || m.role === 'assistent') &&
-      typeof m.text === 'string' &&
-      m.text.length > 0 &&
-      m.text.length <= chatLimits.chars,
-  );
-  if (!ok || messages[0]!.role !== 'haushalt' || messages.at(-1)!.role !== 'haushalt') return null;
-  const strings = [context.categoryLabel, context.device, context.manufacturer, context.problem];
-  if (!strings.every((s) => typeof s === 'string' && s.length <= 200)) return null;
-  return { context, messages };
+  const parsed = requestSchema.safeParse(body);
+  return parsed.success ? parsed.data : null;
 }

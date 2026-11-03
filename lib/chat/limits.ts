@@ -1,5 +1,8 @@
-/** Grenzen für ein Gespräch mit dem Reparatur-Assistenten. App und Server prüfen dieselben Werte. */
-export const chatLimits = { messages: 40, chars: 1200 } as const;
+/**
+ * Grenzen für ein Gespräch mit dem Reparatur-Assistenten. App und Server prüfen dieselben Werte.
+ * messages: Nachrichten je Gespräch, chars: Zeichen je Nachricht, field: Zeichen je Feld im Kontext.
+ */
+export const chatLimits = { messages: 40, chars: 1200, field: 200 } as const;
 
 /**
  * Lässt eine Anfrage mit so vielen Nachrichten noch Platz für die Antwort? Ein Gespräch hat
