@@ -219,3 +219,7 @@ Annahmen, die ich beim Bauen getroffen habe. Jede lässt sich ändern.
 - **Befund:** Die Empfehlung der Fachkraft kommt aus `services.video.finding()`. „Passt, weiter“ speichert sie. „Stimmt nicht“ speichert deinen Widerspruch und bietet Hilfe neu an.
 - **Stift:** an der ersten Antwort, solange der Fall noch keinen Fortschritt hat. Er führt zurück zu „Problem melden“ mit demselben Fall. An der Schadenmeldung nie.
 - **Ein Fall ohne Inhalt** verschwindet, wenn man das Gespräch verlässt. Mit „Später weitermachen“ bleibt er.
+
+## Schritt 16: Werkzeuge
+
+- **Node 24:** `.nvmrc` nennt nur die Hauptversion `24`. `engines` ist `>=24`. Ohne `engine-strict` warnt npm bei älterem Node nur und bricht nicht ab. Die Arbeitsumgebung dieser Sitzung läuft noch mit Node 22. Die Prüfungen laufen dort trotzdem grün.

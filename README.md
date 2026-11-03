@@ -10,7 +10,7 @@ npx expo start
 # QR-Code scannen: iPhone mit der Kamera-App, Android in Expo Go
 ```
 
-Voraussetzungen: Node 20 oder neuer, Expo Go (SDK 58) auf dem Handy, Handy und Rechner im selben WLAN. Auf dem iPhone müssen Expo Go und der Rechner mit demselben Expo-Konto angemeldet sein (`npx expo login`). Klappt das WLAN nicht: `npx expo start --tunnel`.
+Voraussetzungen: Node 24 (siehe `.nvmrc`, mit nvm: `nvm use`), Expo Go (SDK 58) auf dem Handy, Handy und Rechner im selben WLAN. Auf dem iPhone müssen Expo Go und der Rechner mit demselben Expo-Konto angemeldet sein (`npx expo login`). Klappt das WLAN nicht: `npx expo start --tunnel`.
 
 ## Reparatur-Assistent (Chat mit Claude)
 
