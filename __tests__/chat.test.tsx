@@ -8,9 +8,10 @@ import { de } from '@/i18n/de';
 import { formatDateTime } from '@/i18n/format';
 import { chatContext } from '@/lib/chat/context';
 import { chatLimits } from '@/lib/chat/limits';
+import { textStamp } from '@/lib/legalTexts';
 import { parseRequest, type ChatContext } from '@/lib/chat/prompt';
 import { CHAT_HEADERS, INSTALLATION_ID } from '@/lib/chat/protocol';
-import { CONSENT_SCOPES } from '@/model/policies/consentScopes';
+import { CONSENT_SCOPES, scopedConsent } from '@/model/policies/consentScopes';
 import { services } from '@/services';
 import { chatUrl } from '@/services/chatService';
 import { INSTALLATION_KEY, forgetInstallationId } from '@/services/installation';
@@ -554,6 +555,64 @@ describe('Anfrage an den eigenen Server', () => {
     const body = fetchMock.mock.calls[0][1].body as string;
     expect(body).not.toContain('pitch-w45');
     expect(body).not.toContain(first[CHAT_HEADERS.installation]);
+  });
+
+  test('Alles zurücksetzen, der Demo-Startstand und der Widerruf löschen die Installations-ID', async () => {
+    fetchMock.mockReturnValue(reply({ reply: 'Gut.', suggestion: 'keine', guideId: '' }));
+    const sentId = (call: number) => sentHeaders(call)[CHAT_HEADERS.installation];
+    const ids: (string | undefined)[] = [];
+    const askAgain = async () => {
+      await services.chat.ask(context, messages);
+      ids.push(sentId(ids.length));
+      return ids[ids.length - 1];
+    };
+    const first = await askAgain();
+    expect(first).toMatch(INSTALLATION_ID);
+    expect(await AsyncStorage.getItem(INSTALLATION_KEY)).toBe(first);
+
+    // „Alles zurücksetzen“ in der Demo-Steuerung
+    await act(async () => useAppStore.getState().reset());
+    expect(await AsyncStorage.getItem(INSTALLATION_KEY)).toBeNull();
+    const second = await askAgain();
+    expect(second).toMatch(INSTALLATION_ID);
+    expect(second).not.toBe(first);
+
+    // Demo-Startstand: ohne Einwilligung in den Assistenten
+    await act(async () => useAppStore.getState().loadDemoStart());
+    expect(await AsyncStorage.getItem(INSTALLATION_KEY)).toBeNull();
+    const third = await askAgain();
+    expect(third).not.toBe(second);
+
+    // Widerruf einer anderen Einwilligung: Die ID bleibt
+    const grant = (purpose: 'chat_assistent' | 'mitteilungen') =>
+      act(async () =>
+        useAppStore.getState().grantConsent(
+          purpose === 'chat_assistent'
+            ? scopedConsent('chat_assistent', {
+                recipient: {
+                  id: 'assistent',
+                  kind: 'dienstleister',
+                  name: demoConfig.assistant.name,
+                },
+                text: textStamp('assistent_einwilligung'),
+              })
+            : scopedConsent('mitteilungen', {
+                recipient: { id: 'ganz', kind: 'dienstleister', name: de.app.name },
+                text: textStamp('mitteilungen'),
+              }),
+        ),
+      );
+    const chat = await grant('chat_assistent');
+    const other = await grant('mitteilungen');
+    await act(async () => useAppStore.getState().revokeConsent(other.id));
+    expect(await AsyncStorage.getItem(INSTALLATION_KEY)).toBe(third);
+
+    // Widerruf der Einwilligung in den Assistenten
+    await act(async () => useAppStore.getState().revokeConsent(chat.id));
+    expect(await AsyncStorage.getItem(INSTALLATION_KEY)).toBeNull();
+    const fourth = await askAgain();
+    expect(fourth).toMatch(INSTALLATION_ID);
+    expect(fourth).not.toBe(third);
   });
 
   test('ohne EXPO_PUBLIC_CHAT_TOKEN kein Token-Header, ohne Speicher keine Installations-ID', async () => {

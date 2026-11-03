@@ -1,7 +1,9 @@
 // Installations-ID für das Rate-Limit der Chat-Route: eine zufällige Kennung dieser Installation.
 // Sie entsteht erst mit der ersten Frage an den Assistenten, also nach der Einwilligung, und geht
-// nur an den eigenen Server, nie an den Anbieter. Ob das nach § 25 TDDDG unbedingt erforderlich
-// ist, prüft der Anwalt (docs/recht/RECHTSFRAGEN.md, Nr. 14).
+// nur an den eigenen Server, nie an den Anbieter. Der Widerruf der Einwilligung, „Alles
+// zurücksetzen“, der Demo-Startstand und „Zurücksetzen“ nach einem Ladefehler löschen sie
+// (deleteInstallationId). Ob das nach § 25 TDDDG unbedingt erforderlich ist, prüft der Anwalt
+// (docs/recht/RECHTSFRAGEN.md, Nr. 14).
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { INSTALLATION_ID } from '@/lib/chat/protocol';
@@ -39,4 +41,18 @@ export async function installationId(): Promise<string | undefined> {
 /** Für Tests: die gemerkte ID vergessen */
 export function forgetInstallationId() {
   cached = undefined;
+}
+
+/**
+ * Löscht die Installations-ID im Speicher und im Gedächtnis: bei „Alles zurücksetzen“, beim
+ * Demo-Startstand, beim Zurücksetzen nach einem Ladefehler und mit dem Widerruf der Einwilligung
+ * in den Assistenten. Die nächste Frage legt eine neue an, also erst nach einer neuen Einwilligung.
+ */
+export async function deleteInstallationId(): Promise<void> {
+  cached = undefined;
+  try {
+    await AsyncStorage.removeItem(INSTALLATION_KEY);
+  } catch {
+    // Ohne Speicher gibt es nichts zu löschen
+  }
 }

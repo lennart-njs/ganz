@@ -4,6 +4,8 @@ import * as RN from 'react-native';
 import { StyleSheet } from 'react-native';
 
 import { de } from '@/i18n/de';
+import { INSTALLATION_ID } from '@/lib/chat/protocol';
+import { INSTALLATION_KEY, installationId } from '@/services/installation';
 import { initialData, useAppStore } from '@/store/appStore';
 import { BACKUP_PREFIX, STORE_KEY, STORE_VERSION } from '@/store/persistence';
 import { APP } from '@/test/app';
@@ -84,6 +86,20 @@ describe('Hinweis zum Wiederherstellen', () => {
     const fresh = JSON.parse((await AsyncStorage.getItem(STORE_KEY))!);
     expect(fresh.version).toBe(STORE_VERSION);
     expect(fresh.state).toMatchObject({ onboardingDone: false, cases: {}, devices: [] });
+  });
+
+  test('Zurücksetzen löscht auch die Installations-ID für den Assistenten', async () => {
+    await startWith('{kaputt');
+    await AsyncStorage.setItem(INSTALLATION_KEY, 'f4c1d1d0-3b7e-4a51-9c2a-6f0e8d7b5a21');
+    await installationId();
+    await renderRouter(APP, { initialUrl: '/' });
+    await tap(t.reset);
+    expect(await screen.findByText(de.onboarding.welcomeTitle)).toBeTruthy();
+    expect(await AsyncStorage.getItem(INSTALLATION_KEY)).toBeNull();
+    // Auch die gemerkte ID ist vergessen: Die nächste Frage legt eine neue an
+    const next = await installationId();
+    expect(next).toMatch(INSTALLATION_ID);
+    expect(next).not.toBe('f4c1d1d0-3b7e-4a51-9c2a-6f0e8d7b5a21');
   });
 
   test('Zurücksetzen löscht nichts, was es nicht sichern konnte', async () => {

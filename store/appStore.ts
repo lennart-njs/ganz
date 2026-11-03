@@ -8,6 +8,7 @@ import { guides } from '@/data/guides';
 import { de } from '@/i18n/de';
 import { caseAppliance, caseCategory, findingPattern } from '@/lib/appliance';
 import { textStamp, type LegalTextKey } from '@/lib/legalTexts';
+import { deleteInstallationId } from '@/services/installation';
 import { notifications } from '@/services/notifications';
 import {
   canStartVideoCall,
@@ -1371,6 +1372,11 @@ export function createAppStore(storage: StateStorage = AsyncStorage, env: StoreE
             set((s) => ({
               consents: s.consents.map((c) => (c.id === consentId ? { ...c, revokedAt: now } : c)),
             }));
+            // Ohne Einwilligung in den Assistenten braucht es auch die Installations-ID nicht mehr
+            const chatLeft = get().consents.some(
+              (c) => c.purpose === 'chat_assistent' && !c.revokedAt,
+            );
+            if (target.purpose === 'chat_assistent' && !chatLeft) void deleteInstallationId();
             // In die Fallakte, wenn die Einwilligung zu einem Fall gehört. Sonst steht der Widerruf an der Einwilligung.
             if (target.caseId) {
               get().addEvent({
@@ -1419,10 +1425,18 @@ export function createAppStore(storage: StateStorage = AsyncStorage, env: StoreE
             return ev;
           },
 
-          // Die Darstellung ist eine Einstellung des Telefons, kein Demo-Stand
-          reset: () => set({ ...initialData, appearance: get().appearance }),
+          // Die Darstellung ist eine Einstellung des Telefons, kein Demo-Stand. Die Installations-ID
+          // für das Rate-Limit geht mit, sie entstand mit der Einwilligung in den Assistenten.
+          reset: () => {
+            set({ ...initialData, appearance: get().appearance });
+            void deleteInstallationId();
+          },
 
-          loadDemoStart: () => set({ ...demoStartData(initialData), appearance: get().appearance }),
+          // Der Startstand hat keine Einwilligung in den Assistenten, also auch keine Installations-ID
+          loadDemoStart: () => {
+            set({ ...demoStartData(initialData), appearance: get().appearance });
+            void deleteInstallationId();
+          },
         };
       },
       {
@@ -1480,12 +1494,15 @@ export function createAppStore(storage: StateStorage = AsyncStorage, env: StoreE
   /**
    * „Zurücksetzen“ im Hinweis zum Wiederherstellen: sichert den gespeicherten Rohwert, löscht
    * ihn, setzt den Stand zurück und lädt neu. Lässt sich der Rohwert nicht sichern, wirft es,
-   * bevor etwas gelöscht ist. Die Sicherungen bleiben.
+   * bevor etwas gelöscht ist. Die Sicherungen bleiben. Die Installations-ID ist gelöscht, bevor
+   * die App wieder aufgeht, denn ob es noch eine Einwilligung in den Assistenten gab, lässt sich
+   * aus dem kaputten Stand nicht lesen.
    */
   const resetStoredState = async () => {
     await safeStorage.backupStored(STORE_KEY);
     await safeStorage.removeItem(STORE_KEY);
     store.getState().reset();
+    await deleteInstallationId();
     await store.persist.rehydrate();
   };
 
