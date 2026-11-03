@@ -192,6 +192,31 @@ describe('Reparatur-Assistent', () => {
     );
   });
 
+  test('am Eingabefeld steht, dass eigene Worte an den Assistenten gehen', async () => {
+    setup();
+    await renderRouter(APP, { initialUrl: '/fall/neu' });
+    expect(screen.getByText(t.inputNotice)).toBeTruthy();
+    expect(screen.getByLabelText(de.thread.inputLabel).props.accessibilityHint).toBe(t.inputNotice);
+    const c = useAppStore.getState().createCase({
+      deviceId: useAppStore.getState().devices[0]!.id,
+      entry: 'freitext',
+      problemLabel: 'Pumpe',
+    });
+    await act(async () => router.push(`/fall/${c.id}`));
+    expect(screen.getByText(t.inputNotice)).toBeTruthy();
+    expect(screen.getByLabelText(de.thread.inputLabel).props.accessibilityHint).toBe(t.inputNotice);
+  });
+
+  test('die Einwilligung verspricht nichts über eigene Worte', async () => {
+    setup();
+    await renderRouter(APP, { initialUrl: '/fall/neu' });
+    await ask('Es pumpt nicht ab.');
+    expect(screen.getByText(t.consentExcluded)).toBeTruthy();
+    // Der frühere Satz versprach das auch für Freitext, der solche Angaben enthalten kann
+    expect(JSON.stringify(de)).not.toContain('Nicht dabei sind Fotos, Adresse und Vertragsnummer');
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
   test('die Oberfläche sagt nie „KI“ oder „AI“', () => {
     const texts = JSON.stringify(de);
     expect(texts).not.toMatch(/\bKI\b|\bAI\b|künstliche Intelligenz/i);

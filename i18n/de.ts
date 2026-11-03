@@ -1070,12 +1070,19 @@ export const de = {
     consentTitle: 'Bevor du schreibst',
     /** Darunter stehen die Kategorien aus consentScopes (chat_assistent) als Liste */
     consentText: (provider: string) => `Zur Auswertung bekommt ${provider}:`,
-    consentExcluded: 'Nicht dabei sind Fotos, Adresse und Vertragsnummer.',
+    /**
+     * Vorsichtig: Eigene Worte können solche Angaben enthalten. Den Wortlaut legt der Anwalt fest
+     * (docs/ANNAHMEN.md, Schritt 26).
+     */
+    consentExcluded:
+      'Fotos, Adresse und Vertragsnummer schickt die App nicht mit. Schreib solche Angaben bitte auch nicht selbst in deine Nachrichten.',
     consentBasis:
       'Freiwillig, mit deiner Einwilligung (Art. 6 Abs. 1 lit. a DSGVO). Du kannst sie im Profil widerrufen. Ohne Einwilligung hilft dir eine Fachkraft im Videocall.',
     consentAccept: 'Einverstanden',
     consentDecline: 'Lieber eine Fachkraft',
     inputLabel: 'Deine Nachricht',
+    /** Unter dem Eingabefeld: Eigene Worte gehen an den Assistenten */
+    inputNotice: 'Was du hier schreibst, geht an den Reparatur-Assistenten.',
     send: 'Senden',
     typing: 'Der Assistent schreibt',
     you: 'Du',

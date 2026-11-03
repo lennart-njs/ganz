@@ -1091,6 +1091,7 @@ export default function FallGespraech() {
           <TextField
             label={t.inputLabel}
             labelHidden
+            hint={de.chat.inputNotice}
             placeholder={a.otherPlaceholder}
             multiline
             rows={1}

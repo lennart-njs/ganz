@@ -56,9 +56,14 @@ export const LEGAL_TEXTS = {
     version: '2026-10-1',
     parts: () => [de.chat.who],
   },
+  /** Unter dem Eingabefeld in „Problem melden“ und im Gespräch */
+  eingabe_hinweis: {
+    version: '2026-11-1',
+    parts: () => [de.chat.inputNotice],
+  },
   /** Vor der ersten Nachricht an den Assistenten (lit. a) */
   assistent_einwilligung: {
-    version: '2026-11-1',
+    version: '2026-11-2',
     scope: 'chat_assistent',
     parts: (n) => [
       de.chat.consentTitle,

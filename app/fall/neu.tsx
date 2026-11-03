@@ -263,6 +263,7 @@ export default function ProblemMelden() {
           <TextField
             label={de.thread.inputLabel}
             labelHidden
+            hint={de.chat.inputNotice}
             placeholder={a.otherPlaceholder}
             error={textError}
             multiline
