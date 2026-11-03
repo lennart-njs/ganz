@@ -189,7 +189,9 @@ describe('R-07 „Du zahlst 189 €“ während der Prüfung', () => {
   // app/fall/[id]/kosten.tsx:141 bietet „Ohne Versicherung selbst zahlen“ auch in freigabe_noetig.
   // Der Termin zeigt dann „Du zahlst 189 €“ und „Zahlungspflichtig buchen“, und requestBooking
   // überspringt selbst_zahlen. B-18 wieder offen, Regel „keine Kostenzusage vor der Freigabe“.
-  test.failing('R-07 während der Prüfung kein Selbstzahlen und kein „Du zahlst“', async () => {
+  // Behoben: Kosten bieten Selbstzahlen nur bei canTransition(status, 'selbst_zahlen'), Termin
+  // nimmt zahlung=selbst nur bei canPaySelf (lib/booking.ts).
+  test('R-07 während der Prüfung kein Selbstzahlen und kein „Du zahlst“', async () => {
     const { id } = await backToCostsAfterClaim();
     expect(screen.queryByRole('button', { name: de.costs.selfPay })).toBeNull();
     await act(async () => router.push(selfPayUrl(id)));

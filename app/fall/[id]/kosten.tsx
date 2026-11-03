@@ -11,6 +11,7 @@ import { demoConfig } from '@/config/demo.config';
 import { de } from '@/i18n/de';
 import { formatEuro } from '@/i18n/format';
 import { latestDiagnosis } from '@/lib/caseView';
+import { canTransition } from '@/model/caseMachine';
 import { useAppStore } from '@/store/appStore';
 
 const t = de.costs;
@@ -137,7 +138,8 @@ export default function Kosten() {
             </View>
           </Disclosure>
           <Text variant="meta">{t.legal(insurer)}</Text>
-          {!replacement ? (
+          {/* Selbst zahlen nur als echte Wahl, nicht während der Prüfung (R-07) */}
+          {!replacement && canTransition(c.status, 'selbst_zahlen') ? (
             <Button label={t.selfPay} variant="link" onPress={() => toAppointment(true)} />
           ) : null}
         </>

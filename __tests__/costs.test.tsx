@@ -134,6 +134,35 @@ describe('Betrieb und Termin', () => {
     expect(useAppStore.getState().cases[id]?.status).toBe('in_reparatur');
   });
 
+  test('mit Schutz vor der Meldung: selbst zahlen nennt den Preis vor dem Buchen', async () => {
+    const id = caseAfterFinding();
+    const r = await renderRouter(APP, { initialUrl: `/fall/${id}/kosten` });
+    await tap(de.costs.selfPay);
+    expect(r.getPathname()).toBe(`/fall/${id}/termin`);
+    expect(screen.getByText(de.appointment.costsSelf('189 €'))).toBeTruthy();
+    await fireEvent.press(screen.getByRole('radio', { name: demoConfig.slots[0] }));
+    await tap(de.appointment.requestPaid);
+    expect(useAppStore.getState().cases[id]).toMatchObject({ status: 'in_reparatur' });
+    expect(useAppStore.getState().cases[id]?.claim).toBeUndefined();
+  });
+
+  test('nach der Ablehnung: selbst zahlen nennt den Preis vor dem Buchen', async () => {
+    const id = caseAfterFinding();
+    const s = useAppStore.getState();
+    s.setDemo({ claimScenario: 'ablehnen' });
+    s.reportClaim(id, '2026-10-1');
+    s.simulateNext(id);
+    expect(useAppStore.getState().cases[id]?.status).toBe('abgelehnt');
+    const r = await renderRouter(APP, { initialUrl: `/fall/${id}/kosten` });
+    await tap(de.costs.rejectedSelfPay('189 €'));
+    expect(r.getPathname()).toBe(`/fall/${id}/termin`);
+    expect(screen.getByText(de.appointment.costsSelf('189 €'))).toBeTruthy();
+    expect(screen.queryByText(de.appointment.pending)).toBeNull();
+    await fireEvent.press(screen.getByRole('radio', { name: demoConfig.slots[0] }));
+    await tap(de.appointment.requestPaid);
+    expect(useAppStore.getState().cases[id]?.status).toBe('in_reparatur');
+  });
+
   test('die Pumpe geht nie an den Haushalt', async () => {
     const { id } = await bookAfterClaim();
     expect(

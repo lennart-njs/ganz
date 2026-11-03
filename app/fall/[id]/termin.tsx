@@ -21,7 +21,7 @@ import { de } from '@/i18n/de';
 import { formatDecimal } from '@/i18n/format';
 import { getManufacturer } from '@/lib/devices';
 import { caseAppliance } from '@/lib/appliance';
-import { amountToPay, costsLine, requestAppointment } from '@/lib/booking';
+import { amountToPay, canPaySelf, costsLine, requestAppointment } from '@/lib/booking';
 import { useAppStore } from '@/store/appStore';
 
 const t = de.appointment;
@@ -34,9 +34,10 @@ export default function Termin() {
   const caseId = useCaseId();
   const params = useLocalSearchParams<{ art?: string; zahlung?: string }>();
   const diagnosis = params.art === 'diagnose';
-  const selfPay = params.zahlung === 'selbst';
   const state = useAppStore();
   const c = state.cases[caseId];
+  // Während der Prüfung oder nach der Freigabe zählt ein alter Link mit zahlung=selbst nicht (R-07)
+  const selfPay = params.zahlung === 'selbst' && canPaySelf(c);
   const quote = state.quotes.find((q) => q.id === c?.quoteId);
   const device = state.devices.find((d) => d.id === c?.deviceId);
   const address = state.household?.address;

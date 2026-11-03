@@ -2,24 +2,38 @@
 import { demoConfig } from '@/config/demo.config';
 import { de } from '@/i18n/de';
 import { formatEuro } from '@/i18n/format';
-import type { Id } from '@/model/types';
+import { canTransition } from '@/model/caseMachine';
+import type { Case, Id } from '@/model/types';
 import { notifications } from '@/services/notifications';
 import { useAppStore, type AppData } from '@/store/appStore';
+
+/**
+ * Darf der Haushalt selbst zahlen? Ja ohne Schadenfall, nach einer Ablehnung und in einer
+ * Reparatur, die er schon selbst zahlt. Nein, solange der Versicherer prüft, und nach der
+ * Freigabe. Dann gibt es weder „Du zahlst …“ noch „Zahlungspflichtig buchen“ (R-07).
+ */
+export function canPaySelf(c: Case | undefined): boolean {
+  if (!c) return false;
+  if (canTransition(c.status, 'selbst_zahlen')) return true;
+  return c.status === 'in_reparatur' && c.claim?.decision?.result !== 'freigegeben';
+}
 
 /** Was die Nutzerin selbst zahlt: nichts, die Selbstbeteiligung oder die ganze Reparatur */
 export function amountToPay(s: AppData, caseId: Id, selfPay: boolean, diagnosis = false): number {
   const c = s.cases[caseId];
   const quote = s.quotes.find((q) => q.id === c?.quoteId);
   if (diagnosis) return 0;
-  if (selfPay) return quote?.repair.total ?? 0;
+  if (selfPay && canPaySelf(c)) return quote?.repair.total ?? 0;
   return c?.status === 'freigabe_noetig' || c?.claim ? s.demo.deductible : 0;
 }
 
-/** Kostenzeile der Zusammenfassung */
+/** Kostenzeile der Zusammenfassung. Den Preis einer Selbstzahler-Buchung zeigt sie immer vorher. */
 export function costsLine(s: AppData, caseId: Id, selfPay: boolean, diagnosis = false): string {
   const t = de.appointment;
   if (diagnosis) return t.costsDiagnosis;
-  if (selfPay) return t.costsSelf(formatEuro(amountToPay(s, caseId, true)));
+  if (selfPay && canPaySelf(s.cases[caseId])) {
+    return t.costsSelf(formatEuro(amountToPay(s, caseId, true)));
+  }
   return t.costsClaim(demoConfig.insurer.shortName, formatEuro(s.demo.deductible));
 }
 
