@@ -159,7 +159,8 @@ export interface AppActions {
   /**
    * Der eine Weg, einen Fall zu öffnen (Entscheidung Nr. 13, model/policies/openCase.ts):
    * 'neu' legt einen Fall an, nach „Neues Problem melden“ erst nach dem Abbruch des laufenden.
-   * 'ersetzt' gibt dem offenen Fall ohne Fortschritt das neue Problem. 'frage_weitermachen'
+   * 'ersetzt' gibt dem offenen Fall ohne Fortschritt das neue Problem, eine offene Anleitung
+   * bleibt nur mit options.guideId derselben Anleitung. 'frage_weitermachen'
    * ändert nichts, ganz fragt dann „Weitermachen“ oder „Neues Problem melden“.
    */
   openCaseFor: (
@@ -179,7 +180,10 @@ export interface AppActions {
   addDiagnosis: (input: Omit<Diagnosis, 'id' | 'createdAt'>) => Diagnosis;
   /** Foto aus der App-Kamera: Zeitstempel, Gerät, Zweck und Fall (B-16) */
   addPhoto: (input: Omit<Photo, 'id' | 'takenAt'>) => Photo;
-  /** Startet eine Anleitung. Aus „offen“ wechselt der Fall in die Selbsthilfe. */
+  /**
+   * Startet eine Anleitung. Aus „offen“ wechselt der Fall in die Selbsthilfe. Läuft dieselbe
+   * Anleitung schon, geht sie weiter. Eine andere offene Anleitung des Falls endet.
+   */
   startGuide: (caseId: Id, guideId: string) => GuideRun;
   /** Hilfe holen, wenn der Status es erlaubt. Sonst ohne Wirkung. */
   escalate: (caseId: Id) => void;
@@ -281,6 +285,43 @@ export function createAppStore(storage: StateStorage = AsyncStorage, env: StoreE
           const c = get().cases[caseId];
           if (!c) throw new Error(`Fall nicht gefunden: ${caseId}`);
           return c;
+        };
+
+        /** Anleitungen des Falls, die noch laufen */
+        const openRuns = (caseId: Id): GuideRun[] =>
+          (get().cases[caseId]?.guideRunIds ?? [])
+            .map((id) => get().guideRuns[id])
+            .filter((r): r is GuideRun => !!r && !r.endedAt);
+
+        /**
+         * Beendet Anleitungen, weil es mit einem anderen Problem weitergeht. Ohne Ergebnis
+         * (outcome), erledigte Schritte bleiben. Ohne Schritt zählt das nicht als Fortschritt.
+         */
+        const endRuns = (runs: GuideRun[]) => {
+          if (!runs.length) return;
+          const now = env.now();
+          set((s) => ({
+            guideRuns: {
+              ...s.guideRuns,
+              ...Object.fromEntries(runs.map((r) => [r.id, { ...r, endedAt: now }])),
+            },
+            events: [
+              ...s.events,
+              ...runs.map((r): CaseEvent => ({
+                id: env.newId('ev'),
+                caseId: r.caseId,
+                type: 'anleitung_beendet',
+                at: now,
+                actor: householdActor(),
+                payload: {
+                  guideRunId: r.id,
+                  guideId: r.guideId,
+                  step: r.currentStep + 1,
+                  replaced: true,
+                },
+              })),
+            ],
+          }));
         };
 
         return {
@@ -406,6 +447,8 @@ export function createAppStore(storage: StateStorage = AsyncStorage, env: StoreE
             if (plan.art === 'ersetzt') {
               // Der neue Versuch geht im selben Fall weiter, auch nach „Später weitermachen“
               if (getCase(plan.caseId).pausedAt) get().resumeCase(plan.caseId);
+              // Eine offene Anleitung bleibt nur, wenn es mit ihr weitergeht (R-06)
+              endRuns(openRuns(plan.caseId).filter((r) => r.guideId !== options.guideId));
               get().updateCase(plan.caseId, { entry, problemLabel });
               return { art: plan.art, caseId: plan.caseId };
             }
@@ -533,6 +576,12 @@ export function createAppStore(storage: StateStorage = AsyncStorage, env: StoreE
           },
 
           startGuide: (caseId, guideId) => {
+            // Eine offene Anleitung derselben Art geht weiter, wo du warst (B-05, R-06)
+            const running = openRuns(caseId);
+            const same = running.find((r) => r.guideId === guideId);
+            if (same) return same;
+            // Eine andere offene Anleitung endet. Es gibt nie zwei offene Anleitungen.
+            endRuns(running);
             const now = env.now();
             const run: GuideRun = {
               id: env.newId('anleitung'),

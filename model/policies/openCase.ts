@@ -25,8 +25,8 @@ export function findOpenCase(s: OpenCaseSource, deviceId: Id): Case | undefined 
 /**
  * Hat der Fall schon Inhalt, den ein neuer Versuch nicht einfach ersetzen darf? Fortschritt sind
  * ein Status nach der Selbsthilfe, Fotos, Schadenfall, Kostenvoranschlag, Chat, Videocall und
- * eine Anleitung mit erledigtem Schritt oder mit Ende. Ohne Fortschritt ersetzt ein neuer Versuch
- * den Fall (Entscheidung Nr. 13).
+ * eine Anleitung mit erledigtem Schritt oder mit Ergebnis. Ohne Fortschritt ersetzt ein neuer
+ * Versuch den Fall (Entscheidung Nr. 13).
  */
 export function hasProgress(s: OpenCaseSource, c: Case): boolean {
   if (c.status !== 'offen' && c.status !== 'selbsthilfe') return true;
@@ -35,7 +35,9 @@ export function hasProgress(s: OpenCaseSource, c: Case): boolean {
   if (s.videoSessions.some((v) => v.caseId === c.id)) return true;
   return c.guideRunIds.some((id) => {
     const run = s.guideRuns[id];
-    return !!run && (run.completedSteps.length > 0 || !!run.endedAt);
+    // Eine Anleitung, die ohne Ergebnis endete, weil es mit einem anderen Problem weiterging,
+    // ist ohne erledigten Schritt kein Fortschritt
+    return !!run && (run.completedSteps.length > 0 || !!run.outcome);
   });
 }
 
@@ -62,6 +64,8 @@ export interface OpenCaseOptions {
   aendern?: Id;
   /** Du hast beim laufenden Fall „Neues Problem melden“ gewählt */
   neuesProblem?: boolean;
+  /** Mit dieser Anleitung geht es gleich weiter. Eine offene dazu bleibt offen, andere enden. */
+  guideId?: string;
 }
 
 export type OpenCasePlan =

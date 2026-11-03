@@ -894,6 +894,8 @@ export const de = {
         geht_nicht: 'Geht nicht',
         fertig: 'Fertig',
       },
+      /** Anleitung endet, weil es mit einem anderen Problem weitergeht (R-06) */
+      replaced: 'Anderes Problem gewählt',
       photo: (purpose: string) => `Foto: ${purpose}`,
       status: (label: string) => `Status: ${label}`,
       shared: (recipient: string) => `an ${recipient}`,

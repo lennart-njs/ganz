@@ -2,6 +2,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { Linking } from 'react-native';
 import { act, fireEvent, renderRouter, screen } from 'expo-router/testing-library';
+import { router } from 'expo-router';
 
 import { guides } from '@/data/guides';
 import { de } from '@/i18n/de';
@@ -228,6 +229,63 @@ test('Pflege aus dem Gerätedetail startet einen Pflege-Fall', async () => {
   await tap(new RegExp(`^${de.maintenance[0]!.title}`));
   expect(r.getPathname()).toBe('/fall/GS-24817/anleitung');
   expect(useAppStore.getState().cases['GS-24817']).toMatchObject({ entry: 'pflege' });
+});
+
+describe('Nie zwei offene Anleitungen (R-06)', () => {
+  const openRuns = (caseId: string) =>
+    Object.values(useAppStore.getState().guideRuns).filter(
+      (r) => r.caseId === caseId && !r.endedAt,
+    );
+  const offer = (title: string, steps: number) =>
+    de.thread.guideOffer(title, de.result.stepsCount(steps), de.result.source('Miele'));
+
+  test('Stift und ein anderes Symptom: die erste Anleitung endet, das Gespräch zeigt nur die neue', async () => {
+    const s = useAppStore.getState();
+    const device = s.devices[0]!;
+    const c = s.createCase({
+      deviceId: device.id,
+      entry: 'symptom',
+      problemLabel: guides.nass.title,
+    });
+    const first = s.startGuide(c.id, 'nass');
+    const r = await renderRouter(APP, { initialUrl: `/fall/${c.id}` });
+    expect(screen.getByText(offer(guides.nass.title, guides.nass.steps.length))).toBeTruthy();
+    await tap(de.talk.edit(guides.nass.title));
+    await tap(new RegExp(`^${de.problems[2]!.label}`));
+    expect(r.getPathname()).toBe(`/fall/${c.id}/anleitung`);
+    expect(openRuns(c.id).map((x) => x.guideId)).toEqual(['tuer']);
+    expect(useAppStore.getState().guideRuns[first.id]).toMatchObject({ completedSteps: [] });
+    expect(useAppStore.getState().guideRuns[first.id]?.outcome).toBeUndefined();
+    await act(async () => router.back());
+    expect(r.getPathname()).toBe(`/fall/${c.id}`);
+    expect(screen.queryByText(offer(guides.nass.title, guides.nass.steps.length))).toBeNull();
+    expect(screen.getByText(offer(guides.tuer.title, guides.tuer.steps.length))).toBeTruthy();
+    // Ohne erledigten Schritt bleibt der Stift, das Problem lässt sich weiter ändern
+    expect(screen.getByRole('button', { name: de.talk.edit(guides.tuer.title) })).toBeTruthy();
+    // Die Fallakte sagt, warum die erste Anleitung endete
+    await act(async () => router.push(`/fall/${c.id}/fallakte`));
+    expect(
+      screen.getByText(
+        de.file.event.detail(de.caseEvent.anleitung_beendet, de.file.event.replaced),
+      ),
+    ).toBeTruthy();
+  });
+
+  test('Foto statt Symptom: die offene Anleitung ohne Schritt endet', async () => {
+    const s = useAppStore.getState();
+    const device = s.devices[0]!;
+    const c = s.createCase({
+      deviceId: device.id,
+      entry: 'symptom',
+      problemLabel: guides.nass.title,
+    });
+    s.startGuide(c.id, 'nass');
+    const r = await renderRouter(APP, { initialUrl: `/fall/neu?fall=${c.id}` });
+    await tap(new RegExp(`^${de.problem.photo}`));
+    expect(r.getPathname()).toBe(`/fall/${c.id}/kamera`);
+    expect(openRuns(c.id)).toEqual([]);
+    expect(useAppStore.getState().cases[c.id]).toMatchObject({ entry: 'foto' });
+  });
 });
 
 describe('Pflege aus dem Gerätedetail bei einem laufenden Fall (Entscheidung Nr. 13)', () => {

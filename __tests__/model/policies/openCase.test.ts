@@ -143,6 +143,14 @@ describe('hasProgress', () => {
     expect(hasProgress(source([c], extra), c)).toBe(true);
   });
 
+  test('eine Anleitung, die ohne Schritt für ein anderes Problem endete, ist kein Fortschritt', () => {
+    const c = makeCase({ status: 'selbsthilfe', guideRunIds: ['anleitung-1'] });
+    const replaced = run({ endedAt: NOW });
+    expect(hasProgress(source([c], { guideRuns: { 'anleitung-1': replaced } }), c)).toBe(false);
+    const withStep = run({ endedAt: NOW, completedSteps: [0], currentStep: 1 });
+    expect(hasProgress(source([c], { guideRuns: { 'anleitung-1': withStep } }), c)).toBe(true);
+  });
+
   test('Chat und Videocall eines anderen Falls zählen nicht', () => {
     const c = makeCase();
     const s = source([c], {

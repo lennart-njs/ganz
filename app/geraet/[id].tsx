@@ -134,7 +134,7 @@ export default function GeraetDetail() {
                 // Ein offener Fall pro Gerät (Entscheidung Nr. 13): Mit Fortschritt fragt
                 // „Problem melden“ zuerst, ob du dort weitermachen willst.
                 const st = useAppStore.getState();
-                const r = st.openCaseFor(device.id, 'pflege', m.title);
+                const r = st.openCaseFor(device.id, 'pflege', m.title, { guideId: m.guideId });
                 if (r.art === 'frage_weitermachen') {
                   router.push({
                     pathname: '/fall/neu',

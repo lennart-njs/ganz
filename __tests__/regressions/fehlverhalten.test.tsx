@@ -151,23 +151,22 @@ describe('R-06 Fortschritt der Anleitung geht verloren', () => {
   // app/fall/[id]/ergebnis.tsx:140: „Anleitung starten“ legt einen neuen GuideRun ab Schritt 1 an,
   // obwohl einer in Schritt 5 läuft. Der alte endet nie. Dazu: Stift im Gespräch und ein anderes
   // Symptom lassen die erste Anleitung offen, das Gespräch zeigt beide Angebote. B-05 wieder offen.
-  test.failing(
-    'R-06 eine laufende Anleitung geht weiter, nie zwei offene Anleitungen',
-    async () => {
-      const { a, b } = await twoGuideCases();
-      // Stift: die Antwort ändern und ein anderes Symptom wählen
-      await tap(de.talk.edit(guides.nass.title));
-      await tap(new RegExp(`^${de.problems[2]!.label}`));
-      await flush();
-      expect(openRuns(b).length).toBeLessThanOrEqual(1);
+  // Behoben: startGuide setzt eine offene Anleitung derselben Art fort und beendet eine andere.
+  // openCaseFor beendet beim Ersetzen jede offene Anleitung, mit der es nicht weitergeht.
+  test('R-06 eine laufende Anleitung geht weiter, nie zwei offene Anleitungen', async () => {
+    const { a, b } = await twoGuideCases();
+    // Stift: die Antwort ändern und ein anderes Symptom wählen
+    await tap(de.talk.edit(guides.nass.title));
+    await tap(new RegExp(`^${de.problems[2]!.label}`));
+    await flush();
+    expect(openRuns(b).length).toBeLessThanOrEqual(1);
 
-      // Details → „Anleitung starten“ im Fall mit laufender Anleitung
-      await act(async () => router.replace(`/fall/${a}/ergebnis`));
-      await tap(de.result.startGuide);
-      expect(openRuns(a)).toHaveLength(1);
-      expect(latestGuideRun(useAppStore.getState(), caseOf(a))?.currentStep).toBe(4);
-    },
-  );
+    // Details → „Anleitung starten“ im Fall mit laufender Anleitung
+    await act(async () => router.replace(`/fall/${a}/ergebnis`));
+    await tap(de.result.startGuide);
+    expect(openRuns(a)).toHaveLength(1);
+    expect(latestGuideRun(useAppStore.getState(), caseOf(a))?.currentStep).toBe(4);
+  });
 });
 
 // ---------- R-07 ----------

@@ -203,14 +203,13 @@ export default function FallGespraech() {
     router.push(`/fall/${caseId}/warteraum?video=${session.id}`);
   };
 
+  // Läuft dieselbe Anleitung schon, geht startGuide dort weiter (R-06)
   const openGuide = (guideId: string) => {
     const s = useAppStore.getState();
-    if (!(run && !run.endedAt && run.guideId === guideId)) {
-      if (!c.guideRunIds.length && c.entry === 'freitext') {
-        s.updateCase(caseId, { problemLabel: guides[guideId as GuideId].title });
-      }
-      s.startGuide(caseId, guideId);
+    if (!c.guideRunIds.length && c.entry === 'freitext') {
+      s.updateCase(caseId, { problemLabel: guides[guideId as GuideId].title });
     }
+    s.startGuide(caseId, guideId);
     router.push(`/fall/${caseId}/anleitung`);
   };
 
@@ -391,10 +390,12 @@ export default function FallGespraech() {
     );
   }
 
-  // Anleitungen
+  // Anleitungen. Eine, die ohne Schritt endete, weil du ein anderes Problem gewählt hast, ist
+  // kein Angebot mehr. Sie steht nur in der Fallakte.
   for (const r of runs) {
     const guide = guides[r.guideId as GuideId];
     if (!guide) continue;
+    if (r.endedAt && !r.outcome && !r.completedSteps.length) continue;
     const tools = guideTools(guide);
     add(
       r.startedAt,

@@ -152,6 +152,8 @@ export default function Ergebnis() {
     [t.facts.damage, diagnosis.visibleDamage ?? t.noDamage],
   ];
 
+  // Läuft diese Anleitung schon, geht startGuide dort weiter (B-05, R-06). Die Leiste sagt, wo.
+  const running = caseFacts?.guideRun?.guideId === guide.id ? caseFacts.guideRun : undefined;
   const startGuide = () => {
     useAppStore.getState().startGuide(caseId, guide.id);
     router.push(`/fall/${caseId}/anleitung`);
@@ -161,7 +163,14 @@ export default function Ergebnis() {
     <CaseScreen
       title={de.screens.ergebnis}
       footer={
-        <ActionBar meta={t.stepsCount(guide.steps.length)} sub={t.source(manufacturer)}>
+        <ActionBar
+          meta={
+            running
+              ? de.a11y.stepOf(running.currentStep + 1, guide.steps.length)
+              : t.stepsCount(guide.steps.length)
+          }
+          sub={t.source(manufacturer)}
+        >
           {can(caseFacts, 'anleitung_starten') ? (
             <Button label={t.startGuide} onPress={startGuide} />
           ) : null}

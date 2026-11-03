@@ -2,6 +2,7 @@ import { Linking } from 'react-native';
 import { act, fireEvent, renderRouter, screen } from 'expo-router/testing-library';
 import { router } from 'expo-router';
 
+import { guides } from '@/data/guides';
 import { de } from '@/i18n/de';
 import { services } from '@/services';
 import { useAppStore } from '@/store/appStore';
@@ -154,6 +155,22 @@ describe('Foto → Ergebnis', () => {
     for (const name of [de.result.startGuide, de.result.doesNotFit, de.result.helpInstead]) {
       expect(screen.queryByRole('button', { name })).toBeNull();
     }
+  });
+
+  test('Details → „Anleitung starten“ geht in der laufenden Anleitung weiter (B-05)', async () => {
+    const r = await photoFlow('display');
+    const s = useAppStore.getState();
+    const run = s.startGuide('GS-24817', 'ablauf');
+    s.moveGuideStep(run.id, 'next');
+    s.moveGuideStep(run.id, 'next');
+    await act(async () => router.push('/fall/GS-24817/ergebnis'));
+    // Die Leiste sagt, wo es weitergeht
+    expect(screen.getByText(de.a11y.stepOf(3, guides.ablauf.steps.length))).toBeTruthy();
+    await tap(de.result.startGuide);
+    expect(r.getPathname()).toBe('/fall/GS-24817/anleitung');
+    const after = useAppStore.getState();
+    expect(after.cases['GS-24817']?.guideRunIds).toEqual([run.id]);
+    expect(after.guideRuns[run.id]).toMatchObject({ currentStep: 2, completedSteps: [0, 1] });
   });
 
   test('Kamera abgelehnt: Hinweis und Link zu den Einstellungen', async () => {

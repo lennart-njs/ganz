@@ -144,19 +144,29 @@ export default function ProblemMelden() {
       return;
     }
     const guide = guides[key as GuideId];
-    withCase('symptom', guide.title, (id) => {
-      store.getState().startGuide(id, guide.id);
-      toThread(id, { weiter: 'anleitung' });
-    });
+    withCase(
+      'symptom',
+      guide.title,
+      (id) => {
+        store.getState().startGuide(id, guide.id);
+        toThread(id, { weiter: 'anleitung' });
+      },
+      { ...openOptions, guideId: guide.id },
+    );
   };
 
   const pickMessage = (key: string) => {
     const m = de.displayMessages.find((x) => x.guideId === key);
     if (!m) return;
-    withCase('meldung', m.code, (id) => {
-      reportDisplayMessage(id, m.guideId as GuideId, m.code);
-      toThread(id, { weiter: 'anleitung' });
-    });
+    withCase(
+      'meldung',
+      m.code,
+      (id) => {
+        reportDisplayMessage(id, m.guideId as GuideId, m.code);
+        toThread(id, { weiter: 'anleitung' });
+      },
+      { ...openOptions, guideId: m.guideId },
+    );
   };
 
   /** Eigene Worte: Der Reparatur-Assistent antwortet im Gespräch des Falls */
@@ -208,7 +218,7 @@ export default function ProblemMelden() {
             store.getState().startGuide(id, maintenance.guideId);
             toThread(id, { weiter: 'anleitung' });
           },
-          { ...openOptions, neuesProblem: true },
+          { ...openOptions, neuesProblem: true, guideId: maintenance.guideId },
         );
         return;
       }

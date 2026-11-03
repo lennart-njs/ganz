@@ -113,7 +113,7 @@ Ereignisse, die ein Dashboard besonders braucht:
 | `GuideRun.completedSteps` | ✓ | – | (✓) | Protokoll, auch 0 Schritte (B-22) |
 | `GuideRun.abortedAtStep` | ✓ | – | (✓) | **Häufigster Abbruch** im Hersteller-Portal |
 | `GuideRun.abortNote` | ✓ | – | E | Freitext, darum nur mit Einwilligung |
-| `GuideRun.outcome` | ✓ | – | (✓) | **Selbst gelöst** je Anleitung |
+| `GuideRun.outcome` | ✓ | – | (✓) | **Selbst gelöst** je Anleitung. Fehlt er bei `endedAt`, endete die Anleitung für ein anderes Problem (`anleitung_beendet` mit `replaced`, Schritt 23) |
 | `Guide.sourceDocument` | – | – | ✓ | genutzte Reparaturinformation |
 
 ### Einwilligung

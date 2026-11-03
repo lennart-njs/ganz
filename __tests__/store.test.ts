@@ -187,3 +187,54 @@ describe('openCaseFor: ein offener Fall pro Gerät (Entscheidung Nr. 13)', () =>
     expect(s().cases[a.caseId]?.problemLabel).toBe('Wäsche noch nass');
   });
 });
+
+describe('startGuide: nie zwei offene Anleitungen (B-05, R-06)', () => {
+  const setup = () => {
+    const store = createAppStore(memoryStorage(), testEnv());
+    const s = () => store.getState();
+    const id = s().openCaseFor('d-1', 'symptom', 'Wäsche noch nass').caseId;
+    return { s, id };
+  };
+  const open = (s: () => ReturnType<ReturnType<typeof createAppStore>['getState']>, id: string) =>
+    Object.values(s().guideRuns).filter((r) => r.caseId === id && !r.endedAt);
+
+  test('dieselbe Anleitung geht weiter, wo du warst', () => {
+    const { s, id } = setup();
+    const run = s().startGuide(id, 'nass');
+    s().moveGuideStep(run.id, 'next');
+    const again = s().startGuide(id, 'nass');
+    expect(again.id).toBe(run.id);
+    expect(s().guideRuns[run.id]).toMatchObject({ currentStep: 1, completedSteps: [0] });
+    expect(s().cases[id]?.guideRunIds).toEqual([run.id]);
+  });
+
+  test('eine andere Anleitung beendet die offene, die erledigten Schritte bleiben', () => {
+    const { s, id } = setup();
+    const run = s().startGuide(id, 'nass');
+    s().moveGuideStep(run.id, 'next');
+    const next = s().startGuide(id, 'tuer');
+    expect(open(s, id).map((r) => r.id)).toEqual([next.id]);
+    expect(s().guideRuns[run.id]).toMatchObject({
+      completedSteps: [0],
+      endedAt: expect.any(String),
+    });
+    expect(s().guideRuns[run.id]?.outcome).toBeUndefined();
+    const ended = s().events.filter((e) => e.type === 'anleitung_beendet');
+    expect(ended.map((e) => e.payload)).toEqual([
+      { guideRunId: run.id, guideId: 'nass', step: 2, replaced: true },
+    ]);
+  });
+
+  test('openCaseFor beim Ersetzen: eine offene Anleitung bleibt nur, wenn es mit ihr weitergeht', () => {
+    const { s, id } = setup();
+    const run = s().startGuide(id, 'nass');
+    expect(s().openCaseFor('d-1', 'symptom', 'Wäsche noch nass', { guideId: 'nass' }).art).toBe(
+      'ersetzt',
+    );
+    expect(open(s, id).map((r) => r.id)).toEqual([run.id]);
+    s().openCaseFor('d-1', 'foto', 'Foto vom Display');
+    expect(open(s, id)).toEqual([]);
+    // Ohne erledigten Schritt ist das kein Fortschritt, der nächste Versuch ersetzt wieder
+    expect(s().openCaseFor('d-1', 'symptom', 'Tür geht nicht auf').art).toBe('ersetzt');
+  });
+});
