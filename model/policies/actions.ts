@@ -2,7 +2,8 @@
 // TRANSITIONS aus der Status-Maschine, dazu Regeln zu Bestätigung, Termin und Freigabe.
 // Kein Import aus react, expo, i18n, config oder store (ZUKUNFTSPLAN 3.1).
 import { canTransition, type CaseCommand } from '../caseMachine';
-import type { BookingKind, CaseFacts } from './caseFacts';
+import { booked } from './bookingRules';
+import type { CaseFacts } from './caseFacts';
 
 export type ActionKey =
   // Selbsthilfe
@@ -51,8 +52,7 @@ export const ALL_ACTIONS: readonly ActionKey[] = [
 
 type Rule = (f: CaseFacts) => boolean;
 
-/** Termin-Regel: höchstens ein Termin je Art, der zählt. Ein erledigter zählt mit. */
-const booked = (f: CaseFacts, kind: BookingKind) => !!f.bookings[kind];
+// Termin-Regel: höchstens ein Termin je Art, der zählt (booked, model/policies/bookingRules.ts)
 const repairDone = (f: CaseFacts) => f.bookings.reparatur?.status === 'erledigt';
 /** Hilfe ist angefragt: eskaliert, oder die Anleitung ging nicht */
 const helpPhase = (f: CaseFacts) =>

@@ -418,6 +418,100 @@ describe('Schadenfall und Termin: erst prüfen, dann in einem Schritt schreiben'
   });
 });
 
+describe('Termin-Regeln im Store (model/policies/bookingRules.ts)', () => {
+  const partner = demoConfig.partners[1]!;
+  /** Fall mit Kostenvoranschlag, mit oder ohne Schutz. Ablehnung, wenn gewünscht. */
+  const setup = (contract = true, claimScenario: 'freigeben' | 'ablehnen' = 'freigeben') => {
+    const store = createAppStore(memoryStorage(), testEnv());
+    const s = () => store.getState();
+    s().ensureHousehold();
+    s().setDemo({ claimScenario });
+    if (contract) s().linkContract('vertragsnummer');
+    const device = s().addDevice({
+      category: 'waschmaschine',
+      manufacturerId: demoConfig.manufacturer.id,
+      model: demoConfig.device.model,
+      contractId: s().contracts[0]?.id,
+      identifiedBy: 'manuell',
+    });
+    const c = s().createCase({ deviceId: device.id, entry: 'foto', problemLabel: 'x' });
+    unwrap(s().escalate(c.id));
+    unwrap(s().setFinding(c.id, 'reparatur', 'fachkraft'));
+    const input = {
+      caseId: c.id,
+      kind: 'reparatur' as const,
+      partnerId: partner.id,
+      slotLabel: demoConfig.slots[0]!,
+      selfPay: !contract,
+    };
+    return { store, s, id: c.id, input };
+  };
+
+  test('ein bestätigter Termin: kein zweiter derselben Art, der Store bleibt, wie er ist (R-08)', () => {
+    const { store, s, id, input } = setup(false);
+    const first = unwrap(s().requestBooking(input));
+    expect(s().simulateNext(id)).toBe(true);
+    expect(s().bookings.find((b) => b.id === first.id)?.status).toBe('bestaetigt');
+    const before = store.getState();
+    expect(s().requestBooking({ ...input, slotLabel: demoConfig.slots[1]! })).toEqual({
+      ok: false,
+      refusal: { code: 'termin_laeuft', kind: 'reparatur' },
+    });
+    expect(store.getState()).toBe(before);
+    expect(s().bookings.filter((b) => b.status !== 'storniert')).toHaveLength(1);
+  });
+
+  test('auch ein nur angefragter Termin läuft: kein zweiter daneben', () => {
+    const { s, input } = setup(false);
+    unwrap(s().requestBooking(input));
+    expect(s().requestBooking(input)).toEqual({
+      ok: false,
+      refusal: { code: 'termin_laeuft', kind: 'reparatur' },
+    });
+    expect(s().bookings).toHaveLength(1);
+  });
+
+  test('nach der Ablehnung kein Termin auf Kosten des Versicherers (R-09)', () => {
+    const { store, s, id, input } = setup(true, 'ablehnen');
+    unwrap(s().reportClaim(id, '1'));
+    expect(s().simulateNext(id)).toBe(true);
+    expect(s().cases[id]?.status).toBe('abgelehnt');
+    const before = store.getState();
+    expect(s().requestBooking(input)).toEqual({
+      ok: false,
+      refusal: { code: 'regel', action: 'termin_versicherer' },
+    });
+    expect(store.getState()).toBe(before);
+  });
+
+  test('während der Prüfung kein Selbstzahler-Termin, nur vorbehaltlich Freigabe (R-07)', () => {
+    const { s, id, input } = setup(true);
+    unwrap(s().reportClaim(id, '1'));
+    expect(s().requestBooking({ ...input, selfPay: true })).toEqual({
+      ok: false,
+      refusal: { code: 'regel', action: 'termin_selbst' },
+    });
+    const booking = unwrap(s().requestBooking(input));
+    expect(booking.subjectToApproval).toBe(true);
+    expect(s().cases[id]?.status).toBe('freigabe_noetig');
+  });
+
+  test('umbuchen nach der Ablehnung: der verfallene Termin wird storniert, ein neuer angelegt', () => {
+    const { s, id, input } = setup(true, 'ablehnen');
+    unwrap(s().reportClaim(id, '1'));
+    const lapsed = unwrap(s().requestBooking(input));
+    expect(s().simulateNext(id)).toBe(true);
+    expect(s().cases[id]?.status).toBe('abgelehnt');
+    const rebooked = unwrap(
+      s().requestBooking({ ...input, selfPay: true, slotLabel: demoConfig.slots[1]! }),
+    );
+    expect(s().bookings.find((b) => b.id === lapsed.id)?.status).toBe('storniert');
+    expect(s().bookings.filter((b) => b.status !== 'storniert')).toEqual([rebooked]);
+    expect(rebooked).toMatchObject({ subjectToApproval: false, slotLabel: demoConfig.slots[1] });
+    expect(s().cases[id]).toMatchObject({ status: 'in_reparatur', bookingId: rebooked.id });
+  });
+});
+
 describe('Videocall und Rückruf: Bestätigung und Anfrage in einem Schritt', () => {
   const partner = demoConfig.partners[0]!;
   const share = (caseId: string) => ({

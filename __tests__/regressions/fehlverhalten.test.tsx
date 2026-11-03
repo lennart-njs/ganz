@@ -220,13 +220,28 @@ describe('R-08 zweite Buchung', () => {
   // store/appStore.ts:792 (heute Zeile 802) storniert nur angefragte Termine. Der zweite Termin
   // läuft neben dem ersten, und „Läuft wieder“ kommt nie, weil der neueste Termin nie fertig wird.
   // Behoben: Kosten fragen can(facts, 'termin_selbst'), die Regel lässt höchstens einen Termin je
-  // Art zu (Schritt 22). Dieselbe Regel im Store, in requestBooking, folgt mit Schritt 25.
+  // Art zu (Schritt 22). Dieselbe Regel gilt im Store, in requestBooking (Schritt 25,
+  // model/policies/bookingRules.ts).
   test('R-08 höchstens ein laufender Termin je Art', async () => {
     const { id } = await confirmedSelfPayRepair();
     if (await tapIfOffered(de.costs.toAppointment)) {
       await tapIfOffered(demoConfig.slots[1], 'radio');
       await tapIfOffered(de.appointment.requestPaid);
     }
+    expect(runningBookings(id, 'reparatur')).toHaveLength(1);
+    expect(activeBooking(useAppStore.getState(), id)?.status).toBe('bestaetigt');
+  });
+
+  test('R-08 auch der Store bucht keinen zweiten Termin derselben Art', async () => {
+    const { id } = await confirmedSelfPayRepair();
+    const result = useAppStore.getState().requestBooking({
+      caseId: id,
+      kind: 'reparatur',
+      partnerId: demoConfig.partners[1]!.id,
+      slotLabel: demoConfig.slots[1],
+      selfPay: true,
+    });
+    expect(result.ok).toBe(false);
     expect(runningBookings(id, 'reparatur')).toHaveLength(1);
     expect(activeBooking(useAppStore.getState(), id)?.status).toBe('bestaetigt');
   });

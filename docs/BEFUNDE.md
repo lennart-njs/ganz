@@ -90,7 +90,7 @@ R-07, R-12, R-13, R-16 und R-17 brechen eine feste Regel. Solange einer davon of
 | R-05 | Zwei offene Fälle über eine Pflege-Zeile im Gerätedetail (Nr. 13) | – | behoben | Schritt 23 | `__tests__/regressions/fehlverhalten.test.tsx` |
 | R-06 | Fortschritt der Anleitung verloren über „Details → Anleitung starten“, Stift lässt eine Anleitung offen | B-05 | behoben | Schritt 23 | `__tests__/regressions/fehlverhalten.test.tsx` |
 | R-07 | „Du zahlst 189 €“ während der Prüfung durch den Versicherer | B-18 | behoben | Schritt 22 (vorgezogen) | `__tests__/regressions/fehlverhalten.test.tsx` |
-| R-08 | Zweite Buchung macht einen Selbstzahler-Fall unvollendbar | – | behoben | Schritt 22 (Kosten fragen `can`), Store-Regel in Schritt 25 | `__tests__/regressions/fehlverhalten.test.tsx` |
+| R-08 | Zweite Buchung macht einen Selbstzahler-Fall unvollendbar | – | behoben | Schritt 22 (Kosten fragen `can`) und 25 (`bookingRules` im Store) | `__tests__/regressions/fehlverhalten.test.tsx` |
 | R-09 | Termin ignoriert die Ablehnung des Schadenfalls | – | behoben | Schritt 22 | `__tests__/regressions/fehlverhalten.test.tsx` |
 | R-10 | Befund nach Vor-Ort-Diagnose dem falschen Betrieb zugeschrieben | – | offen | Schritt 25 | `__tests__/regressions/fehlverhalten.test.tsx` |
 | R-11 | Grenze von 40 Nachrichten im Chat fehlt | – | offen | Schritt 25 | `__tests__/regressions/fehlverhalten.test.tsx` |

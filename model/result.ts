@@ -3,6 +3,7 @@
 // nie die Domäne (hooks/useCommand.ts).
 import type { CaseCommand } from './caseMachine';
 import type { ActionKey } from './policies/actions';
+import type { BookingKind } from './policies/caseFacts';
 import type { CaseStatus, ConsentPurpose, Id } from './types';
 
 /** Was es unter der Nummer nicht gibt */
@@ -15,6 +16,8 @@ export type Refusal =
   | { readonly code: 'uebergang'; readonly from: CaseStatus; readonly command: CaseCommand }
   /** Eine Regel aus model/policies/actions.ts erlaubt die Aktion gerade nicht */
   | { readonly code: 'regel'; readonly action: ActionKey }
+  /** Ein Termin dieser Art läuft schon oder ist erledigt (model/policies/bookingRules.ts) */
+  | { readonly code: 'termin_laeuft'; readonly kind: BookingKind }
   /** Die Bestätigung oder Einwilligung fehlt, oder sie ist widerrufen */
   | { readonly code: 'bestaetigung'; readonly purpose: ConsentPurpose }
   /** Ohne Schutz kein Schadenfall */

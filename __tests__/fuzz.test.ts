@@ -2,7 +2,7 @@
 // Jede Folge wählt ihre Schritte aus dem, was gerade möglich ist: availableActions je Fall,
 // „Problem melden“ je Gerät und die Welt draußen (Simulation, Call, Befund, Widerruf).
 // Kein Schritt darf werfen. Je Gerät gibt es höchstens einen offenen Fall, je Fall höchstens
-// eine offene Anleitung, und eine Ablehnung ändert nichts.
+// eine offene Anleitung und je Art höchstens einen Termin, der zählt. Eine Ablehnung ändert nichts.
 import { array, assert, boolean, constantFrom, integer, nat, property } from 'fast-check';
 import type { StateStorage } from 'zustand/middleware';
 
@@ -242,8 +242,10 @@ function setup(
 }
 
 /**
- * Je Gerät höchstens ein offener Fall (Nr. 13), je Fall höchstens eine offene Anleitung (B-05).
- * Gibt den ersten Verstoß zurück. Ohne expect je Schritt, damit 1.000 Folgen schnell laufen.
+ * Je Gerät höchstens ein offener Fall (Nr. 13), je Fall höchstens eine offene Anleitung (B-05)
+ * und je Art höchstens ein Termin, der zählt (R-08). Ein Termin vorbehaltlich Freigabe, der nach
+ * der Ablehnung nur angefragt ist, zählt nicht mehr. Gibt den ersten Verstoß zurück. Ohne expect
+ * je Schritt, damit 1.000 Folgen schnell laufen.
  */
 function violation(s: AppState): string | undefined {
   const devices = new Set<string>();
@@ -254,6 +256,16 @@ function violation(s: AppState): string | undefined {
   for (const c of Object.values(s.cases)) {
     const running = c.guideRunIds.filter((r) => s.guideRuns[r] && !s.guideRuns[r].endedAt);
     if (running.length > 1) return `zwei offene Anleitungen in ${c.id}`;
+    const rejected = c.claim?.decision?.result === 'abgelehnt';
+    const kinds = s.bookings
+      .filter(
+        (b) =>
+          b.caseId === c.id &&
+          b.status !== 'storniert' &&
+          !(rejected && b.subjectToApproval && b.status === 'angefragt'),
+      )
+      .map((b) => b.kind);
+    if (new Set(kinds).size < kinds.length) return `zwei Termine derselben Art in ${c.id}`;
   }
   return undefined;
 }

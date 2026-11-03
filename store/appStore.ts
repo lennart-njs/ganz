@@ -22,6 +22,7 @@ import {
   type CommandResult,
 } from '@/model/caseMachine';
 import { can } from '@/model/policies/actions';
+import { planBooking } from '@/model/policies/bookingRules';
 import { selectCaseFacts } from '@/model/policies/caseFacts';
 import {
   isEmptyCase,
@@ -1067,11 +1068,19 @@ export function createAppStore(storage: StateStorage = AsyncStorage, env: StoreE
             }
             const partner = demoConfig.partners.find((p) => p.id === partnerId);
             if (!partner) return refuse({ code: 'unbekannt', what: 'betrieb', id: partnerId });
-            // Selbst zahlen wechselt in die Reparatur, wo die Status-Maschine es erlaubt
+            // Dieselben Regeln wie in den Screens: höchstens ein Termin je Art (R-08), nach der
+            // Ablehnung keiner auf Kosten des Versicherers (R-09). Erst prüfen, dann schreiben.
+            const facts = selectCaseFacts(get(), caseId)!;
+            const planned = planBooking(facts, get().bookings, kind, selfPay);
+            if (!planned.ok) return planned;
+            const plan = planned.value;
+            if (plan.action && !can(facts, plan.action)) {
+              return refuse({ code: 'regel', action: plan.action });
+            }
+            // Selbst zahlen wechselt in die Reparatur. Die Regel termin_selbst erlaubt es nur dort,
+            // wo die Status-Maschine es zulässt.
             const paid =
-              selfPay && canTransition(before.status, 'selbst_zahlen')
-                ? draftCommand(before, 'selbst_zahlen')
-                : undefined;
+              plan.action === 'termin_selbst' ? draftCommand(before, 'selbst_zahlen') : undefined;
             if (paid && !paid.ok) return paid;
             const c = paid?.value.case ?? before;
             const provider = { id: partner.id, kind: 'betrieb' as const, name: partner.name };
@@ -1090,7 +1099,7 @@ export function createAppStore(storage: StateStorage = AsyncStorage, env: StoreE
               provider: { ...provider, authorized: partner.authorized },
               slotLabel,
               status: 'angefragt',
-              subjectToApproval: c.status === 'freigabe_noetig',
+              subjectToApproval: plan.subjectToApproval,
               address: get().household?.address,
               createdAt: env.now(),
             };
@@ -1108,14 +1117,13 @@ export function createAppStore(storage: StateStorage = AsyncStorage, env: StoreE
                 subjectToApproval: booking.subjectToApproval,
               },
             };
-            // Status, Bestätigung, Termin und Ereignisse in einem Schritt
+            // Status, Bestätigung, Termin und Ereignisse in einem Schritt. Umbuchen storniert den
+            // alten Termin und legt den neuen an.
             set((s) => ({
               consents: [...s.consents, confirmed.consent],
               bookings: [
                 ...s.bookings.map((b) =>
-                  b.caseId === caseId && b.status === 'angefragt'
-                    ? { ...b, status: 'storniert' as const }
-                    : b,
+                  plan.replaces.includes(b.id) ? { ...b, status: 'storniert' as const } : b,
                 ),
                 booking,
               ],
