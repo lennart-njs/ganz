@@ -309,6 +309,20 @@ export const de = {
     phoneHint: 'Öffnet die Telefon-App.',
   },
 
+  /** Hinweis, wenn sich der gespeicherte Stand beim Start nicht laden lässt (Schritt 19) */
+  recovery: {
+    title: 'Deine Daten lassen sich gerade nicht laden.',
+    text: 'Die App kann den gespeicherten Stand auf diesem Telefon nicht lesen. Versuch es noch einmal.',
+    resetText:
+      'Hilft das nicht, setz die App zurück. Dann beginnst du neu, ohne deine Geräte und Fälle. Eine Kopie der alten Daten bleibt auf dem Telefon.',
+    retry: 'Erneut versuchen',
+    retryHint: 'Lädt den gespeicherten Stand noch einmal.',
+    reset: 'Zurücksetzen',
+    resetHint: 'Beginnt neu ohne Geräte und Fälle. Eine Kopie der alten Daten bleibt.',
+    retryFailed: 'Das hat wieder nicht geklappt. Du kannst die App zurücksetzen.',
+    resetFailed: 'Das Zurücksetzen hat nicht geklappt. Versuch es gleich noch einmal.',
+  },
+
   onboarding: {
     welcomePhoto: 'Waschmaschine in einer Küche',
     welcomeTitle: 'Reparatur, die mit einem Foto beginnt.',

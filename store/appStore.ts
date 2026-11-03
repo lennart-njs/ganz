@@ -1068,8 +1068,21 @@ export function createAppStore(storage: StateStorage = AsyncStorage, env: StoreE
       },
     ),
   );
-  /** Ladezustand des gespeicherten Stands, siehe useHydrated */
-  return Object.assign(store, { loading });
+
+  /**
+   * „Zurücksetzen“ im Hinweis zum Wiederherstellen: sichert den gespeicherten Rohwert, löscht
+   * ihn, setzt den Stand zurück und lädt neu. Lässt sich der Rohwert nicht sichern, wirft es,
+   * bevor etwas gelöscht ist. Die Sicherungen bleiben.
+   */
+  const resetStoredState = async () => {
+    await safeStorage.backupStored(STORE_KEY);
+    await safeStorage.removeItem(STORE_KEY);
+    store.getState().reset();
+    await store.persist.rehydrate();
+  };
+
+  /** loading: Ladezustand des gespeicherten Stands, siehe useHydrated */
+  return Object.assign(store, { loading, resetStoredState });
 }
 
 export type AppStore = ReturnType<typeof createAppStore>;

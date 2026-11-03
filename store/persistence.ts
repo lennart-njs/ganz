@@ -88,6 +88,11 @@ export interface SafeStorage extends PersistStorage<AppData> {
    * Liefert den Schlüssel der Sicherung oder undefined, wenn es nichts zu sichern gab.
    */
   backupLastRead: () => Promise<string | undefined>;
+  /**
+   * Liest den gespeicherten Rohwert neu und sichert ihn, falls er noch nicht gesichert ist.
+   * Wirft, wenn Lesen oder Sichern scheitern. Dann darf nichts den Stand löschen.
+   */
+  backupStored: (name: string) => Promise<string | undefined>;
 }
 
 /**
@@ -128,6 +133,10 @@ export function createSafeStorage(storage: StateStorage, now: () => string): Saf
     setItem: (name, value) => storage.setItem(name, JSON.stringify(value)),
     removeItem: (name) => storage.removeItem(name),
     backupLastRead: async () => (lastRead ? backup(lastRead.name, lastRead.raw) : undefined),
+    backupStored: async (name) => {
+      const raw = await storage.getItem(name);
+      return raw === null ? undefined : backup(name, raw);
+    },
   };
 }
 
