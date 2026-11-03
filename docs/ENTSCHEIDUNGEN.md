@@ -43,21 +43,24 @@ Lennart: „Die Formular/Chat logik macht noch nicht richtig sinn. Das muss ein 
 
 Lennart im Chat: „setze den plan um“. Damit ist `docs/ZUKUNFTSPLAN.md` freigegeben. Die Schritte stehen in `docs/BUILD_PLAN.md` Abschnitt 8.
 
-Offen, mit Empfehlung im Zukunftsplan Abschnitt 6. Bis zur Antwort gilt die dort genannte Empfehlung oder die strengere Variante:
+Offen, mit Empfehlung im Zukunftsplan Abschnitt 6. Bis zur Antwort gilt die dort genannte Empfehlung oder die strengere Variante. Die Nummern setzen die bestehenden fort.
 
-- [ ] E1 Branch und PR je Schritt (bis Ende Woche 1)
-- [ ] E2 Wirkung eines Widerrufs bei lit. b (vor Phase 3a). Bis dahin: Die Simulation hält bei Widerruf an.
-- [ ] E3 Eigener Build für den Pitch, Apple Developer Program (Konto bis Ende Woche 2)
-- [ ] E4 Host für den Assistenten, später EU-Inferenz und Kerndaten
-- [ ] E5 Pflichthinweis nach Art. 50 KI-VO (vor dem Gate in Phase 4)
-- [ ] E6 Crash-Reporting als Opt-in (vor Phase 4)
-- [ ] E7 Co-Branding statt vollem Whitelabel (vor Phase 3b)
-- [ ] E8 Rolle von ganz nach DSGVO (vor Phase 5)
-- [ ] E9 Concierge-Pilot (mit dem LOI)
-- [ ] E10 Anmeldung per E-Mail-Code (vor Phase 5)
-- [ ] E11 Löschfristen (Entwurf Ende Phase 4)
-- [ ] E12 Lizenz der Anleitungstexte (vor dem Gate in Phase 4)
-- [ ] E13 Selbstzahler im Pilot (vor Phase 6)
+- [ ] 15. Branch und PR je Schritt (Ende Woche 1)
+- [ ] 16. Wirkung eines Widerrufs bei lit. b (vor Phase 3a). Bis dahin: Die Simulation hält bei Widerruf an.
+- [ ] 17. Eigener Build für den Pitch, Apple Developer Program als Organisation (Antrag Woche 1)
+- [ ] 18. Host für den Assistenten, später EU-Inferenz und Kerndaten
+- [ ] 19. Pflichthinweis nach Art. 50 KI-VO (vor dem Gate in Phase 4)
+- [ ] 20. Crash-Reporting als Opt-in (vor Phase 4)
+- [ ] 21. Co-Branding statt vollem Whitelabel (vor Phase 3b)
+- [ ] 22. Rolle von ganz nach DSGVO: Hypothese vor Phase 3a, Bestätigung vor Phase 5
+- [ ] 23. Concierge-Pilot nach Gate echte Daten, mit Pilotvertrag
+- [ ] 24. Anmeldung und Personen je Haushalt (vor Phase 5)
+- [ ] 25. Löschfristen (Entwurf Ende Phase 4)
+- [ ] 26. Lizenz und Haftung der Anleitungen (vor dem Gate in Phase 4)
+- [ ] 27. Selbstzahler im Pilot und Pflichten als Vermittler (vor Phase 6)
+- [ ] 28. Assistent für externe Testerinnen (vor dem Gate in Phase 4)
+- [ ] 29. Einzelfall mit Einwilligung für Hersteller (vor Phase 6)
+- [ ] 30. Fehlererkennung und Videoanbieter im Pilot (vor Phase 5)
 
 ## Werte für `config/demo.config.ts`
 
