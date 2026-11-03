@@ -184,7 +184,7 @@ describe('Demo-Modus', () => {
 
   test('„Offene Fälle einen Schritt weiter“ schaltet den Status', async () => {
     const { caseId } = goldenCase();
-    useAppStore.getState().reportClaim(caseId, '1');
+    useAppStore.getState().reportClaim(caseId);
     await renderRouter(APP, { initialUrl: '/profil' });
     const version = screen.getByText(/^Version/);
     for (let i = 0; i < 7; i++) await fireEvent.press(version);
@@ -211,7 +211,7 @@ describe('Demo-Startstand', () => {
   test('jedes Laden ergibt denselben Stand, egal was vorher war', () => {
     const { caseId } = goldenCase();
     const s = useAppStore.getState();
-    s.reportClaim(caseId, '1');
+    s.reportClaim(caseId);
     s.setDemo({ claimScenario: 'ablehnen', deductible: 5000, hints: false });
     s.setAppearance('dunkel');
     s.loadDemoStart();

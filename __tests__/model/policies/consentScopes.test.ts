@@ -78,7 +78,8 @@ describe('scopedConsent', () => {
   const recipient = { id: 'kranich', kind: 'versicherer' as const, name: 'Kranich' };
 
   test.each(expected)('%s: Rechtsgrundlage und Kategorien kommen aus dem Umfang', (purpose) => {
-    const draft = scopedConsent(purpose, { caseId: 'GS-1', recipient, textVersion: 'v1' });
+    const text = { textVersion: 'v1', textHash: 'a'.repeat(64) };
+    const draft = scopedConsent(purpose, { caseId: 'GS-1', recipient, text });
     expect(draft).toEqual({
       caseId: 'GS-1',
       purpose,
@@ -86,12 +87,14 @@ describe('scopedConsent', () => {
       recipient,
       dataCategories: [...CONSENT_SCOPES[purpose].dataCategories],
       textVersion: 'v1',
+      textHash: 'a'.repeat(64),
     });
   });
 
   test('ohne Fall fehlt caseId ganz, die Kategorien sind eine Kopie', () => {
-    const draft = scopedConsent('chat_assistent', { recipient, textVersion: 'v1' });
+    const draft = scopedConsent('chat_assistent', { recipient, text: { textVersion: 'v1' } });
     expect('caseId' in draft).toBe(false);
+    expect('textHash' in draft).toBe(false);
     expect(draft.dataCategories).not.toBe(CONSENT_SCOPES.chat_assistent.dataCategories);
     draft.dataCategories.push('adresse');
     expect(CONSENT_SCOPES.chat_assistent.dataCategories).not.toContain('adresse');

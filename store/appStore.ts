@@ -7,6 +7,7 @@ import { demoConfig } from '@/config/demo.config';
 import { guides } from '@/data/guides';
 import { de } from '@/i18n/de';
 import { caseAppliance, caseCategory, findingPattern } from '@/lib/appliance';
+import { textStamp } from '@/lib/legalTexts';
 import { notifications } from '@/services/notifications';
 import {
   canStartVideoCall,
@@ -93,9 +94,6 @@ export const defaultDemoSettings: DemoSettings = {
 export type NewDevice = Omit<Device, 'id' | 'householdId' | 'createdAt'>;
 
 export type NotificationSetting = 'offen' | 'erlaubt' | 'abgelehnt';
-
-/** Version des Texts zu Mitteilungen im Profil (de.profile.notifications) */
-const NOTIFICATIONS_TEXT_VERSION = '2026-11-1';
 
 /**
  * Empfänger der Einwilligung in Mitteilungen: ganz selbst als Absender. Lokale Mitteilungen
@@ -216,9 +214,10 @@ export interface AppActions {
   /**
    * Meldet den Schadenfall: speichert die Bestätigung und wechselt auf „freigabe_noetig“ (B-17).
    * Erst die Regel, dann Bestätigung, Meldung und Status in einem set. Ohne Vertrag oder nach
-   * der Meldung abgelehnt.
+   * der Meldung abgelehnt. Version und Hash des Hinweistexts kommen aus lib/legalTexts.ts
+   * (schadenmeldung): Kosten und Gespräch zeigen beide diesen Text.
    */
-  reportClaim: (caseId: Id, textVersion: string) => Result<Case>;
+  reportClaim: (caseId: Id) => Result<Case>;
   /**
    * Termin anfragen. Die Pumpe geht nie an den Haushalt (B-28). Erst die Prüfung, dann Status,
    * Bestätigung, Termin und Ereignisse in einem set.
@@ -1037,7 +1036,7 @@ export function createAppStore(storage: StateStorage = AsyncStorage, env: StoreE
             return ok(after);
           },
 
-          reportClaim: (caseId, textVersion) => {
+          reportClaim: (caseId) => {
             const c = get().cases[caseId];
             if (!c) return missingCase(caseId);
             const device = get().devices.find((d) => d.id === c.deviceId);
@@ -1052,7 +1051,7 @@ export function createAppStore(storage: StateStorage = AsyncStorage, env: StoreE
               scopedConsent('weitergabe_versicherer', {
                 caseId,
                 recipient: contract.provider,
-                textVersion,
+                text: textStamp('schadenmeldung'),
               }),
             );
             const reported = draftCommand(c, 'schaden_melden', { contractId: contract.id }, [
@@ -1101,7 +1100,7 @@ export function createAppStore(storage: StateStorage = AsyncStorage, env: StoreE
               scopedConsent('weitergabe_betrieb', {
                 caseId,
                 recipient: provider,
-                textVersion: '2026-10-1',
+                text: textStamp('termin_betrieb'),
               }),
             );
             const booking: Booking = {
@@ -1152,7 +1151,7 @@ export function createAppStore(storage: StateStorage = AsyncStorage, env: StoreE
               get().grantConsent(
                 scopedConsent('mitteilungen', {
                   recipient: { ...NOTIFICATIONS_RECIPIENT },
-                  textVersion: NOTIFICATIONS_TEXT_VERSION,
+                  text: textStamp('mitteilungen'),
                 }),
               );
               return;

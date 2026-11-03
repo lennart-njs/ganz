@@ -1,6 +1,6 @@
 // Test je Zweck: Die Vorschau zeigt genau die Kategorien, die die Bestätigung speichert. Beide
 // kommen aus model/policies/consentScopes.ts (ZUKUNFTSPLAN Phase 1, Abnahme; R-14).
-import { fireEvent, renderRouter, screen, within } from 'expo-router/testing-library';
+import { act, fireEvent, renderRouter, screen, within } from 'expo-router/testing-library';
 
 import { CASE_FILE_CARD } from '@/components/app/CaseFileCard';
 import { demoConfig } from '@/config/demo.config';
@@ -8,6 +8,7 @@ import { de } from '@/i18n/de';
 import { chatContext } from '@/lib/chat/context';
 import type { ChatContext } from '@/lib/chat/prompt';
 import { categoryLabels, scopeLabels } from '@/lib/consent';
+import { legalParts, textStamp, type LegalTextKey } from '@/lib/legalTexts';
 import { CONSENT_SCOPES, DATA_CATEGORIES, type DataCategory } from '@/model/policies/consentScopes';
 import type { ConsentPurpose, Id } from '@/model/types';
 import { useAppStore } from '@/store/appStore';
@@ -59,15 +60,24 @@ function expectItems(purpose: ConsentPurpose) {
 }
 
 /** Die gespeicherte Bestätigung trägt genau den Umfang aus CONSENT_SCOPES */
-function expectStored(purpose: ConsentPurpose, caseId?: Id) {
+function expectStored(purpose: ConsentPurpose, text: LegalTextKey, caseId?: Id) {
   const consent = consentsFor(purpose, caseId).at(-1);
   const scope = CONSENT_SCOPES[purpose];
   expect(consent).toMatchObject({
     legalBasis: scope.legalBasis,
     recipient: { kind: scope.recipientKind },
     dataCategories: [...scope.dataCategories],
+    // Version und Hash des Texts, der vor dem Tap stand (lib/legalTexts.ts)
+    ...textStamp(text),
   });
   return consent!;
+}
+
+/** Jeder Teil des versionierten Texts steht auf dem Screen */
+function expectShown(text: LegalTextKey) {
+  for (const part of legalParts(text)) {
+    expect([part, screen.queryAllByText(part).length > 0]).toEqual([part, true]);
+  }
 }
 
 /** Fall mit allem: Foto und Ergebnis, Chat, Anleitung bis „Geht nicht“ mit Notiz, optional Befund */
@@ -119,8 +129,9 @@ const flows: Record<ConsentPurpose, Record<string, () => Promise<void> | void>> 
       await renderRouter(APP, { initialUrl: `/fall/${id}/kosten` });
       await tap(de.costs.preview(insurer));
       const shown = cardCategories();
+      expectShown('schadenmeldung');
       await tap(de.costs.report);
-      const consent = expectStored('weitergabe_versicherer', id);
+      const consent = expectStored('weitergabe_versicherer', 'schadenmeldung', id);
       expect(shown).toEqual(consent.dataCategories);
     },
     'Gespräch: dieselbe Vorschau': async () => {
@@ -128,16 +139,17 @@ const flows: Record<ConsentPurpose, Record<string, () => Promise<void> | void>> 
       await renderRouter(APP, { initialUrl: `/fall/${id}` });
       await tap(de.costs.preview(insurer));
       const shown = cardCategories();
+      expectShown('schadenmeldung');
       await tap(de.costs.report);
       await flush();
-      const consent = expectStored('weitergabe_versicherer', id);
+      const consent = expectStored('weitergabe_versicherer', 'schadenmeldung', id);
       expect(shown).toEqual(consent.dataCategories);
     },
     'Profil: die Weitergabe nennt ihre gespeicherten Kategorien': async () => {
       start();
       const id = caseAfterFinding(addWasher().id);
-      useAppStore.getState().reportClaim(id, '2026-10-1');
-      const consent = expectStored('weitergabe_versicherer', id);
+      useAppStore.getState().reportClaim(id);
+      const consent = expectStored('weitergabe_versicherer', 'schadenmeldung', id);
       await renderRouter(APP, { initialUrl: '/profil' });
       expect(screen.getByText(de.common.list(categoryLabels(consent.dataCategories)))).toBeTruthy();
     },
@@ -148,9 +160,10 @@ const flows: Record<ConsentPurpose, Record<string, () => Promise<void> | void>> 
       await renderRouter(APP, { initialUrl: `/fall/${id}` });
       const shown = cardCategories();
       expectItems('weitergabe_fachkraft');
+      expectShown('fachkraft_videocall');
       await tap(new RegExp(`^${de.thread.callStart}`));
       await flush();
-      const consent = expectStored('weitergabe_fachkraft', id);
+      const consent = expectStored('weitergabe_fachkraft', 'fachkraft_videocall', id);
       expect(shown).toEqual(consent.dataCategories);
     },
     'vor dem Rückruf: dieselbe Liste im Sheet': async () => {
@@ -162,9 +175,10 @@ const flows: Record<ConsentPurpose, Record<string, () => Promise<void> | void>> 
       const before = consentsFor('weitergabe_fachkraft', id).length;
       await tap(de.waiting.callbackSlots[0]!);
       expectItems('weitergabe_fachkraft');
+      expectShown('fachkraft_rueckruf');
       await tap(de.waiting.requestCallback);
       expect(consentsFor('weitergabe_fachkraft', id)).toHaveLength(before + 1);
-      expectStored('weitergabe_fachkraft', id);
+      expectStored('weitergabe_fachkraft', 'fachkraft_rueckruf', id);
     },
   },
   screenshots_im_call: {
@@ -173,10 +187,11 @@ const flows: Record<ConsentPurpose, Record<string, () => Promise<void> | void>> 
       await renderRouter(APP, { initialUrl: `/fall/${id}` });
       const sub = de.help.screenshotsSub(de.common.list(scopeLabels('screenshots_im_call')));
       expect(screen.getByText(sub)).toBeTruthy();
+      expectShown('screenshots');
       await fireEvent.press(screen.getByRole('checkbox', { name: de.help.screenshots }));
       await tap(new RegExp(`^${de.thread.callStart}`));
       await flush();
-      const consent = expectStored('screenshots_im_call', id);
+      const consent = expectStored('screenshots_im_call', 'screenshots', id);
       expect(de.help.screenshotsSub(de.common.list(categoryLabels(consent.dataCategories)))).toBe(
         sub,
       );
@@ -190,9 +205,10 @@ const flows: Record<ConsentPurpose, Record<string, () => Promise<void> | void>> 
       await tap(de.costs.report);
       const shares = de.appointment.shares(de.common.list(scopeLabels('weitergabe_betrieb')));
       expect(screen.getByText(shares)).toBeTruthy();
+      expectShown('termin_betrieb');
       await fireEvent.press(screen.getByRole('radio', { name: demoConfig.slots[0] }));
       await tap(de.appointment.request);
-      const consent = expectStored('weitergabe_betrieb', id);
+      const consent = expectStored('weitergabe_betrieb', 'termin_betrieb', id);
       expect(de.appointment.shares(de.common.list(categoryLabels(consent.dataCategories)))).toBe(
         shares,
       );
@@ -206,12 +222,13 @@ const flows: Record<ConsentPurpose, Record<string, () => Promise<void> | void>> 
         de.common.list(scopeLabels('hersteller_einzelfall')),
       );
       expect(screen.getByText(sub)).toBeTruthy();
+      expectShown('hersteller_einzelfall');
       await fireEvent.press(
         screen.getByRole('checkbox', {
           name: de.profile.manufacturerCase(demoConfig.manufacturer.name),
         }),
       );
-      const consent = expectStored('hersteller_einzelfall');
+      const consent = expectStored('hersteller_einzelfall', 'hersteller_einzelfall');
       expect(consent.caseId).toBeUndefined();
       expect(
         de.profile.manufacturerCaseSub(de.common.list(categoryLabels(consent.dataCategories))),
@@ -219,10 +236,12 @@ const flows: Record<ConsentPurpose, Record<string, () => Promise<void> | void>> 
     },
   },
   mitteilungen: {
-    'ohne Vorschau, die Daten verlassen das Telefon nicht': () => {
+    'ohne Vorschau, die Daten verlassen das Telefon nicht': async () => {
       start();
-      useAppStore.getState().setNotifications('erlaubt');
-      expect(expectStored('mitteilungen').caseId).toBeUndefined();
+      await renderRouter(APP, { initialUrl: '/profil' });
+      expectShown('mitteilungen');
+      await act(async () => useAppStore.getState().setNotifications('erlaubt'));
+      expect(expectStored('mitteilungen', 'mitteilungen').caseId).toBeUndefined();
     },
   },
   chat_assistent: {
@@ -235,9 +254,10 @@ const flows: Record<ConsentPurpose, Record<string, () => Promise<void> | void>> 
       await fireEvent.changeText(screen.getByLabelText(de.thread.inputLabel), 'Es pumpt nicht ab.');
       await tap(de.chat.send);
       expectItems('chat_assistent');
+      expectShown('assistent_einwilligung');
       await tap(de.chat.consentAccept);
       await flush();
-      expectStored('chat_assistent');
+      expectStored('chat_assistent', 'assistent_einwilligung');
     },
     'was lib/chat/context.ts mitschickt, steht in der Einwilligung': () => {
       const id = fullCase({ finding: false });

@@ -124,7 +124,7 @@ describe('Betrieb und Termin', () => {
     expect(r.getPathname()).toBe(`/fall/${id}/termin`);
     expect(screen.getByText(de.appointment.pending)).toBeTruthy();
     // Auch der Store meldet nicht zweimal und legt keine zweite Bestätigung an
-    expect(useAppStore.getState().reportClaim(id, '2026-10-1')).toEqual({
+    expect(useAppStore.getState().reportClaim(id)).toEqual({
       ok: false,
       refusal: { code: 'regel', action: 'schaden_melden' },
     });
@@ -172,7 +172,7 @@ describe('Betrieb und Termin', () => {
     const id = caseAfterFinding();
     const s = useAppStore.getState();
     s.setDemo({ claimScenario: 'ablehnen' });
-    s.reportClaim(id, '2026-10-1');
+    s.reportClaim(id);
     s.simulateNext(id);
     expect(useAppStore.getState().cases[id]?.status).toBe('abgelehnt');
     const r = await renderRouter(APP, { initialUrl: `/fall/${id}/kosten` });
@@ -274,7 +274,7 @@ describe('Zahler aus den Fakten: „Du zahlst“ nur, wenn der Haushalt zahlt', 
   test('nach der Freigabe: Kranich zahlt, ohne „vorbehaltlich Freigabe“', async () => {
     const id = caseAfterFinding();
     const s = useAppStore.getState();
-    s.reportClaim(id, '2026-10-1');
+    s.reportClaim(id);
     s.simulateNext(id);
     expect(useAppStore.getState().cases[id]?.status).toBe('freigegeben');
     const r = await renderRouter(APP, { initialUrl: `/fall/${id}/kosten` });
@@ -312,7 +312,7 @@ describe('Zahler aus den Fakten: „Du zahlst“ nur, wenn der Haushalt zahlt', 
     expect(screen.getByText(de.talk.claim.selfPay('189 €'))).toBeTruthy();
     // Gemeldet über die Details: Kranich prüft, die Wahl zählt nicht mehr
     await act(async () => {
-      useAppStore.getState().reportClaim(id, '2026-10-1');
+      useAppStore.getState().reportClaim(id);
     });
     expect(useAppStore.getState().cases[id]?.status).toBe('freigabe_noetig');
     expect(screen.queryByText(de.talk.claim.selfPay('189 €'))).toBeNull();

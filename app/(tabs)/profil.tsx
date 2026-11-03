@@ -23,6 +23,7 @@ import { useNotice } from '@/hooks/useNotice';
 import { de } from '@/i18n/de';
 import { formatDateTime, formatEuro, formatMonthYear } from '@/i18n/format';
 import { categoryLabels, scopeList } from '@/lib/consent';
+import { textStamp } from '@/lib/legalTexts';
 import { openSystemSettings } from '@/lib/linking';
 import { scopedConsent } from '@/model/policies/consentScopes';
 import { notifications } from '@/services/notifications';
@@ -81,7 +82,7 @@ export default function Profil() {
             kind: 'hersteller',
             name: demoConfig.manufacturer.name,
           },
-          textVersion: '2026-10-1',
+          text: textStamp('hersteller_einzelfall'),
         }),
       );
     } else if (manufacturerConsent) {

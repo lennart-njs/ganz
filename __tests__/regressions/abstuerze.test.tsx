@@ -115,7 +115,7 @@ describe('R-02 „Schadenfall melden“ nach der Meldung', () => {
     // Auch der Store legt keine verwaiste Bestätigung an, egal ob er wirft oder ablehnt
     await act(async () => {
       try {
-        useAppStore.getState().reportClaim(id, '2026-10-1');
+        useAppStore.getState().reportClaim(id);
       } catch {
         // Ablehnen ist erlaubt, eine zweite Bestätigung nicht
       }

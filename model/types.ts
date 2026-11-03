@@ -275,8 +275,11 @@ export interface Consent {
   /** 'vertrag' = Bestätigung einer angefragten Leistung (lit. b), 'einwilligung' = lit. a */
   legalBasis: 'vertrag' | 'einwilligung';
   recipient: PartnerRef;
-  dataCategories: string[]; // „Modell“, „Fotos“, „Protokoll“
-  textVersion: string; // Version des gezeigten Hinweistexts
+  /** Schlüssel aus model/policies/consentScopes.ts. Stände vor Schritt 26: Bezeichnungen. */
+  dataCategories: string[];
+  textVersion: string; // Version des gezeigten Hinweistexts (lib/legalTexts.ts)
+  /** SHA-256 des gezeigten Texts mit den echten Namen. Fehlt bei Ständen vor Schritt 26. */
+  textHash?: string;
   grantedAt: ISODateTime;
   revokedAt?: ISODateTime;
 }

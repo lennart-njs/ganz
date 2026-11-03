@@ -35,7 +35,7 @@ function claimWithRevokedTransfer() {
   start();
   const id = caseAfterFinding(addWasher().id);
   const s = useAppStore.getState();
-  s.reportClaim(id, '2026-10-1');
+  s.reportClaim(id);
   s.revokeConsent(consentsFor('weitergabe_versicherer', id)[0]!.id);
   return id;
 }
@@ -65,7 +65,7 @@ describe('R-12 Widerruf nach lit. b ohne Wirkung', () => {
 async function notificationsAllowedOnBooking() {
   start();
   const id = caseAfterFinding(addWasher().id);
-  useAppStore.getState().reportClaim(id, '2026-10-1');
+  useAppStore.getState().reportClaim(id);
   requestAppointment({
     caseId: id,
     partnerId: demoConfig.partners[0]!.id,
@@ -335,7 +335,7 @@ function notificationsOfAllSteps() {
   const s = useAppStore.getState();
   s.setNotifications('erlaubt');
   const approved = caseAfterFinding(addWasher().id);
-  s.reportClaim(approved, '2026-10-1');
+  s.reportClaim(approved);
   s.requestBooking({
     caseId: approved,
     kind: 'reparatur',
@@ -347,7 +347,7 @@ function notificationsOfAllSteps() {
 
   s.setDemo({ claimScenario: 'ablehnen' });
   const rejected = caseAfterFinding(addWasher().id);
-  s.reportClaim(rejected, '2026-10-1');
+  s.reportClaim(rejected);
   s.simulateNext(rejected);
 
   const onSite = s.createCase({

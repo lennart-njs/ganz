@@ -123,7 +123,8 @@ Ereignisse, die ein Dashboard besonders braucht:
 | `Consent.purpose`, `recipient` | ✓ | – | ✓ | jeder Empfänger sieht nur seine eigenen |
 | `Consent.legalBasis` | ✓ | – | ✓ | `vertrag` (lit. b) oder `einwilligung` (lit. a) |
 | `Consent.dataCategories` | ✓ | – | ✓ | Datenumfang als Schlüssel aus `model/policies/consentScopes.ts` (`geraet`, `fotos`, …), so wie in der Vorschau gezeigt. Stände vor Schritt 26 enthalten Bezeichnungen |
-| `Consent.textVersion` | ✓ | – | ✓ | Version des Hinweistexts |
+| `Consent.textVersion` | ✓ | – | ✓ | Version des Hinweistexts aus `lib/legalTexts.ts` |
+| `Consent.textHash` | ✓ | – | ✓ | SHA-256 des gezeigten Texts mit den echten Namen. Fehlt bei Ständen vor Schritt 26 |
 | `Consent.grantedAt`, `revokedAt` | ✓ | – | ✓ | Widerruf beendet die Weitergabe |
 
 ### Kosten, Termin, Videocall

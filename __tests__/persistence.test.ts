@@ -137,7 +137,7 @@ function playThrough(store: AppStore) {
   unwrap(s().updateVideoCall(video.id, 'verbunden'));
   unwrap(s().updateVideoCall(video.id, 'beendet'));
   s().setFinding(b.id, 'reparatur', 'fachkraft');
-  unwrap(s().reportClaim(b.id, '1'));
+  unwrap(s().reportClaim(b.id));
   const booking = unwrap(
     s().requestBooking({
       caseId: b.id,

@@ -65,7 +65,7 @@ function world() {
   const v = unwrap(s.requestVideoCall(c.id));
   s.updateVideoCall(v.id, 'verbunden');
   s.setFinding(c.id, 'reparatur', 'fachkraft');
-  s.reportClaim(c.id, '1');
+  s.reportClaim(c.id);
   s.requestBooking({
     caseId: c.id,
     kind: 'reparatur',

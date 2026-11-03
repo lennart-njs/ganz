@@ -6,14 +6,13 @@ import { useState } from 'react';
 
 import { demoConfig } from '@/config/demo.config';
 import { de } from '@/i18n/de';
+import { textStamp } from '@/lib/legalTexts';
 import { scopedConsent } from '@/model/policies/consentScopes';
 import { services, type ChatError } from '@/services';
 import { useAppStore } from '@/store/appStore';
 
 import { chatContext, hasChatConsent } from './context';
 import { chatFull, fitsRequest } from './limits';
-
-const CONSENT_TEXT_VERSION = '2026-10-1';
 
 /** Bei diesen Fehlern lohnt ein zweiter Versuch. Sonst wird die Nachricht zur Notiz. */
 export const retryableChatErrors: ChatError[] = ['ausgelastet', 'netz', 'dienst'];
@@ -114,7 +113,7 @@ export function useAssistant(caseId: string) {
           kind: 'dienstleister',
           name: demoConfig.assistant.name,
         },
-        textVersion: CONSENT_TEXT_VERSION,
+        text: textStamp('assistent_einwilligung'),
       }),
     );
     const text = waiting;

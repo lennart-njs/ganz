@@ -51,7 +51,7 @@ function fullHistory() {
   s.updateVideoCall(v.id, 'verbunden');
   s.updateVideoCall(v.id, 'beendet');
   s.setFinding(c.id, 'reparatur', 'fachkraft');
-  s.reportClaim(c.id, '1');
+  s.reportClaim(c.id);
   s.requestBooking({
     caseId: c.id,
     kind: 'reparatur',

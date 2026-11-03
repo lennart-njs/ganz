@@ -93,11 +93,14 @@ export const CONSENT_SCOPES: Readonly<Record<ConsentPurpose, ConsentScope>> = {
 /** Eine Bestätigung, wie der Store sie speichert, ohne Nummer, Person und Zeit */
 export type ConsentDraft = Omit<Consent, 'id' | 'personId' | 'grantedAt'>;
 
+/** Welcher Text gezeigt wurde: Version und SHA-256 (lib/legalTexts.ts, textStamp) */
+export type TextStamp = Pick<Consent, 'textVersion' | 'textHash'>;
+
 export interface ScopedConsentInput {
   /** Ohne Fall gilt sie für alle Fälle, etwa beim Reparatur-Assistenten */
   caseId?: Id;
   recipient: PartnerRef;
-  textVersion: string;
+  text: TextStamp;
 }
 
 /**
@@ -112,6 +115,7 @@ export function scopedConsent(purpose: ConsentPurpose, input: ScopedConsentInput
     legalBasis: scope.legalBasis,
     recipient: input.recipient,
     dataCategories: [...scope.dataCategories],
-    textVersion: input.textVersion,
+    textVersion: input.text.textVersion,
+    ...(input.text.textHash ? { textHash: input.text.textHash } : {}),
   };
 }

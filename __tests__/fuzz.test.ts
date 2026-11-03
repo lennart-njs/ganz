@@ -116,7 +116,7 @@ function household(key: ActionKey, c: Case, f: CaseFacts, s: AppState): Step[] {
     case 'termin_diagnose':
       return booking('vor_ort_diagnose', false);
     case 'schaden_melden':
-      return [step(key, (x) => x.reportClaim(id, '1'))];
+      return [step(key, (x) => x.reportClaim(id))];
     case 'selbst_zahlen':
     case 'selbst_zahlen_nach_ablehnung':
     case 'termin_selbst':
@@ -232,7 +232,7 @@ function setup(
   unwrap(s().updateVideoCall(call.id, 'verbunden'));
   unwrap(s().updateVideoCall(call.id, 'beendet'));
   unwrap(s().setFinding(id, 'reparatur', 'fachkraft'));
-  if (start === 'gemeldet' && contract) unwrap(s().reportClaim(id, '1'));
+  if (start === 'gemeldet' && contract) unwrap(s().reportClaim(id));
   if (start === 'reparatur') {
     // Selbst gezahlt, der Betrieb ist fertig
     booking('reparatur', true);

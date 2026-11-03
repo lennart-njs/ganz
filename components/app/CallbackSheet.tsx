@@ -5,12 +5,10 @@ import { Button, Card, Sheet, Text, Toast } from '@/components/ds';
 import { demoConfig } from '@/config/demo.config';
 import { useCommand } from '@/hooks/useCommand';
 import { de } from '@/i18n/de';
+import { textStamp } from '@/lib/legalTexts';
 import { scopedConsent } from '@/model/policies/consentScopes';
 import type { Id } from '@/model/types';
 import { useAppStore } from '@/store/appStore';
-
-/** Version des Hinweistexts vor dem Rückruf, wie vor dem Videocall */
-const CONSENT_TEXT_VERSION = '2026-10-1';
 
 interface CallbackSheetProps {
   caseId: Id;
@@ -37,7 +35,7 @@ export function CallbackSheet({ caseId, slot, onClose }: CallbackSheetProps) {
         scopedConsent('weitergabe_fachkraft', {
           caseId,
           recipient: { id: partner.id, kind: 'betrieb', name: partner.name },
-          textVersion: CONSENT_TEXT_VERSION,
+          text: textStamp('fachkraft_rueckruf'),
         }),
       ),
     onClose,

@@ -36,6 +36,7 @@ import { caseAppliance, hasGuides } from '@/lib/appliance';
 import { amountToPay, costsLine, requestAppointment } from '@/lib/booking';
 import { chatLimits } from '@/lib/chat/limits';
 import { scopeList } from '@/lib/consent';
+import { textStamp } from '@/lib/legalTexts';
 import { retryableChatErrors, useAssistant } from '@/lib/chat/useAssistant';
 import { deviceTitle, getManufacturer } from '@/lib/devices';
 import { guideTools } from '@/lib/guideMeta';
@@ -56,8 +57,6 @@ import {
 import { useTheme } from '@/theme';
 
 const t = de.thread;
-const CONSENT_TEXT_VERSION = '2026-10-1';
-const CLAIM_TEXT_VERSION = '2026-10-1';
 
 interface Item {
   at: string;
@@ -102,7 +101,7 @@ export default function FallGespraech() {
     (session) => router.push(`/fall/${caseId}/warteraum?video=${session.id}`),
   );
   const claim = useCommand(
-    () => useAppStore.getState().reportClaim(caseId, CLAIM_TEXT_VERSION),
+    () => useAppStore.getState().reportClaim(caseId),
     () => setPayment(undefined),
   );
   const book = useCommand(requestAppointment, () => {
@@ -217,10 +216,19 @@ export default function FallGespraech() {
   // Umfang und Rechtsgrundlage kommen aus CONSENT_SCOPES, wie in der Liste darüber (R-14).
   const startCall = () => {
     const recipient = { id: helpPartner.id, kind: 'betrieb' as const, name: helpPartner.name };
-    const input = { caseId, recipient, textVersion: CONSENT_TEXT_VERSION };
     call.run({
-      share: scopedConsent('weitergabe_fachkraft', input),
-      screenshots: screenshots ? scopedConsent('screenshots_im_call', input) : undefined,
+      share: scopedConsent('weitergabe_fachkraft', {
+        caseId,
+        recipient,
+        text: textStamp('fachkraft_videocall'),
+      }),
+      screenshots: screenshots
+        ? scopedConsent('screenshots_im_call', {
+            caseId,
+            recipient,
+            text: textStamp('screenshots'),
+          })
+        : undefined,
     });
   };
 

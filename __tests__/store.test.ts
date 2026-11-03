@@ -334,7 +334,7 @@ describe('Schadenfall und Termin: erst prüfen, dann in einem Schritt schreiben'
 
   test('die Meldung schreibt Bestätigung, Meldung und Status auf einmal', () => {
     const { s, id, writes } = setup();
-    const reported = unwrap(s().reportClaim(id, '1'));
+    const reported = unwrap(s().reportClaim(id));
     expect(reported.status).toBe('freigabe_noetig');
     expect(writes()).toBe(1);
     const consent = s().consents.find((c) => c.purpose === 'weitergabe_versicherer');
@@ -348,8 +348,8 @@ describe('Schadenfall und Termin: erst prüfen, dann in einem Schritt schreiben'
 
   test('ein zweites Melden wird abgelehnt, ohne zweite Bestätigung', () => {
     const { s, id, writes } = setup();
-    unwrap(s().reportClaim(id, '1'));
-    expect(s().reportClaim(id, '1')).toEqual({
+    unwrap(s().reportClaim(id));
+    expect(s().reportClaim(id)).toEqual({
       ok: false,
       refusal: { code: 'regel', action: 'schaden_melden' },
     });
@@ -359,11 +359,11 @@ describe('Schadenfall und Termin: erst prüfen, dann in einem Schritt schreiben'
 
   test('ohne Schutz und ohne Fall keine Meldung', () => {
     const without = setup(false);
-    expect(without.s().reportClaim(without.id, '1')).toEqual({
+    expect(without.s().reportClaim(without.id)).toEqual({
       ok: false,
       refusal: { code: 'vertrag' },
     });
-    expect(without.s().reportClaim('GS-99999', '1')).toEqual({
+    expect(without.s().reportClaim('GS-99999')).toEqual({
       ok: false,
       refusal: { code: 'unbekannt', what: 'fall', id: 'GS-99999' },
     });
@@ -473,7 +473,7 @@ describe('Termin-Regeln im Store (model/policies/bookingRules.ts)', () => {
 
   test('nach der Ablehnung kein Termin auf Kosten des Versicherers (R-09)', () => {
     const { store, s, id, input } = setup(true, 'ablehnen');
-    unwrap(s().reportClaim(id, '1'));
+    unwrap(s().reportClaim(id));
     expect(s().simulateNext(id)).toBe(true);
     expect(s().cases[id]?.status).toBe('abgelehnt');
     const before = store.getState();
@@ -486,7 +486,7 @@ describe('Termin-Regeln im Store (model/policies/bookingRules.ts)', () => {
 
   test('während der Prüfung kein Selbstzahler-Termin, nur vorbehaltlich Freigabe (R-07)', () => {
     const { s, id, input } = setup(true);
-    unwrap(s().reportClaim(id, '1'));
+    unwrap(s().reportClaim(id));
     expect(s().requestBooking({ ...input, selfPay: true })).toEqual({
       ok: false,
       refusal: { code: 'regel', action: 'termin_selbst' },
@@ -498,7 +498,7 @@ describe('Termin-Regeln im Store (model/policies/bookingRules.ts)', () => {
 
   test('umbuchen nach der Ablehnung: der verfallene Termin wird storniert, ein neuer angelegt', () => {
     const { s, id, input } = setup(true, 'ablehnen');
-    unwrap(s().reportClaim(id, '1'));
+    unwrap(s().reportClaim(id));
     const lapsed = unwrap(s().requestBooking(input));
     expect(s().simulateNext(id)).toBe(true);
     expect(s().cases[id]?.status).toBe('abgelehnt');

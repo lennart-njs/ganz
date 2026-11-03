@@ -142,7 +142,7 @@ describe('Buttons, die nur einmal zählen', () => {
     test('bleibt der Termin offen, mit einem ruhigen Satz statt des Fehlers', async () => {
       start();
       const id = caseAfterFinding(addWasher().id);
-      useAppStore.getState().reportClaim(id, '2026-10-1');
+      useAppStore.getState().reportClaim(id);
       useAppStore.setState({
         requestBooking: () => refuse({ code: 'regel', action: 'termin_versicherer' }),
       });

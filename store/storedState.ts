@@ -226,6 +226,7 @@ const consent = z.object({
   recipient: partnerRef,
   dataCategories: z.array(z.string()),
   textVersion: z.string(),
+  textHash: z.string().optional(),
   grantedAt: time,
   revokedAt: time.optional(),
 });

@@ -18,7 +18,6 @@ import { CONSENT_SCOPES } from '@/model/policies/consentScopes';
 import { useAppStore } from '@/store/appStore';
 
 const t = de.costs;
-const CLAIM_TEXT_VERSION = '2026-10-1';
 
 /**
  * Kosten und Schadenmeldung: Reparatur gegen Ersatzgerät, Kostenträger, Selbstbeteiligung, was bei
@@ -41,7 +40,7 @@ export default function Kosten() {
   const replacement = finding?.errorPattern === 'ersatzgeraet_noetig';
   // Der Schadenfall entsteht nur einmal, auch bei einem Doppeltap. Danach weiter zum Termin.
   const report = useCommand(
-    () => useAppStore.getState().reportClaim(caseId, CLAIM_TEXT_VERSION),
+    () => useAppStore.getState().reportClaim(caseId),
     () =>
       replacement ? backToThread(caseId) : router.push(`/fall/${caseId}/termin?art=reparatur`),
   );
