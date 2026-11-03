@@ -361,3 +361,13 @@ Lennart: „Überall Erklärtexte entfernen. App und Webseite müssen selbsterkl
 - **Gekürzt** auf das Nötige: Kamera-Hilfe („Typenschild ganz in den Rahmen.“), Fehlermeldungen beim Foto, Abschlussmeldungen, Kamera-Erlaubnis.
 - **Bleibt bewusst:** Einwilligungs- und Weitergabetexte (DSGVO), „Kosten prüft …“ (keine Kostenzusage), „Computerprogramm, kein Mensch“ beim Assistenten (Entscheidung 6), Folgen einer Ablehnung in „Details“ zu den Kosten.
 - **B-37:** Der Leerzustand der Fälle verspricht nichts mehr zur Weitergabe, er hat jetzt nur noch die Überschrift.
+
+## Portal komplett: Backend (03.11.2026, Entscheidungen 32 bis 37)
+
+- **Team von Fründ** (alles erfunden außer dem Namen Fründ): Thomas B. (Leitung), Sandra K. und Lea W. (Sachbearbeitung), Markus T. und Jonas R. (Technik), Anna H. (nur lesen, inaktiv). Angemeldet ist Sandra K. Werte in `config/portal.demo.ts`.
+- **Standorte, Telefonnummern, Servicezeiten** sind Platzhalter (Straßen „Beispielstraße“, Nummern mit 000). Städte echt (Entscheidung 21).
+- **Gewährleistung** 24 Monate ab Kaufdatum, **Kulanz** bis 6 Monate danach und bis 150 €. **Fristen** erste Reaktion 4 Stunden, Antwort 24 Stunden. Alles einstellbar.
+- **Ersparnis in der Auswertung:** vermiedener Einsatz 129 €, vermiedene Rücksendung 85 € (Annahme, einstellbar). „Selbst gelöst“ und „im Videocall gelöst“ zählen als vermiedener Einsatz.
+- **Anonyme Zahlen:** Für die Auswertung zählt das Backend auch Fälle an Geräten von Fründ, die nicht gesendet wurden, ohne Namen, Adressen und Fallnummern. Ob und wie das in echt erlaubt ist, klärt der Auftragsverarbeitungsvertrag (offen).
+- **Keine Signatur unter Nachrichten:** Im Gespräch steht der Absender ohnehin dabei („Sandra K. · Fründ“). Eine Signatur wäre doppelt.
+- **Gewähltes Zeitfenster** bestätigt das Backend sofort als Termin beim Kundendienst. In echt prüft das der Kalender (Schnittstelle).

@@ -1,11 +1,12 @@
-// Anmeldung im Händlerportal (Demo). Ein Konto je Händler aus config/demo.config.ts,
+// Anmeldung im Händlerportal (Demo). Ein Konto aus config/portal.demo.ts (Sandra K. bei Fründ),
 // Passwort aus PORTAL_DEMO_PASSWORD (Standard „demo“). Kein echtes Konto, kein echtes Passwort.
-// Später übernimmt das der Login des Backends, mit Rollen je Mitarbeiter.
+// Später übernimmt das der Login des Backends, mit Rollen je Teammitglied.
 import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 
 import { demoConfig } from '@/config/demo.config';
+import { fruendSettings, portalLogin } from '@/config/portal.demo';
 
 import type { Tenant } from './types';
 
@@ -29,12 +30,20 @@ function sessionSecret(): string {
 }
 const secret = sessionSecret();
 
-/** Ein Demo-Konto je Händler mit `portalUser` (config/demo.config.ts) */
-const accounts = demoConfig.dealers.flatMap((d) =>
-  'portalUser' in d && d.portalUser
-    ? [{ email: d.portalUser, tenant: { kind: 'haendler' as const, id: d.id, name: d.name } }]
-    : [],
-);
+/** Das Demo-Konto (config/portal.demo.ts) */
+const accounts = [portalLogin].flatMap((l) => {
+  const dealer = demoConfig.dealers.find((d) => d.id === l.dealerId);
+  const member = fruendSettings.team.find((m) => m.id === l.memberId);
+  if (!dealer || !member) return [];
+  const tenant: Tenant = {
+    kind: 'haendler',
+    id: dealer.id,
+    name: dealer.name,
+    userName: member.name,
+    memberId: member.id,
+  };
+  return [{ email: l.email, tenant }];
+});
 
 const sign = (data: string) => crypto.createHmac('sha256', secret).update(data).digest('base64url');
 
@@ -50,7 +59,7 @@ export function login(email: unknown, password: unknown): { token: string; tenan
   const account = accounts.find((a) => a.email === email.trim().toLowerCase());
   const expected = process.env.PORTAL_DEMO_PASSWORD ?? 'demo';
   if (!account || !safeEqual(password, expected)) return null;
-  const tenant: Tenant = { ...account.tenant, userName: account.email };
+  const tenant: Tenant = account.tenant;
   const body = Buffer.from(
     JSON.stringify({ ...tenant, exp: Date.now() + SESSION_HOURS * 3_600_000 }),
   ).toString('base64url');
@@ -68,7 +77,13 @@ export function tenantFrom(request: Request): Tenant | null {
       exp: number;
     };
     if (data.exp < Date.now()) return null;
-    return { kind: 'haendler', id: data.id, name: data.name, userName: data.userName };
+    return {
+      kind: 'haendler',
+      id: data.id,
+      name: data.name,
+      userName: data.userName,
+      ...(data.memberId ? { memberId: data.memberId } : {}),
+    };
   } catch {
     return null;
   }

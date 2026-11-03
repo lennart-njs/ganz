@@ -181,7 +181,12 @@ export type CaseEventType =
   | 'haendler_rueckfrage'
   | 'haendler_entscheidung'
   | 'haendler_betrieb'
-  | 'haendler_status';
+  | 'haendler_status'
+  // Freier Chat (Entscheidung 32), Termin und Ersatzteil aus dem Portal
+  | 'haendler_nachricht'
+  | 'haendler_termin'
+  | 'haendler_ersatzteil'
+  | 'nachricht_an_haendler';
 
 export type ActorKind =
   'haushalt' | 'fachkraft' | 'betrieb' | 'versicherer' | 'haendler' | 'system';

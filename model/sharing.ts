@@ -16,6 +16,13 @@ import type {
   PhotoPurpose,
   Quote,
 } from './types';
+import {
+  workflowStatuses,
+  type AccessEntry,
+  type InternalNote,
+  type Workflow,
+  type WorkflowStatus,
+} from './portal';
 
 export const SHARE_FORMAT_VERSION = 1;
 
@@ -85,6 +92,10 @@ export interface SharedCaseFile {
   timeline: { at: ISODateTime; type: CaseEvent['type']; label: string; actor: string }[];
   /** Rückfragen des Händlers und deine Antworten */
   answers: { questionEventId: Id; answer: string; at: ISODateTime }[];
+  /** Nachrichten der Kundschaft an den Händler (Entscheidung 32) */
+  messages?: { id: Id; at: ISODateTime; text: string; photoId?: Id }[];
+  /** Bewertung des Betriebs nach der Reparatur, 1 bis 5 */
+  rating?: number;
 }
 
 // ---------- Aktionen im Händlerportal ----------
@@ -92,12 +103,18 @@ export interface SharedCaseFile {
 export type RetailerDecision = 'gewaehrleistung' | 'kulanz' | 'an_versicherer' | 'abgelehnt';
 export type RetailerStatus = 'in_pruefung' | 'ersatzteil_bestellt' | 'abgeschlossen';
 
+export type PartStatus = 'bestellt' | 'geliefert';
+
+/** Aktionen, die beim Haushalt im Gespräch ankommen */
 export type RetailerAction =
   | { type: 'annehmen' }
   | { type: 'rueckfrage'; question: string; options: string[] }
   | { type: 'entscheidung'; decision: RetailerDecision; note?: string }
   | { type: 'betrieb'; partnerName: string; slot?: string }
-  | { type: 'status'; status: RetailerStatus; note?: string };
+  | { type: 'status'; status: RetailerStatus; note?: string }
+  | { type: 'nachricht'; text: string }
+  | { type: 'termin'; partnerName: string; slots: string[] }
+  | { type: 'ersatzteil'; part: string; status: PartStatus; eta?: string };
 
 export const retailerEventType = {
   annehmen: 'haendler_angenommen',
@@ -105,7 +122,16 @@ export const retailerEventType = {
   entscheidung: 'haendler_entscheidung',
   betrieb: 'haendler_betrieb',
   status: 'haendler_status',
+  nachricht: 'haendler_nachricht',
+  termin: 'haendler_termin',
+  ersatzteil: 'haendler_ersatzteil',
 } as const satisfies Record<RetailerAction['type'], CaseEvent['type']>;
+
+/** Aktionen nur im Portal, ohne Nachricht an den Haushalt */
+export type WorkflowAction =
+  | { type: 'notiz'; text: string }
+  | { type: 'zuweisen'; assigneeId: string | null }
+  | { type: 'stand'; status: WorkflowStatus };
 
 /** Ein Fall im Backend: die geteilte Akte, die Ereignisse des Händlers und der Widerruf */
 export interface SharedCaseRecord {
@@ -113,6 +139,12 @@ export interface SharedCaseRecord {
   retailerEvents: CaseEvent[];
   /** Nach dem Widerruf bleiben nur Fallnummer und Zeitpunkte, keine Personendaten */
   revokedAt?: ISODateTime;
+  /** Bearbeitungsstand im Portal */
+  workflow?: Workflow;
+  /** Interne Notizen des Teams */
+  notes?: InternalNote[];
+  /** Zugriffsprotokoll */
+  access?: AccessEntry[];
 }
 
 const ACTION_TEXT_MAX = 500;
@@ -165,6 +197,51 @@ export function parseRetailerAction(body: unknown): RetailerAction | null {
         status: o.status as RetailerStatus,
         ...(typeof o.note === 'string' && o.note.trim() ? { note: o.note.trim() } : {}),
       };
+    case 'nachricht':
+      if (typeof o.text !== 'string' || !o.text.trim() || o.text.length > MESSAGE_MAX) return null;
+      return { type: 'nachricht', text: o.text.trim() };
+    case 'termin': {
+      const slots = Array.isArray(o.slots) ? o.slots : [];
+      if (!text(o.partnerName, true) || slots.length < 1 || slots.length > 4) return null;
+      if (!slots.every((x) => text(x, true))) return null;
+      return {
+        type: 'termin',
+        partnerName: (o.partnerName as string).trim(),
+        slots: (slots as string[]).map((x) => x.trim()),
+      };
+    }
+    case 'ersatzteil':
+      if (!text(o.part, true) || !['bestellt', 'geliefert'].includes(o.status as string))
+        return null;
+      if (o.eta !== undefined && !text(o.eta)) return null;
+      return {
+        type: 'ersatzteil',
+        part: (o.part as string).trim(),
+        status: o.status as PartStatus,
+        ...(typeof o.eta === 'string' && o.eta.trim() ? { eta: o.eta.trim() } : {}),
+      };
+    default:
+      return null;
+  }
+}
+
+const MESSAGE_MAX = 2000;
+
+/** Prüft eine Aktion, die nur im Portal wirkt. null: ungültig. */
+export function parseWorkflowAction(body: unknown): WorkflowAction | null {
+  if (!body || typeof body !== 'object') return null;
+  const o = body as Record<string, unknown>;
+  switch (o.type) {
+    case 'notiz':
+      if (typeof o.text !== 'string' || !o.text.trim() || o.text.length > MESSAGE_MAX) return null;
+      return { type: 'notiz', text: o.text.trim() };
+    case 'zuweisen':
+      if (o.assigneeId !== null && (typeof o.assigneeId !== 'string' || o.assigneeId.length > 80))
+        return null;
+      return { type: 'zuweisen', assigneeId: o.assigneeId as string | null };
+    case 'stand':
+      if (!workflowStatuses.includes(o.status as WorkflowStatus)) return null;
+      return { type: 'stand', status: o.status as WorkflowStatus };
     default:
       return null;
   }

@@ -27,8 +27,6 @@ export interface DealerConfig {
   place: string;
   /** Eigener Kundendienst des Händlers. Die Fachkraft übernimmt Videocall und Befund. */
   service?: { name: string; distanceKm: number; expert: string };
-  /** Demo-Login im Händlerportal (portal/). Passwort aus PORTAL_DEMO_PASSWORD, Standard „demo“. */
-  portalUser?: string;
 }
 
 export const demoConfig = {
@@ -81,7 +79,6 @@ export const demoConfig = {
       shortName: 'Fründ',
       place: 'Löhne, Bad Oeynhausen, Minden',
       service: { name: 'Fründ Kundendienst', distanceKm: 3.1, expert: 'Markus T.' },
-      portalUser: 'demo@fruend.example',
     },
     { id: 'lindemann', name: 'Elektro Lindemann', shortName: 'Lindemann', place: 'Bielefeld' },
     { id: 'kuechenwelt', name: 'Küchenwelt Nord', shortName: 'Küchenwelt', place: 'Herford' },
@@ -92,31 +89,6 @@ export const demoConfig = {
       place: 'Onlinehandel',
     },
   ] satisfies DealerConfig[],
-  /** Beispielfälle im Händlerportal, damit es ohne Telefon etwas zeigt. Alles fiktiv. */
-  portalExamples: [
-    {
-      caseId: 'GS-24790',
-      dealerId: 'fruend',
-      customer: 'Robin K.',
-      address: { street: 'Musterweg 3', zip: '32584', city: 'Löhne' },
-      manufacturerId: 'bosch',
-      model: 'SMI4EAS24E',
-      category: 'geschirrspueler' as DeviceCategory,
-      purchaseDate: '2025-02-10T00:00:00+01:00',
-      daysAgo: 1,
-    },
-    {
-      caseId: 'GS-24802',
-      dealerId: 'fruend',
-      customer: 'Alex M.',
-      address: { street: 'Probestraße 8', zip: '32423', city: 'Minden' },
-      manufacturerId: 'miele',
-      model: 'WQ 1000 WPS',
-      category: 'waschmaschine' as DeviceCategory,
-      purchaseDate: '2024-11-20T00:00:00+01:00',
-      daysAgo: 3,
-    },
-  ],
 
   manufacturer: {
     id: 'miele',

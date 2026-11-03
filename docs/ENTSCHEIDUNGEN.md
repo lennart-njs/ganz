@@ -96,3 +96,14 @@ Lennart: „Wie können wir es so umgestalten, dass ich nicht jede Anleitung hä
 29. **Rückfragen des Händlers** kommen als Ereignisse mit Antwort-Buttons ins Fall-Gespräch. Kein freier Chat mit dem Händler, Entscheidung 6 bleibt.
 30. **Händlerportal:** Web-App unter der Marke machs.io, im Look der Website, ohne Erklärtexte. Im selben Repo als zweite App (`portal/`). Für die Demo mit Beispielfällen und Demo-Login, gebaut gegen eine Backend-Schnittstelle, damit es später mit echtem Backend weiterläuft. **Backend-Anbieter entscheidet Lennart später.**
 31. **Reihenfolge beim Gerät:** Zuerst „Wo hast du das Gerät gekauft?“ (Händler aus der Liste), dann „Zusätzlich eine Versicherung?“. Der Händler bleibt am Gerät, auch wenn eine Versicherung dazukommt. Ändert die Reihenfolge aus Entscheidung 16. Passt zu B-41 „Zuerst der Händler“. (Lennart, 02.11.2026, beim Zusammenführen bestätigt)
+
+## Händlerportal vollständig (03.11.2026)
+
+Lennart: „Der Hersteller muss sich denken: Wow, damit will ich jeden meiner Fälle abwickeln, jeden einzelnen.“ Antworten auf die Rückfragen:
+
+32. **Freier Chat Händler und Kundschaft:** Der Händler schreibt frei, die Kundschaft antwortet per Knopf oder Freitext, auch mit Foto. Alles steht im selben Fall-Gespräch in der App. Ersetzt Entscheidung 29. Der Reparatur-Assistent bleibt daneben erreichbar (Empfänger wählbar).
+33. **Portal vollständig:** Arbeitsliste mit Warteschlangen, Fristen, Suche, Massenaktionen, Tastaturkürzeln und Live-Aktualisierung. Fallakte mit Gespräch, interner Notiz, Textbausteinen, Gewährleistungsvorschlag, Termin und Ersatzteil. Auswertung. Einstellungen: Profil, Nachrichten, Team, Regeln, Kundendienst, Benachrichtigungen, Datenschutz, Schnittstellen (mit Logos der wichtigsten Werkzeuge).
+34. **Für Freitag nur Fründ.** Kein Hersteller-Blick.
+35. **Videocall im Portal:** sichtbar, nicht funktional.
+36. **Team sichtbar:** mehrere Personen mit Rollen, die Anmeldung bleibt ein Demo-Konto.
+37. **Auswertung aus den Demo-Fällen,** dafür deutlich mehr Beispielfälle anlegen.

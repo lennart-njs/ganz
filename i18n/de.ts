@@ -120,7 +120,11 @@ export const de = {
     haendler_rueckfrage: 'Rückfrage vom Händler',
     haendler_entscheidung: 'Entscheidung des Händlers',
     haendler_betrieb: 'Händler hat einen Betrieb beauftragt',
-    haendler_status: 'Nachricht vom Händler',
+    haendler_status: 'Stand vom Händler',
+    haendler_nachricht: 'Nachricht vom Händler',
+    haendler_termin: 'Terminvorschlag vom Händler',
+    haendler_ersatzteil: 'Ersatzteil',
+    nachricht_an_haendler: 'Nachricht an den Händler',
   },
 
   /** Datenumfang je Weitergabe, so gespeichert und im Profil gezeigt */
