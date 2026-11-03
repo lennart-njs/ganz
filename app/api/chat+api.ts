@@ -2,7 +2,9 @@
 // nie in der App. Der Schlüssel kommt aus ANTHROPIC_API_KEY in .env und verlässt den Rechner nicht.
 import Anthropic from '@anthropic-ai/sdk';
 
+import { chatRateLimit, clientKeys, pitchTokenOk } from '@/lib/chat/guard';
 import { fitsRequest } from '@/lib/chat/limits';
+import { CHAT_HEADERS } from '@/lib/chat/protocol';
 import {
   STABLE_SYSTEM,
   caseSystem,
@@ -22,8 +24,8 @@ function getClient(): Anthropic {
   return client;
 }
 
-const json = (body: unknown, status = 200) =>
-  Response.json(body, { status, headers: { 'Cache-Control': 'no-store' } });
+const json = (body: unknown, status = 200, headers: Record<string, string> = {}) =>
+  Response.json(body, { status, headers: { 'Cache-Control': 'no-store', ...headers } });
 
 /**
  * Der Verlauf für Claude. Was der Haushalt selbst angegeben hat (Problem, unbekanntes Modell), steht
@@ -44,6 +46,17 @@ function toMessages(context: ChatContext, turns: ChatTurn[]): Anthropic.Beta.Bet
 }
 
 export async function POST(request: Request): Promise<Response> {
+  // Missbrauch begrenzen, bevor etwas Geld kostet (lib/chat/guard.ts). Kein Schutz, nur eine Grenze.
+  if (!pitchTokenOk(request.headers.get(CHAT_HEADERS.token))) {
+    return json({ error: 'token' }, 401);
+  }
+  const keys = clientKeys(request);
+  if (!keys) return json({ error: 'ungueltig' }, 400);
+  const rate = chatRateLimit.take(keys);
+  if (!rate.ok) {
+    return json({ error: rate.reason }, 429, { 'Retry-After': String(rate.retryAfterS) });
+  }
+
   if (!process.env.ANTHROPIC_API_KEY) return json({ error: 'kein_schluessel' }, 503);
 
   let body: unknown;
