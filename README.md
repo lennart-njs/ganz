@@ -88,6 +88,8 @@ APP_VARIANT=pitch npx expo config --type public   # Konfiguration einer Variante
 
 Ein unbekannter Wert bricht ab. Die Variante steht in jedem Build unter `extra.appVariant`, mit `EXPO_PUBLIC_APP_VARIANT` auch fest im Bundle.
 
+Neue Versionen und den monatlichen Stand der Abhängigkeiten notierst du in `docs/RELEASES.md`, die Kosten für Assistent, Host und Builds in `docs/KOSTEN.md`.
+
 `eas.json` hat dieselben drei Profile und setzt die Variante je Profil. Gebaut wird erst mit Expo-Konto und Apple Developer Program (Schritt 30), etwa `eas build --profile pitch`. `eas update` liest nur die Variablen der EAS-Umgebung, darum `eas update --channel pitch --environment preview` (`docs/ANNAHMEN.md`, Schritt 29).
 
 ## Prüfen
@@ -124,7 +126,8 @@ Alle Tests in `ui` laufen mit Fake Timers. Die Zeit läuft nur weiter, wenn ein 
 - `config/demo.config.ts` – Beispielwerte für den Pitch
 - `data/guides.ts` – Anleitungen, wörtlich aus der Demo
 - `i18n/de.ts` – alle Texte
-- `docs/` – Review, Bauplan, Zukunftsplan, Entscheidungen, Annahmen, Befunde, Datenmodell, Pitch-Check, Review-Checkliste
+- `docs/` – Review, Bauplan, Zukunftsplan, Entscheidungen, Annahmen, Befunde, Datenmodell, Pitch-Check, Review-Checkliste, Kosten (`KOSTEN.md`), Releases (`RELEASES.md`)
+- `e2e/` – Maestro-Flows für Golden Path, Abbruch, dunkel und 200 %. Noch nicht gelaufen, das kommt mit dem Pitch-Build (Schritt 30). `__tests__/build/e2eFlows.test.ts` hält sie bis dahin mit Texten und Code im Einklang
 - `docs/recht/` – offene Rechtsfragen mit Frist je Frage
 - `design-system/` – ganz-Designsystem (verbindlich)
 - `reference/demo-v1.0/` – Klick-Demo v1.0 (nur Spezifikation)
