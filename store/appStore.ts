@@ -24,7 +24,12 @@ import {
 } from '@/model/caseMachine';
 import { can } from '@/model/policies/actions';
 import { selectCaseFacts } from '@/model/policies/caseFacts';
-import { isEmptyCase } from '@/model/policies/openCase';
+import {
+  isEmptyCase,
+  planOpenCase,
+  type OpenCaseArt,
+  type OpenCaseOptions,
+} from '@/model/policies/openCase';
 import type {
   Booking,
   Cents,
@@ -132,6 +137,12 @@ export interface CommandOptions extends Omit<
 
 export type NewConsent = Omit<Consent, 'id' | 'grantedAt' | 'personId'>;
 
+/** Ergebnis von openCaseFor: was passiert ist und um welchen Fall es geht */
+export interface OpenCaseResult {
+  art: OpenCaseArt;
+  caseId: Id;
+}
+
 export interface AppActions {
   /** Legt Haushalt und Person beim ersten Start an. Idempotent. */
   ensureHousehold: () => Person;
@@ -140,7 +151,23 @@ export interface AppActions {
   linkContract: (via: Contract['linkedVia']) => Contract;
   addDevice: (input: NewDevice) => Device;
   setDemo: (patch: Partial<DemoSettings>) => void;
+  /**
+   * Legt einen Fall an, ohne nach einem offenen Fall zu fragen. In der App ruft das nur
+   * openCaseFor auf, ein Test prüft das. Tests bauen damit Ausgangslagen.
+   */
   createCase: (input: { deviceId: Id; entry: CaseEntry; problemLabel: string }) => Case;
+  /**
+   * Der eine Weg, einen Fall zu öffnen (Entscheidung Nr. 13, model/policies/openCase.ts):
+   * 'neu' legt einen Fall an, nach „Neues Problem melden“ erst nach dem Abbruch des laufenden.
+   * 'ersetzt' gibt dem offenen Fall ohne Fortschritt das neue Problem. 'frage_weitermachen'
+   * ändert nichts, ganz fragt dann „Weitermachen“ oder „Neues Problem melden“.
+   */
+  openCaseFor: (
+    deviceId: Id,
+    entry: CaseEntry,
+    problemLabel: string,
+    options?: OpenCaseOptions,
+  ) => OpenCaseResult;
   runCommand: (caseId: Id, command: CaseCommand, options?: CommandOptions) => Case;
   /** Ändert Einstieg oder Bezeichnung eines Falls, solange er offen ist */
   updateCase: (caseId: Id, patch: Partial<Pick<Case, 'entry' | 'problemLabel'>>) => void;
@@ -371,6 +398,26 @@ export function createAppStore(storage: StateStorage = AsyncStorage, env: StoreE
               nextCaseNumber: number + 1,
             }));
             return c;
+          },
+
+          openCaseFor: (deviceId, entry, problemLabel, options = {}) => {
+            const plan = planOpenCase(get(), deviceId, options);
+            if (plan.art === 'frage_weitermachen') return { art: plan.art, caseId: plan.caseId };
+            if (plan.art === 'ersetzt') {
+              // Der neue Versuch geht im selben Fall weiter, auch nach „Später weitermachen“
+              if (getCase(plan.caseId).pausedAt) get().resumeCase(plan.caseId);
+              get().updateCase(plan.caseId, { entry, problemLabel });
+              return { art: plan.art, caseId: plan.caseId };
+            }
+            if (plan.cancel) {
+              get().runCommand(plan.cancel, 'abbrechen', {
+                cancelReason: de.thread.newProblemReason,
+              });
+            }
+            return {
+              art: plan.art,
+              caseId: get().createCase({ deviceId, entry, problemLabel }).id,
+            };
           },
 
           runCommand: (caseId, command, options = {}) => {

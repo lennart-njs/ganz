@@ -1,5 +1,6 @@
 import type { StateStorage } from 'zustand/middleware';
 
+import { de } from '@/i18n/de';
 import { ConsentRequiredError } from '@/model/caseMachine';
 import { createAppStore, selectCaseEvents, selectOpenCases } from '@/store/appStore';
 import type { StoreEnv } from '@/store/env';
@@ -89,5 +90,100 @@ describe('Store', () => {
     expect(a.id).toBe(b.id);
     expect(a.role).toBe('versicherungsnehmer');
     expect(store.getState().household?.address?.city).toBe('Berlin');
+  });
+});
+
+describe('openCaseFor: ein offener Fall pro Gerät (Entscheidung Nr. 13)', () => {
+  const setup = () => {
+    const store = createAppStore(memoryStorage(), testEnv());
+    return { store, s: () => store.getState() };
+  };
+  const openOf = (state: ReturnType<typeof setup>['s'], deviceId: string) =>
+    selectOpenCases(state()).filter((c) => c.deviceId === deviceId);
+
+  test('ohne offenen Fall: ein neuer Fall', () => {
+    const { s } = setup();
+    const r = s().openCaseFor('d-1', 'symptom', 'Wäsche noch nass');
+    expect(r.art).toBe('neu');
+    expect(s().cases[r.caseId]).toMatchObject({
+      deviceId: 'd-1',
+      entry: 'symptom',
+      problemLabel: 'Wäsche noch nass',
+      status: 'offen',
+    });
+  });
+
+  test('ohne Fortschritt: derselbe Fall mit dem neuen Problem, auch nach einer Pause', () => {
+    const { s } = setup();
+    const first = s().openCaseFor('d-1', 'symptom', 'Wäsche noch nass');
+    s().pauseCase(first.caseId);
+    const r = s().openCaseFor('d-1', 'foto', 'Foto vom Display');
+    expect(r).toEqual({ art: 'ersetzt', caseId: first.caseId });
+    expect(s().cases[r.caseId]).toMatchObject({ entry: 'foto', problemLabel: 'Foto vom Display' });
+    expect(s().cases[r.caseId]?.pausedAt).toBeUndefined();
+    expect(openOf(s, 'd-1')).toHaveLength(1);
+  });
+
+  test('mit Fortschritt: nichts ändert sich, ganz fragt', () => {
+    const { s } = setup();
+    const first = s().openCaseFor('d-1', 'symptom', 'Wäsche noch nass');
+    s().runCommand(first.caseId, 'hilfe_holen');
+    const before = s().events.length;
+    expect(s().openCaseFor('d-1', 'symptom', 'Tür geht nicht auf')).toEqual({
+      art: 'frage_weitermachen',
+      caseId: first.caseId,
+    });
+    expect(s().events).toHaveLength(before);
+    expect(s().cases[first.caseId]?.problemLabel).toBe('Wäsche noch nass');
+  });
+
+  test('„Neues Problem melden“: der alte Fall wird abgebrochen, dann gibt es einen neuen', () => {
+    const { s } = setup();
+    const first = s().openCaseFor('d-1', 'symptom', 'Wäsche noch nass');
+    s().runCommand(first.caseId, 'hilfe_holen');
+    const r = s().openCaseFor('d-1', 'symptom', 'Tür geht nicht auf', { neuesProblem: true });
+    expect(r.art).toBe('neu');
+    expect(r.caseId).not.toBe(first.caseId);
+    expect(s().cases[first.caseId]).toMatchObject({
+      status: 'abgebrochen',
+      cancelReason: de.thread.newProblemReason,
+    });
+    expect(openOf(s, 'd-1').map((c) => c.id)).toEqual([r.caseId]);
+  });
+
+  test('in der Reparatur: kein Abbruch, kein Absturz, nur die Frage', () => {
+    const { s } = setup();
+    const first = s().openCaseFor('d-1', 'symptom', 'Wäsche noch nass');
+    s().runCommand(first.caseId, 'hilfe_holen');
+    s().runCommand(first.caseId, 'selbst_zahlen');
+    const r = s().openCaseFor('d-1', 'symptom', 'Tür geht nicht auf', { neuesProblem: true });
+    expect(r).toEqual({ art: 'frage_weitermachen', caseId: first.caseId });
+    expect(s().cases[first.caseId]?.status).toBe('in_reparatur');
+    expect(openOf(s, 'd-1')).toHaveLength(1);
+  });
+
+  test('das Problem des eigenen Falls ändern („Passt nicht“): derselbe Fall, auch mit Foto', () => {
+    const { s } = setup();
+    const first = s().openCaseFor('d-1', 'foto', 'Foto vom Display');
+    s().addPhoto({
+      caseId: first.caseId,
+      deviceId: 'd-1',
+      purpose: 'display',
+      source: 'in_app_camera',
+      uri: '',
+    });
+    expect(s().openCaseFor('d-1', 'symptom', 'Tür geht nicht auf').art).toBe('frage_weitermachen');
+    const r = s().openCaseFor('d-1', 'symptom', 'Tür geht nicht auf', { aendern: first.caseId });
+    expect(r).toEqual({ art: 'ersetzt', caseId: first.caseId });
+    expect(s().cases[r.caseId]).toMatchObject({ entry: 'symptom', photoIds: [expect.any(String)] });
+    expect(openOf(s, 'd-1')).toHaveLength(1);
+  });
+
+  test('ein anderes Gerät bleibt unberührt', () => {
+    const { s } = setup();
+    const a = s().openCaseFor('d-1', 'symptom', 'Wäsche noch nass');
+    const b = s().openCaseFor('d-2', 'symptom', 'Tür geht nicht auf');
+    expect([a.art, b.art]).toEqual(['neu', 'neu']);
+    expect(s().cases[a.caseId]?.problemLabel).toBe('Wäsche noch nass');
   });
 });

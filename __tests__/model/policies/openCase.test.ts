@@ -1,10 +1,12 @@
 import fs from 'fs';
 import path from 'path';
 
+import { canTransition } from '@/model/caseMachine';
 import {
   findOpenCase,
   hasProgress,
   isEmptyCase,
+  planOpenCase,
   type OpenCaseSource,
 } from '@/model/policies/openCase';
 import type { Case, CaseStatus, ChatMessage, GuideRun, VideoSession } from '@/model/types';
@@ -180,6 +182,73 @@ describe('isEmptyCase', () => {
   });
 });
 
+describe('planOpenCase (Entscheidung Nr. 13)', () => {
+  test('ohne offenen Fall: neu', () => {
+    const s = source([makeCase({ status: 'erledigt' }), makeCase({ id: 'GS-2', deviceId: 'x' })]);
+    expect(planOpenCase(s, 'geraet-1')).toEqual({ art: 'neu' });
+  });
+
+  test('ohne Fortschritt: der offene Fall bekommt das neue Problem', () => {
+    const c = makeCase({ status: 'selbsthilfe', guideRunIds: ['anleitung-1'] });
+    const s = source([c], { guideRuns: { 'anleitung-1': run() } });
+    expect(planOpenCase(s, 'geraet-1')).toEqual({ art: 'ersetzt', caseId: 'GS-1' });
+    expect(planOpenCase(s, 'geraet-1', { neuesProblem: true })).toEqual({
+      art: 'ersetzt',
+      caseId: 'GS-1',
+    });
+  });
+
+  const withProgress: CaseStatus[] = [
+    'offen',
+    'selbsthilfe',
+    'eskaliert',
+    'freigabe_noetig',
+    'freigegeben',
+    'abgelehnt',
+    'in_reparatur',
+  ];
+
+  test.each(withProgress)('mit Fortschritt in %s: ganz fragt', (status) => {
+    const s = source([makeCase({ status, photoIds: ['foto-1'] })]);
+    const canCancel = canTransition(status, 'abbrechen');
+    expect(planOpenCase(s, 'geraet-1')).toEqual({
+      art: 'frage_weitermachen',
+      caseId: 'GS-1',
+      canCancel,
+    });
+    // „Neues Problem melden“ bricht nur ab, wo die Regeln es erlauben, sonst bleibt die Frage
+    expect(planOpenCase(s, 'geraet-1', { neuesProblem: true })).toEqual(
+      canCancel
+        ? { art: 'neu', cancel: 'GS-1' }
+        : { art: 'frage_weitermachen', caseId: 'GS-1', canCancel: false },
+    );
+  });
+
+  test('ein Fall in der Reparatur lässt sich nicht ersetzen, nur weitermachen', () => {
+    const s = source([makeCase({ status: 'in_reparatur' })]);
+    expect(planOpenCase(s, 'geraet-1', { neuesProblem: true, aendern: 'GS-1' })).toEqual({
+      art: 'frage_weitermachen',
+      caseId: 'GS-1',
+      canCancel: false,
+    });
+  });
+
+  test('das Problem des offenen Falls ändern: derselbe Fall, auch mit Fortschritt', () => {
+    const s = source([makeCase({ photoIds: ['foto-1'] })]);
+    expect(planOpenCase(s, 'geraet-1', { aendern: 'GS-1' })).toEqual({
+      art: 'ersetzt',
+      caseId: 'GS-1',
+    });
+  });
+
+  test('ändern gilt nur für den offenen Fall dieses Geräts und nur am Anfang', () => {
+    const eskaliert = source([makeCase({ status: 'eskaliert' })]);
+    expect(planOpenCase(eskaliert, 'geraet-1', { aendern: 'GS-1' }).art).toBe('frage_weitermachen');
+    const other = source([makeCase({ photoIds: ['foto-1'] })]);
+    expect(planOpenCase(other, 'geraet-1', { aendern: 'GS-2' }).art).toBe('frage_weitermachen');
+  });
+});
+
 describe('Eine Definition je Regel', () => {
   const root = path.join(__dirname, '..', '..', '..');
   const SOURCE_DIRS = ['app', 'components', 'lib', 'model', 'services', 'store'];
@@ -203,4 +272,37 @@ describe('Eine Definition je Regel', () => {
       expect(hits).toEqual([path.join('model', 'policies', 'openCase.ts')]);
     },
   );
+
+  /** Anfang und Ende des Rumpfs von openCaseFor in store/appStore.ts */
+  function openCaseForBody(text: string): [number, number] {
+    // Die Umsetzung, nicht die Signatur in AppActions
+    const head = /\bopenCaseFor:\s*\([^)]*\)\s*=>\s*\{/.exec(text);
+    if (!head) return [-1, -1];
+    const open = head.index + head[0].length - 1;
+    let depth = 0;
+    for (let i = open; i < text.length; i++) {
+      if (text[i] === '{') depth++;
+      if (text[i] === '}' && --depth === 0) return [open, i];
+    }
+    return [-1, -1];
+  }
+
+  // Bis die Pflege-Zeilen im Gerätedetail openCaseFor nutzen, rufen app/fall/neu.tsx und
+  // app/geraet/[id].tsx createCase noch selbst auf.
+  test.failing('createCase( steht in der App nur in openCaseFor', () => {
+    const outside: string[] = [];
+    for (const { file, text } of sources) {
+      const [from, to] =
+        file === path.join('store', 'appStore.ts') ? openCaseForBody(text) : [-1, -1];
+      for (const m of text.matchAll(/\bcreateCase\(/g)) {
+        if (m.index > from && m.index < to) continue;
+        outside.push(`${file}:${text.slice(0, m.index).split('\n').length}`);
+      }
+    }
+    expect(outside).toEqual([]);
+    // Der Rumpf ist gefunden, und createCase( steht darin
+    const store = sources.find((s) => s.file === path.join('store', 'appStore.ts'))!;
+    const [from, to] = openCaseForBody(store.text);
+    expect(store.text.slice(from, to)).toMatch(/\bcreateCase\(/);
+  });
 });
