@@ -62,7 +62,7 @@ Bestanden, wenn Texte und Bilder der Anleitung da sind, der Fortschritt bleibt u
 
 ### 6. Assistent mit Schlüssel
 
-`ANTHROPIC_API_KEY` steht in `.env`, `npx expo start` ist neu gestartet. Im Gespräch eigene Worte schreiben und senden.
+`ANTHROPIC_API_KEY` steht in `.env`, `npx expo start` ist neu gestartet. Im Gespräch eigene Worte schreiben und senden. Ist `CHAT_PITCH_TOKEN` gesetzt, steht derselbe Wert in `EXPO_PUBLIC_CHAT_TOKEN`. Sonst antwortet die Route mit 401, und die Nachricht geht als Notiz an die Fachkraft.
 
 Bestanden, wenn vor dem ersten Senden steht, wohin die Nachricht geht, und erst der Tap sie schickt. Die Antwort kommt nach wenigen Sekunden, ruhig und ohne Kostenzusage. In der Fallakte steht der Anbieter des Assistenten.
 

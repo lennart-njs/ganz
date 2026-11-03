@@ -3,7 +3,7 @@
 // Die App importiert hier nur Typen, damit der Prompt nicht im App-Bundle landet.
 import { z } from 'zod';
 
-import { GUIDE_SOURCE, guides, type GuideId } from '@/data/guides';
+import { GUIDE_SOURCE, guides } from '@/data/guides';
 import { de } from '@/i18n/de';
 import type { Guide } from '@/model/types';
 
@@ -19,8 +19,6 @@ import {
   isKnownModel,
 } from './catalog';
 import { chatLimits, fitsRequest } from './limits';
-
-export const guideIds = Object.keys(guides) as GuideId[];
 
 /**
  * Was die App zum Fall mitschickt. Keine Adresse, keine Fotos, keine Vertragsnummer.
@@ -58,7 +56,7 @@ export const replySchema = {
     },
     guideId: {
       type: 'string',
-      enum: ['', ...guideIds],
+      enum: ['', ...CHAT_GUIDE_IDS],
       description: 'Id der Anleitung bei suggestion = anleitung, sonst leer.',
     },
   },
