@@ -91,6 +91,7 @@ Alle Tests in `ui` laufen mit Fake Timers. Die Zeit läuft nur weiter, wenn ein 
 - `config/demo.config.ts` – Beispielwerte für den Pitch
 - `data/guides.ts` – Anleitungen, wörtlich aus der Demo
 - `i18n/de.ts` – alle Texte
-- `docs/` – Review, Bauplan, Entscheidungen, Annahmen, Befunde, Datenmodell
+- `docs/` – Review, Bauplan, Zukunftsplan, Entscheidungen, Annahmen, Befunde, Datenmodell, Pitch-Check, Review-Checkliste
+- `docs/recht/` – offene Rechtsfragen mit Frist je Frage
 - `design-system/` – ganz-Designsystem (verbindlich)
 - `reference/demo-v1.0/` – Klick-Demo v1.0 (nur Spezifikation)
