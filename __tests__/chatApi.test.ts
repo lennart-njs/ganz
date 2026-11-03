@@ -522,6 +522,41 @@ describe('Missbrauch begrenzen', () => {
   });
 });
 
+test('Logs nennen keine Inhalte, auch wenn eine Fehlermeldung sie zitiert', async () => {
+  const secret = 'Meine Adresse ist Beispielstraße 12';
+  const methods = ['error', 'warn', 'log', 'info', 'debug'] as const;
+  const spies = methods.map((m) => jest.spyOn(console, m).mockImplementation(() => undefined));
+  const { APIError } = jest.requireActual('@anthropic-ai/sdk');
+  mockCreate.mockRejectedValueOnce(
+    new APIError(
+      400,
+      { type: 'error', error: { type: 'invalid_request_error', message: secret } },
+      `400 ${secret}`,
+      new Headers({ 'request-id': 'req_1' }),
+    ),
+  );
+  mockCreate.mockRejectedValueOnce(new TypeError(`kaputt: ${secret}`));
+  const body = {
+    context: { ...context, problem: secret },
+    messages: [{ role: 'haushalt', text: secret }],
+  };
+  const headers = { 'X-Forwarded-For': '10.0.0.1', [CHAT_HEADERS.installation]: 'installation-a' };
+  expect((await post(body, headers)).status).toBe(502);
+  expect((await post(body, headers)).status).toBe(502);
+  const logged = spies
+    .flatMap((spy) => spy.mock.calls)
+    .map((args) =>
+      args.map((a) => (a instanceof Error ? `${a.message} ${a.stack}` : String(a))).join(' '),
+    )
+    .join('\n');
+  expect(logged).toContain('Claude API 400');
+  expect(logged).toContain('Chat-Route TypeError');
+  for (const value of ['Beispielstraße', 'Adresse', '10.0.0.1', 'installation-a']) {
+    expect(logged).not.toContain(value);
+  }
+  spies.forEach((spy) => spy.mockRestore());
+});
+
 test('Schlüssel, SDK und Systemprompt bleiben auf dem Server', () => {
   const fs = jest.requireActual<typeof import('fs')>('fs');
   const path = jest.requireActual<typeof import('path')>('path');

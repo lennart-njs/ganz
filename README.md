@@ -24,6 +24,8 @@ npx expo start   # neu starten, damit .env gelesen wird
 
 Den Schlüssel bekommst du unter console.anthropic.com (API Keys). Ohne Schlüssel zeigt der Chat „noch nicht eingerichtet“ und verweist auf die Fachkraft. Der Chat funktioniert nur, solange `npx expo start` läuft. Modell und Einstellungen stehen in `app/api/chat+api.ts`, der Systemprompt in `lib/chat/prompt.ts`.
 
+Die App fragt die Route unter `EXPO_PUBLIC_API_URL` (etwa `https://chat.example.org`, ohne `/api/chat`). Ohne die Variable nimmt sie den Dev-Server, von dem sie geladen ist. Die Route schreibt keine Nachrichten, keinen Kontext und keine Fehlermeldungen ins Log, nur Status, Fehlerart und Anfrage-Nummer.
+
 Die Route nimmt nur Anfragen in der festen Form an (`requestSchema` in `lib/chat/prompt.ts`). Der Systemblock entsteht nur aus Schlüsseln und dem Katalog, eigene Worte gehen nur als Nachricht des Haushalts mit.
 
 **Missbrauch begrenzen.** Für einen Pitch über einen erreichbaren Server setzt du zwei Werte in `.env` (siehe `.env.example`):

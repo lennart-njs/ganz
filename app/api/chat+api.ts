@@ -24,6 +24,14 @@ function getClient(): Anthropic {
   return client;
 }
 
+/**
+ * Log ohne Inhalte: nur Status, Fehlerart und Anfrage-Nummer. Keine Nachricht, kein Kontext, keine
+ * Fehlermeldung, denn auch die kann Teile der Anfrage zitieren. Keine IP-Adresse, keine Installation.
+ */
+function logFailure(...parts: (string | number | null | undefined)[]) {
+  console.error(parts.filter((p) => p !== undefined && p !== null && p !== '').join(' '));
+}
+
 const json = (body: unknown, status = 200, headers: Record<string, string> = {}) =>
   Response.json(body, { status, headers: { 'Cache-Control': 'no-store', ...headers } });
 
@@ -105,10 +113,10 @@ export async function POST(request: Request): Promise<Response> {
     if (error instanceof Anthropic.AuthenticationError) return json({ error: 'schluessel' }, 503);
     if (error instanceof Anthropic.RateLimitError) return json({ error: 'ausgelastet' }, 429);
     if (error instanceof Anthropic.APIError) {
-      console.error(`Claude API ${error.status}: ${error.message}`);
+      logFailure('Claude API', error.status, error.type, error.requestID);
       return json({ error: 'dienst' }, 502);
     }
-    console.error(error);
+    logFailure('Chat-Route', error instanceof Error ? error.name : typeof error);
     return json({ error: 'dienst' }, 502);
   }
 }

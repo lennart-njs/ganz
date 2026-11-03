@@ -12,6 +12,7 @@ import { parseRequest, type ChatContext } from '@/lib/chat/prompt';
 import { CHAT_HEADERS, INSTALLATION_ID } from '@/lib/chat/protocol';
 import { CONSENT_SCOPES } from '@/model/policies/consentScopes';
 import { services } from '@/services';
+import { chatUrl } from '@/services/chatService';
 import { INSTALLATION_KEY, forgetInstallationId } from '@/services/installation';
 import type { DeviceCategory } from '@/model/types';
 import { useAppStore } from '@/store/appStore';
@@ -509,6 +510,31 @@ describe('Anfrage an den eigenen Server', () => {
 
   afterEach(() => {
     delete process.env.EXPO_PUBLIC_CHAT_TOKEN;
+    delete process.env.EXPO_PUBLIC_API_URL;
+  });
+
+  test('die Adresse kommt aus EXPO_PUBLIC_API_URL, ohne sie gilt der relative Pfad', async () => {
+    expect(chatUrl(undefined)).toBe('/api/chat');
+    expect(chatUrl('  ')).toBe('/api/chat');
+    expect(chatUrl('https://chat.example.org/')).toBe('https://chat.example.org/api/chat');
+    expect(chatUrl('https://chat.example.org/ganz')).toBe('https://chat.example.org/ganz/api/chat');
+    fetchMock.mockReturnValue(reply({ reply: 'Gut.', suggestion: 'keine', guideId: '' }));
+    await services.chat.ask(context, messages);
+    expect(fetchMock.mock.calls[0][0]).toBe('/api/chat');
+    process.env.EXPO_PUBLIC_API_URL = 'https://chat.example.org';
+    await services.chat.ask(context, messages);
+    expect(fetchMock.mock.calls[1][0]).toBe('https://chat.example.org/api/chat');
+  });
+
+  test('die App loggt nichts, auch nicht bei Fehlern', async () => {
+    const methods = ['error', 'warn', 'log', 'info', 'debug'] as const;
+    const spies = methods.map((m) => jest.spyOn(console, m).mockImplementation(() => undefined));
+    fetchMock.mockRejectedValueOnce(new TypeError('Network request failed'));
+    fetchMock.mockReturnValueOnce(reply({ error: 'dienst' }, 502));
+    fetchMock.mockReturnValueOnce(reply({ reply: 'Gut.', suggestion: 'keine', guideId: '' }));
+    for (let i = 0; i < 3; i++) await services.chat.ask(context, messages);
+    expect(spies.flatMap((spy) => spy.mock.calls)).toEqual([]);
+    spies.forEach((spy) => spy.mockRestore());
   });
 
   test('Pitch-Token und Installations-ID gehen im Header mit, nie im Body', async () => {

@@ -1,5 +1,6 @@
 // Reparatur-Assistent: Die App fragt den eigenen Server (app/api/chat+api.ts), nie Claude direkt.
-// In der Entwicklung löst Expo den relativen Pfad gegen den Dev-Server auf.
+// Die Adresse kommt aus EXPO_PUBLIC_API_URL. Ohne sie löst Expo den relativen Pfad gegen den
+// Dev-Server auf, das geht nur, solange `npx expo start` läuft. Hier wird nichts geloggt.
 import { CHAT_HEADERS, CHAT_PATH } from '@/lib/chat/protocol';
 import type { ChatContext, ChatReply, ChatTurn } from '@/lib/chat/prompt';
 
@@ -48,6 +49,12 @@ function errorFor(status: number, data: unknown): ChatError {
   return 'dienst';
 }
 
+/** Adresse der Route: EXPO_PUBLIC_API_URL davor, sonst der relative Pfad für den Dev-Server */
+export function chatUrl(base: string | undefined = process.env.EXPO_PUBLIC_API_URL): string {
+  const root = base?.trim().replace(/\/+$/, '');
+  return root ? `${root}${CHAT_PATH}` : CHAT_PATH;
+}
+
 /** Pitch-Token und Installations-ID für die Route. Nichts davon steht im Body. */
 async function headers(): Promise<Record<string, string>> {
   const out: Record<string, string> = { 'Content-Type': 'application/json' };
@@ -62,7 +69,7 @@ export const httpChatService: ChatService = {
   async ask(context, messages) {
     let res: Response;
     try {
-      res = await fetch(CHAT_PATH, {
+      res = await fetch(chatUrl(), {
         method: 'POST',
         headers: await headers(),
         body: JSON.stringify({ context, messages }),
