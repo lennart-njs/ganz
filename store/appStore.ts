@@ -24,6 +24,7 @@ import {
 } from '@/model/caseMachine';
 import { can } from '@/model/policies/actions';
 import { selectCaseFacts } from '@/model/policies/caseFacts';
+import { isEmptyCase } from '@/model/policies/openCase';
 import type {
   Booking,
   Cents,
@@ -143,7 +144,7 @@ export interface AppActions {
   runCommand: (caseId: Id, command: CaseCommand, options?: CommandOptions) => Case;
   /** Ändert Einstieg oder Bezeichnung eines Falls, solange er offen ist */
   updateCase: (caseId: Id, patch: Partial<Pick<Case, 'entry' | 'problemLabel'>>) => void;
-  /** Entfernt einen Fall ohne Inhalt (nur angelegt, kein Foto, kein Ergebnis, keine Anleitung) */
+  /** Entfernt einen Fall ohne Inhalt, siehe isEmptyCase in model/policies/openCase.ts */
   discardIfEmpty: (caseId: Id) => void;
   setAppearance: (appearance: Appearance) => void;
   /** Nachricht im Chat. Eine Frage des Haushalts kommt als Ereignis in die Fallakte. */
@@ -397,16 +398,7 @@ export function createAppStore(storage: StateStorage = AsyncStorage, env: StoreE
           discardIfEmpty: (caseId) =>
             set((s) => {
               const c = s.cases[caseId];
-              const empty =
-                c &&
-                c.status === 'offen' &&
-                // „Später weitermachen“ behält den Fall bewusst
-                !c.pausedAt &&
-                !c.photoIds.length &&
-                !c.diagnosisIds.length &&
-                !c.guideRunIds.length &&
-                !s.chatMessages.some((m) => m.caseId === caseId);
-              if (!empty) return {};
+              if (!c || !isEmptyCase(s, c)) return {};
               const { [caseId]: _removed, ...cases } = s.cases;
               return { cases, events: s.events.filter((e) => e.caseId !== caseId) };
             }),
@@ -1202,11 +1194,6 @@ export function selectContract(s: AppData): Contract | undefined {
 
 export function selectDevice(s: AppData, id: Id | undefined): Device | undefined {
   return s.devices.find((d) => d.id === id);
-}
-
-/** Offener Fall eines Geräts, neuester zuerst */
-export function selectOpenCaseForDevice(s: AppData, deviceId: Id): Case | undefined {
-  return selectOpenCases(s).find((c) => c.deviceId === deviceId);
 }
 
 export function selectCaseEvents(s: AppData, caseId: Id): CaseEvent[] {

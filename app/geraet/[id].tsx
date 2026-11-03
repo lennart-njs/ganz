@@ -21,7 +21,8 @@ import { hasGuides } from '@/lib/appliance';
 import { caseProgressLabel, caseStatusLabel, deviceStatusLabel, resumeHref } from '@/lib/caseView';
 import { deviceTitle, getManufacturer } from '@/lib/devices';
 import { isClosed } from '@/model/caseMachine';
-import { selectDevice, selectOpenCaseForDevice, useAppStore } from '@/store/appStore';
+import { findOpenCase } from '@/model/policies/openCase';
+import { selectDevice, useAppStore } from '@/store/appStore';
 
 const t = de.device;
 
@@ -52,7 +53,7 @@ export default function GeraetDetail() {
   const title = deviceTitle(device);
   const manufacturer = getManufacturer(device.manufacturerId);
   const contract = state.contracts.find((c) => c.id === device.contractId);
-  const openCase = selectOpenCaseForDevice(state, device.id);
+  const openCase = findOpenCase(state, device.id);
   const cases = Object.values(state.cases)
     .filter((c) => c.deviceId === device.id)
     .sort((a, b) => b.createdAt.localeCompare(a.createdAt));

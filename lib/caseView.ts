@@ -1,11 +1,13 @@
-// Ableitungen aus dem Zustand für die Anzeige: Status eines Geräts, Fortschritt eines Falls, Ziel beim Fortsetzen.
+// Ableitungen aus dem Zustand für die Anzeige: Status eines Geräts, Stand eines Falls, Ziel beim Fortsetzen.
+// Fortschritt und leerer Fall stehen in model/policies/openCase.ts.
 import type { Href } from 'expo-router';
 
 import { demoConfig } from '@/config/demo.config';
 import { guides, type GuideId } from '@/data/guides';
 import { de } from '@/i18n/de';
+import { findOpenCase } from '@/model/policies/openCase';
 import type { Case, CaseStatus, Diagnosis, GuideRun } from '@/model/types';
-import { selectOpenCaseForDevice, type AppData } from '@/store/appStore';
+import type { AppData } from '@/store/appStore';
 
 export function latestGuideRun(s: AppData, c: Case): GuideRun | undefined {
   const id = c.guideRunIds[c.guideRunIds.length - 1];
@@ -14,7 +16,7 @@ export function latestGuideRun(s: AppData, c: Case): GuideRun | undefined {
 
 /** Status-Zeile eines Geräts aus dem offenen Fall (B-49) */
 export function deviceStatusLabel(s: AppData, deviceId: string): string {
-  const c = selectOpenCaseForDevice(s, deviceId);
+  const c = findOpenCase(s, deviceId);
   if (!c) return de.deviceStatus.laeuft;
   if (c.status === 'offen' || c.status === 'selbsthilfe') return de.deviceStatus.problem;
   const booking = s.bookings.find((b) => b.caseId === c.id && b.status !== 'storniert');
@@ -36,21 +38,6 @@ export function caseStatusLabel(status: CaseStatus): string {
   if (status === 'freigabe_noetig')
     return de.caseStatus.freigabe_noetig(demoConfig.insurer.shortName);
   return de.caseStatus[status];
-}
-
-/**
- * Hat der Fall schon Inhalt, den ein neuer Versuch nicht einfach ersetzen darf?
- * Ohne Fortschritt ersetzt ein neues Problem den Fall (Entscheidung 13).
- */
-export function hasProgress(s: AppData, c: Case): boolean {
-  if (c.status !== 'offen' && c.status !== 'selbsthilfe') return true;
-  if (c.photoIds.length || c.claim || c.quoteId) return true;
-  if (s.chatMessages.some((m) => m.caseId === c.id)) return true;
-  if (s.videoSessions.some((v) => v.caseId === c.id)) return true;
-  return c.guideRunIds.some((id) => {
-    const run = s.guideRuns[id];
-    return !!run && (run.completedSteps.length > 0 || !!run.endedAt);
-  });
 }
 
 /** Wohin „Weitermachen“ führt */

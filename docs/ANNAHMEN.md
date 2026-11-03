@@ -392,3 +392,9 @@ Annahmen, die ich beim Bauen getroffen habe. Jede lässt sich ändern.
 - **Zwei Treffer außerhalb der Liste aus dem Plan:** `app/geraet/[id].tsx` (Fälle des Geräts) und `app/fall/neu.tsx` (`caseFor`) prüften „erledigt oder abgebrochen“ selbst. Beide fragen jetzt `isClosed` aus `model/caseMachine.ts`, das Verhalten bleibt gleich. `caseFor` ersetzt Schritt 23 durch `openCaseFor`.
 - **Pfade relativ zum Repo:** Die Regel rechnet den Dateipfad relativ zu `eslint.config.js`, nicht zum Arbeitsverzeichnis. So passt die Allowlist auch, wenn ESLint aus einem anderen Ordner läuft. Dafür bekommt `eslint.config.js` die Node-Globals wie `scripts/`.
 - **`CLAUDE.md` bleibt unverändert.** Die Zeile „Keine Status-Vergleiche in Screens“ trägt Lennart nach Phase 1 selbst ein (ZUKUNFTSPLAN Abschnitt 5).
+
+## Schritt 23: Ein Weg, einen Fall zu öffnen
+
+- **Eine Quelle für „offen“, „Fortschritt“ und „leer“:** `model/policies/openCase.ts` mit `findOpenCase`, `hasProgress` und `isEmptyCase`. `hasProgress` aus `lib/caseView.ts` und `selectOpenCaseForDevice` aus dem Store sind weg, ebenso die eigene Prüfung in `discardIfEmpty`. Ein Test in `__tests__/model/policies/openCase.test.ts` sucht in `app/`, `components/`, `lib/`, `model/`, `services/` und `store/` und findet jede der drei Funktionen genau einmal.
+- **Leer heißt ohne Fortschritt:** `isEmptyCase` ist `hasProgress` gleich `false` und dazu: noch gemeldet, nicht pausiert, ohne Ergebnis und ohne Anleitung. So kann ein leerer Fall nie Fortschritt haben. Gegenüber der alten Prüfung in `discardIfEmpty` zählen auch Schadenfall, Kostenvoranschlag und Videocall. Im Status `offen` gibt es die ohnehin nicht.
+- **`findOpenCase`** liefert wie bisher den zuletzt geänderten offenen Fall des Geräts. Die Liste aller offenen Fälle (`selectOpenCases`) bleibt im Store, die Startseite braucht sie.

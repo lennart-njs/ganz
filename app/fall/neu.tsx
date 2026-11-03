@@ -11,12 +11,12 @@ import { guides, type GuideId } from '@/data/guides';
 import { de } from '@/i18n/de';
 import { appliance, hasGuides } from '@/lib/appliance';
 import { chatLimits } from '@/lib/chat/limits';
-import { hasProgress } from '@/lib/caseView';
 import { deviceTitle } from '@/lib/devices';
 import { reportDisplayMessage } from '@/lib/problem';
 import { isClosed } from '@/model/caseMachine';
+import { findOpenCase, hasProgress } from '@/model/policies/openCase';
 import type { CaseEntry, Id } from '@/model/types';
-import { selectOpenCaseForDevice, useAppStore } from '@/store/appStore';
+import { useAppStore } from '@/store/appStore';
 import { useTheme } from '@/theme';
 
 const t = de.problem;
@@ -69,7 +69,7 @@ export default function ProblemMelden() {
     return () => clearTimeout(id);
   }, [step, deviceId]);
 
-  const running = device ? selectOpenCaseForDevice(state, device.id) : undefined;
+  const running = device ? findOpenCase(state, device.id) : undefined;
   const runningWithProgress =
     running && running.id !== resumed?.id && hasProgress(state, running) && !replaceRunning
       ? running
@@ -78,7 +78,7 @@ export default function ProblemMelden() {
   /** Legt den Fall an oder nutzt einen Fall ohne Fortschritt weiter. Pro Gerät ein offener Fall. */
   const caseFor = (entry: CaseEntry, problemLabel: string): Id => {
     const s = store.getState();
-    const open = selectOpenCaseForDevice(s, device!.id);
+    const open = findOpenCase(s, device!.id);
     if (open && open.id !== resumed?.id && hasProgress(s, open)) {
       s.runCommand(open.id, 'abbrechen', { cancelReason: de.thread.newProblemReason });
     }
