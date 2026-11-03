@@ -60,13 +60,15 @@ Versicherer, Händler, Hersteller, Betriebe, Fachkraft, Preise und Zeitfenster s
 
 ```bash
 npm run check          # Typecheck, Lint über das ganze Repo, Prettier und alle Tests
-npm run check:fast     # Typecheck, Lint auf geänderten Dateien, Unit-Tests
+npm run check:fast     # Typecheck, Lint auf geänderten Dateien, Jest-Projekt unit
 npm test               # nur Tests
 npm run guides:check   # Anleitungen wörtlich gegen die Demo prüfen
 npm run lint           # nur Lint
 ```
 
 Lint prüft das ganze Repo. Eigene Regeln stehen im Plugin `ganz` in `eslint.config.js`: keine Farbwerte außerhalb von `theme/` (`ganz/farben-aus-theme`), kein Text außerhalb von `i18n/de.ts` (`ganz/text-aus-i18n`, dazu `ganz/text-in-ausdruecken` für Bedingungen, Template-Literale, Verkettungen, Listen und Objekte in JSX). Dazu kein `Text` direkt aus `react-native`. `__tests__/lint.test.ts` zeigt, dass alle Regeln gleichzeitig greifen. Ein Test prüft jeden Screen auf Rolle, Label, 44 pt und Schrift bis 200 %.
+
+Jest hat zwei Projekte. `unit` prüft `model/` ohne React Native (Preset `jest-expo/node`), die Tests dazu liegen in `__tests__/model/`. `ui` prüft alles andere mit dem Preset `jest-expo`. `npx jest --selectProjects unit` startet nur die Unit-Tests.
 
 ## Ordner
 

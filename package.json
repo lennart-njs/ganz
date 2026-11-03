@@ -17,7 +17,7 @@
     "format:check": "prettier --check .",
     "test": "jest",
     "check": "npm run typecheck && npm run lint && npm run format:check && jest --maxWorkers=2",
-    "check:fast": "tsc --noEmit && node scripts/lint-changed.js && jest --maxWorkers=2 --testPathPatterns \"\\.test\\.ts$\"",
+    "check:fast": "tsc --noEmit && node scripts/lint-changed.js && jest --maxWorkers=2 --selectProjects unit",
     "guides:check": "jest __tests__/guides.test.ts"
   },
   "dependencies": {
@@ -63,20 +63,33 @@
     "typescript": "~6.0.3"
   },
   "jest": {
-    "preset": "jest-expo",
-    "testPathIgnorePatterns": [
-      "/node_modules/",
-      "/design-system/",
-      "/reference/"
-    ],
-    "transformIgnorePatterns": [
-      "node_modules/(?!((jest-)?react-native|@react-native(-community)?)|expo(nent)?|@expo(nent)?/.*|@expo-google-fonts/.*|react-navigation|@react-navigation/.*|standard-navigation|react-native-svg)"
-    ],
-    "moduleNameMapper": {
-      "^lucide-react-native$": "<rootDir>/node_modules/lucide-react-native/dist/cjs/lucide-react-native.js"
-    },
-    "setupFiles": [
-      "<rootDir>/test/setup.ts"
+    "projects": [
+      {
+        "displayName": "unit",
+        "preset": "jest-expo/node",
+        "testMatch": [
+          "<rootDir>/__tests__/model/**/*.test.ts"
+        ]
+      },
+      {
+        "displayName": "ui",
+        "preset": "jest-expo",
+        "setupFiles": [
+          "<rootDir>/test/setup.ts"
+        ],
+        "moduleNameMapper": {
+          "^lucide-react-native$": "<rootDir>/node_modules/lucide-react-native/dist/cjs/lucide-react-native.js"
+        },
+        "transformIgnorePatterns": [
+          "node_modules/(?!((jest-)?react-native|@react-native(-community)?)|expo(nent)?|@expo(nent)?/.*|@expo-google-fonts/.*|react-navigation|@react-navigation/.*|standard-navigation|react-native-svg)"
+        ],
+        "testPathIgnorePatterns": [
+          "/node_modules/",
+          "/design-system/",
+          "/reference/",
+          "<rootDir>/__tests__/model/"
+        ]
+      }
     ]
   }
 }

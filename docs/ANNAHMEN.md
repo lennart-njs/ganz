@@ -233,3 +233,12 @@ Annahmen, die ich beim Bauen getroffen habe. Jede lässt sich ändern.
 - **Fixture-Test** `__tests__/lint.test.ts` läuft mit der ESLint-Node-API und `lintText` auf eine Datei unter `app/`. Jest kann `eslint.config.js` nicht per `import()` laden. Der Test lädt dieselbe Datei per `require` und übergibt sie als `overrideConfig`.
 - **`check:fast`:** `tsc`, dann `scripts/lint-changed.js`, dann die Unit-Tests. Geändert heißt: gegenüber `HEAD` (oder einer Basis als Argument) plus neue, nicht eingecheckte Dateien. Unit-Tests sind bis Schritt 17 alle `*.test.ts` ohne Rendering. Schritt 17 stellt auf das Jest-Projekt `unit` um.
 - **`check`** nutzt das neue `npm run lint` und startet Jest mit `--maxWorkers=2`, wie es die Abnahme von Phase 0 verlangt.
+
+## Schritt 17: Stabile Tests
+
+- **Zwei Jest-Projekte** in `package.json`: `unit` und `ui`. Jedes hat einen `displayName`, darum wählt `--selectProjects unit` nur die Unit-Tests.
+- **`unit`** nutzt das Preset `jest-expo/node` und findet nur Tests in `__tests__/model/`. Es lädt `test/setup.ts` nicht, denn `model/` braucht keine Mocks für React Native. `lib/` und `services/` kommen in Phase 3 dazu, dann mit eigenen Ordnern unter `__tests__/`.
+- **Test verschoben:** `__tests__/caseMachine.test.ts` liegt jetzt in `__tests__/model/`. Er ist der einzige Test, der nur `model/` prüft. `docs/BEFUNDE.md` nennt den neuen Pfad.
+- **`ui`** wiederholt Preset, `setupFiles`, `moduleNameMapper`, `transformIgnorePatterns` und `testPathIgnorePatterns`. Projekte erben sie nicht. Zusätzlich ignoriert `ui` den Ordner `__tests__/model/`, damit kein Test doppelt läuft.
+- **Gleiche Zahl:** vorher und nachher 20 Testdateien und 318 Tests, davon 121 in `unit`.
+- **`check:fast`** startet jetzt `jest --selectProjects unit` statt aller `*.test.ts`.

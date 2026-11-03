@@ -13,7 +13,7 @@ Alle P0- und P1-Befunde sind behoben. Die Spalte „Nachweis“ nennt den Test, 
 | B-06 | „Geht nicht“ in jedem Schritt, Abbruchschritt im `GuideRun` | `__tests__/guide.test.tsx` |
 | B-11 | Regel-Mock je Modus, Typenschild ohne Diagnose | `__tests__/diagnosis.test.tsx` |
 | B-12 | Sicherheit in drei Stufen, Rückfrage bei „unsicher“, „Passt nicht“ | `__tests__/diagnosis.test.tsx` |
-| B-17 | Schadenfall nur durch „Schadenfall melden“ mit gespeicherter Bestätigung | `__tests__/caseMachine.test.ts`, `__tests__/costs.test.tsx` |
+| B-17 | Schadenfall nur durch „Schadenfall melden“ mit gespeicherter Bestätigung | `__tests__/model/caseMachine.test.ts`, `__tests__/costs.test.tsx` |
 | B-18 | „Die Kosten prüft … nach dem Befund“ statt Zusage | `__tests__/help.test.tsx`, Test „Kein Text sagt Kosten zu“ |
 | B-19 | Hinweis „Das sieht … (Betrieb)“, Bestätigung vor dem Call, kein Call ohne Bestätigung | `__tests__/help.test.tsx` |
 | B-27 | „vorbehaltlich Freigabe“, `freigabe_noetig` nach der Meldung | `__tests__/costs.test.tsx` |
@@ -53,7 +53,7 @@ Alle P0- und P1-Befunde sind behoben. Die Spalte „Nachweis“ nennt den Test, 
 | B-43 | Typo skaliert bis 200 %, Spalten stapeln sich | `__tests__/a11y.test.tsx`, Galerie |
 | B-46 | Glossar aus Review Abschnitt 6 in `i18n/de.ts` | Durchsicht der Texte |
 | B-47 | Demo-Modus per Konfiguration und Geste, Hinweise schließbar | `__tests__/demo.test.tsx` |
-| B-48 | Werte in `demo.config.ts`, Ersparnis berechnet und „in diesem Fall“ | `__tests__/caseMachine.test.ts`, `__tests__/costs.test.tsx` |
+| B-48 | Werte in `demo.config.ts`, Ersparnis berechnet und „in diesem Fall“ | `__tests__/model/caseMachine.test.ts`, `__tests__/costs.test.tsx` |
 | B-50 | Fall als modaler Stack, X öffnet das Schließen-Sheet | `__tests__/navigation.test.tsx` |
 | B-51 | „Achtung“-Block vor dem Schritttext, „Wasserhahn ist zu“ bestätigen | `__tests__/guide.test.tsx` |
 | B-53 | Vorschau „Das geht an …“ vor der Schadenmeldung | `__tests__/costs.test.tsx` |
