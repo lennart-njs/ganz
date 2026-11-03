@@ -4,6 +4,7 @@ import { Linking, StyleSheet, View } from 'react-native';
 import type { KeyboardAwareScrollViewRef } from 'react-native-keyboard-controller';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { CallbackSheet } from '@/components/app/CallbackSheet';
 import { CaseFileCard } from '@/components/app/CaseFileCard';
 import { CaseScreen, useCaseId } from '@/components/app/CaseScreen';
 import { BotSays, QuickReplies, Typing, UserSaid, type Reply } from '@/components/app/Conversation';
@@ -80,6 +81,8 @@ export default function FallGespraech() {
   const [onSite, setOnSite] = useState(false);
   const [partnerId, setPartnerId] = useState<string>();
   const [slot, setSlot] = useState<string>();
+  /** Zeitfenster für den Rückruf, bis die Weitergabe bestätigt ist */
+  const [callbackSlot, setCallbackSlot] = useState<string>();
   const [input, setInput] = useState('');
   const [inputError, setInputError] = useState<string>();
 
@@ -788,8 +791,9 @@ export default function FallGespraech() {
     reply('befund-nein', t.findingWrong, declineFinding);
   } else if (noExpert) {
     tail.push(<BotSays key="rueckruf" lines={[t.callbackAsk]} />);
+    // Erst bestätigen, wer welche Daten sieht, dann der Rückruf (R-16)
     for (const s of de.waiting.callbackSlots) {
-      reply(`rueckruf-${s}`, s, () => useAppStore.getState().requestCallback(caseId, s));
+      reply(`rueckruf-${s}`, s, () => setCallbackSlot(s));
     }
     reply('vor-ort', de.waiting.onSiteInstead, () => setOnSite(true));
   } else if (c.status === 'abgelehnt' && !payment) {
@@ -1103,6 +1107,11 @@ export default function FallGespraech() {
         <View key={x.key}>{x.node}</View>
       ))}
       {tail}
+      <CallbackSheet
+        caseId={caseId}
+        slot={callbackSlot}
+        onClose={() => setCallbackSlot(undefined)}
+      />
     </CaseScreen>
   );
 }

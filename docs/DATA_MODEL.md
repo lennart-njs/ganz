@@ -18,6 +18,7 @@ Die App erzeugt heute alle Daten lokal (Store `store/appStore.ts`). Ein spätere
 | Empfänger | Auslöser in der App | Consent (`purpose`) | Grundlage |
 |---|---|---|---|
 | Betrieb der Fachkraft | „Videocall starten“ | `weitergabe_fachkraft` | lit. b |
+| Betrieb der Fachkraft (Rückruf) | Zeitfenster wählen, dann „Rückruf anfragen“ im Sheet | `weitergabe_fachkraft` | lit. b |
 | Betrieb (Screenshots) | Häkchen „Screenshots als Nachweis erlauben“ | `screenshots_im_call` | lit. a |
 | Versicherer | „Schadenfall melden“ | `weitergabe_versicherer` | lit. b |
 | Betrieb (Auftrag) | „Termin anfragen“ / „Zahlungspflichtig buchen“ | `weitergabe_betrieb` | lit. b |

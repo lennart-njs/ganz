@@ -159,6 +159,7 @@ export interface AppActions {
     sessionId: Id,
     change: 'verbunden' | 'keine_fachkraft' | 'abgebrochen' | 'beendet',
   ) => void;
+  /** Rückruf der Fachkraft. Nur mit bestätigter Weitergabe an die Fachkraft (R-16). */
   requestCallback: (caseId: Id, slot: string) => void;
   /** Meldet den Schadenfall: speichert die Bestätigung und wechselt auf „freigabe_noetig“ (B-17) */
   reportClaim: (caseId: Id, textVersion: string) => Case;
@@ -682,13 +683,19 @@ export function createAppStore(storage: StateStorage = AsyncStorage, env: StoreE
             });
           },
 
-          requestCallback: (caseId, slot) =>
-            void get().addEvent({
+          requestCallback: (caseId, slot) => {
+            const c = getCase(caseId);
+            // Wie beim Videocall: ohne gültige Bestätigung geht nichts an die Fachkraft
+            if (!canStartVideoCall(get().consents, c.reportedBy, caseId)) {
+              throw new ConsentRequiredError('weitergabe_fachkraft');
+            }
+            get().addEvent({
               caseId,
               type: 'videocall_angefragt',
               actor: householdActor(),
               payload: { art: 'rueckruf', slot },
-            }),
+            });
+          },
 
           setFinding: (caseId, option, by) => {
             const cfg = demoConfig;

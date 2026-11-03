@@ -2,7 +2,7 @@
 
 Stand: 03.11.2026 · nach Schritt 20 und den ersten Regelbrüchen aus Phase 1 · Befunde: `docs/REVIEW.md` Abschnitt 2 und `docs/ZUKUNFTSPLAN.md` Anhang B
 
-Nach Schritt 14 waren alle P0- und P1-Befunde behoben. Die Code-Review vom 03.11.2026 hat acht davon wieder geöffnet: B-04, B-05, B-17, B-18, B-19, B-23, B-40 und B-53. Sie sind offen, bis die Rückfälle R-01 bis R-18 behoben sind (Abschnitt „Rückfälle“ unten). Wieder behoben sind B-18 (R-07) und B-40 (R-12). Alle anderen P0- und P1-Befunde bleiben behoben. Die Spalte „Nachweis“ nennt den Test, der das Verhalten prüft, oder die Stelle im Code.
+Nach Schritt 14 waren alle P0- und P1-Befunde behoben. Die Code-Review vom 03.11.2026 hat acht davon wieder geöffnet: B-04, B-05, B-17, B-18, B-19, B-23, B-40 und B-53. Sie sind offen, bis die Rückfälle R-01 bis R-18 behoben sind (Abschnitt „Rückfälle“ unten). Wieder behoben sind B-18 (R-07), B-40 (R-12) sowie B-19 und B-23 (R-16). Alle anderen P0- und P1-Befunde bleiben behoben. Die Spalte „Nachweis“ nennt den Test, der das Verhalten prüft, oder die Stelle im Code.
 
 ## P0
 
@@ -15,7 +15,7 @@ Nach Schritt 14 waren alle P0- und P1-Befunde behoben. Die Code-Review vom 03.11
 | B-12 | Sicherheit in drei Stufen, Rückfrage bei „unsicher“, „Passt nicht“ | `__tests__/diagnosis.test.tsx` |
 | B-17 (wieder offen, R-02) | Schadenfall nur durch „Schadenfall melden“ mit gespeicherter Bestätigung | `__tests__/model/caseMachine.test.ts`, `__tests__/costs.test.tsx` |
 | B-18 | „Die Kosten prüft … nach dem Befund“ statt Zusage. Während der Prüfung kein Selbstzahlen und kein „Du zahlst“ | `__tests__/help.test.tsx`, Test „Kein Text sagt Kosten zu“, `__tests__/regressions/fehlverhalten.test.tsx` (R-07) |
-| B-19 (wieder offen, R-16) | Hinweis „Das sieht … (Betrieb)“, Bestätigung vor dem Call, kein Call ohne Bestätigung | `__tests__/help.test.tsx` |
+| B-19 | Hinweis „Das sieht … (Betrieb)“, Bestätigung vor dem Call und vor dem Rückruf, weder Call noch Rückruf ohne Bestätigung | `__tests__/help.test.tsx`, `__tests__/regressions/datenschutz.test.tsx` (R-16) |
 | B-27 | „vorbehaltlich Freigabe“, `freigabe_noetig` nach der Meldung | `__tests__/costs.test.tsx` |
 | B-29 | Zusammenfassung mit Adresse, „Termin anfragen“ oder „Zahlungspflichtig buchen“ | `__tests__/costs.test.tsx` |
 
@@ -35,7 +35,7 @@ Nach Schritt 14 waren alle P0- und P1-Befunde behoben. Die Code-Review vom 03.11
 | B-16 | Foto mit Zeitstempel, Gerät, Zweck, Fall und Quelle | `__tests__/diagnosis.test.tsx` |
 | B-21 | Kundendienst aus `Manufacturer.serviceContact` | `__tests__/devices.test.tsx` |
 | B-22 | Protokoll mit echten Schritten, „Anleitung nicht gestartet“ | `__tests__/help.test.tsx` |
-| B-23 (wieder offen, R-16) | Warteraum, Wartezeit, „keine Fachkraft frei“ mit Rückruf | `__tests__/help.test.tsx` |
+| B-23 | Warteraum, Wartezeit, „keine Fachkraft frei“ mit Rückruf nach Bestätigung | `__tests__/help.test.tsx`, `__tests__/regressions/datenschutz.test.tsx` (R-16) |
 | B-24 | Mikrofon und Kamera als Umschalter mit Zustand | `__tests__/help.test.tsx` |
 | B-25 | „Keine Aufnahme“ vor und im Call, Screenshots nur mit Einwilligung | `__tests__/help.test.tsx` |
 | B-26 | Befund der Fachkraft im Gespräch: „Im Call gelöst“, Reparatur oder Ersatzgerät. Seit Entscheidung 14 bestätigst du ihn oder sagst „Stimmt nicht“ | `__tests__/help.test.tsx` |
@@ -98,6 +98,6 @@ R-07, R-12, R-13, R-16 und R-17 brechen eine feste Regel. Solange einer davon of
 | R-13 | Mitteilungen ohne gespeicherte Einwilligung | – | behoben | Schritt 26 (vorgezogen) | `__tests__/regressions/datenschutz.test.tsx` |
 | R-14 | Vorschau „Das geht an …“ zeigt mehr als die bestätigten Kategorien | B-53 | offen | Schritt 26 | `__tests__/regressions/datenschutz.test.tsx` |
 | R-15 | Chat-Einwilligung mit `caseId`, andere Fallakten zeigen nichts | – | offen | Schritt 26 | `__tests__/regressions/datenschutz.test.tsx` |
-| R-16 | Rückruf ohne Bestätigung | B-19, B-23 | offen | Schritt 26 | `__tests__/regressions/datenschutz.test.tsx` |
+| R-16 | Rückruf ohne Bestätigung | B-19, B-23 | behoben | Schritt 26 (vorgezogen) | `__tests__/regressions/datenschutz.test.tsx` |
 | R-17 | Mitteilungstexte mit Falldetails auf dem Sperrbildschirm | – | offen | Schritt 26 | `__tests__/regressions/datenschutz.test.tsx` |
 | R-18 | Termin mit unbekannter Fallnummer per Deep Link stürzt ab | – | offen | Schritt 24 | `__tests__/regressions/abstuerze.test.tsx` |

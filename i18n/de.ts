@@ -666,6 +666,9 @@ export const de = {
     callbackLabel: 'Wann passt der Rückruf?',
     requestCallback: 'Rückruf anfragen',
     onSiteInstead: 'Lieber Vor-Ort-Diagnose',
+    /** Bestätigung vor dem Rückruf (R-16) */
+    confirmTitle: (slot: string) => `Rückruf: ${slot}`,
+    confirmText: 'Vor dem Rückruf bekommt die Fachkraft deine Fallakte.',
   },
 
   call: {
