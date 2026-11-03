@@ -380,29 +380,27 @@ describe('R-17 Mitteilungstexte mit Falldetails', () => {
 
   // i18n/de.ts, de.notify: Die Texte nennen Versicherer, Entscheidung, Betrieb, Zeitfenster und
   // das Gerät. Mitteilungen stehen auf dem Sperrbildschirm, für alle sichtbar.
-  test.failing(
-    'R-17 Mitteilungen sind neutral: kein Gerät, Betrag, Betrieb, Entscheidung, Fall',
-    () => {
-      const { approved, sent } = notificationsOfAllSteps();
-      const details = [
-        demoConfig.insurer.name,
-        insurer,
-        demoConfig.manufacturer.name,
-        demoConfig.device.model,
-        approved,
-        ...demoConfig.partners.map((p) => p.name),
-        ...demoConfig.slots,
-        ...Object.values(de.deviceCategory),
-      ];
-      const pattern = /€|GS-\d|Maschine|freigegeben|Freigabe|abgelehnt|übernimmt/i;
-      const leaks = sent.flatMap(({ title, body }) => {
-        const text = `${title} ${body}`;
-        return [
-          ...details.filter((d) => text.includes(d)),
-          ...(pattern.test(text) ? [text.match(pattern)![0]] : []),
-        ].map((d) => `${title}: ${d}`);
-      });
-      expect(leaks).toEqual([]);
-    },
-  );
+  // Behoben: Jeder Schritt schickt denselben neutralen Satz, de.notify.update.
+  test('R-17 Mitteilungen sind neutral: kein Gerät, Betrag, Betrieb, Entscheidung, Fall', () => {
+    const { approved, sent } = notificationsOfAllSteps();
+    const details = [
+      demoConfig.insurer.name,
+      insurer,
+      demoConfig.manufacturer.name,
+      demoConfig.device.model,
+      approved,
+      ...demoConfig.partners.map((p) => p.name),
+      ...demoConfig.slots,
+      ...Object.values(de.deviceCategory),
+    ];
+    const pattern = /€|GS-\d|Maschine|freigegeben|Freigabe|abgelehnt|übernimmt/i;
+    const leaks = sent.flatMap(({ title, body }) => {
+      const text = `${title} ${body}`;
+      return [
+        ...details.filter((d) => text.includes(d)),
+        ...(pattern.test(text) ? [text.match(pattern)![0]] : []),
+      ].map((d) => `${title}: ${d}`);
+    });
+    expect(leaks).toEqual([]);
+  });
 });

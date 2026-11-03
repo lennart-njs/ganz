@@ -866,10 +866,11 @@ export function createAppStore(storage: StateStorage = AsyncStorage, env: StoreE
             // Widerrufene Weitergabe: Versicherer und Betrieb machen nicht weiter (R-12)
             if (simulationHold(get(), caseId)) return false;
             const booking = activeBooking(get(), caseId);
-            const insurer = cfg.insurer.shortName;
             const partner = booking?.provider.name ?? '';
-            // Nur mit erteilter Einwilligung in Mitteilungen (R-13)
-            const notify = (msg: { title: string; body: string }) => {
+            // Nur mit erteilter Einwilligung in Mitteilungen (R-13). Der Text ist neutral, denn
+            // er steht auf dem Sperrbildschirm (R-17).
+            const notify = () => {
+              const msg = de.notify.update;
               if (notificationsOn(get()))
                 notifications.notify(msg.title, msg.body).catch(() => undefined);
             };
@@ -887,7 +888,7 @@ export function createAppStore(storage: StateStorage = AsyncStorage, env: StoreE
                 decisionActor: 'mensch',
                 approvedAmount: approve ? quote?.repair.total : undefined,
               });
-              notify(approve ? de.notify.freigegeben(insurer) : de.notify.abgelehnt(insurer));
+              notify();
               return true;
             }
             if (!booking) return false;
@@ -907,7 +908,7 @@ export function createAppStore(storage: StateStorage = AsyncStorage, env: StoreE
                   payload: { bookingId: booking.id },
                 });
               }
-              notify(de.notify.bestaetigt(partner, booking.slotLabel));
+              notify();
               return true;
             }
             if (booking.status === 'bestaetigt') {
@@ -918,14 +919,14 @@ export function createAppStore(storage: StateStorage = AsyncStorage, env: StoreE
                 actor: betrieb,
                 payload: { bookingId: booking.id },
               });
-              notify(de.notify.unterwegs(partner));
+              notify();
               return true;
             }
             if (booking.status === 'unterwegs') {
               if (booking.kind === 'vor_ort_diagnose') {
                 setBooking({ status: 'erledigt' });
                 get().setFinding(caseId, 'reparatur', 'betrieb');
-                notify(de.notify.diagnose(caseAppliance(get(), caseId).examined(partner)));
+                notify();
                 return true;
               }
               const photo = get().addPhoto({
@@ -942,7 +943,7 @@ export function createAppStore(storage: StateStorage = AsyncStorage, env: StoreE
                 actor: betrieb,
                 payload: { bookingId: booking.id, photoId: photo.id },
               });
-              notify(de.notify.repariert(partner, caseAppliance(get(), caseId).runsAgain));
+              notify();
               return true;
             }
             return false;

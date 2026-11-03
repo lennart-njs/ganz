@@ -79,7 +79,7 @@ Nach Schritt 14 waren alle P0- und P1-Befunde behoben. Die Code-Review vom 03.11
 
 Befunde: `docs/ZUKUNFTSPLAN.md` Anhang B. Jeder hat einen Test mit dem erwarteten Verhalten. Er ist als `test.failing` markiert, dazu kommt eine „Ausgangslage“ als normaler Test. Mit der Behebung wird `test.failing` im selben Commit zu `test`. Die Spalte „Behebung“ nennt den Schritt aus `docs/BUILD_PLAN.md` Abschnitt 8.2.
 
-R-07, R-12, R-13, R-16 und R-17 brechen eine feste Regel. Solange einer davon offen ist, gibt es keinen Pitch-Tag.
+R-07, R-12, R-13, R-16 und R-17 brechen eine feste Regel. Solange einer davon offen ist, gibt es keinen Pitch-Tag. Seit den ersten Commits von Phase 1 sind alle fünf behoben (`node scripts/open-findings.js`).
 
 | ID | Befund | Wieder offen | Stand | Behebung | Test |
 |---|---|---|---|---|---|
@@ -99,5 +99,5 @@ R-07, R-12, R-13, R-16 und R-17 brechen eine feste Regel. Solange einer davon of
 | R-14 | Vorschau „Das geht an …“ zeigt mehr als die bestätigten Kategorien | B-53 | offen | Schritt 26 | `__tests__/regressions/datenschutz.test.tsx` |
 | R-15 | Chat-Einwilligung mit `caseId`, andere Fallakten zeigen nichts | – | offen | Schritt 26 | `__tests__/regressions/datenschutz.test.tsx` |
 | R-16 | Rückruf ohne Bestätigung | B-19, B-23 | behoben | Schritt 26 (vorgezogen) | `__tests__/regressions/datenschutz.test.tsx` |
-| R-17 | Mitteilungstexte mit Falldetails auf dem Sperrbildschirm | – | offen | Schritt 26 | `__tests__/regressions/datenschutz.test.tsx` |
+| R-17 | Mitteilungstexte mit Falldetails auf dem Sperrbildschirm | – | behoben | Schritt 26 (vorgezogen) | `__tests__/regressions/datenschutz.test.tsx` |
 | R-18 | Termin mit unbekannter Fallnummer per Deep Link stürzt ab | – | offen | Schritt 24 | `__tests__/regressions/abstuerze.test.tsx` |

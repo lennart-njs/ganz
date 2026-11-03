@@ -95,7 +95,7 @@ describe('Fall-Status', () => {
     await act(async () => {});
     expect(Notifications.scheduleNotificationAsync).toHaveBeenCalledTimes(2);
     expect(jest.mocked(Notifications.scheduleNotificationAsync).mock.calls[0]![0]).toMatchObject({
-      content: de.notify.freigegeben('Kranich'),
+      content: de.notify.update,
     });
     expect(caseOf(id).status).toBe('in_reparatur');
   });
@@ -115,6 +115,13 @@ describe('Fall-Status', () => {
     await act(async () => {});
     expect(caseOf(id).status).toBe('freigegeben');
     expect(Notifications.scheduleNotificationAsync).not.toHaveBeenCalled();
+  });
+
+  test('Mitteilungstexte haben keine Platzhalter für Falldetails (R-17)', () => {
+    for (const msg of Object.values(de.notify)) {
+      expect(typeof msg.title).toBe('string');
+      expect(typeof msg.body).toBe('string');
+    }
   });
 
   test('ohne Zustimmung keine Mitteilung', async () => {

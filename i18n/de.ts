@@ -149,7 +149,6 @@ export const de = {
       runsAgain: 'Läuft die Maschine wieder?',
       runsAgainAsk: 'Sag uns, ob die Maschine wieder läuft.',
       reachable: 'Bitte sorg dafür, dass die Maschine gut erreichbar ist.',
-      examined: (partner: string) => `${partner} hat die Maschine geprüft.`,
       typePlate: 'Bei geöffneter Tür oberhalb des Schauglases. Wir erkennen Modell und Baujahr.',
       otherPlaceholder: 'z. B. Die Maschine riecht verbrannt.',
       photoSelf: 'Waschmaschine läuft wieder',
@@ -171,7 +170,6 @@ export const de = {
       runsAgain: 'Läuft der Geschirrspüler wieder?',
       runsAgainAsk: 'Sag uns, ob der Geschirrspüler wieder läuft.',
       reachable: 'Bitte räum den Geschirrspüler aus, damit der Betrieb gut herankommt.',
-      examined: (partner: string) => `${partner} hat den Geschirrspüler geprüft.`,
       typePlate: 'Am Rand der geöffneten Tür, meist oben rechts. Wir erkennen Modell und Baujahr.',
       otherPlaceholder: 'z. B. Der Geschirrspüler pumpt nicht ab.',
       photoSelf: 'Geschirrspüler läuft wieder',
@@ -202,7 +200,6 @@ export const de = {
       runsAgain: 'Läuft der Trockner wieder?',
       runsAgainAsk: 'Sag uns, ob der Trockner wieder läuft.',
       reachable: 'Bitte sorg dafür, dass der Trockner gut erreichbar ist.',
-      examined: (partner: string) => `${partner} hat den Trockner geprüft.`,
       typePlate: 'Bei geöffneter Tür am Türrahmen. Wir erkennen Modell und Baujahr.',
       otherPlaceholder: 'z. B. Der Trockner riecht verbrannt.',
       photoSelf: 'Trockner läuft wieder',
@@ -229,7 +226,6 @@ export const de = {
       runsAgain: 'Kühlt der Kühlschrank wieder?',
       runsAgainAsk: 'Sag uns, ob der Kühlschrank wieder kühlt.',
       reachable: 'Bitte räum Lebensmittel, die schnell verderben, vorher in eine Kühltasche.',
-      examined: (partner: string) => `${partner} hat den Kühlschrank geprüft.`,
       typePlate:
         'Innen an der Seitenwand, meist unten neben dem Gemüsefach. Wir erkennen Modell und Baujahr.',
       otherPlaceholder: 'z. B. Der Kühlschrank brummt sehr laut.',
@@ -845,29 +841,13 @@ export const de = {
     demoNext: 'Nächster Schritt (Demo)',
   },
 
+  /**
+   * Mitteilungen stehen auf dem Sperrbildschirm, für alle sichtbar. Darum ein neutraler Satz für
+   * jeden Schritt: kein Gerät, kein Betrag, kein Betrieb, keine Entscheidung, kein Zeitfenster und
+   * keine Fallnummer (R-17). Was passiert ist, zeigt die App.
+   */
   notify: {
-    freigegeben: (insurer: string) => ({
-      title: 'Kosten freigegeben',
-      body: `${insurer} übernimmt die Reparatur laut Vertrag.`,
-    }),
-    abgelehnt: (insurer: string) => ({
-      title: 'Keine Freigabe',
-      body: `${insurer} hat abgelehnt. Du entscheidest, wie es weitergeht.`,
-    }),
-    bestaetigt: (partner: string, slot: string) => ({
-      title: 'Termin bestätigt',
-      body: `${partner} kommt ${slot}.`,
-    }),
-    unterwegs: (partner: string) => ({
-      title: 'Betrieb unterwegs',
-      body: `${partner} ist auf dem Weg zu dir.`,
-    }),
-    repariert: (partner: string, question: string) => ({
-      title: 'Repariert',
-      body: `${partner} ist fertig. ${question}`,
-    }),
-    /** body: Satz aus de.appliance, z. B. „… hat die Maschine geprüft.“ */
-    diagnose: (body: string) => ({ title: 'Kostenvoranschlag da', body }),
+    update: { title: 'Neuigkeiten', body: 'Es gibt Neuigkeiten zu deinem Fall.' },
   },
 
   finish: {
