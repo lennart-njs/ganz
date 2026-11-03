@@ -31,8 +31,8 @@ const actorName = (e: CaseEvent) =>
     system: de.app.name,
   }[e.actor.kind];
 
-/** Ereignisse, die nicht in die Akte des Händlers gehören */
-const hidden: CaseEvent['type'][] = ['assistent_gefragt'];
+/** Ereignisse, die nicht in den Zeitstrahl der Akte gehören. Nachrichten stehen eigens in `messages`. */
+const hidden: CaseEvent['type'][] = ['assistent_gefragt', 'nachricht_an_haendler'];
 
 /** Verkleinert ein Foto für die Akte. Beispielfotos ohne Bild bleiben ohne Bild. */
 export async function photoForShare(photo: Photo): Promise<SharedPhoto> {
@@ -65,6 +65,8 @@ export function buildSharedCaseFile(
   const consent = dealerConsent(s, caseId);
   const device = s.devices.find((d) => d.id === c?.deviceId);
   if (!c || !consent || !device) return undefined;
+  const all = s.events.filter((e) => e.caseId === caseId);
+  const rated = s.bookings.findLast((b) => b.caseId === caseId && b.rating)?.rating;
   const person = s.persons[0];
   const contract = s.contracts.find((k) => k.id === device.contractId);
   const events = s.events.filter((e) => e.caseId === caseId && !hidden.includes(e.type));
@@ -176,10 +178,29 @@ export function buildSharedCaseFile(
         answer: String(e.payload.answer),
         at: e.at,
       })),
+    messages: all
+      .filter((e) => e.type === 'nachricht_an_haendler')
+      .map((e) => ({
+        id: e.id,
+        at: e.at,
+        text: String(e.payload.text ?? ''),
+        ...(e.payload.photoId ? { photoId: String(e.payload.photoId) } : {}),
+      })),
+    ...(rated ? { rating: rated.stars } : {}),
   };
 }
 
-/** Fotos, die in die Akte gehören: alle aus dem Fall, außer Fotos zu Fragen an den Assistenten */
+/**
+ * Fotos, die in die Akte gehören: alle aus dem Fall außer Fotos zu Fragen an den Assistenten.
+ * Fotos zu Nachrichten an den Händler gehören dazu.
+ */
 export function photosToShare(s: AppData, caseId: Id): Photo[] {
-  return s.photos.filter((p) => p.caseId === caseId && p.purpose !== 'frage').slice(-12);
+  const toDealer = new Set(
+    s.events
+      .filter((e) => e.caseId === caseId && e.type === 'nachricht_an_haendler' && e.payload.photoId)
+      .map((e) => String(e.payload.photoId)),
+  );
+  return s.photos
+    .filter((p) => p.caseId === caseId && (p.purpose !== 'frage' || toDealer.has(p.id)))
+    .slice(-12);
 }

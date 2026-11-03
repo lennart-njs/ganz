@@ -102,11 +102,14 @@ export function UserSaid({
   text,
   onEdit,
   photoUri,
+  to,
 }: {
   text: string;
   onEdit?: () => void;
   /** Foto zur Nachricht. Leerer String: Beispielfoto ohne Bild. */
   photoUri?: string;
+  /** Empfänger, wenn nicht mach’s oder der Assistent, z. B. „An Fründ“ */
+  to?: string;
 }) {
   const theme = useTheme();
   return (
@@ -115,7 +118,7 @@ export function UserSaid({
       <View
         accessible
         accessibilityLabel={de.chat.message(
-          de.chat.you,
+          to ? de.common.dot(de.chat.you, to) : de.chat.you,
           photoUri === undefined ? text : de.common.dot(de.chat.photoLabel, text),
         )}
         style={[
@@ -130,6 +133,11 @@ export function UserSaid({
           },
         ]}
       >
+        {to ? (
+          <Text variant="meta" tone="onPrimary">
+            {to}
+          </Text>
+        ) : null}
         {photoUri ? (
           <Image
             source={{ uri: photoUri }}

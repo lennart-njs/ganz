@@ -4,10 +4,11 @@ import type { SharedCaseFile } from '@/model/sharing';
 import type { CaseEvent } from '@/model/types';
 
 export type ShareResult =
-  { ok: true; token: string } | { ok: false; reason: 'token' | 'widerrufen' | 'netz' };
+  | { ok: true; token: string; events: CaseEvent[] }
+  | { ok: false; reason: 'token' | 'widerrufen' | 'netz' };
 
 export interface BackendService {
-  /** Akte anlegen (ohne Token) oder aktualisieren (mit Token) */
+  /** Akte anlegen (ohne Token) oder aktualisieren (mit Token). Mit den Ereignissen, die dabei entstanden. */
   share(file: SharedCaseFile, token?: string): Promise<ShareResult>;
   /** Ereignisse des Händlers seit einem Zeitpunkt. null: nicht erreichbar oder kein Zugriff. */
   retailerEvents(caseId: string, token: string, since?: string): Promise<CaseEvent[] | null>;
@@ -26,8 +27,13 @@ export const httpBackendService: BackendService = {
         },
         body: JSON.stringify({ file }),
       });
-      const data = (await res.json()) as { token?: string; error?: string };
-      if (res.ok && data.token) return { ok: true, token: data.token };
+      const data = (await res.json()) as { token?: string; error?: string; events?: CaseEvent[] };
+      if (res.ok && data.token)
+        return {
+          ok: true,
+          token: data.token,
+          events: Array.isArray(data.events) ? data.events : [],
+        };
       return { ok: false, reason: data.error === 'widerrufen' ? 'widerrufen' : 'token' };
     } catch {
       return { ok: false, reason: 'netz' };

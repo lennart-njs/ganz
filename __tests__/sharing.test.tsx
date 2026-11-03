@@ -163,6 +163,118 @@ describe('Fall an den Händler (Entscheidung 28)', () => {
     expect(backend.share).not.toHaveBeenCalled();
   });
 
+  test('Begrüßung kommt mit dem Senden und steht sofort im Gespräch, mit Anrufen', async () => {
+    const caseId = setup();
+    useAppStore.getState().shareWithDealer(caseId, 'test');
+    const greeting: CaseEvent = {
+      id: 'hev_gruss',
+      caseId,
+      type: 'haendler_nachricht',
+      at: new Date(Date.now() + 1000).toISOString(),
+      actor: { kind: 'haendler', id: dealer.id, name: dealer.name },
+      payload: {
+        text: 'Hallo Sam, danke für deinen Fall.',
+        by: 'Fründ',
+        auto: true,
+        contact: {
+          name: 'Fründ Kundendienst',
+          phone: '05732 000 00-0',
+          hours: { days: [1, 2, 3, 4, 5, 6], from: '08:00', to: '18:00' },
+        },
+      },
+    };
+    backend.share.mockResolvedValueOnce({ ok: true, token: 'test-token', events: [greeting] });
+    await act(async () => {
+      await syncShare(caseId, false);
+    });
+    expect(backend.retailerEvents).not.toHaveBeenCalled();
+    await renderRouter(APP, { initialUrl: `/fall/${caseId}` });
+    expect(screen.getByText('Hallo Sam, danke für deinen Fall.')).toBeTruthy();
+    expect(screen.getByText('Mo–Sa, 8–18 Uhr')).toBeTruthy();
+    expect(screen.getByRole('button', { name: de.sharing.contact.call })).toBeTruthy();
+  });
+
+  test('freier Chat: Antwort geht an den Händler, nicht an den Assistenten', async () => {
+    const caseId = setup();
+    useAppStore.getState().shareWithDealer(caseId, 'test');
+    await act(async () => {
+      await syncShare(caseId, false);
+    });
+    useAppStore.getState().importRetailerEvents(caseId, [
+      {
+        id: 'hev_msg',
+        caseId,
+        type: 'haendler_nachricht',
+        at: new Date(Date.now() + 1000).toISOString(),
+        actor: { kind: 'haendler', id: dealer.id, name: dealer.name },
+        payload: { text: 'Ist das Gerät freistehend?', by: 'Sandra K.' },
+      },
+    ]);
+    await renderRouter(APP, { initialUrl: `/fall/${caseId}` });
+    expect(screen.getByText('Sandra K. · Fründ')).toBeTruthy();
+    const field = screen.getByLabelText(de.sharing.placeholderDealer('Fründ'));
+    await fireEvent.changeText(field, 'Ja, freistehend.');
+    const chatBefore = useAppStore.getState().chatMessages.length;
+    await tap(de.chat.send);
+    expect(useAppStore.getState().chatMessages.length).toBe(chatBefore);
+    expect(
+      useAppStore.getState().events.find((e) => e.type === 'nachricht_an_haendler')?.payload,
+    ).toEqual({ text: 'Ja, freistehend.' });
+    expect(screen.getByText(de.sharing.sentTo('Fründ'))).toBeTruthy();
+    await act(async () => {
+      await syncShare(caseId, false);
+    });
+    const last = backend.share.mock.calls.at(-1)![0] as SharedCaseFile;
+    expect(last.messages).toEqual([expect.objectContaining({ text: 'Ja, freistehend.' })]);
+    expect(last.timeline.some((x) => x.type === 'nachricht_an_haendler')).toBe(false);
+
+    // Umschalten: wieder an den Assistenten
+    await fireEvent.press(screen.getByRole('radio', { name: de.sharing.toAssistant }));
+    expect(screen.getByLabelText(de.thread.inputLabel)).toBeTruthy();
+  });
+
+  test('Terminvorschlag: Zeitfenster als Buttons, Ersatzteil als Nachricht', async () => {
+    const caseId = setup();
+    useAppStore.getState().shareWithDealer(caseId, 'test');
+    await act(async () => {
+      await syncShare(caseId, false);
+    });
+    const base = { caseId, actor: { kind: 'haendler' as const, id: dealer.id, name: dealer.name } };
+    useAppStore.getState().importRetailerEvents(caseId, [
+      {
+        ...base,
+        id: 'hev_teil',
+        type: 'haendler_ersatzteil',
+        at: new Date(Date.now() + 1000).toISOString(),
+        payload: { part: 'Laugenpumpe', status: 'bestellt', eta: '3 Werktagen', by: 'Sandra K.' },
+      },
+      {
+        ...base,
+        id: 'hev_termin',
+        type: 'haendler_termin',
+        at: new Date(Date.now() + 2000).toISOString(),
+        payload: {
+          partnerName: 'Fründ Kundendienst',
+          slots: ['Mo, 8–12 Uhr', 'Di, 12–16 Uhr'],
+          by: 'Sandra K.',
+        },
+      },
+    ]);
+    await renderRouter(APP, { initialUrl: `/fall/${caseId}` });
+    expect(
+      screen.getByText(de.sharing.part('Laugenpumpe', 'bestellt', '3 Werktagen')),
+    ).toBeTruthy();
+    expect(screen.getByText(de.sharing.slotOffer('Fründ Kundendienst'))).toBeTruthy();
+    await tap('Di, 12–16 Uhr');
+    const answer = useAppStore
+      .getState()
+      .events.find((e) => e.type === 'rueckfrage_beantwortet' && e.payload.questionEventId);
+    expect(answer?.payload).toMatchObject({
+      answer: 'Di, 12–16 Uhr',
+      questionEventId: 'hev_termin',
+    });
+  });
+
   test('ohne bekannten Händler gibt es kein Angebot', async () => {
     const caseId = setup(false);
     await renderRouter(APP, { initialUrl: `/fall/${caseId}` });

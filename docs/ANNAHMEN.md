@@ -371,3 +371,14 @@ Lennart: „Überall Erklärtexte entfernen. App und Webseite müssen selbsterkl
 - **Anonyme Zahlen:** Für die Auswertung zählt das Backend auch Fälle an Geräten von Fründ, die nicht gesendet wurden, ohne Namen, Adressen und Fallnummern. Ob und wie das in echt erlaubt ist, klärt der Auftragsverarbeitungsvertrag (offen).
 - **Keine Signatur unter Nachrichten:** Im Gespräch steht der Absender ohnehin dabei („Sandra K. · Fründ“). Eine Signatur wäre doppelt.
 - **Gewähltes Zeitfenster** bestätigt das Backend sofort als Termin beim Kundendienst. In echt prüft das der Kalender (Schnittstelle).
+
+## Portal komplett: App (03.11.2026, Entscheidung 32)
+
+- **Ein Eingabefeld, zwei Empfänger.** Ist der Fall an den Händler gesendet, steht über dem Feld ein Umschalter „Assistent | Fründ“. Ohne Wahl antwortet das Feld dem, der zuletzt geschrieben hat. Der Platzhalter sagt, wohin es geht („Nachricht an Fründ“).
+- **Absender im Gespräch:** „Sandra K. · Fründ“, bei automatischen Nachrichten nur „Fründ“. Deine Nachrichten an den Händler tragen oben „An Fründ“.
+- **Begrüßung sofort:** Die Antwort auf das Senden bringt die Begrüßung mit. Kontaktkarte mit Telefon, Servicezeiten und „Anrufen“.
+- **Terminvorschlag** des Händlers: Zeitfenster als Buttons wie bei Rückfragen. **Ersatzteil:** „Das Ersatzteil ist bestellt: Laugenpumpe. Lieferung in 3 Werktagen.“
+- **Fotos an den Händler** über dieselbe Kamera wie für den Assistenten. Sie gehen mit der nächsten Akte an den Händler, Fotos für den Assistenten weiter nicht.
+- **Abruf alle 5 Sekunden** statt 15, damit es sich wie ein Chat anfühlt. Später Push.
+- **Bewertung** nach der Reparatur geht mit in die Akte (für die Sterne in der Auswertung).
+- **Text der Weitergabe** nennt jetzt auch „Deine Nachrichten an den Händler“ (Textversion 2026-11-3).

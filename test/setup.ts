@@ -61,7 +61,7 @@ jest.mock('@/services/guideService', () => ({
 // Backend für geteilte Fälle: in Tests ein steuerbarer Mock, damit fetch-Mocks nur den Assistenten betreffen
 jest.mock('@/services/backendService', () => ({
   httpBackendService: {
-    share: jest.fn(async () => ({ ok: true, token: 'test-token' })),
+    share: jest.fn(async () => ({ ok: true, token: 'test-token', events: [] })),
     retailerEvents: jest.fn(async () => []),
     revoke: jest.fn(async () => true),
   },

@@ -139,6 +139,8 @@ export interface AppActions {
   updateShare: (caseId: Id, patch: Partial<CaseShare>) => void;
   /** Ereignisse des Händlers aus dem Backend in den Fall übernehmen, ohne Doppelte */
   importRetailerEvents: (caseId: Id, events: CaseEvent[]) => void;
+  /** Nachricht an den Händler (Entscheidung 32). Nur bei aktiver Weitergabe. */
+  messageDealer: (caseId: Id, text: string, photoId?: Id) => CaseEvent | undefined;
   /** Legt den Vertrag aus der Konfiguration an (nach erfolgreicher Prüfung). */
   linkContract: (via: Contract['linkedVia']) => Contract;
   addDevice: (input: NewDevice) => Device;
@@ -325,6 +327,21 @@ export function createAppStore(storage: StateStorage = AsyncStorage, env: StoreE
                   : s.shares,
               };
             }),
+
+          messageDealer: (caseId, text, photoId) => {
+            const s = get();
+            const share = s.shares[caseId];
+            const consent = s.consents.find((k) => k.id === share?.consentId);
+            if (!share || share.revoked || !consent || consent.revokedAt) return undefined;
+            const clean = text.trim().slice(0, 2000);
+            if (!clean) return undefined;
+            return get().addEvent({
+              caseId,
+              type: 'nachricht_an_haendler',
+              actor: { kind: 'haushalt', id: s.persons[0]?.id },
+              payload: { text: clean, ...(photoId ? { photoId } : {}) },
+            });
+          },
 
           addCatalogEntry: (entry) => {
             if (!registerCatalogEntry(entry)) return;

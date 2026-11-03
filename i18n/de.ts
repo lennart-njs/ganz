@@ -54,6 +54,7 @@ export const de = {
     meldungen: 'Meldung im Display',
     kamera: 'Foto machen',
     fotoFrage: 'Foto für den Assistenten',
+    fotoHaendler: 'Foto für den Händler',
     analyse: 'Intelligente Fehlererkennung',
     rueckfrage: 'Rückfrage',
     ergebnis: 'Ergebnis',
@@ -137,6 +138,7 @@ export const de = {
       'Problem und Fotos aus dem Fall',
       'Ergebnis und Schritte der Anleitung',
       'Befund, Kosten und Termin',
+      'Deine Nachrichten an den Händler',
     ],
     assistent: [
       'Deine Nachrichten',
@@ -1172,6 +1174,28 @@ export const de = {
       abgeschlossen: 'Wir haben den Fall abgeschlossen.',
     },
     defaultOptions: ['Ja', 'Nein'],
+    /** Absender im Gespräch: „Sandra K. · Fründ“ */
+    sender: (person: string | undefined, dealer: string) =>
+      person && person !== dealer ? `${person} · ${dealer}` : dealer,
+    slotOffer: (partner: string) => `${partner} kommt zu dir. Wann passt es?`,
+    part: (part: string, status: 'bestellt' | 'geliefert', eta?: string) =>
+      status === 'geliefert'
+        ? `Das Ersatzteil ist da: ${part}.`
+        : `Das Ersatzteil ist bestellt: ${part}.${eta ? ` Lieferung in ${eta}.` : ''}`,
+    contact: {
+      call: 'Anrufen',
+      mail: 'E-Mail',
+    },
+    hours: {
+      days: ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'],
+      range: (from: string, to: string) => `${from}–${to} Uhr`,
+    },
+    /** Eingabefeld: an wen die Nachricht geht */
+    recipient: 'Empfänger',
+    toAssistant: 'Assistent',
+    placeholderDealer: (dealer: string) => `Nachricht an ${dealer}`,
+    photoButtonDealer: (dealer: string) => `Foto für ${dealer} aufnehmen`,
+    sentTo: (dealer: string) => `An ${dealer}`,
     eventDetail: {
       decision: {
         gewaehrleistung: 'Gewährleistung',

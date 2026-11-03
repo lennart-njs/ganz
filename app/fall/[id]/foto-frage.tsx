@@ -1,3 +1,4 @@
+import { useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 
 import { CameraCapture, type CapturedPhoto } from '@/components/app/CameraCapture';
@@ -9,11 +10,12 @@ import { prepareChatImage } from '@/lib/chat/photo';
 import { useAppStore } from '@/store/appStore';
 
 /**
- * Foto für den Reparatur-Assistenten (Entscheidung 26). Nur Aufnahme in der App.
- * Danach geht es zurück ins Gespräch, das Foto hängt am Eingabefeld.
+ * Foto für den Reparatur-Assistenten (Entscheidung 26) oder den Händler (Entscheidung 32).
+ * Nur Aufnahme in der App. Danach geht es zurück ins Gespräch, das Foto hängt am Eingabefeld.
  */
 export default function FotoFrage() {
   const caseId = useCaseId();
+  const { an } = useLocalSearchParams<{ an?: string }>();
   const [preparing, setPreparing] = useState(false);
 
   const capture = async (pic: CapturedPhoto) => {
@@ -35,7 +37,10 @@ export default function FotoFrage() {
   };
 
   return (
-    <CaseScreen title={de.screens.fotoFrage} scroll={false}>
+    <CaseScreen
+      title={an === 'haendler' ? de.screens.fotoHaendler : de.screens.fotoFrage}
+      scroll={false}
+    >
       {preparing ? (
         <Typing label={de.chat.photoPreparing} />
       ) : (

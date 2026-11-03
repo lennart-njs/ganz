@@ -1,5 +1,6 @@
-// Hält geteilte Fälle mit dem Backend gleich (Entscheidung 28, 29):
+// Hält geteilte Fälle mit dem Backend gleich (Entscheidung 28, 32):
 // sendet die Akte nach jeder Änderung, holt Antworten des Händlers ab und meldet den Widerruf.
+// Was beim Senden entsteht (Begrüßung, Frage nach dem Kaufbeleg), steht sofort im Gespräch.
 import { useEffect } from 'react';
 import { AppState } from 'react-native';
 
@@ -8,7 +9,8 @@ import { services } from '@/services';
 
 import { useAppStore, type AppData } from './appStore';
 
-const POLL_MS = 15_000;
+/** Abruf im Gespräch mit dem Händler. Später Push statt Abruf (docs/BACKEND.md). */
+const POLL_MS = 5_000;
 const busy = new Set<string>();
 
 const eventCount = (s: AppData, caseId: string) =>
@@ -45,6 +47,8 @@ export async function syncShare(caseId: string, poll = true): Promise<void> {
         const result = await services.backend.share(file, share.token);
         if (result.ok) {
           useAppStore.getState().updateShare(caseId, { token: result.token, syncedEvents: count });
+          if (result.events.length)
+            useAppStore.getState().importRetailerEvents(caseId, result.events);
         } else if (result.reason === 'widerrufen') {
           useAppStore.getState().updateShare(caseId, { revoked: true });
         }

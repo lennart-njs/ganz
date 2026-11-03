@@ -21,6 +21,7 @@ import {
   FactList,
   InfoBox,
   PhotoFrame,
+  SegmentedControl,
   Sheet,
   StarRating,
   Text,
@@ -37,11 +38,13 @@ import { amountToPay, costsLine, requestAppointment } from '@/lib/booking';
 import { chatLimits } from '@/lib/chat/limits';
 import { retryableChatErrors, useAssistant } from '@/lib/chat/useAssistant';
 import { hasProgress } from '@/lib/caseView';
+import { formatServiceHours } from '@/lib/serviceHours';
 import { deviceTitle, getManufacturer } from '@/lib/devices';
 import { guideEnding, guideTools, SAFETY_CONFIRM } from '@/lib/guideMeta';
 import { guideThread, safetyConfirmed } from '@/lib/guideThread';
 import { dealerService, insurerShortName, partnerKind, serviceFor } from '@/lib/service';
 import { toDiagnosis } from '@/lib/diagnosis';
+import type { DealerSettings } from '@/model/portal';
 import type { CaseEvent, Diagnosis } from '@/model/types';
 import { services, type FindingOption, type PhotoMode, type QuestionAnswer } from '@/services';
 import { activeBooking, nextSimulationDue, selectCaseEvents, useAppStore } from '@/store/appStore';
@@ -49,7 +52,7 @@ import { activeBooking, nextSimulationDue, selectCaseEvents, useAppStore } from 
 const t = de.thread;
 const CONSENT_TEXT_VERSION = '2026-10-1';
 const CLAIM_TEXT_VERSION = '2026-10-1';
-const SHARE_TEXT_VERSION = '2026-11-1';
+const SHARE_TEXT_VERSION = '2026-11-3';
 
 interface Item {
   at: string;
@@ -58,6 +61,51 @@ interface Item {
 }
 
 const answers: QuestionAnswer[] = ['ablauf', 'zulauf', 'unklar'];
+
+/** Kurzname des Händlers aus der Konfiguration, sonst der Name am Ereignis */
+const dealerShort = (e: CaseEvent) =>
+  demoConfig.dealers.find((d) => d.id === e.actor.id)?.shortName ??
+  e.actor.name ??
+  de.sharing.actor.haendler;
+
+/** Kontakt aus der Begrüßung des Händlers */
+interface DealerContact {
+  name: string;
+  phone: string;
+  email?: string;
+  hours?: DealerSettings['profile']['hours'];
+}
+
+function ContactCard({ contact }: { contact: DealerContact }) {
+  const c = de.sharing.contact;
+  return (
+    <View style={styles.full}>
+      <Card>
+        <View style={styles.items}>
+          <Text variant="label">{contact.name}</Text>
+          <Text variant="body">{contact.phone}</Text>
+          {contact.hours ? <Text variant="meta">{formatServiceHours(contact.hours)}</Text> : null}
+          <View style={styles.links}>
+            <Button
+              label={c.call}
+              variant="link"
+              accessibilityHint={contact.phone}
+              onPress={() => Linking.openURL(`tel:${contact.phone.replace(/[^\d+]/g, '')}`)}
+            />
+            {contact.email ? (
+              <Button
+                label={c.mail}
+                variant="link"
+                accessibilityHint={contact.email}
+                onPress={() => Linking.openURL(`mailto:${contact.email}`)}
+              />
+            ) : null}
+          </View>
+        </View>
+      </Card>
+    </View>
+  );
+}
 
 /**
  * Der Fall als ein Gespräch (Entscheidung 11). Alles, was im Fall passiert, steht als Nachricht
@@ -93,6 +141,8 @@ export default function FallGespraech() {
   const [note, setNote] = useState('');
   // Fall an den Händler: erst zeigen, was er sieht, dann senden (Entscheidung 28)
   const [dealerConfirm, setDealerConfirm] = useState(false);
+  // Eingabefeld: an den Assistenten oder an den Händler (Entscheidung 32). Ohne Wahl: wer zuletzt sprach.
+  const [recipientPick, setRecipientPick] = useState<'assistent' | 'haendler'>();
 
   // Ein Fall ohne Inhalt bleibt nicht liegen, wenn man das Gespräch verlässt
   useEffect(() => () => useAppStore.getState().discardIfEmpty(caseId), [caseId]);
@@ -183,6 +233,19 @@ export default function FallGespraech() {
   const repairBooking = bookings.find((b) => b.kind === 'reparatur' && b.status !== 'storniert');
   const progress = hasProgress(state, c);
   const of = (type: CaseEvent['type']) => events.filter((e) => e.type === type);
+
+  // Gespräch mit dem Händler (Entscheidung 32): Wer zuletzt sprach, bekommt die Antwort
+  const dealer = device?.soldBy;
+  const dealerName = dealer
+    ? (demoConfig.dealers.find((d) => d.id === dealer.id)?.shortName ?? dealer.name)
+    : '';
+  const dealerShared = !!state.shares[caseId] && !state.shares[caseId]?.revoked;
+  const lastDealerAt =
+    events.filter((e) => e.actor.kind === 'haendler' || e.type === 'nachricht_an_haendler').at(-1)
+      ?.at ?? '';
+  const recipient: 'assistent' | 'haendler' = dealerShared
+    ? (recipientPick ?? (lastDealerAt > (msgs.at(-1)?.at ?? '') ? 'haendler' : 'assistent'))
+    : 'assistent';
   const after = (
     iso: string | undefined,
     type: CaseEvent['type'],
@@ -302,7 +365,10 @@ export default function FallGespraech() {
       type: 'rueckfrage_beantwortet',
       actor: { kind: 'haushalt', id: s.persons[0]?.id },
       payload: {
-        question: String(question.payload.question),
+        question:
+          question.type === 'haendler_termin'
+            ? de.sharing.slotOffer(String(question.payload.partnerName ?? ''))
+            : String(question.payload.question),
         answer,
         questionEventId: question.id,
       },
@@ -330,14 +396,17 @@ export default function FallGespraech() {
   };
 
   const sendInput = () => {
-    const text = input.trim() || (attached ? de.chat.photoDefault : '');
+    const toDealer = recipient === 'haendler';
+    const text =
+      input.trim() || (attached ? (toDealer ? de.chat.photoLabel : de.chat.photoDefault) : '');
     if (!text) return;
     if (text.length > chatLimits.chars) {
       setInputError(de.chat.tooLong(chatLimits.chars));
       return;
     }
     setInput('');
-    assistant.send(text, attached);
+    if (toDealer) useAppStore.getState().messageDealer(caseId, text, attached);
+    else assistant.send(text, attached);
     setAttached(undefined);
   };
   const photoOf = (id: string | undefined) =>
@@ -409,13 +478,47 @@ export default function FallGespraech() {
     add(e.at, `${e.id}-a`, <BotSays lines={[de.sharing.sent(name)]} />);
   }
   for (const e of events) {
+    // Deine Nachrichten an den Händler (Entscheidung 32)
+    if (e.type === 'nachricht_an_haendler') {
+      const to = device?.soldBy
+        ? (demoConfig.dealers.find((d) => d.id === device.soldBy?.id)?.shortName ??
+          device.soldBy.name)
+        : de.sharing.actor.haendler;
+      add(
+        e.at,
+        e.id,
+        <UserSaid
+          text={String(e.payload.text ?? '')}
+          photoUri={photoOf(e.payload.photoId as string | undefined)}
+          to={de.sharing.sentTo(to)}
+        />,
+      );
+      continue;
+    }
     if (e.actor.kind !== 'haendler') continue;
-    const name = e.actor.name ?? de.sharing.actor.haendler;
+    const short = dealerShort(e);
     const p = e.payload;
+    const name = de.sharing.sender(p.by ? String(p.by) : undefined, short);
     let lines: string[] = [];
     let hint: string | undefined;
-    if (e.type === 'haendler_angenommen') lines = [de.sharing.accepted(name)];
+    let extra: ReactNode;
+    if (e.type === 'haendler_angenommen') lines = [de.sharing.accepted(short)];
     if (e.type === 'haendler_rueckfrage') lines = [String(p.question ?? '')];
+    if (e.type === 'haendler_nachricht') {
+      lines = [String(p.text ?? '')];
+      const contact = p.contact as DealerContact | undefined;
+      if (contact?.phone) extra = <ContactCard contact={contact} />;
+    }
+    if (e.type === 'haendler_termin') lines = [de.sharing.slotOffer(String(p.partnerName ?? ''))];
+    if (e.type === 'haendler_ersatzteil') {
+      lines = [
+        de.sharing.part(
+          String(p.part ?? ''),
+          p.status === 'geliefert' ? 'geliefert' : 'bestellt',
+          p.eta ? String(p.eta) : undefined,
+        ),
+      ];
+    }
     if (e.type === 'haendler_entscheidung') {
       lines = [de.sharing.decision[p.decision as keyof typeof de.sharing.decision] ?? ''];
       hint = p.note ? String(p.note) : undefined;
@@ -429,7 +532,15 @@ export default function FallGespraech() {
       lines = [de.sharing.status[p.status as keyof typeof de.sharing.status] ?? ''];
       hint = p.note ? String(p.note) : undefined;
     }
-    if (lines.some(Boolean)) add(e.at, e.id, <BotSays name={name} lines={lines} hint={hint} />);
+    if (lines.some(Boolean)) {
+      add(
+        e.at,
+        e.id,
+        <BotSays name={name} lines={lines} hint={hint}>
+          {extra}
+        </BotSays>,
+      );
+    }
   }
 
   // Ergebnis der Intelligenten Fehlererkennung
@@ -866,17 +977,21 @@ export default function FallGespraech() {
     }
   }
 
-  // Offene Rückfrage des Händlers: Antworten als Buttons (Entscheidung 29)
-  const dealerQuestion = of('haendler_rueckfrage')
+  // Offene Rückfrage oder Terminvorschlag des Händlers: Antworten als Buttons
+  const dealerQuestion = events
+    .filter((q) => q.type === 'haendler_rueckfrage' || q.type === 'haendler_termin')
     .filter((q) => !of('rueckfrage_beantwortet').some((a) => a.payload.questionEventId === q.id))
+    // Ein Termin, den der Händler danach selbst festgelegt hat, braucht keine Wahl mehr
+    .filter(
+      (q) =>
+        q.type !== 'haendler_termin' ||
+        !of('haendler_betrieb').some((b) => b.at > q.at && b.payload.slot),
+    )
     .at(-1);
-  const dealer = device?.soldBy;
-  const dealerShared = !!state.shares[caseId] && !state.shares[caseId]?.revoked;
 
   if (dealerQuestion && !assistant.waiting) {
-    const options = Array.isArray(dealerQuestion.payload.options)
-      ? (dealerQuestion.payload.options as string[])
-      : [];
+    const raw = dealerQuestion.payload.options ?? dealerQuestion.payload.slots;
+    const options = Array.isArray(raw) ? (raw as string[]) : [];
     for (const [i, o] of (options.length ? options : de.sharing.defaultOptions).entries()) {
       reply(`haendler-antwort-${i}`, o, () => answerDealer(dealerQuestion, o));
     }
@@ -1273,10 +1388,17 @@ export default function FallGespraech() {
   const closed = c.status === 'erledigt' || c.status === 'abgebrochen';
   // Laufende Anleitung: Der Platzhalter lädt zur Frage zum aktuellen Schritt ein (statt eines Links)
   const stepNow = run && !run.endedAt && c.status === 'selbsthilfe' ? run.currentStep + 1 : 0;
+  const toDealer = recipient === 'haendler';
   const inputBar = closed ? undefined : (
     <ChatInput
-      label={t.inputLabel}
-      placeholder={stepNow ? de.chat.placeholderStep(stepNow) : de.chat.placeholder}
+      label={toDealer ? de.sharing.placeholderDealer(dealerName) : t.inputLabel}
+      placeholder={
+        toDealer
+          ? de.sharing.placeholderDealer(dealerName)
+          : stepNow
+            ? de.chat.placeholderStep(stepNow)
+            : de.chat.placeholder
+      }
       value={input}
       error={inputError}
       onChangeText={(v) => {
@@ -1285,21 +1407,38 @@ export default function FallGespraech() {
       }}
       onSend={sendInput}
       sendLabel={de.chat.send}
-      canSend={(!!input.trim() || !!attached) && !assistant.pending}
+      canSend={(!!input.trim() || !!attached) && (toDealer || !assistant.pending)}
       camera={{
-        label: de.chat.photoButton,
-        disabled: assistant.pending,
-        onPress: () => router.push(`/fall/${caseId}/foto-frage`),
+        label: toDealer ? de.sharing.photoButtonDealer(dealerName) : de.chat.photoButton,
+        disabled: !toDealer && assistant.pending,
+        onPress: () => router.push(`/fall/${caseId}/foto-frage${toDealer ? '?an=haendler' : ''}`),
       }}
       above={
-        attachedPhoto ? (
-          <View style={styles.attached}>
-            <Text variant="meta">{de.chat.photoAttached}</Text>
-            <Button
-              label={de.chat.photoRemove}
-              variant="link"
-              onPress={() => setAttached(undefined)}
-            />
+        dealerShared || attachedPhoto ? (
+          <View style={styles.stack}>
+            {dealerShared ? (
+              <View style={styles.recipient}>
+                <SegmentedControl
+                  accessibilityLabel={de.sharing.recipient}
+                  options={[
+                    { value: 'assistent', label: de.sharing.toAssistant },
+                    { value: 'haendler', label: dealerName },
+                  ]}
+                  value={recipient}
+                  onChange={setRecipientPick}
+                />
+              </View>
+            ) : null}
+            {attachedPhoto ? (
+              <View style={styles.attached}>
+                <Text variant="meta">{de.chat.photoAttached}</Text>
+                <Button
+                  label={de.chat.photoRemove}
+                  variant="link"
+                  onPress={() => setAttached(undefined)}
+                />
+              </View>
+            ) : null}
           </View>
         ) : undefined
       }
@@ -1350,4 +1489,5 @@ const styles = StyleSheet.create({
   gapTop: { marginTop: 8 },
   links: { flexDirection: 'row', flexWrap: 'wrap', columnGap: 16 },
   attached: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  recipient: { alignSelf: 'flex-start' },
 });
