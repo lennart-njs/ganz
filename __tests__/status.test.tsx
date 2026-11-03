@@ -239,6 +239,21 @@ describe('Abschluss', () => {
     ).toBeTruthy();
   });
 
+  test('läuft für das Gerät schon ein neuer Fall, öffnet sich der erledigte nicht wieder (Nr. 13)', async () => {
+    const { id } = await repaired();
+    await tap(de.finish.runsAgain);
+    const deviceId = caseOf(id).deviceId;
+    await act(async () => {
+      useAppStore.getState().openCaseFor(deviceId, 'symptom', 'Tür geht nicht auf');
+    });
+    expect(screen.queryByRole('button', { name: de.finish.stillBroken })).toBeNull();
+    expect(useAppStore.getState().confirmRepair(id, false)).toEqual({
+      ok: false,
+      refusal: { code: 'regel', action: 'problem_besteht_weiter' },
+    });
+    expect(caseOf(id).status).toBe('erledigt');
+  });
+
   test('auch nach „Läuft wieder“ lässt sich ein erledigter Fall wieder öffnen', async () => {
     const { id, r } = await repaired();
     await tap(de.finish.runsAgain);

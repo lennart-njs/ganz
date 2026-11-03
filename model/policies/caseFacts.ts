@@ -75,6 +75,11 @@ export interface CaseFacts {
   finding?: Diagnosis;
   /** Der Befund sagt: Ersatzgerät nötig */
   replacement: boolean;
+  /**
+   * Ein anderer offener Fall desselben Geräts. Dann öffnet sich dieser Fall nicht wieder, denn
+   * je Gerät gibt es höchstens einen offenen Fall (Entscheidung Nr. 13).
+   */
+  otherOpenCase?: Id;
 }
 
 function claimState(c: Case): ClaimState {
@@ -186,5 +191,8 @@ export function selectCaseFacts(s: CaseFactsSource, caseId: Id): CaseFacts | und
     guideOutcome: lastRun?.outcome,
     finding,
     replacement: finding?.errorPattern === 'ersatzgeraet_noetig',
+    otherOpenCase: Object.values(s.cases).find(
+      (o) => o.id !== caseId && o.deviceId === c.deviceId && !isClosed(o.status),
+    )?.id,
   };
 }

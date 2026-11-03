@@ -178,6 +178,21 @@ describe('Abbrechen und Später weitermachen (R-01)', () => {
   });
 });
 
+describe('Wieder öffnen (Entscheidung Nr. 13)', () => {
+  test('ein erledigter Fall öffnet sich nur, wenn für das Gerät kein anderer offen ist', () => {
+    expect(can(facts('erledigt'), 'problem_besteht_weiter')).toBe(true);
+    expect(can(facts('erledigt', { otherOpenCase: 'GS-2' }), 'problem_besteht_weiter')).toBe(false);
+    // Auch nach einer Reparatur, die erledigt ist
+    const repaired = facts('erledigt', { quote, ...repair('erledigt'), otherOpenCase: 'GS-2' });
+    expect(can(repaired, 'problem_besteht_weiter')).toBe(false);
+  });
+
+  test('in der Reparatur bleibt „Problem besteht weiter“, der Fall ist ja offen', () => {
+    const f = facts('in_reparatur', { quote, ...repair('erledigt'), otherOpenCase: 'GS-2' });
+    expect(can(f, 'problem_besteht_weiter')).toBe(true);
+  });
+});
+
 describe('Freigabe', () => {
   test('Schadenfall nur einmal, nur mit Schutz und Kostenvoranschlag (R-02)', () => {
     expect(can(facts('eskaliert', withContract), 'schaden_melden')).toBe(true);

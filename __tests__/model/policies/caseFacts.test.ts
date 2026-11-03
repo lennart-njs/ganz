@@ -132,6 +132,16 @@ describe('selectCaseFacts', () => {
     expect(factsOf(makeCase(), { contracts: [] }).hasContract).toBe(false);
   });
 
+  test('anderer offener Fall desselben Geräts', () => {
+    const done = makeCase({ status: 'erledigt' });
+    const other = { ...makeCase(), id: 'GS-2' };
+    const elsewhere = { ...makeCase(), id: 'GS-3', deviceId: 'geraet-2' };
+    const closed = { ...makeCase({ status: 'abgebrochen' }), id: 'GS-4' };
+    const cases = (...list: Case[]) => Object.fromEntries(list.map((c) => [c.id, c]));
+    expect(factsOf(done, { cases: cases(done, other) }).otherOpenCase).toBe('GS-2');
+    expect(factsOf(done, { cases: cases(done, elsewhere, closed) }).otherOpenCase).toBeUndefined();
+  });
+
   test('Schadenfall: keiner, in Prüfung, freigegeben, abgelehnt', () => {
     expect(factsOf(makeCase()).claim).toBe('keiner');
     expect(factsOf(makeCase({ status: 'freigabe_noetig', claim: claim() })).claim).toBe(

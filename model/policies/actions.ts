@@ -106,8 +106,11 @@ const RULES: Record<ActionKey, Rule> = {
   termin_selbst: (f) => RULES.selbst_zahlen(f) || RULES.selbst_zahlen_nach_ablehnung(f),
 
   reparatur_bestaetigen: (f) => canTransition(f.status, 'repariert') && repairDone(f),
+  // Ein erledigter Fall öffnet sich nur wieder, wenn für das Gerät kein anderer offen ist (Nr. 13)
   problem_besteht_weiter: (f) =>
-    canTransition(f.status, 'problem_besteht_weiter') && (f.status === 'erledigt' || repairDone(f)),
+    canTransition(f.status, 'problem_besteht_weiter') &&
+    !(f.closed && f.otherOpenCase) &&
+    (f.status === 'erledigt' || repairDone(f)),
   bewerten: (f) => repairDone(f) && f.status !== 'abgebrochen',
 
   pausieren: (f) => !f.closed,
