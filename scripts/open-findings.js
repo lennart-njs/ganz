@@ -2,6 +2,8 @@
 // Ein Befund gilt als offen, solange einer dieser Punkte zutrifft:
 //   - sein Regressionstest in __tests__/regressions/ ist noch test.failing,
 //   - es gibt dort gar keinen Test zu ihm (auch test.skip zählt nicht),
+//   - in __tests__/regressions/ ist irgendein Test übersprungen oder mit .only markiert
+//     (describe.skip, xit, test.only …). Dann läuft nicht sicher jeder Regressionstest.
 //   - docs/BEFUNDE.md führt ihn nicht als „behoben“.
 // Aufruf: node scripts/open-findings.js [R-xx …]
 // Ohne Argumente prüft es die Befunde, die eine feste Regel brechen (ZUKUNFTSPLAN, Pitch-Gate).
@@ -24,6 +26,14 @@ const tests = fs
 const befunde = fs.readFileSync(path.join(root, 'docs', 'BEFUNDE.md'), 'utf8').split('\n');
 
 const open = [];
+// Ein übersprungener Block oder ein .only irgendwo, und kein Befund gilt als sicher zu.
+// Der Text des Codes reicht dafür, Kommentare mit diesen Wörtern gibt es dort nicht.
+const skipped = tests.match(
+  /\b(?:(?:describe|test|it)\.(?:skip|only|todo)|x(?:describe|test|it)|f(?:describe|it))\s*\(/,
+);
+if (skipped) {
+  open.push(`Alle: In __tests__/regressions/ steht „${skipped[0].replace(/\s*\($/, '')}“.`);
+}
 for (const id of ids) {
   // Der Test zum Befund, nicht die „Ausgangslage“. Der Name kann auf der nächsten Zeile stehen.
   const name = `\\(\\s*['"\`]${id} (?!Ausgangslage)`;
