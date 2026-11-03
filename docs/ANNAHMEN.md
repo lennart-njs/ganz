@@ -223,3 +223,6 @@ Annahmen, die ich beim Bauen getroffen habe. Jede lässt sich ändern.
 ## Schritt 16: Werkzeuge
 
 - **Node 24:** `.nvmrc` nennt nur die Hauptversion `24`. `engines` ist `>=24`. Ohne `engine-strict` warnt npm bei älterem Node nur und bricht nicht ab. Die Arbeitsumgebung dieser Sitzung läuft noch mit Node 22. Die Prüfungen laufen dort trotzdem grün.
+- **Lint über das ganze Repo:** `npm run lint` ist `eslint . --max-warnings 10`. Die 10 Warnungen stehen in Tests und Skripten (`require()` in Mocks, eine ungenutzte Variable). Sie fallen bis Ende Phase 1 weg.
+- **Node-Globals für `scripts/`:** aus dem Paket `globals`, das mit `eslint-config-expo` kommt. Ich löse es über `eslint-config-expo` auf, damit kein eigenes Paket nötig ist.
+- **`useHydrated`** nutzt `useSyncExternalStore` statt `useState` und `useEffect`. Das Verhalten bleibt gleich. Den Fehlerzustand (`'fehler'`) baut Schritt 19.

@@ -27,7 +27,10 @@ jest.mock('expo-camera', () => {
   const React = require('react');
   const { View } = require('react-native');
   const permission = { current: { granted: true, canAskAgain: true, status: 'granted' } };
-  const CameraView = React.forwardRef((props: { onCameraReady?: () => void }, ref: unknown) => {
+  const CameraView = React.forwardRef(function CameraView(
+    props: { onCameraReady?: () => void },
+    ref: unknown,
+  ) {
     React.useImperativeHandle(ref, () => ({
       takePictureAsync: async () => ({ uri: 'file:///test.jpg', width: 1200, height: 900 }),
     }));

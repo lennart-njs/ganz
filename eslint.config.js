@@ -2,6 +2,14 @@
 const { defineConfig } = require('eslint/config');
 const expoConfig = require('eslint-config-expo/flat');
 const prettierRecommended = require('eslint-plugin-prettier/recommended');
+const path = require('path');
+
+// Node-Globals für scripts/. Das Paket globals kommt mit eslint-config-expo.
+const globals = require(
+  require.resolve('globals', {
+    paths: [path.dirname(require.resolve('eslint-config-expo/package.json'))],
+  }),
+);
 
 // Farben nur aus theme/ (CLAUDE.md: keine Hex-Werte außerhalb von theme/).
 const colorLiterals = [
@@ -46,6 +54,14 @@ module.exports = defineConfig([
   prettierRecommended,
   {
     ignores: ['dist/*', '.expo/*', 'design-system/*', 'reference/*', 'expo-env.d.ts'],
+  },
+  {
+    // Werkzeuge laufen in Node, nicht in der App.
+    files: ['scripts/**/*.js'],
+    languageOptions: {
+      sourceType: 'commonjs',
+      globals: globals.node,
+    },
   },
   {
     files: ['**/*.{js,jsx,ts,tsx}'],
