@@ -1,3 +1,4 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { router } from 'expo-router';
 import { act, fireEvent, renderRouter, screen } from 'expo-router/testing-library';
 
@@ -7,8 +8,11 @@ import { de } from '@/i18n/de';
 import { formatDateTime } from '@/i18n/format';
 import { chatContext } from '@/lib/chat/context';
 import { chatLimits } from '@/lib/chat/limits';
-import { parseRequest } from '@/lib/chat/prompt';
+import { parseRequest, type ChatContext } from '@/lib/chat/prompt';
+import { CHAT_HEADERS, INSTALLATION_ID } from '@/lib/chat/protocol';
 import { CONSENT_SCOPES } from '@/model/policies/consentScopes';
+import { services } from '@/services';
+import { INSTALLATION_KEY, forgetInstallationId } from '@/services/installation';
 import type { DeviceCategory } from '@/model/types';
 import { useAppStore } from '@/store/appStore';
 import { APP } from '@/test/app';
@@ -490,5 +494,93 @@ describe('Kontext für die Route', () => {
       hasProtection: false,
     });
     expect(parseRequest(body)).toEqual(body);
+  });
+});
+
+describe('Anfrage an den eigenen Server', () => {
+  const context: ChatContext = {
+    category: 'waschmaschine',
+    model: demoConfig.device.model,
+    problem: 'Pumpt nicht ab',
+    hasProtection: true,
+  };
+  const messages = [{ role: 'haushalt' as const, text: 'Es bleibt Wasser stehen.' }];
+  const sentHeaders = (call = 0) => fetchMock.mock.calls[call][1].headers as Record<string, string>;
+
+  afterEach(() => {
+    delete process.env.EXPO_PUBLIC_CHAT_TOKEN;
+  });
+
+  test('Pitch-Token und Installations-ID gehen im Header mit, nie im Body', async () => {
+    process.env.EXPO_PUBLIC_CHAT_TOKEN = 'pitch-w45';
+    fetchMock.mockReturnValue(reply({ reply: 'Gut.', suggestion: 'keine', guideId: '' }));
+    await services.chat.ask(context, messages);
+    await services.chat.ask(context, messages);
+    const [first, second] = [sentHeaders(0), sentHeaders(1)];
+    expect(first[CHAT_HEADERS.token]).toBe('pitch-w45');
+    expect(first[CHAT_HEADERS.installation]).toMatch(INSTALLATION_ID);
+    // Dieselbe Installation bei jeder Anfrage, auch nach einem Neustart der App
+    expect(second[CHAT_HEADERS.installation]).toBe(first[CHAT_HEADERS.installation]);
+    forgetInstallationId();
+    expect(await AsyncStorage.getItem(INSTALLATION_KEY)).toBe(first[CHAT_HEADERS.installation]);
+    await services.chat.ask(context, messages);
+    expect(sentHeaders(2)[CHAT_HEADERS.installation]).toBe(first[CHAT_HEADERS.installation]);
+    const body = fetchMock.mock.calls[0][1].body as string;
+    expect(body).not.toContain('pitch-w45');
+    expect(body).not.toContain(first[CHAT_HEADERS.installation]);
+  });
+
+  test('ohne EXPO_PUBLIC_CHAT_TOKEN kein Token-Header, ohne Speicher keine Installations-ID', async () => {
+    forgetInstallationId();
+    jest.mocked(AsyncStorage.getItem).mockRejectedValueOnce(new Error('kein Speicher'));
+    fetchMock.mockReturnValue(reply({ reply: 'Gut.', suggestion: 'keine', guideId: '' }));
+    expect(await services.chat.ask(context, messages)).toMatchObject({ ok: true });
+    expect(sentHeaders()).toEqual({ 'Content-Type': 'application/json' });
+  });
+
+  test.each([
+    [401, { error: 'token' }, 'token'],
+    [401, null, 'token'],
+    [429, { error: 'zu_viele' }, 'zu_viele'],
+    [429, { error: 'tagesgrenze' }, 'tagesgrenze'],
+    [429, { error: 'ausgelastet' }, 'ausgelastet'],
+    [429, null, 'zu_viele'],
+    [413, null, 'voll'],
+    [400, { error: 'ungueltig' }, 'dienst'],
+    [502, null, 'dienst'],
+  ])('Status %i mit %j wird zum Fehler %s', async (status, body, error) => {
+    fetchMock.mockReturnValueOnce(
+      Promise.resolve({
+        ok: false,
+        status,
+        json: () => (body ? Promise.resolve(body) : Promise.reject(new SyntaxError('kein JSON'))),
+      }),
+    );
+    expect(await services.chat.ask(context, messages)).toEqual({ ok: false, error });
+  });
+
+  test('401 und Tagesgrenze: ruhig zur Fachkraft, viele Fragen: warten und noch einmal', async () => {
+    setup();
+    await renderRouter(APP, { initialUrl: '/fall/neu' });
+    fetchMock.mockReturnValueOnce(reply({ error: 'token' }, 401));
+    await ask('Die Tür geht nicht auf.');
+    await tap(t.consentAccept);
+    await flush();
+    expect(screen.getByText(de.thread.noteFallback)).toBeTruthy();
+    expect(screen.queryByRole('button', { name: t.retry })).toBeNull();
+
+    fetchMock.mockReturnValueOnce(reply({ error: 'zu_viele' }, 429));
+    await ask('Und jetzt?');
+    await flush();
+    expect(screen.getByText(t.errors.zu_viele)).toBeTruthy();
+    fetchMock.mockReturnValueOnce(reply({ error: 'tagesgrenze' }, 429));
+    await tap(t.retry);
+    await flush();
+    expect(screen.getByText(de.thread.noteFallback)).toBeTruthy();
+    expect(screen.queryByRole('button', { name: t.retry })).toBeNull();
+    expect(screen.getByRole('button', { name: t.getHelp })).toBeTruthy();
+    for (const text of [t.errors.token, t.errors.zu_viele, t.errors.tagesgrenze]) {
+      expect(text).not.toMatch(/!|Fehler|401|429/);
+    }
   });
 });

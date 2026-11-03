@@ -1,6 +1,9 @@
 // Reparatur-Assistent: Die App fragt den eigenen Server (app/api/chat+api.ts), nie Claude direkt.
 // In der Entwicklung löst Expo den relativen Pfad gegen den Dev-Server auf.
+import { CHAT_HEADERS, CHAT_PATH } from '@/lib/chat/protocol';
 import type { ChatContext, ChatReply, ChatTurn } from '@/lib/chat/prompt';
+
+import { installationId } from './installation';
 
 export type ChatError =
   | 'kein_schluessel'
@@ -9,6 +12,12 @@ export type ChatError =
   | 'ausgelastet'
   | 'netz'
   | 'dienst'
+  /** 401: Der Pitch-Token fehlt oder ist alt (CHAT_PITCH_TOKEN auf dem Server) */
+  | 'token'
+  /** 429: viele Anfragen in kurzer Zeit, gleich geht es wieder */
+  | 'zu_viele'
+  /** 429: Für heute ist die Grenze erreicht */
+  | 'tagesgrenze'
   /** Das Gespräch hat die Grenze erreicht (lib/chat/limits.ts). Weiter hilft die Fachkraft. */
   | 'voll';
 
@@ -18,15 +27,44 @@ export interface ChatService {
   ask(context: ChatContext, messages: ChatTurn[]): Promise<ChatResult>;
 }
 
-const known: ChatError[] = ['kein_schluessel', 'schluessel', 'abgelehnt', 'ausgelastet', 'voll'];
+const known: ChatError[] = [
+  'kein_schluessel',
+  'schluessel',
+  'abgelehnt',
+  'ausgelastet',
+  'voll',
+  'token',
+  'zu_viele',
+  'tagesgrenze',
+];
+
+/** Fehler zu einer Antwort ohne Erfolg. Ohne bekannten Fehler im Body entscheidet der Status. */
+function errorFor(status: number, data: unknown): ChatError {
+  const error = (data as { error?: string } | null)?.error as ChatError | undefined;
+  if (error && known.includes(error)) return error;
+  if (status === 401 || status === 403) return 'token';
+  if (status === 429) return 'zu_viele';
+  if (status === 413) return 'voll';
+  return 'dienst';
+}
+
+/** Pitch-Token und Installations-ID für die Route. Nichts davon steht im Body. */
+async function headers(): Promise<Record<string, string>> {
+  const out: Record<string, string> = { 'Content-Type': 'application/json' };
+  const token = process.env.EXPO_PUBLIC_CHAT_TOKEN;
+  if (token) out[CHAT_HEADERS.token] = token;
+  const installation = await installationId();
+  if (installation) out[CHAT_HEADERS.installation] = installation;
+  return out;
+}
 
 export const httpChatService: ChatService = {
   async ask(context, messages) {
     let res: Response;
     try {
-      res = await fetch('/api/chat', {
+      res = await fetch(CHAT_PATH, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: await headers(),
         body: JSON.stringify({ context, messages }),
       });
     } catch {
@@ -36,12 +74,10 @@ export const httpChatService: ChatService = {
     try {
       data = await res.json();
     } catch {
-      return { ok: false, error: 'dienst' };
+      // Ein Proxy antwortet bei 401 oder 429 auch ohne JSON
+      return { ok: false, error: res.ok ? 'dienst' : errorFor(res.status, null) };
     }
-    if (!res.ok) {
-      const error = (data as { error?: string } | null)?.error as ChatError | undefined;
-      return { ok: false, error: error && known.includes(error) ? error : 'dienst' };
-    }
+    if (!res.ok) return { ok: false, error: errorFor(res.status, data) };
     const reply = data as Partial<ChatReply> | null;
     if (!reply || typeof reply.reply !== 'string') return { ok: false, error: 'dienst' };
     return {

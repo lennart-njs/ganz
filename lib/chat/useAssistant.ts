@@ -16,7 +16,7 @@ import { chatContext, hasChatConsent } from './context';
 import { chatFull, fitsRequest } from './limits';
 
 /** Bei diesen Fehlern lohnt ein zweiter Versuch. Sonst wird die Nachricht zur Notiz. */
-export const retryableChatErrors: ChatError[] = ['ausgelastet', 'netz', 'dienst'];
+export const retryableChatErrors: ChatError[] = ['ausgelastet', 'zu_viele', 'netz', 'dienst'];
 
 /** Fehler, die das Gespräch als Hinweis zeigt. Ein volles Gespräch zeigt full statt eines Fehlers. */
 export type AssistantError = Exclude<ChatError, 'voll'>;

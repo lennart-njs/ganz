@@ -24,6 +24,17 @@ npx expo start   # neu starten, damit .env gelesen wird
 
 Den Schlüssel bekommst du unter console.anthropic.com (API Keys). Ohne Schlüssel zeigt der Chat „noch nicht eingerichtet“ und verweist auf die Fachkraft. Der Chat funktioniert nur, solange `npx expo start` läuft. Modell und Einstellungen stehen in `app/api/chat+api.ts`, der Systemprompt in `lib/chat/prompt.ts`.
 
+Die Route nimmt nur Anfragen in der festen Form an (`requestSchema` in `lib/chat/prompt.ts`). Der Systemblock entsteht nur aus Schlüsseln und dem Katalog, eigene Worte gehen nur als Nachricht des Haushalts mit.
+
+**Missbrauch begrenzen.** Für einen Pitch über einen erreichbaren Server setzt du zwei Werte in `.env` (siehe `.env.example`):
+
+```bash
+CHAT_PITCH_TOKEN=pitch-2026-w45         # Server: ohne diesen Token antwortet die Route mit 401
+EXPO_PUBLIC_CHAT_TOKEN=pitch-2026-w45   # App: schickt ihn im Header X-Ganz-Token
+```
+
+Den Token wechselst du jede Woche: erst `CHAT_PITCH_TOKEN=neu,alt`, dann den neuen Build auf das Telefon, dann den alten Token entfernen. Dazu zählt die Route Anfragen je IP-Adresse und je Installation (Header `X-Ganz-Installation`, eine zufällige ID auf dem Telefon): 10 je Minute, 200 am Tag und 1.000 am Tag insgesamt, sonst 429. Die Werte änderst du mit `CHAT_RATE_PER_MINUTE`, `CHAT_RATE_PER_DAY` und `CHAT_DAILY_LIMIT`. Das begrenzt Missbrauch, ist aber kein Schutz: Der Token steckt in der App und lässt sich auslesen, Adresse und Installation lassen sich wechseln. Echte Anmeldung kommt erst mit dem Pilot-Backend (Phase 5).
+
 ## Demo-Modus
 
 Der Demo-Modus ist in `config/demo.config.ts` eingeschaltet (`demo.enabled`).

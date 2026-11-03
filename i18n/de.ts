@@ -1112,6 +1112,15 @@ export const de = {
       netz: 'Gerade gibt es keine Verbindung. Deine Nachricht ist nicht verloren. Du kannst sie noch einmal senden oder als Notiz für die Fachkraft speichern.',
       dienst:
         'Der Assistent ist gerade nicht erreichbar. Versuch es noch einmal oder hol dir Hilfe.',
+      /** 401: Der Pitch-Token fehlt oder ist alt */
+      token:
+        'Der Assistent ist in dieser Version der App nicht freigeschaltet. Eine Fachkraft hilft dir weiter.',
+      /** 429: viele Anfragen in kurzer Zeit */
+      zu_viele:
+        'Das waren viele Fragen in kurzer Zeit. Warte einen Moment und versuch es dann noch einmal.',
+      /** 429: Grenze für heute erreicht */
+      tagesgrenze:
+        'Der Assistent hat für heute genug Fragen beantwortet. Eine Fachkraft hilft dir weiter.',
     },
     entry: 'Reparatur-Assistent fragen',
     entrySub: 'Beschreib es, der Assistent fragt nach',
