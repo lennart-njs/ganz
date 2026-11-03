@@ -1,5 +1,6 @@
 import { Linking } from 'react-native';
 import { act, fireEvent, renderRouter, screen } from 'expo-router/testing-library';
+import { router } from 'expo-router';
 
 import { de } from '@/i18n/de';
 import { services } from '@/services';
@@ -139,6 +140,20 @@ describe('Foto → Ergebnis', () => {
     const r = await photoFlow('display');
     await tap(de.result.doesNotFit);
     expect(r.getPathname()).toBe('/fall/neu');
+  });
+
+  test('Details: Anleitung, „Passt nicht“ und Hilfe nur, solange die Regeln sie erlauben', async () => {
+    await photoFlow('display');
+    await act(async () => router.push('/fall/GS-24817/ergebnis'));
+    expect(screen.getByRole('button', { name: de.result.startGuide })).toBeTruthy();
+    expect(screen.getByRole('button', { name: de.result.doesNotFit })).toBeTruthy();
+    expect(screen.getByRole('button', { name: de.result.helpInstead })).toBeTruthy();
+    // Nach „Hilfe holen“ bleibt das Ergebnis lesbar, ohne die Wege der Selbsthilfe
+    await act(async () => useAppStore.getState().escalate('GS-24817'));
+    expect(screen.getByText(de.result.headline.wasserablauf)).toBeTruthy();
+    for (const name of [de.result.startGuide, de.result.doesNotFit, de.result.helpInstead]) {
+      expect(screen.queryByRole('button', { name })).toBeNull();
+    }
   });
 
   test('Kamera abgelehnt: Hinweis und Link zu den Einstellungen', async () => {
