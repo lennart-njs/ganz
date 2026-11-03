@@ -102,18 +102,17 @@ describe('R-05 zwei offene Fälle über eine Pflege-Zeile', () => {
 
   // app/geraet/[id].tsx:131 ruft createCase und startGuide direkt auf, ohne nach dem laufenden
   // Fall zu fragen. Danach gibt es zwei offene Fälle für ein Gerät. Verstößt gegen Nr. 13.
-  test.failing(
-    'R-05 Pflege bei laufendem Fall: höchstens ein offener Fall, Frage „Weitermachen“',
-    async () => {
-      const { device, id, runId } = await deviceWithRunningGuide();
-      await tap(maintenanceRow);
-      await flush();
-      expect(openCasesOf(device.id)).toHaveLength(1);
-      expect(useAppStore.getState().guideRuns[runId]?.completedSteps).toEqual([0]);
-      expect(caseOf(id).status).toBe('selbsthilfe');
-      expect(screen.getByRole('button', { name: de.thread.continueCase })).toBeTruthy();
-    },
-  );
+  // Behoben: Die Pflege-Zeile öffnet den Fall über openCaseFor. Bei der Frage geht es zu
+  // „Problem melden“ mit „Weitermachen“ und „Neues Problem melden“.
+  test('R-05 Pflege bei laufendem Fall: höchstens ein offener Fall, Frage „Weitermachen“', async () => {
+    const { device, id, runId } = await deviceWithRunningGuide();
+    await tap(maintenanceRow);
+    await flush();
+    expect(openCasesOf(device.id)).toHaveLength(1);
+    expect(useAppStore.getState().guideRuns[runId]?.completedSteps).toEqual([0]);
+    expect(caseOf(id).status).toBe('selbsthilfe');
+    expect(screen.getByRole('button', { name: de.thread.continueCase })).toBeTruthy();
+  });
 });
 
 // ---------- R-06 ----------

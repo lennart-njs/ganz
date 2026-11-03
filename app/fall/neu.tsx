@@ -13,7 +13,7 @@ import { appliance, hasGuides } from '@/lib/appliance';
 import { chatLimits } from '@/lib/chat/limits';
 import { deviceTitle } from '@/lib/devices';
 import { reportDisplayMessage } from '@/lib/problem';
-import { planOpenCase } from '@/model/policies/openCase';
+import { planOpenCase, type OpenCaseOptions } from '@/model/policies/openCase';
 import type { CaseEntry, Id } from '@/model/types';
 import { useAppStore } from '@/store/appStore';
 import { useTheme } from '@/theme';
@@ -31,16 +31,19 @@ const ADD_DEVICE = 'neues-geraet';
  * Problem melden: der Anfang des Fall-Gesprächs. ganz fragt nach Gerät und Problem, die Antworten
  * stehen unten, eigene Worte gehen direkt an den Reparatur-Assistenten (Entscheidung 12).
  * Sobald es einen Fall gibt, geht es im Gespräch des Falls weiter. Pro Gerät gibt es einen
- * offenen Fall (Entscheidung 13). Kein Link nach außen.
+ * offenen Fall (Entscheidung 13): Läuft einer mit Fortschritt, fragt ganz zuerst danach, auch für
+ * eine Pflege aus dem Gerätedetail (pflege). Kein Link nach außen.
  */
 export default function ProblemMelden() {
   const theme = useTheme();
   const insets = useSafeAreaInsets();
-  const params = useLocalSearchParams<{ geraet?: string; fall?: string }>();
+  const params = useLocalSearchParams<{ geraet?: string; fall?: string; pflege?: string }>();
   const store = useAppStore;
   const state = useAppStore();
   const devices = state.devices;
   const resumed = params.fall ? state.cases[params.fall] : undefined;
+  // Pflege aus dem Gerätedetail, während ein Fall mit Fortschritt läuft
+  const maintenance = de.maintenance.find((m) => m.guideId === params.pflege);
   const fixedDevice = params.geraet ?? resumed?.deviceId;
   const askDevice = !fixedDevice && devices.length > 1;
   const [deviceId, setDeviceId] = useState<string | undefined>(
@@ -77,8 +80,13 @@ export default function ProblemMelden() {
   const canReplace = plan?.art === 'frage_weitermachen' && plan.canCancel;
 
   /** Öffnet den Fall über openCaseFor und geht weiter. Bei der Frage bleibt alles, wie es ist. */
-  const withCase = (entry: CaseEntry, problemLabel: string, then: (id: Id) => void) => {
-    const r = store.getState().openCaseFor(device!.id, entry, problemLabel, openOptions);
+  const withCase = (
+    entry: CaseEntry,
+    problemLabel: string,
+    then: (id: Id) => void,
+    options: OpenCaseOptions = openOptions,
+  ) => {
+    const r = store.getState().openCaseFor(device!.id, entry, problemLabel, options);
     if (r.art === 'frage_weitermachen') return;
     draft.current = r.caseId;
     then(r.caseId);
@@ -191,6 +199,19 @@ export default function ProblemMelden() {
     ];
   } else if (running) {
     onPick = (key) => {
+      if (key !== 'weiter' && maintenance) {
+        // Pflege statt des laufenden Falls: gleich in die Anleitung
+        withCase(
+          'pflege',
+          maintenance.title,
+          (id) => {
+            store.getState().startGuide(id, maintenance.guideId);
+            toThread(id, { weiter: 'anleitung' });
+          },
+          { ...openOptions, neuesProblem: true },
+        );
+        return;
+      }
       if (key !== 'weiter') {
         setNewProblem(true);
         return;
@@ -264,6 +285,7 @@ export default function ProblemMelden() {
         <BotSays lines={[g.forDevice(deviceTitle(device))]} />
       ) : null}
 
+      {running && maintenance ? <UserSaid text={maintenance.title} /> : null}
       {running ? (
         <BotSays
           sender={askDevice}

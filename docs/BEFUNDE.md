@@ -87,7 +87,7 @@ R-07, R-12, R-13, R-16 und R-17 brechen eine feste Regel. Solange einer davon of
 | R-02 | „Schadenfall melden“ nach der Meldung, mit verwaister Bestätigung | B-17 | behoben | Schritt 22 | `__tests__/regressions/abstuerze.test.tsx` |
 | R-03 | „Neues Problem melden“ bei einem Fall in `in_reparatur` stürzt ab | – | behoben | Schritt 23 | `__tests__/regressions/abstuerze.test.tsx` |
 | R-04 | Zwei offene Fälle über „Passt nicht“ (Nr. 13) | – | behoben | Schritt 23 | `__tests__/regressions/fehlverhalten.test.tsx` |
-| R-05 | Zwei offene Fälle über eine Pflege-Zeile im Gerätedetail (Nr. 13) | – | offen | Schritt 23 | `__tests__/regressions/fehlverhalten.test.tsx` |
+| R-05 | Zwei offene Fälle über eine Pflege-Zeile im Gerätedetail (Nr. 13) | – | behoben | Schritt 23 | `__tests__/regressions/fehlverhalten.test.tsx` |
 | R-06 | Fortschritt der Anleitung verloren über „Details → Anleitung starten“, Stift lässt eine Anleitung offen | B-05 | offen | Schritt 23 | `__tests__/regressions/fehlverhalten.test.tsx` |
 | R-07 | „Du zahlst 189 €“ während der Prüfung durch den Versicherer | B-18 | behoben | Schritt 22 (vorgezogen) | `__tests__/regressions/fehlverhalten.test.tsx` |
 | R-08 | Zweite Buchung macht einen Selbstzahler-Fall unvollendbar | – | behoben | Schritt 22 (Kosten fragen `can`), Store-Regel in Schritt 25 | `__tests__/regressions/fehlverhalten.test.tsx` |

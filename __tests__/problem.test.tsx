@@ -230,6 +230,61 @@ test('Pflege aus dem Gerätedetail startet einen Pflege-Fall', async () => {
   expect(useAppStore.getState().cases['GS-24817']).toMatchObject({ entry: 'pflege' });
 });
 
+describe('Pflege aus dem Gerätedetail bei einem laufenden Fall (Entscheidung Nr. 13)', () => {
+  const row = new RegExp(`^${de.maintenance[0]!.title}`);
+
+  /** Ein Fall nach „Hilfe holen“, dann das Gerätedetail */
+  async function withRunningCase() {
+    const s = useAppStore.getState();
+    const device = s.devices[0]!;
+    const c = s.createCase({ deviceId: device.id, entry: 'symptom', problemLabel: 'Tür klemmt' });
+    s.escalate(c.id);
+    const r = await renderRouter(APP, { initialUrl: `/geraet/${device.id}` });
+    await act(async () => {});
+    return { id: c.id, r };
+  }
+
+  test('ganz fragt zuerst, „Weitermachen“ führt ins Gespräch des laufenden Falls', async () => {
+    const { id, r } = await withRunningCase();
+    await tap(row);
+    expect(r.getPathname()).toBe('/fall/neu');
+    expect(screen.getByText(de.maintenance[0]!.title)).toBeTruthy();
+    expect(screen.getByText(de.thread.runningCase('Tür klemmt'))).toBeTruthy();
+    expect(screen.getByText(de.thread.runningCaseAsk)).toBeTruthy();
+    await tap(de.thread.continueCase);
+    expect(r.getPathname()).toBe(`/fall/${id}`);
+    expect(Object.keys(useAppStore.getState().cases)).toEqual([id]);
+  });
+
+  test('„Neues Problem melden“ bricht den Fall ab und startet die Pflege', async () => {
+    const { id, r } = await withRunningCase();
+    await tap(row);
+    await tap(de.thread.newProblem);
+    const s = useAppStore.getState();
+    const pflege = Object.values(s.cases).find((c) => c.id !== id)!;
+    expect(r.getPathname()).toBe(`/fall/${pflege.id}/anleitung`);
+    expect(s.cases[id]).toMatchObject({
+      status: 'abgebrochen',
+      cancelReason: de.thread.newProblemReason,
+    });
+    expect(pflege).toMatchObject({ entry: 'pflege', status: 'selbsthilfe' });
+    expect(latestGuideRun(s, pflege)?.guideId).toBe(de.maintenance[0]!.guideId);
+  });
+});
+
+test('Fälle des Geräts: ein pausierter Fall geht beim Öffnen weiter', async () => {
+  const s = useAppStore.getState();
+  const device = s.devices[0]!;
+  const c = s.createCase({ deviceId: device.id, entry: 'symptom', problemLabel: 'Tür klemmt' });
+  s.escalate(c.id);
+  s.pauseCase(c.id);
+  const r = await renderRouter(APP, { initialUrl: `/geraet/${device.id}` });
+  await act(async () => {});
+  await tap(new RegExp(`^Tür klemmt, ${de.caseStatus.eskaliert}`));
+  expect(r.getPathname()).toBe(`/fall/${c.id}`);
+  expect(useAppStore.getState().cases[c.id]?.pausedAt).toBeUndefined();
+});
+
 describe('Problem melden als Gespräch', () => {
   test('bei mehreren Geräten fragt ganz zuerst nach dem Gerät, der Stift ändert die Antwort', async () => {
     const s = useAppStore.getState();

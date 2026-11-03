@@ -131,14 +131,19 @@ export default function GeraetDetail() {
               title={m.title}
               sub={m.sub}
               onPress={() => {
+                // Ein offener Fall pro Gerät (Entscheidung Nr. 13): Mit Fortschritt fragt
+                // „Problem melden“ zuerst, ob du dort weitermachen willst.
                 const st = useAppStore.getState();
-                const c = st.createCase({
-                  deviceId: device.id,
-                  entry: 'pflege',
-                  problemLabel: m.title,
-                });
-                st.startGuide(c.id, m.guideId);
-                router.push(`/fall/${c.id}?weiter=anleitung`);
+                const r = st.openCaseFor(device.id, 'pflege', m.title);
+                if (r.art === 'frage_weitermachen') {
+                  router.push({
+                    pathname: '/fall/neu',
+                    params: { geraet: device.id, pflege: m.guideId },
+                  });
+                  return;
+                }
+                st.startGuide(r.caseId, m.guideId);
+                router.push(`/fall/${r.caseId}?weiter=anleitung`);
               }}
             />
           ))}
@@ -163,9 +168,15 @@ export default function GeraetDetail() {
               key={c.id}
               title={c.problemLabel}
               sub={de.common.dot(caseStatusLabel(c.status), formatDateTime(c.createdAt))}
-              onPress={() =>
-                router.push(isClosed(c.status) ? `/fall/${c.id}/fallakte` : resumeHref(state, c))
-              }
+              onPress={() => {
+                if (isClosed(c.status)) {
+                  router.push(`/fall/${c.id}/fallakte`);
+                  return;
+                }
+                // Wie die Karte „Offener Fall“: weitermachen setzt eine Pause fort
+                if (c.pausedAt) state.resumeCase(c.id);
+                router.push(resumeHref(state, c));
+              }}
             />
           ))
         )}
