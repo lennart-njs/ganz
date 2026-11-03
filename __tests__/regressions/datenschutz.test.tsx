@@ -98,7 +98,8 @@ describe('R-13 Mitteilungen ohne gespeicherte Einwilligung', () => {
 
   // lib/booking.ts:45 und app/(tabs)/profil.tsx:84 setzen nur notifications. Eine Einwilligung
   // mit Zweck 'mitteilungen' (lit. a) entsteht nie, ein Ausschalten widerruft nichts.
-  test.failing('R-13 Erlauben speichert eine Einwilligung, Ausschalten widerruft sie', async () => {
+  // Behoben: setNotifications speichert und widerruft die Einwilligung (store/appStore.ts).
+  test('R-13 Erlauben speichert eine Einwilligung, Ausschalten widerruft sie', async () => {
     await notificationsAllowedOnBooking();
     const active = () => consentsFor('mitteilungen').filter((c) => !c.revokedAt);
     expect(active()).toHaveLength(1);

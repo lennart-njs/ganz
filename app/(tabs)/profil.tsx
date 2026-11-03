@@ -21,7 +21,7 @@ import { demoConfig } from '@/config/demo.config';
 import { de } from '@/i18n/de';
 import { formatDateTime, formatEuro, formatMonthYear } from '@/i18n/format';
 import { notifications } from '@/services/notifications';
-import { selectContract, useAppStore, type Appearance } from '@/store/appStore';
+import { notificationsOn, selectContract, useAppStore, type Appearance } from '@/store/appStore';
 
 const t = de.profile;
 
@@ -46,7 +46,10 @@ export default function Profil() {
   const manufacturerConsent = consents.find(
     (c) => c.purpose === 'hersteller_einzelfall' && !c.revokedAt,
   );
-  const caseConsents = consents.filter((c) => c.purpose !== 'hersteller_einzelfall');
+  // Hersteller und Mitteilungen haben eigene Schalter unter „Freiwillig“
+  const caseConsents = consents.filter(
+    (c) => c.purpose !== 'hersteller_einzelfall' && c.purpose !== 'mitteilungen',
+  );
   const version = Constants.expoConfig?.version ?? '';
   const [demoOpen, setDemoOpen] = useState(false);
   const taps = useRef<number[]>([]);
@@ -81,6 +84,7 @@ export default function Profil() {
     }
   };
 
+  // Einschalten speichert die Einwilligung, Ausschalten widerruft sie (im Store, R-13)
   const toggleNotifications = async (on: boolean) => {
     const s = useAppStore.getState();
     if (!on) {
@@ -170,7 +174,7 @@ export default function Profil() {
         <Checkbox
           label={t.notifications}
           sub={state.notifications === 'abgelehnt' ? t.notificationsDenied : t.notificationsSub}
-          checked={state.notifications === 'erlaubt'}
+          checked={notificationsOn(state)}
           onChange={toggleNotifications}
         />
       </Section>

@@ -100,6 +100,23 @@ describe('Fall-Status', () => {
     expect(caseOf(id).status).toBe('in_reparatur');
   });
 
+  test('die Zustimmung speichert eine Einwilligung, ohne sie keine Mitteilung (R-13)', async () => {
+    const { id } = await bookedCase();
+    const consent = useAppStore.getState().consents.find((c) => c.purpose === 'mitteilungen')!;
+    expect(consent).toMatchObject({
+      legalBasis: 'einwilligung',
+      dataCategories: [...de.consentData.mitteilungen],
+    });
+    expect(consent.caseId).toBeUndefined();
+    await act(async () => useAppStore.getState().revokeConsent(consent.id));
+    // Das System erlaubt sie weiter, aber die Einwilligung fehlt
+    expect(useAppStore.getState().notifications).toBe('erlaubt');
+    await tap(de.status.demoNext);
+    await act(async () => {});
+    expect(caseOf(id).status).toBe('freigegeben');
+    expect(Notifications.scheduleNotificationAsync).not.toHaveBeenCalled();
+  });
+
   test('ohne Zustimmung keine Mitteilung', async () => {
     jest.mocked(Notifications.requestPermissionsAsync).mockResolvedValue({
       granted: false,

@@ -83,6 +83,15 @@ export type NewDevice = Omit<Device, 'id' | 'householdId' | 'createdAt'>;
 
 export type NotificationSetting = 'offen' | 'erlaubt' | 'abgelehnt';
 
+/** Version des Texts zu Mitteilungen im Profil (de.profile.notifications) */
+const NOTIFICATIONS_TEXT_VERSION = '2026-11-1';
+
+/**
+ * Empfänger der Einwilligung in Mitteilungen: ganz selbst als Absender. Lokale Mitteilungen
+ * verlassen das Telefon nicht. PartnerKind kennt ganz noch nicht, Phase 3 fasst Empfänger neu.
+ */
+const NOTIFICATIONS_RECIPIENT = { id: 'ganz', kind: 'dienstleister', name: de.app.name } as const;
+
 /** Darstellung: folgt dem System oder ist fest hell oder dunkel */
 export type Appearance = 'system' | 'hell' | 'dunkel';
 
@@ -162,6 +171,10 @@ export interface AppActions {
     selfPay: boolean;
     partName?: string;
   }) => Booking;
+  /**
+   * Antwort auf den Systemdialog oder den Schalter im Profil. „erlaubt“ speichert die Einwilligung
+   * 'mitteilungen' (lit. a), alles andere widerruft sie (R-13).
+   */
   setNotifications: (value: NotificationSetting) => void;
   /**
    * Nächster Schritt der Simulation: Freigabe, Bestätigung, unterwegs, repariert (BUILD_PLAN 5.1).
@@ -821,7 +834,23 @@ export function createAppStore(storage: StateStorage = AsyncStorage, env: StoreE
             return booking;
           },
 
-          setNotifications: (value) => set({ notifications: value }),
+          setNotifications: (value) => {
+            set({ notifications: value });
+            if (value === 'erlaubt') {
+              if (notificationsOn(get())) return;
+              get().grantConsent({
+                purpose: 'mitteilungen',
+                legalBasis: 'einwilligung',
+                recipient: { ...NOTIFICATIONS_RECIPIENT },
+                dataCategories: [...de.consentData.mitteilungen],
+                textVersion: NOTIFICATIONS_TEXT_VERSION,
+              });
+              return;
+            }
+            for (const c of get().consents) {
+              if (c.purpose === 'mitteilungen' && !c.revokedAt) get().revokeConsent(c.id);
+            }
+          },
 
           simulateNext: (caseId) => {
             const cfg = demoConfig;
@@ -832,8 +861,9 @@ export function createAppStore(storage: StateStorage = AsyncStorage, env: StoreE
             const booking = activeBooking(get(), caseId);
             const insurer = cfg.insurer.shortName;
             const partner = booking?.provider.name ?? '';
+            // Nur mit erteilter Einwilligung in Mitteilungen (R-13)
             const notify = (msg: { title: string; body: string }) => {
-              if (get().notifications === 'erlaubt')
+              if (notificationsOn(get()))
                 notifications.notify(msg.title, msg.body).catch(() => undefined);
             };
             const setBooking = (patch: Partial<Booking>) =>
@@ -1155,6 +1185,16 @@ export function nextSimulationDue(s: AppData, caseId: Id): number | undefined {
     .map((e) => Date.parse(e.at))
     .sort((a, b) => b - a)[0];
   return (last ?? Date.parse(booking.createdAt)) + bookingStepMs;
+}
+
+/** Mitteilungen sind an: Das System erlaubt sie, und die Einwilligung gilt (R-13) */
+export function notificationsOn(s: AppData): boolean {
+  const person = s.persons[0];
+  return (
+    s.notifications === 'erlaubt' &&
+    !!person &&
+    !!findActiveConsent(s.consents, person.id, 'mitteilungen')
+  );
 }
 
 export function selectContract(s: AppData): Contract | undefined {

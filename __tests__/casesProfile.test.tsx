@@ -1,4 +1,5 @@
-import { fireEvent, renderRouter, screen } from 'expo-router/testing-library';
+import * as Notifications from 'expo-notifications';
+import { act, fireEvent, renderRouter, screen } from 'expo-router/testing-library';
 
 import { demoConfig } from '@/config/demo.config';
 import { de } from '@/i18n/de';
@@ -179,6 +180,31 @@ describe('Profil', () => {
     expect(
       useAppStore.getState().consents.find((c) => c.purpose === 'hersteller_einzelfall')?.revokedAt,
     ).toBeDefined();
+  });
+
+  test('Mitteilungen: der Schalter folgt der Einwilligung, nicht nur dem System (R-13)', async () => {
+    jest.mocked(Notifications.requestPermissionsAsync).mockResolvedValue({
+      granted: true,
+      canAskAgain: true,
+    } as Awaited<ReturnType<typeof Notifications.requestPermissionsAsync>>);
+    fullHistory();
+    // Ein Stand von früher: erlaubt, aber ohne gespeicherte Einwilligung
+    useAppStore.setState({ notifications: 'erlaubt' });
+    await renderRouter(APP, { initialUrl: '/profil' });
+    const box = () => screen.getByRole('checkbox', { name: de.profile.notifications });
+    const active = () =>
+      useAppStore.getState().consents.filter((c) => c.purpose === 'mitteilungen' && !c.revokedAt);
+    expect(box()).not.toBeChecked();
+    const rows = screen.getAllByRole('button', { name: de.profile.revoke }).length;
+    await fireEvent.press(box());
+    await act(async () => {});
+    expect(box()).toBeChecked();
+    expect(active()).toHaveLength(1);
+    // Eigener Schalter unter „Freiwillig“, keine zweite Zeile unter den Weitergaben
+    expect(screen.getAllByRole('button', { name: de.profile.revoke })).toHaveLength(rows);
+    await fireEvent.press(box());
+    expect(box()).not.toBeChecked();
+    expect(active()).toHaveLength(0);
   });
 
   test('zeigt Schutz und Datenschutz', async () => {

@@ -119,6 +119,8 @@ export const de = {
     versicherer: ['Gerät', 'Fotos', 'Ergebnis', 'Schritte', 'Befund', 'Kosten'],
     betrieb: ['Gerät', 'Typenschild', 'Fotos', 'Befund', 'Schritte', 'Adresse'],
     assistent: ['Deine Nachrichten', 'Gerät und Modell', 'Problem', 'Erledigte Schritte'],
+    /** Lokale Mitteilungen auf diesem Telefon (lit. a) */
+    mitteilungen: ['Stand deiner Fälle'],
   },
 
   consentPurpose: {

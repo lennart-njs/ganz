@@ -95,7 +95,7 @@ R-07, R-12, R-13, R-16 und R-17 brechen eine feste Regel. Solange einer davon of
 | R-10 | Befund nach Vor-Ort-Diagnose dem falschen Betrieb zugeschrieben | – | offen | Schritt 25 | `__tests__/regressions/fehlverhalten.test.tsx` |
 | R-11 | Grenze von 40 Nachrichten im Chat fehlt | – | offen | Schritt 25 | `__tests__/regressions/fehlverhalten.test.tsx` |
 | R-12 | Widerruf einer Weitergabe nach lit. b ohne Wirkung | B-40 | behoben | Schritt 26 (vorgezogen) | `__tests__/regressions/datenschutz.test.tsx` |
-| R-13 | Mitteilungen ohne gespeicherte Einwilligung | – | offen | Schritt 26 | `__tests__/regressions/datenschutz.test.tsx` |
+| R-13 | Mitteilungen ohne gespeicherte Einwilligung | – | behoben | Schritt 26 (vorgezogen) | `__tests__/regressions/datenschutz.test.tsx` |
 | R-14 | Vorschau „Das geht an …“ zeigt mehr als die bestätigten Kategorien | B-53 | offen | Schritt 26 | `__tests__/regressions/datenschutz.test.tsx` |
 | R-15 | Chat-Einwilligung mit `caseId`, andere Fallakten zeigen nichts | – | offen | Schritt 26 | `__tests__/regressions/datenschutz.test.tsx` |
 | R-16 | Rückruf ohne Bestätigung | B-19, B-23 | offen | Schritt 26 | `__tests__/regressions/datenschutz.test.tsx` |
