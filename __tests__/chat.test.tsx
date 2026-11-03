@@ -1,13 +1,16 @@
+import { router } from 'expo-router';
 import { act, fireEvent, renderRouter, screen } from 'expo-router/testing-library';
 
 import { demoConfig } from '@/config/demo.config';
 import { guides } from '@/data/guides';
 import { de } from '@/i18n/de';
+import { formatDateTime } from '@/i18n/format';
 import { chatLimits } from '@/lib/chat/limits';
 import { CONSENT_SCOPES } from '@/model/policies/consentScopes';
 import type { DeviceCategory } from '@/model/types';
 import { useAppStore } from '@/store/appStore';
 import { APP } from '@/test/app';
+import { escapeRegExp } from '@/test/regressions';
 
 const t = de.chat;
 const tap = (name: string | RegExp) => fireEvent.press(screen.getByRole('button', { name }));
@@ -273,5 +276,76 @@ describe('Grenze von 40 Nachrichten (R-11)', () => {
     await renderRouter(APP, { initialUrl: `/fall/${id}/anleitung` });
     expect(screen.getByText(guides.ablauf.steps[0]!.t)).toBeTruthy();
     expect(screen.queryByRole('button', { name: t.askStep })).toBeNull();
+  });
+});
+
+describe('Einwilligung ohne Fall (R-15)', () => {
+  /** Einwilligung im Gespräch eines Falls, eine Antwort des Assistenten */
+  async function acceptedIn() {
+    const device = setup();
+    const c = useAppStore
+      .getState()
+      .createCase({ deviceId: device.id, entry: 'freitext', problemLabel: 'Pumpe' });
+    await renderRouter(APP, { initialUrl: `/fall/${c.id}` });
+    fetchMock.mockReturnValueOnce(
+      reply({ reply: 'Steht Wasser drin?', suggestion: 'keine', guideId: '' }),
+    );
+    await ask('Es pumpt nicht ab.');
+    await tap(t.consentAccept);
+    await flush();
+    return c.id;
+  }
+
+  const chatConsent = () =>
+    useAppStore.getState().consents.find((k) => k.purpose === 'chat_assistent');
+
+  test('gespeichert ohne Fall, die Fallakte nennt Empfänger, Zahl und Zeit', async () => {
+    const id = await acceptedIn();
+    expect(chatConsent()).toBeDefined();
+    expect('caseId' in chatConsent()!).toBe(false);
+    await act(async () => router.push(`/fall/${id}/fallakte`));
+    const sent = useAppStore.getState().chatMessages.find((m) => m.role === 'haushalt')!;
+    expect(
+      screen.getByText(
+        de.file.assistantLine(demoConfig.assistant.name, t.fileCount(1), formatDateTime(sent.at)),
+      ),
+    ).toBeTruthy();
+    expect(screen.queryByText(de.file.none)).toBeNull();
+  });
+
+  test('eine Fallakte ohne Nachrichten nennt den Assistenten nicht', async () => {
+    await acceptedIn();
+    const other = useAppStore.getState().createCase({
+      deviceId: useAppStore.getState().devices[0]!.id,
+      entry: 'symptom',
+      problemLabel: 'Tür klemmt',
+    });
+    await act(async () => router.push(`/fall/${other.id}/fallakte`));
+    expect(screen.getByText(de.file.none)).toBeTruthy();
+    expect(screen.queryAllByText(new RegExp(escapeRegExp(demoConfig.assistant.name)))).toHaveLength(
+      0,
+    );
+  });
+
+  test('im Profil widerrufbar, danach fragt das Gespräch wieder nach der Einwilligung', async () => {
+    const id = await acceptedIn();
+    await act(async () => router.push('/profil'));
+    await fireEvent.press(
+      screen.getByHintText(
+        de.profile.revokeLabel(de.consentPurpose.chat_assistent, demoConfig.assistant.name),
+      ),
+    );
+    expect(chatConsent()?.revokedAt).toBeDefined();
+
+    // Die Fallakte nennt die Weitergabe weiter, mit dem Widerruf
+    await act(async () => router.push(`/fall/${id}/fallakte`));
+    const revoked = de.file.revoked(formatDateTime(chatConsent()!.revokedAt!));
+    expect(screen.getByText(new RegExp(escapeRegExp(revoked)))).toBeTruthy();
+
+    // Das Gespräch fragt erst wieder, und ohne Ja geht nichts an den Assistenten
+    await act(async () => router.push(`/fall/${id}`));
+    await ask('Noch eine Frage');
+    expect(screen.getByText(t.consentTitle)).toBeTruthy();
+    expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 });

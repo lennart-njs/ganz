@@ -6,6 +6,7 @@ import { Card, Text, Timeline } from '@/components/ds';
 import { de } from '@/i18n/de';
 import { formatDateTime } from '@/i18n/format';
 import { eventLabel } from '@/lib/caseEvents';
+import { assistantTransfer } from '@/lib/chat/context';
 import { caseStatusLabel } from '@/lib/caseView';
 import { deviceTitle } from '@/lib/devices';
 import { selectCaseEvents, useAppStore } from '@/store/appStore';
@@ -26,7 +27,12 @@ export default function Fallakte() {
   }
   const device = state.devices.find((d) => d.id === c.deviceId);
   const events = selectCaseEvents(state, caseId);
-  const consents = state.consents.filter((x) => x.caseId === caseId);
+  // Die Einwilligung für den Assistenten gilt für alle Fälle. Hier steht, was aus diesem Fall an
+  // ihn ging (R-15). Ältere Stände speicherten sie mit Fall, die Zeile darunter ersetzt sie.
+  const consents = state.consents.filter(
+    (x) => x.caseId === caseId && x.purpose !== 'chat_assistent',
+  );
+  const assistant = assistantTransfer(state, caseId);
 
   return (
     <CaseScreen title={de.screens.fallakte}>
@@ -42,18 +48,27 @@ export default function Fallakte() {
         <Text variant="title" accessibilityRole="header">
           {t.shared}
         </Text>
-        {consents.length === 0 ? (
-          <Text variant="body">{t.none}</Text>
-        ) : (
-          consents.map((x) => (
-            <Text key={x.id} variant="body">
-              {de.common.dot(
-                t.sharedLine(x.recipient.name, formatDateTime(x.grantedAt)),
-                x.revokedAt ? t.revoked(formatDateTime(x.revokedAt)) : '',
-              )}
-            </Text>
-          ))
-        )}
+        {consents.length === 0 && !assistant ? <Text variant="body">{t.none}</Text> : null}
+        {consents.map((x) => (
+          <Text key={x.id} variant="body">
+            {de.common.dot(
+              t.sharedLine(x.recipient.name, formatDateTime(x.grantedAt)),
+              x.revokedAt ? t.revoked(formatDateTime(x.revokedAt)) : '',
+            )}
+          </Text>
+        ))}
+        {assistant ? (
+          <Text variant="body">
+            {de.common.dot(
+              t.assistantLine(
+                assistant.recipient,
+                de.chat.fileCount(assistant.count),
+                formatDateTime(assistant.lastAt),
+              ),
+              assistant.revokedAt ? t.revoked(formatDateTime(assistant.revokedAt)) : '',
+            )}
+          </Text>
+        ) : null}
       </View>
 
       <View style={styles.section}>

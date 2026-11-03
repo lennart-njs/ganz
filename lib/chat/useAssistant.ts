@@ -105,9 +105,10 @@ export function useAssistant(caseId: string) {
   };
 
   const accept = () => {
+    // Ohne Fall: Die Einwilligung gilt für jedes Gespräch. Die Fallakte zeigt die Weitergabe in
+    // jedem Fall, aus dem Nachrichten gingen (R-15).
     useAppStore.getState().grantConsent(
       scopedConsent('chat_assistent', {
-        caseId,
         recipient: {
           id: demoConfig.assistant.id,
           kind: 'dienstleister',

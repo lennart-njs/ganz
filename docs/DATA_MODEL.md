@@ -23,7 +23,7 @@ Die App erzeugt heute alle Daten lokal (Store `store/appStore.ts`). Ein spätere
 | Versicherer | „Schadenfall melden“ | `weitergabe_versicherer` | lit. b |
 | Betrieb (Auftrag) | „Termin anfragen“ / „Zahlungspflichtig buchen“ | `weitergabe_betrieb` | lit. b |
 | Hersteller (Einzelfall) | Profil: „Einzelfälle an … weitergeben“ | `hersteller_einzelfall` | lit. a |
-| Anbieter des Reparatur-Assistenten (Auftragsverarbeiter) | „Einverstanden“ vor der ersten Nachricht | `chat_assistent` | lit. a |
+| Anbieter des Reparatur-Assistenten (Auftragsverarbeiter) | „Einverstanden“ vor der ersten Nachricht | `chat_assistent`, ohne Fall. Die Fallakte jedes Falls mit Nachrichten nennt die Weitergabe | lit. a |
 | niemand, lokale Mitteilung auf dem eigenen Telefon (Absender ganz) | Systemdialog nach „Termin anfragen“, Profil: „Mitteilungen zum Fall-Status“ | `mitteilungen`, ohne Fall | lit. a |
 | Hersteller (aggregiert) | immer | – | ohne Personenbezug |
 

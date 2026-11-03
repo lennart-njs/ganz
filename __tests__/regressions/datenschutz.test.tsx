@@ -249,7 +249,8 @@ describe('R-15 Chat-Einwilligung mit caseId', () => {
   // lib/chat/context.ts (hasChatConsent) wertet die Einwilligung global, lib/chat/useAssistant.ts
   // (accept) speichert sie mit der caseId von Fall A. app/fall/[id]/fallakte.tsx:29 zeigt in Fall B
   // dann „Noch nichts weitergegeben“, obwohl seine Nachrichten an den Assistenten gingen.
-  test.failing('R-15 Einwilligung ohne Fall, jede Fallakte mit Nachrichten zeigt sie', async () => {
+  // Behoben: accept speichert ohne Fall, die Fallakte zeigt assistantTransfer (lib/chat/context.ts).
+  test('R-15 Einwilligung ohne Fall, jede Fallakte mit Nachrichten zeigt sie', async () => {
     await chatInTwoCases();
     expect(consentsFor('chat_assistent')[0]?.caseId).toBeUndefined();
     expect(screen.queryByText(de.file.none)).toBeNull();

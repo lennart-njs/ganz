@@ -924,6 +924,9 @@ export const de = {
     history: 'Verlauf',
     shared: 'Weitergegeben an',
     sharedLine: (recipient: string, date: string) => `${recipient} · ${date}`,
+    /** Weitergabe an den Reparatur-Assistenten aus diesem Fall (R-15) */
+    assistantLine: (recipient: string, messages: string, time: string) =>
+      `${recipient}, Reparatur-Assistent · ${messages} · zuletzt ${time}`,
     revoked: (date: string) => `widerrufen am ${date}`,
     none: 'Noch nichts weitergegeben.',
     event: {
