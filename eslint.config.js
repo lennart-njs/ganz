@@ -41,9 +41,14 @@ const isTextProp = (name) => TEXT_PROPS.has(name);
 const TEXT_METHODS = new Set(['join', 'filter']);
 const isStyleProp = (name) => name === 'style' || /Style$/.test(name);
 
+// Konstanten wie 'GO_BACK' oder 'POP' sind Schlüssel, auch wenn sie groß anfangen.
+const CONSTANT = /^[A-Z][A-Z0-9_]*$/;
+
 /** Sieht ein Wert außerhalb der Text-Props nach Text aus und nicht nach einem Schlüssel wie 'primary'? */
 const looksLikeText = (s) =>
-  LETTER_NEXT_TO_SPACE.test(s) || NON_ASCII_LETTER.test(s) || STARTS_UPPERCASE.test(s);
+  LETTER_NEXT_TO_SPACE.test(s) ||
+  NON_ASCII_LETTER.test(s) ||
+  (STARTS_UPPERCASE.test(s) && !CONSTANT.test(s));
 
 const isString = (node) => node.type === 'Literal' && typeof node.value === 'string';
 
@@ -182,19 +187,101 @@ const textAusI18n = {
   },
 };
 
+// Wo ein String nie Text für Menschen ist: Quelle eines Imports, Schlüssel, Typen, Logs und
+// Fehler der Domäne (die App zeigt sie nie, hooks/useCommand.ts nimmt einen ruhigen Satz).
+const isConsoleCall = (call) =>
+  call.callee.type === 'MemberExpression' &&
+  call.callee.object.type === 'Identifier' &&
+  call.callee.object.name === 'console';
+const isErrorConstruction = (call) =>
+  call.callee.type === 'Identifier' && /Error$/.test(call.callee.name);
+const isStyleSheetCreate = (call) =>
+  call.callee.type === 'MemberExpression' &&
+  call.callee.object.type === 'Identifier' &&
+  call.callee.object.name === 'StyleSheet';
+
+/** Ist dieser String ein Schlüssel, ein Pfad zum Import, ein Typ oder ein Stil? */
+function isNeverText(node) {
+  const parent = node.parent;
+  if (!parent) return false;
+  switch (parent.type) {
+    case 'ImportDeclaration':
+    case 'ExportAllDeclaration':
+    case 'ExportNamedDeclaration':
+    case 'ImportExpression':
+      return parent.source === node;
+    case 'Property':
+    case 'MethodDefinition':
+    case 'PropertyDefinition':
+      if (parent.key === node && !parent.computed) return true;
+      break;
+    case 'MemberExpression':
+      if (parent.property === node) return true;
+      break;
+    case 'TSLiteralType':
+    case 'TSPropertySignature':
+    case 'TSEnumMember':
+      return true;
+    case 'ExpressionStatement':
+      return !!parent.directive;
+    case 'BinaryExpression':
+      // type === 'GO_BACK': ein Vergleich mit einem Schlüssel, kein Text auf dem Screen
+      if (['===', '!==', '==', '!='].includes(parent.operator)) return true;
+      break;
+    case 'SwitchCase':
+      return parent.test === node;
+    default:
+      break;
+  }
+  for (let n = parent; n; n = n.parent) {
+    if (n.type === 'Property' && !n.computed && isStyleProp(propertyName(n) ?? '')) return true;
+    if (n.type === 'JSXAttribute' && isStyleProp(attributeName(n) ?? '')) return true;
+    if (n.type === 'CallExpression' && (isConsoleCall(n) || isStyleSheetCreate(n))) return true;
+    if (n.type === 'NewExpression' && isErrorConstruction(n)) return true;
+    if (n.type.startsWith('TS') && n.type.endsWith('Type')) return true;
+  }
+  return false;
+}
+
+/** Steht der String (auch in einer Bedingung oder Liste) als Wert einer Text-Prop, z. B. { hint: '…' }? */
+function inTextProperty(node) {
+  for (let n = node; n.parent; n = n.parent) {
+    const p = n.parent;
+    if (p.type === 'Property' && p.value === n) return isTextProp(propertyName(p) ?? '');
+    if (
+      ![
+        'ConditionalExpression',
+        'LogicalExpression',
+        'BinaryExpression',
+        'TemplateLiteral',
+        'ArrayExpression',
+        'TSAsExpression',
+        'TSSatisfiesExpression',
+      ].includes(p.type)
+    ) {
+      return false;
+    }
+  }
+  return false;
+}
+
 const textInAusdruecken = {
   meta: {
     type: 'problem',
     docs: {
       description:
-        'Alle Texte in i18n/de.ts, auch in Bedingungen, Template-Literalen, Verkettungen, Listen und Objekten in JSX.',
+        'Alle Texte in i18n/de.ts, auch in Bedingungen, Template-Literalen, Verkettungen, Listen und Objekten in JSX, in Konstanten, Objekten und Argumenten von Aufrufen.',
     },
     messages: {
       text: 'Text gehört in i18n/de.ts, auch in Bedingungen, Listen und Objekten.',
+      ausserhalb:
+        'Text gehört in i18n/de.ts, auch in Konstanten, Objekten und Argumenten wie setToast(…).',
     },
     schema: [],
   },
   create(context) {
+    // Was die Prüfung in JSX schon gemeldet hat, meldet die Prüfung außerhalb nicht noch einmal
+    const reported = new Set();
     function check(root, { inChildren, attribute }) {
       // Ein einzelnes Literal und ein Template-Literal in einer Text-Prop meldet schon text-aus-i18n.
       if (root.type === 'Literal') return;
@@ -204,10 +291,37 @@ const textInAusdruecken = {
       for (const { node, text, propName } of found) {
         if (!LETTER.test(text)) continue;
         const isText = inChildren || (propName && isTextProp(propName)) || looksLikeText(text);
-        if (isText) context.report({ node, messageId: 'text' });
+        if (isText) {
+          reported.add(node);
+          context.report({ node, messageId: 'text' });
+        }
+      }
+    }
+    /**
+     * Jeder andere String im Code: Konstanten, Objekte, Rückgaben und Argumente, auch in
+     * Funktionen in JSX wie onPress={() => setToast('…')}. Gemeldet wird, was nach Text aussieht.
+     */
+    function checkAnywhere(node, text) {
+      if (reported.has(node) || !LETTER.test(text)) return;
+      // Direkt in JSX prüfen das text-aus-i18n und check() oben
+      const parent = node.parent;
+      if (parent.type === 'JSXAttribute' || parent.type === 'JSXExpressionContainer') return;
+      if (isNeverText(node)) return;
+      if (looksLikeText(text) || inTextProperty(node)) {
+        reported.add(node);
+        context.report({ node, messageId: 'ausserhalb' });
       }
     }
     return {
+      'Program:exit'() {
+        reported.clear();
+      },
+      Literal(node) {
+        if (isString(node)) checkAnywhere(node, node.value);
+      },
+      TemplateLiteral(node) {
+        checkAnywhere(node, node.quasis.map((q) => q.value.cooked ?? '').join(''));
+      },
       JSXExpressionContainer(node) {
         if (node.expression.type === 'JSXEmptyExpression') return;
         const parent = node.parent;
@@ -237,6 +351,32 @@ function isStatusMember(node) {
   return isString(n.property) && n.property.value === 'status';
 }
 
+/** Die Variable, auf die ein Name an dieser Stelle zeigt */
+function resolve(context, id) {
+  for (let scope = context.sourceCode.getScope(id); scope; scope = scope.upper) {
+    const variable = scope.set.get(id.name);
+    if (variable) return variable;
+  }
+  return undefined;
+}
+
+/**
+ * Ein Name, der einen Status trägt: heißt status, kommt aus { status } oder { status: x } oder
+ * wurde mit x.status belegt. So fällt auch const { status } = c; status === 'offen' auf.
+ */
+function isStatusName(context, node) {
+  if (node.type !== 'Identifier') return false;
+  if (node.name === 'status') return true;
+  const variable = resolve(context, node);
+  return !!variable?.defs.some((def) => {
+    const prop = def.name.parent;
+    if (prop?.type === 'Property' && prop.parent?.type === 'ObjectPattern') {
+      return propertyName(prop) === 'status';
+    }
+    return def.node.type === 'VariableDeclarator' && def.node.init && isStatusMember(def.node.init);
+  });
+}
+
 const squash = (s) => s.replace(/\s+/g, ' ').trim();
 
 const keinStatusVergleich = {
@@ -244,7 +384,7 @@ const keinStatusVergleich = {
     type: 'problem',
     docs: {
       description:
-        'Kein Vergleich mit .status in Screens und Komponenten. Was erlaubt ist, sagen can() und die Fakten aus model/policies.',
+        'Kein Vergleich mit einem Status in Screens und Komponenten, auch nicht über { status } oder eine Variable. Was erlaubt ist, sagen can() und die Fakten aus model/policies.',
     },
     messages: {
       vergleich:
@@ -285,13 +425,14 @@ const keinStatusVergleich = {
       if (entry) used.add(entry);
       else context.report({ node, messageId: 'vergleich' });
     };
+    const isStatus = (node) => isStatusMember(node) || isStatusName(context, node);
     return {
       BinaryExpression(node) {
         if (!COMPARISON.has(node.operator)) return;
-        if (isStatusMember(node.left) || isStatusMember(node.right)) check(node);
+        if (isStatus(node.left) || isStatus(node.right)) check(node);
       },
       SwitchStatement(node) {
-        if (isStatusMember(node.discriminant)) check(node.discriminant);
+        if (isStatus(node.discriminant)) check(node.discriminant);
       },
       // ['offen', 'selbsthilfe'].includes(c.status) ist auch ein Vergleich
       CallExpression(node) {
@@ -300,7 +441,7 @@ const keinStatusVergleich = {
           callee.type === 'MemberExpression' &&
           !callee.computed &&
           callee.property.name === 'includes' &&
-          node.arguments.some(isStatusMember)
+          node.arguments.some(isStatus)
         ) {
           check(node);
         }
@@ -321,12 +462,17 @@ const keinStatusVergleich = {
  * Ausdruck genau wie im Code und ein Grund. Die Liste soll leer bleiben. Ein Eintrag ohne Treffer
  * meldet die Regel selbst.
  */
+const LOAD_STATUS = 'Ladezustand des gespeicherten Stands (Schritt 19), kein Status eines Falls.';
 const STATUS_ALLOWLIST = [
   {
     file: 'components/app/RecoveryScreen.tsx',
     code: "store.loading.getState().status === 'ok'",
-    reason: 'Ladezustand des gespeicherten Stands (Schritt 19), kein Status eines Falls.',
+    reason: LOAD_STATUS,
   },
+  // useHydrated() liefert 'laedt', 'ok' oder 'fehler'. Danach wählt das Layout RecoveryScreen.
+  { file: 'app/_layout.tsx', code: "status === 'fehler'", reason: LOAD_STATUS },
+  { file: 'app/_layout.tsx', code: "status === 'laedt'", reason: LOAD_STATUS },
+  { file: 'app/_layout.tsx', code: "status !== 'laedt'", reason: LOAD_STATUS },
 ];
 
 const ganz = {
@@ -364,12 +510,20 @@ module.exports = defineConfig([
     },
   },
   {
-    // Alle Texte in i18n/de.ts (CLAUDE.md). Gilt für Screens, Komponenten und Hooks.
+    // Alle Texte in i18n/de.ts (CLAUDE.md). Gilt für Screens, Komponenten und Hooks. Die Chat-Route
+    // (app/api/*+api.ts) läuft auf dem Server und zeigt nichts: Sie antwortet mit Schlüsseln wie
+    // { error: 'voll' } und nennt Header wie 'Retry-After'.
     files: ['app/**/*.{ts,tsx}', 'components/**/*.{ts,tsx}', 'hooks/**/*.{ts,tsx}'],
+    ignores: ['app/**/*+api.ts'],
     rules: {
       'ganz/text-aus-i18n': 'error',
       'ganz/text-in-ausdruecken': 'error',
-      // Keine Status-Vergleiche in Screens (Schritt 22). Ausnahmen nur mit Grund.
+    },
+  },
+  {
+    // Keine Status-Vergleiche in Screens (Schritt 22). Ausnahmen nur mit Grund.
+    files: ['app/**/*.{ts,tsx}', 'components/**/*.{ts,tsx}', 'hooks/**/*.{ts,tsx}'],
+    rules: {
       'ganz/kein-status-vergleich': ['error', { allow: STATUS_ALLOWLIST }],
     },
   },

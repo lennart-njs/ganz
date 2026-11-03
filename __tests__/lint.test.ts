@@ -119,6 +119,77 @@ describe('eigene Lint-Regeln', () => {
   });
 });
 
+// Text außerhalb von JSX (Schritt 28): Konstanten, Objekte und Argumente von Aufrufen
+const outsideFixture = `import { useState } from 'react';
+import { StyleSheet } from 'react-native';
+
+import { Button } from '@/components/ds';
+import { de } from '@/i18n/de';
+
+const TITLE = 'Neues Gerät anlegen';
+const opts = { hint: 'Wähl bitte ein Zeitfenster.', label: 'kurz' };
+const choices = [de.common.next, 'Später'];
+const key = 'schaden_melden';
+const route = \`/fall/\${key}\`;
+const styles = StyleSheet.create({ title: { fontFamily: 'SchibstedGrotesk_600SemiBold' } });
+
+export function Outside({ type }: { type: 'GO_BACK' | 'POP' }) {
+  const [, setToast] = useState<string>();
+  if (type === 'GO_BACK') console.warn('Zurück ohne Ziel');
+  if (!route) throw new Error('Kein Weg zurück');
+  return (
+    <Button
+      label={TITLE}
+      sub={opts.hint}
+      style={styles.title}
+      onPress={() => setToast('Bitte erst ein Zeitfenster wählen.')}
+      onLongPress={() => setToast(choices.join(', '))}
+    />
+  );
+}
+`;
+const outsideLines = outsideFixture.split('\n');
+const outsideLine = (snippet: string) => {
+  const i = outsideLines.findIndex((l) => l.includes(snippet));
+  if (i < 0) throw new Error(`Nicht in der Vorlage: ${snippet}`);
+  return i + 1;
+};
+
+describe('Text außerhalb von JSX', () => {
+  const TEXT = 'ganz/text-in-ausdruecken';
+  const hits = async (file: string) =>
+    (await lint(file, outsideFixture)).filter(([rule]) => rule === TEXT);
+
+  test('meldet Konstanten, Objektwerte, Listen und Argumente in Handlern', async () => {
+    expect(await hits('app/__outside-fixture__.tsx')).toEqual(
+      ["TITLE = 'Neues", "hint: 'Wähl", "label: 'kurz'", "'Später'", "setToast('Bitte"].map(
+        (snippet): [string, number] => [TEXT, outsideLine(snippet)],
+      ),
+    );
+    expect(await hits('hooks/__outside-fixture__.tsx')).toHaveLength(5);
+  });
+
+  test('Schlüssel, Pfade, Vergleiche, Stile, Logs und Fehler der Domäne sind kein Text', async () => {
+    const found = await hits('app/__outside-fixture__.tsx');
+    for (const snippet of [
+      "from 'react'",
+      "key = 'schaden_melden'",
+      'route = `/fall/',
+      'fontFamily',
+      "type === 'GO_BACK'",
+      "console.warn('Zurück",
+      "new Error('Kein",
+    ]) {
+      expect(found.filter(([, line]) => line === outsideLine(snippet))).toEqual([]);
+    }
+  });
+
+  test('die Chat-Route auf dem Server zeigt nichts, lib/ prüft die Regel nicht', async () => {
+    expect(await hits('app/api/__outside-fixture__+api.ts')).toEqual([]);
+    expect(await hits('lib/__outside-fixture__.tsx')).toEqual([]);
+  });
+});
+
 // Status-Vergleiche (Schritt 22): Screens fragen can() und die Fakten aus model/policies.
 const statusFixture = `import { useAppStore } from '@/store/appStore';
 
@@ -134,7 +205,15 @@ export function useStatus(id: string, kind: string) {
   }
   const geladen = c.loading.status === 'ok';
   const art = kind === 'reparatur';
-  return { offen, nichtZu, lose, anfang, geladen, art, status: c.status };
+  const { status } = c;
+  const ohneMember = status === 'offen';
+  const { status: umbenannt } = c;
+  const auchUmbenannt = umbenannt !== 'erledigt';
+  const kopie = c.status;
+  const ausKopie = ['eskaliert'].includes(kopie);
+  const fremd = kind;
+  const keinStatus = fremd === 'pumpe';
+  return { offen, nichtZu, lose, anfang, geladen, art, ohneMember, auchUmbenannt, ausKopie, keinStatus, status: c.status };
 }
 `;
 const statusLines = statusFixture.split('\n');
@@ -167,6 +246,10 @@ describe('kein Status-Vergleich in Screens', () => {
       '.includes(c!.status)',
       'switch (c.status)',
       "c.loading.status === 'ok'",
+      // Über einen Namen: { status }, { status: x } und eine Kopie von c.status (Schritt 28)
+      "ohneMember = status === 'offen'",
+      "umbenannt !== 'erledigt'",
+      '.includes(kopie)',
     ].map((snippet): [string, number] => [STATUS, statusLine(snippet)]);
     expect(await statusHits('app/__status-fixture__.tsx')).toEqual(expected);
     expect(await statusHits('components/__status-fixture__.tsx')).toEqual(expected);
@@ -174,7 +257,7 @@ describe('kein Status-Vergleich in Screens', () => {
 
   test('ein Vergleich ohne .status und der Wert selbst sind erlaubt, lib/ und model/ sind frei', async () => {
     const hits = await statusHits('app/__status-fixture__.tsx');
-    for (const snippet of ["kind === 'reparatur'", 'status: c.status']) {
+    for (const snippet of ["kind === 'reparatur'", "fremd === 'pumpe'", 'status: c.status']) {
       expect(hits.filter(([, line]) => line === statusLine(snippet))).toEqual([]);
     }
     expect(await statusHits('lib/__status-fixture__.tsx')).toEqual([]);
