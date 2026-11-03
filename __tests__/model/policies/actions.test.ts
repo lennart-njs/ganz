@@ -294,3 +294,27 @@ describe('Selbsthilfe', () => {
     expect(can(facts('selbsthilfe'), 'anleitung_fortsetzen')).toBe(false);
   });
 });
+
+describe('Nach einem Widerruf (R-12)', () => {
+  test('ein gehaltener Fall lässt sich erneut bestätigen, auch in der Reparatur', () => {
+    const repairing = facts('in_reparatur', {
+      quote,
+      payer: 'haushalt',
+      ...repair('bestaetigt'),
+      hold: 'weitergabe_betrieb',
+    });
+    expect(availableActions(repairing)).toEqual(['weitergabe_erneuern', 'pausieren']);
+    const reviewing = facts('freigabe_noetig', {
+      ...withContract,
+      claim: 'in_pruefung',
+      hold: 'weitergabe_versicherer',
+    });
+    expect(can(reviewing, 'weitergabe_erneuern')).toBe(true);
+  });
+
+  test('ohne Halt gibt es nichts zu erneuern', () => {
+    for (const status of ALL_STATUSES) {
+      expect(can(facts(status, withContract), 'weitergabe_erneuern')).toBe(false);
+    }
+  });
+});

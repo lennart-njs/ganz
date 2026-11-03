@@ -2,6 +2,8 @@ import type { StateStorage } from 'zustand/middleware';
 
 import { demoConfig } from '@/config/demo.config';
 import { de } from '@/i18n/de';
+import { availableActions, can } from '@/model/policies/actions';
+import { selectCaseFacts } from '@/model/policies/caseFacts';
 import { createAppStore, selectCaseEvents, selectOpenCases } from '@/store/appStore';
 import type { StoreEnv } from '@/store/env';
 import { unwrap } from '@/test/result';
@@ -760,5 +762,116 @@ describe('Anleitung, Befund und Abschluss: Result und ein Schritt', () => {
       }),
     ).toEqual({ ok: false, refusal: { code: 'unbekannt', what: 'fall', id: 'GS-99999' } });
     expect(writes()).toBe(0);
+  });
+});
+
+describe('Widerruf in der Reparatur: keine Sackgasse (R-12)', () => {
+  const partner = demoConfig.partners[1]!;
+  /** Selbst gezahlt, in der Reparatur, dann die Weitergabe an den Betrieb widerrufen */
+  const held = () => {
+    const store = createAppStore(memoryStorage(), testEnv());
+    const s = () => store.getState();
+    s().ensureHousehold();
+    const device = s().addDevice({
+      category: 'waschmaschine',
+      manufacturerId: demoConfig.manufacturer.id,
+      model: demoConfig.device.model,
+      identifiedBy: 'manuell',
+    });
+    const id = unwrap(s().openCaseFor(device.id, 'foto', 'Foto vom Display')).caseId;
+    unwrap(s().escalate(id));
+    unwrap(s().setFinding(id, 'reparatur', 'fachkraft'));
+    unwrap(
+      s().requestBooking({
+        caseId: id,
+        kind: 'reparatur',
+        partnerId: partner.id,
+        slotLabel: demoConfig.slots[0]!,
+        selfPay: true,
+      }),
+    );
+    const first = s().consents.find((c) => c.purpose === 'weitergabe_betrieb')!;
+    s().revokeConsent(first.id);
+    return { s, id, deviceId: device.id, first };
+  };
+
+  test('der Fall hält an, bietet aber mehr als „Später weitermachen“', () => {
+    const { s, id } = held();
+    const facts = selectCaseFacts(s(), id)!;
+    expect(facts).toMatchObject({ status: 'in_reparatur', hold: 'weitergabe_betrieb' });
+    expect(availableActions(facts)).toEqual(['weitergabe_erneuern', 'pausieren']);
+    expect(s().simulateNext(id)).toBe(false);
+  });
+
+  test('erneut bestätigen: derselbe Betrieb, derselbe Umfang und Text, dann geht es weiter', () => {
+    const { s, id, first } = held();
+    const renewed = unwrap(s().renewTransfer(id));
+    expect(renewed).toMatchObject({
+      caseId: id,
+      purpose: 'weitergabe_betrieb',
+      legalBasis: first.legalBasis,
+      recipient: first.recipient,
+      dataCategories: first.dataCategories,
+      textVersion: first.textVersion,
+      textHash: first.textHash,
+    });
+    expect(renewed.id).not.toBe(first.id);
+    expect(selectCaseEvents(s(), id).at(-1)?.type).toBe('weitergabe_bestaetigt');
+    expect(selectCaseFacts(s(), id)?.hold).toBeUndefined();
+    expect(s().simulateNext(id)).toBe(true);
+    expect(s().bookings.at(-1)?.status).toBe('bestaetigt');
+  });
+
+  test('ohne Halt wird abgelehnt, ohne etwas zu schreiben', () => {
+    const { s, id } = held();
+    unwrap(s().renewTransfer(id));
+    const before = s();
+    expect(s().renewTransfer(id)).toEqual({
+      ok: false,
+      refusal: { code: 'regel', action: 'weitergabe_erneuern' },
+    });
+    expect(s().renewTransfer('GS-99999')).toEqual({
+      ok: false,
+      refusal: { code: 'unbekannt', what: 'fall', id: 'GS-99999' },
+    });
+    expect(s()).toBe(before);
+  });
+
+  test('Weitergabe an den Versicherer: erneut an den Versicherer des Vertrags', () => {
+    const store = createAppStore(memoryStorage(), testEnv());
+    const s = () => store.getState();
+    s().ensureHousehold();
+    const contract = s().linkContract('vertragsnummer');
+    const device = s().addDevice({
+      category: 'waschmaschine',
+      manufacturerId: demoConfig.manufacturer.id,
+      model: demoConfig.device.model,
+      contractId: contract.id,
+      identifiedBy: 'vertrag',
+    });
+    const id = unwrap(s().openCaseFor(device.id, 'foto', 'Foto vom Display')).caseId;
+    unwrap(s().escalate(id));
+    unwrap(s().setFinding(id, 'reparatur', 'fachkraft'));
+    unwrap(s().reportClaim(id));
+    const first = s().consents.find((c) => c.purpose === 'weitergabe_versicherer')!;
+    s().revokeConsent(first.id);
+    expect(availableActions(selectCaseFacts(s(), id))).toContain('weitergabe_erneuern');
+    const renewed = unwrap(s().renewTransfer(id));
+    expect(renewed).toMatchObject({
+      purpose: 'weitergabe_versicherer',
+      recipient: contract.provider,
+      textHash: first.textHash,
+    });
+    expect(s().simulateNext(id)).toBe(true);
+    expect(s().cases[id]?.status).not.toBe('freigabe_noetig');
+  });
+
+  test('ein neues Problem für das Gerät: weiter nur über den gehaltenen Fall (Nr. 13)', () => {
+    const { s, id, deviceId } = held();
+    expect(
+      unwrap(s().openCaseFor(deviceId, 'symptom', 'Tür geht nicht auf', { neuesProblem: true })),
+    ).toEqual({ art: 'frage_weitermachen', caseId: id });
+    // Dort steht jetzt ein Weg weiter
+    expect(can(selectCaseFacts(s(), id), 'weitergabe_erneuern')).toBe(true);
   });
 });

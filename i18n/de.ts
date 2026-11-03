@@ -1055,6 +1055,10 @@ export const de = {
       close: 'Fall schließen',
     },
     demoNext: 'Nächster Schritt (Demo)',
+    /** Nach einem Widerruf hält der Fall an (R-12). Mit einem Tap geht es weiter. */
+    renewAsk: (recipient: string) =>
+      `Soll es weitergehen? Dann bestätige die Weitergabe an ${recipient} noch einmal.`,
+    renewShare: 'Weitergabe erneut bestätigen',
     done: 'Fertig',
     stillBroken: 'Problem besteht weiter',
     rate: 'Wie zufrieden bist du mit dem Betrieb?',

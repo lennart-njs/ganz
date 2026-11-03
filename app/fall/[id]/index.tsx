@@ -110,9 +110,11 @@ export default function FallGespraech() {
     setPayment(undefined);
     setOnSite(false);
   });
+  // Nach einem Widerruf: die Weitergabe noch einmal bestätigen (R-12)
+  const renew = useCommand(() => useAppStore.getState().renewTransfer(caseId));
   // Lässt sich die Telefon-App nicht öffnen, steht die Nummer im Hinweis
   const phoneNotice = useNotice();
-  const commandToast = call.toast ?? claim.toast ?? book.toast ?? phoneNotice.notice;
+  const commandToast = call.toast ?? claim.toast ?? book.toast ?? renew.toast ?? phoneNotice.notice;
 
   // Ein Fall ohne Inhalt bleibt nicht liegen, wenn man das Gespräch verlässt
   useEffect(() => () => useAppStore.getState().discardIfEmpty(caseId), [caseId]);
@@ -855,6 +857,39 @@ export default function FallGespraech() {
     }
   } else if (replacement && can(facts, 'schaden_melden')) {
     reply('melden', de.costs.report, report);
+  } else if (facts.hold) {
+    // Widerrufene Weitergabe: Versicherer und Betrieb machen nicht weiter (R-12). Mit einem Tap
+    // bestätigst du sie noch einmal, mit demselben Text wie beim ersten Mal. So bleibt auch ein
+    // Fall in der Reparatur keine Sackgasse, obwohl er sich nicht abbrechen lässt.
+    const toInsurer = facts.hold === 'weitergabe_versicherer';
+    const recipient = toInsurer ? insurer : (facts.booking?.provider.name ?? '');
+    const reviewing = facts.claim === 'in_pruefung';
+    tail.push(
+      <BotSays
+        key="angehalten"
+        lines={[reviewing ? de.status.headline.pruefung(insurer) : de.status.text.paused]}
+        hint={reviewing ? de.status.text.paused : undefined}
+      >
+        <Text variant="body">{t.renewAsk(recipient)}</Text>
+        {toInsurer ? (
+          <>
+            <View style={styles.full}>
+              <Disclosure title={de.costs.preview(insurer)}>
+                <CaseFileCard
+                  caseId={caseId}
+                  categories={CONSENT_SCOPES.weitergabe_versicherer.dataCategories}
+                />
+              </Disclosure>
+            </View>
+            <Text variant="meta">{de.costs.legal(insurer)}</Text>
+          </>
+        ) : (
+          <Text variant="meta">{de.appointment.shares(scopeList('weitergabe_betrieb'))}</Text>
+        )}
+      </BotSays>,
+    );
+    reply('weitergabe-erneuern', t.renewShare, () => renew.run(), recipient);
+    reply('status', de.status.caseFile, () => router.push(`/fall/${caseId}/fallakte`));
   } else if (needsAppointment) {
     if (selfPay && quote) {
       tail.push(
@@ -950,17 +985,14 @@ export default function FallGespraech() {
     reply('vor-ort', de.waiting.onSiteInstead, () => setOnSite(true));
     reply('fallakte', t.caseFile, () => router.push(`/fall/${caseId}/fallakte`));
   } else if (facts.bookingOpen) {
-    // Widerrufene Weitergabe: Versicherer und Betrieb machen nicht weiter (R-12)
-    const held = !!facts.hold;
     if (facts.claim === 'in_pruefung')
       tail.push(
         <BotSays
           key="pruefung"
           lines={[de.status.headline.pruefung(insurer)]}
-          hint={held ? de.status.text.paused : de.status.text.pruefung}
+          hint={de.status.text.pruefung}
         />,
       );
-    else if (held) tail.push(<BotSays key="angehalten" lines={[de.status.text.paused]} />);
     if (demoTap) reply('demo', t.demoNext, () => useAppStore.getState().simulateNext(caseId));
     reply('status', de.status.caseFile, () => router.push(`/fall/${caseId}/fallakte`));
   } else if (can(facts, 'videocall_anfragen')) {

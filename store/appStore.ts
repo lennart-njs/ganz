@@ -7,7 +7,7 @@ import { demoConfig } from '@/config/demo.config';
 import { guides } from '@/data/guides';
 import { de } from '@/i18n/de';
 import { caseAppliance, caseCategory, findingPattern } from '@/lib/appliance';
-import { textStamp } from '@/lib/legalTexts';
+import { textStamp, type LegalTextKey } from '@/lib/legalTexts';
 import { notifications } from '@/services/notifications';
 import {
   canStartVideoCall,
@@ -24,7 +24,7 @@ import {
 } from '@/model/caseMachine';
 import { can } from '@/model/policies/actions';
 import { planBooking } from '@/model/policies/bookingRules';
-import { selectCaseFacts } from '@/model/policies/caseFacts';
+import { selectCaseFacts, type HoldPurpose } from '@/model/policies/caseFacts';
 import { scopedConsent } from '@/model/policies/consentScopes';
 import {
   isEmptyCase,
@@ -100,6 +100,12 @@ export type NotificationSetting = 'offen' | 'erlaubt' | 'abgelehnt';
  * verlassen das Telefon nicht. PartnerKind kennt ganz noch nicht, Phase 3 fasst Empfänger neu.
  */
 const NOTIFICATIONS_RECIPIENT = { id: 'ganz', kind: 'dienstleister', name: de.app.name } as const;
+
+/** Der Text, den du vor der Weitergabe siehst, beim ersten Mal und beim erneuten Bestätigen */
+export const TRANSFER_TEXT: Record<HoldPurpose, LegalTextKey> = {
+  weitergabe_versicherer: 'schadenmeldung',
+  weitergabe_betrieb: 'termin_betrieb',
+};
 
 /** Darstellung: folgt dem System oder ist fest hell oder dunkel */
 export type Appearance = 'system' | 'hell' | 'dunkel';
@@ -267,6 +273,11 @@ export interface AppActions {
   resumeCase: (caseId: Id) => Result<Case>;
   grantConsent: (input: NewConsent) => Consent;
   revokeConsent: (consentId: Id) => void;
+  /**
+   * Nach einem Widerruf: Bestätigt die Weitergabe, ohne die der Fall anhält (R-12), noch einmal.
+   * Empfänger, Umfang und Text wie beim ersten Mal. Nur auf einen Tap, nur solange der Fall hält.
+   */
+  renewTransfer: (caseId: Id) => Result<Consent>;
   addEvent: (event: Omit<CaseEvent, 'id' | 'at'>) => CaseEvent;
   /** Nur Demo: alles auf den Anfang */
   reset: () => void;
@@ -1051,7 +1062,7 @@ export function createAppStore(storage: StateStorage = AsyncStorage, env: StoreE
               scopedConsent('weitergabe_versicherer', {
                 caseId,
                 recipient: contract.provider,
-                text: textStamp('schadenmeldung'),
+                text: textStamp(TRANSFER_TEXT.weitergabe_versicherer),
               }),
             );
             const reported = draftCommand(c, 'schaden_melden', { contractId: contract.id }, [
@@ -1100,7 +1111,7 @@ export function createAppStore(storage: StateStorage = AsyncStorage, env: StoreE
               scopedConsent('weitergabe_betrieb', {
                 caseId,
                 recipient: provider,
-                text: textStamp('termin_betrieb'),
+                text: textStamp(TRANSFER_TEXT.weitergabe_betrieb),
               }),
             );
             const booking: Booking = {
@@ -1345,6 +1356,37 @@ export function createAppStore(storage: StateStorage = AsyncStorage, env: StoreE
                 payload: { consentId, purpose: target.purpose, recipient: target.recipient.name },
               });
             }
+          },
+
+          renewTransfer: (caseId) => {
+            const c = get().cases[caseId];
+            if (!c) return missingCase(caseId);
+            const facts = selectCaseFacts(get(), caseId)!;
+            const purpose = facts.hold;
+            if (!purpose || !can(facts, 'weitergabe_erneuern')) {
+              return refuse({ code: 'regel', action: 'weitergabe_erneuern' });
+            }
+            // Derselbe Empfänger wie beim ersten Mal: der Versicherer des Vertrags oder genau der
+            // gebuchte Betrieb (siehe holdOf in model/policies/caseFacts.ts)
+            let recipient: Consent['recipient'];
+            if (purpose === 'weitergabe_versicherer') {
+              const device = get().devices.find((d) => d.id === c.deviceId);
+              const contract = get().contracts.find((k) => k.id === device?.contractId);
+              if (!contract) return refuse({ code: 'vertrag' });
+              recipient = contract.provider;
+            } else {
+              const provider = facts.booking!.provider;
+              recipient = { id: provider.id, kind: provider.kind, name: provider.name };
+            }
+            const { consent, events } = draftConsent(
+              scopedConsent(purpose, {
+                caseId,
+                recipient,
+                text: textStamp(TRANSFER_TEXT[purpose]),
+              }),
+            );
+            set((s) => ({ consents: [...s.consents, consent], events: [...s.events, ...events] }));
+            return ok(consent);
           },
 
           addEvent: (input) => {

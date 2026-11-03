@@ -193,6 +193,40 @@ describe('Widerruf hält die Simulation an (R-12)', () => {
     expect(screen.queryByRole('button', { name: de.status.demoNext })).toBeNull();
   });
 
+  test('im Gespräch: die Weitergabe mit einem Tap erneut bestätigen, dann entscheidet der Versicherer', async () => {
+    const { id } = await bookedCase();
+    await revoke('weitergabe_versicherer', id);
+    expect(screen.getByText(de.thread.renewAsk('Kranich'))).toBeTruthy();
+    // Derselbe Text wie vor der Meldung
+    expect(screen.getByText(de.costs.legal('Kranich'))).toBeTruthy();
+    await tap(new RegExp(`^${de.thread.renewShare}`));
+    await act(async () => {});
+    expect(simulationHold(useAppStore.getState(), id)).toBeUndefined();
+    expect(screen.queryByText(de.status.text.paused)).toBeNull();
+    await advance(demoConfig.timers.claimMs + 1000);
+    expect(caseOf(id).claim?.decision?.result).toBe('freigegeben');
+  });
+
+  test('in der Reparatur: kein Abbruch, aber erneut bestätigen, dann kommt der Betrieb', async () => {
+    const { id } = await bookedCase();
+    await tap(de.status.demoNext);
+    await tap(de.status.demoNext);
+    expect(caseOf(id).status).toBe('in_reparatur');
+    await revoke('weitergabe_betrieb', id);
+    const partner = bookingOf(id).provider.name;
+    expect(screen.getByText(de.status.text.paused)).toBeTruthy();
+    expect(screen.getByText(de.thread.renewAsk(partner))).toBeTruthy();
+    expect(screen.queryByRole('button', { name: de.status.demoNext })).toBeNull();
+    await tap(new RegExp(`^${de.thread.renewShare}`));
+    await act(async () => {});
+    const renewed = useAppStore
+      .getState()
+      .consents.filter((c) => c.purpose === 'weitergabe_betrieb' && !c.revokedAt);
+    expect(renewed.map((c) => c.recipient.id)).toEqual([bookingOf(id).provider.id]);
+    await tap(de.status.demoNext);
+    expect(bookingOf(id).status).toBe('unterwegs');
+  });
+
   test('eine Bestätigung für einen anderen Betrieb zählt nicht', async () => {
     const { id } = await bookedCase();
     await tap(de.status.demoNext);

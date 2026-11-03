@@ -25,6 +25,8 @@ export type ActionKey =
   | 'reparatur_bestaetigen'
   | 'problem_besteht_weiter'
   | 'bewerten'
+  // Bestätigungen
+  | 'weitergabe_erneuern'
   // Der Fall selbst
   | 'pausieren'
   | 'abbrechen';
@@ -46,6 +48,7 @@ export const ALL_ACTIONS: readonly ActionKey[] = [
   'reparatur_bestaetigen',
   'problem_besteht_weiter',
   'bewerten',
+  'weitergabe_erneuern',
   'pausieren',
   'abbrechen',
 ];
@@ -112,6 +115,10 @@ const RULES: Record<ActionKey, Rule> = {
     !(f.closed && f.otherOpenCase) &&
     (f.status === 'erledigt' || repairDone(f)),
   bewerten: (f) => repairDone(f) && f.status !== 'abgebrochen',
+
+  // Nach einem Widerruf hält der Fall an (R-12). Mit einem Tap geht es weiter, auch in der
+  // Reparatur, wo sich der Fall nicht abbrechen lässt. Sonst wäre das Gerät blockiert (Nr. 13).
+  weitergabe_erneuern: (f) => !!f.hold,
 
   pausieren: (f) => !f.closed,
   // Nur wo die Status-Maschine es erlaubt, also nicht in der Reparatur und nicht danach (R-01)

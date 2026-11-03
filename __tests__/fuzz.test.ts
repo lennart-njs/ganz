@@ -131,6 +131,8 @@ function household(key: ActionKey, c: Case, f: CaseFacts, s: AppState): Step[] {
       const b = f.bookings.reparatur;
       return b ? [step(key, (x) => x.rateBooking(b.id, 5))] : [];
     }
+    case 'weitergabe_erneuern':
+      return [step(key, (x) => x.renewTransfer(id))];
     case 'pausieren':
       return [step(key, (x) => x.pauseCase(id))];
     case 'abbrechen':

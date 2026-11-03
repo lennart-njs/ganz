@@ -25,6 +25,9 @@ export type ClaimState = 'keiner' | 'in_pruefung' | 'freigegeben' | 'abgelehnt';
 /** Wer die Reparatur zahlt, sobald es feststeht */
 export type PayerKind = 'versicherer' | 'haushalt';
 
+/** Weitergaben, ohne die Versicherer und Betrieb nicht weitermachen (R-12) */
+export type HoldPurpose = Extract<ConsentPurpose, 'weitergabe_versicherer' | 'weitergabe_betrieb'>;
+
 /** Was selectCaseFacts liest. AppData aus dem Store passt dazu, ohne dass model/ den Store kennt. */
 export interface CaseFactsSource {
   cases: Readonly<Record<Id, Case>>;
@@ -65,8 +68,11 @@ export interface CaseFacts {
   lastVideoSession?: VideoSession;
   /** Zwecke mit gültiger Bestätigung oder Einwilligung, für diesen Fall oder ohne Fall */
   activeConsents: ConsentPurpose[];
-  /** Die Weitergabe für den nächsten Schritt der Simulation fehlt (R-12). Dann geht nichts weiter. */
-  hold?: ConsentPurpose;
+  /**
+   * Die Weitergabe für den nächsten Schritt der Simulation fehlt (R-12). Dann geht nichts weiter,
+   * bis du sie erneut bestätigst (weitergabe_erneuern).
+   */
+  hold?: HoldPurpose;
   /** Anleitung, die noch läuft */
   guideRun?: GuideRun;
   /** Wie die neueste Anleitung endete */
@@ -119,7 +125,7 @@ function holdOf(
   c: Case,
   consents: readonly Consent[],
   booking: Booking | undefined,
-): ConsentPurpose | undefined {
+): HoldPurpose | undefined {
   if (isClosed(c.status)) return undefined;
   if (c.status === 'freigabe_noetig') {
     const ok = findActiveConsent(consents, c.reportedBy, 'weitergabe_versicherer', c.id);
