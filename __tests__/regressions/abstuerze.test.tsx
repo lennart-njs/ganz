@@ -2,7 +2,7 @@
 // Jeder Befund hat eine „Ausgangslage“, die heute grün ist, und einen Test mit dem erwarteten
 // Verhalten. Der ist als test.failing markiert, bis der Befund behoben ist. Mit der Behebung wird
 // er im selben Commit zu test.
-import { act, fireEvent, renderRouter, screen } from 'expo-router/testing-library';
+import { act, renderRouter, screen } from 'expo-router/testing-library';
 import { router } from 'expo-router';
 
 import { demoConfig } from '@/config/demo.config';
@@ -70,21 +70,32 @@ describe('R-01 „Fall abbrechen“ in jedem Status', () => {
   // components/nav/CloseCaseSheet.tsx:37 bietet „Fall abbrechen“ in jedem Status an. In
   // erledigt, in_reparatur und abgebrochen wirft der Tap auf „Fall abbrechen“ einen TransitionError.
   // Behoben: Das Sheet fragt can(facts, 'abbrechen') und can(facts, 'pausieren') (Schritt 22).
+  // Seit Schritt 24 lehnt der Store ab, statt zu werfen. Darum prüft der Test für jeden Status,
+  // dass der Button fehlt, und nicht nur, dass der Status gleich bleibt (Schritt 28).
   test('R-01 „Fall abbrechen“ steht nur da, wo der Fall abbrechbar ist, und wirft nie', async () => {
     const { done, repair, cancelled } = closedAndRepairCases();
+    const button = (name: string) => screen.queryByRole('button', { name });
     await openSheetInCaseFile(done);
-    expect(screen.queryByRole('button', { name: de.closeCase.cancel })).toBeNull();
+    expect(button(de.closeCase.cancel)).toBeNull();
+    expect(button(de.closeCase.later)).toBeNull();
+    expect(button(de.closeCase.leave)).toBeTruthy();
 
-    // Dasselbe im Gespräch eines Falls in der Reparatur und in der Fallakte eines abgebrochenen
-    for (const url of [`/fall/${repair}`, `/fall/${cancelled}/fallakte`]) {
-      await act(async () => router.replace(url));
-      await tap(de.a11y.close);
-      expect(screen.getByRole('header', { name: de.closeCase.title })).toBeTruthy();
-      if (await tapIfOffered(de.closeCase.cancel)) {
-        await fireEvent.press(screen.getByRole('radio', { name: de.closeCase.reasons[1] }));
-        await tap(de.closeCase.confirmCancel);
-      }
-    }
+    // In der Reparatur: Später weitermachen ja, Abbrechen nein, mit einem Satz dazu
+    await act(async () => router.replace(`/fall/${repair}`));
+    await tap(de.a11y.close);
+    expect(screen.getByRole('header', { name: de.closeCase.title })).toBeTruthy();
+    expect(button(de.closeCase.cancel)).toBeNull();
+    expect(button(de.closeCase.later)).toBeTruthy();
+    expect(screen.getByText(de.closeCase.noCancel)).toBeTruthy();
+
+    // Abgebrochen: nur noch zur Übersicht
+    await act(async () => router.replace(`/fall/${cancelled}/fallakte`));
+    await tap(de.a11y.close);
+    expect(screen.getByRole('header', { name: de.closeCase.title })).toBeTruthy();
+    expect(button(de.closeCase.cancel)).toBeNull();
+    expect(button(de.closeCase.later)).toBeNull();
+    expect(button(de.closeCase.leave)).toBeTruthy();
+
     expect(caseOf(done).status).toBe('erledigt');
     expect(caseOf(repair).status).toBe('in_reparatur');
     expect(caseOf(cancelled)).toMatchObject({
