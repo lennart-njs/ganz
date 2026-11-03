@@ -271,3 +271,24 @@ Annahmen, die ich beim Bauen getroffen habe. Jede lässt sich ändern.
 - **Erst sichern, dann löschen:** `resetStoredState` am Store liest den gespeicherten Rohwert neu und sichert ihn, falls das noch nicht geschehen ist. Dann löscht es ihn, setzt den Stand zurück und lädt neu (`persist.rehydrate()`). Lässt sich der Rohwert nicht lesen oder nicht sichern, löscht es nichts, und der Hinweis bleibt. So geht auch bei einem Lesefehler nichts verloren, was später wieder lesbar wäre.
 - **Darstellung im Hinweis:** Der gespeicherte Stand ist nicht geladen, also ist auch die Wahl „Hell“ oder „Dunkel“ unbekannt. Der Hinweis folgt dem System. Nach „Zurücksetzen“ steht die Darstellung wieder auf „Wie System“.
 - **Texte** stehen in `de.recovery`.
+
+## Schritt 20: Regressionstests
+
+- **Drei Dateien** in `__tests__/regressions/`, wie die Gruppen in ZUKUNFTSPLAN Anhang B: `abstuerze.test.tsx` (R-01, R-02, R-03, R-18), `fehlverhalten.test.tsx` (R-04 bis R-11) und `datenschutz.test.tsx` (R-12 bis R-17). Sie laufen im Jest-Projekt `ui`.
+- **Je Befund zwei Tests:** „R-xx Ausgangslage“ ist ein normaler Test. Er baut den Stand auf und prüft, dass er erreicht ist. „R-xx …“ mit dem erwarteten Verhalten ist `test.failing`. So sind es 18 Tests als `test.failing` und 18 Ausgangslagen. Scheitert die Ausgangslage, liegt es am Aufbau, nicht am Befund.
+- **Geprüft, wofür sie scheitern:** Jeder der 18 Tests lief einmal als `test`. Jeder scheitert an einer Erwartung zum Symptom, keiner an einem Fehler im Aufbau. Wo ein Test zwei Teile hat (R-01, R-02, R-05, R-06, R-07, R-09, R-11, R-13, R-15, R-16), scheitert auch der zweite Teil allein. Ein Test, der nur teilweise behoben ist, bleibt also rot.
+- **Ausgangslagen auch nach der Behebung gültig:** Sie prüfen nur den Aufbau, nicht das falsche Verhalten. Sie sollen bei der Behebung grün bleiben.
+- **Das Erwartete, nicht die Lösung:** Wo die Behebung einen Button wegnehmen oder der Store ablehnen kann, drückt der Test nur, was die App anbietet (`tapIfOffered`). Ob der Store wirft oder ein Ergebnis zurückgibt (Schritt 24), ist beiden Tests gleich. Sie prüfen den Stand danach.
+- **Gemeinsame Ausgangslagen** stehen in `test/regressions.ts`, nicht unter `__tests__/`. Dort hielte Jest sie für eine Testdatei.
+- **Kommentar je Test** mit Datei und Zeile aus der Review. Wo sich die Zeile seit Schritt 19 verschoben hat, steht die heutige dazu.
+- **R-01** prüft drei Status: erledigt (Fälle → Fallakte), in der Reparatur (Gespräch) und abgebrochen (Fallakte). „Fall abbrechen“ soll nur stehen, wo `canTransition(status, 'abbrechen')` gilt.
+- **R-06** prüft beide Teile in einem Test: Stift mit anderem Symptom und „Anleitung starten“ im Ergebnis bei laufender Anleitung.
+- **R-07:** Während der Prüfung gibt es weder „Ohne Versicherung selbst zahlen“ noch, über den Link mit `zahlung=selbst`, „Du zahlst 189 €“ oder „Zahlungspflichtig buchen“.
+- **R-09:** Gedrückt wird nur „Termin anfragen“, also der Termin auf Kosten des Versicherers. Bietet die Behebung nach der Ablehnung Selbstzahlen an, ist das kein Fehler.
+- **R-11:** Nach `chatLimits.messages` Nachrichten erwartet der Test den vorhandenen Text `de.chat.full` und kein weiteres Senden. Der Text wird heute nirgends gezeigt.
+- **R-13:** Die Einwilligung `mitteilungen` soll beim Erlauben entstehen, nach dem Termin wie im Profil. Ausschalten im Profil widerruft sie, erneutes Einschalten legt eine neue an.
+- **R-14** vergleicht Bezeichnungen: Jede Kategorie, die „Das geht an …“ zeigt, muss in `dataCategories` der gespeicherten Bestätigung stehen. Die Notiz zählt als „Notiz“. Speichert die Behebung Schlüssel statt Texte, muss der Test die Schlüssel auf Bezeichnungen abbilden.
+- **R-15:** Die Fallakte jedes Falls mit Nachrichten an den Assistenten nennt den Anbieter aus `demoConfig.assistant.name`. Wie die Zeile genau aussieht, lässt der Test offen.
+- **R-16:** Ohne gültige Bestätigung (hier nach dem Widerruf) entsteht kein Rückruf, weder per Tap noch über `requestCallback`. Den Text des neuen Bestätigungs-Sheets kennt der Test noch nicht.
+- **R-17** prüft die Mitteilungen, die die Simulation wirklich schickt: Freigabe bis zur Reparatur, Ablehnung und Vor-Ort-Diagnose. Verboten sind Versicherer, Hersteller, Modell, Gerätearten und „Maschine“, Betriebe, Zeitfenster, Beträge, Fallnummer und Wörter zur Entscheidung.
+- **R-18:** Der Hinweis statt des Formulars nutzt `de.result.missing` wie die anderen Fall-Screens ohne Fall.
