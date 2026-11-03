@@ -1,6 +1,7 @@
-// Reparatur-Assistent im Fall-Gespräch: Einwilligung, Senden, Fehler.
+// Reparatur-Assistent im Fall-Gespräch: Einwilligung, Senden, Fehler, Grenze.
 // Eigene Worte gehen direkt an den Assistenten (Entscheidung 12). Geht das nicht,
-// werden sie zur Notiz für die Fachkraft.
+// werden sie zur Notiz für die Fachkraft. Nach chatLimits.messages Nachrichten ist Senden aus,
+// dann hilft die Fachkraft weiter (R-11).
 import { useState } from 'react';
 
 import { demoConfig } from '@/config/demo.config';
@@ -9,21 +10,36 @@ import { services, type ChatError } from '@/services';
 import { useAppStore } from '@/store/appStore';
 
 import { chatContext, hasChatConsent } from './context';
-import { chatLimits } from './limits';
+import { chatFull, fitsRequest } from './limits';
 
 const CONSENT_TEXT_VERSION = '2026-10-1';
 
 /** Bei diesen Fehlern lohnt ein zweiter Versuch. Sonst wird die Nachricht zur Notiz. */
 export const retryableChatErrors: ChatError[] = ['ausgelastet', 'netz', 'dienst'];
 
+/** Fehler, die das Gespräch als Hinweis zeigt. Ein volles Gespräch zeigt full statt eines Fehlers. */
+export type AssistantError = Exclude<ChatError, 'voll'>;
+
+/** Nachrichten im Gespräch eines Falls, in der Reihenfolge, in der sie kamen */
+const historyOf = (caseId: string) =>
+  useAppStore
+    .getState()
+    .chatMessages.filter((m) => m.caseId === caseId)
+    .map((m) => ({ role: m.role, text: m.text }));
+
 export function useAssistant(caseId: string) {
   const [pending, setPending] = useState(false);
-  const [error, setError] = useState<ChatError>();
+  const [error, setError] = useState<AssistantError>();
   /** Text, der auf die Einwilligung wartet */
   const [waiting, setWaiting] = useState<string>();
   const [noted, setNoted] = useState(false);
 
   const consent = useAppStore(hasChatConsent);
+  const count = useAppStore((s) => s.chatMessages.filter((m) => m.caseId === caseId).length);
+  /** Die Route meldet ein volles Gespräch, auch wenn die App es anders zählt */
+  const [serverFull, setServerFull] = useState(false);
+  /** Für eine weitere Frage samt Antwort ist kein Platz: Senden ist aus (R-11) */
+  const full = chatFull(count) || serverFull;
 
   /** Nachricht als Notiz für die Fachkraft, wenn der Assistent nicht antworten kann */
   const toNote = (text: string) => {
@@ -38,25 +54,26 @@ export function useAssistant(caseId: string) {
   };
 
   const ask = async () => {
-    const st = useAppStore.getState();
-    const context = chatContext(st, caseId);
+    const context = chatContext(useAppStore.getState(), caseId);
     if (!context) return;
-    const history = st.chatMessages
-      .filter((m) => m.caseId === caseId)
-      .map((m) => ({ role: m.role, text: m.text }));
-    // Die Anfrage beginnt mit einer Nachricht des Haushalts
-    const start = history.findIndex(
-      (m, i) => m.role === 'haushalt' && i >= history.length - chatLimits.messages + 2,
-    );
+    // Das ganze Gespräch geht mit, kein Fenster über den Verlauf. Passt die Antwort nicht mehr
+    // hinein, geht nichts raus (R-11).
+    const history = historyOf(caseId);
+    if (!fitsRequest(history.length)) return;
     setPending(true);
     setError(undefined);
-    const result = await services.chat.ask(context, history.slice(Math.max(start, 0)));
+    const result = await services.chat.ask(context, history);
     setPending(false);
     if (!result.ok) {
-      setError(result.error);
-      if (!retryableChatErrors.includes(result.error)) {
-        const last = history.at(-1);
+      const last = history.at(-1);
+      if (result.error === 'voll') {
+        setServerFull(true);
         if (last?.role === 'haushalt') toNote(last.text);
+        return;
+      }
+      setError(result.error);
+      if (!retryableChatErrors.includes(result.error) && last?.role === 'haushalt') {
+        toNote(last.text);
       }
       return;
     }
@@ -76,8 +93,9 @@ export function useAssistant(caseId: string) {
     void ask();
   };
 
-  /** Schickt den Text. Ohne Einwilligung wartet er, bis du zustimmst. */
+  /** Schickt den Text. Ohne Einwilligung wartet er, bis du zustimmst. Ist das Gespräch voll, nicht. */
   const send = (text: string) => {
+    if (chatFull(historyOf(caseId).length) || serverFull) return;
     if (!hasChatConsent(useAppStore.getState())) {
       setWaiting(text);
       return;
@@ -112,5 +130,5 @@ export function useAssistant(caseId: string) {
 
   const retry = () => void ask();
 
-  return { consent, pending, error, waiting, noted, send, accept, decline, retry };
+  return { consent, pending, error, waiting, noted, full, send, accept, decline, retry };
 }

@@ -4,7 +4,7 @@
 import { GUIDE_SOURCE, guides, type GuideId } from '@/data/guides';
 import type { Guide } from '@/model/types';
 
-import { chatLimits } from './limits';
+import { chatLimits, fitsRequest } from './limits';
 
 export const guideIds = Object.keys(guides) as GuideId[];
 
@@ -161,7 +161,7 @@ export function parseRequest(body: unknown): { context: ChatContext; messages: C
   if (!context || typeof context !== 'object' || !Array.isArray(messages)) return null;
   if (!['waschmaschine', 'geschirrspueler', 'trockner', 'kuehlschrank'].includes(context.category))
     return null;
-  if (messages.length === 0 || messages.length > chatLimits.messages) return null;
+  if (messages.length === 0 || !fitsRequest(messages.length)) return null;
   const ok = messages.every(
     (m) =>
       (m.role === 'haushalt' || m.role === 'assistent') &&

@@ -2,6 +2,7 @@
 // nie in der App. Der Schlüssel kommt aus ANTHROPIC_API_KEY in .env und verlässt den Rechner nicht.
 import Anthropic from '@anthropic-ai/sdk';
 
+import { fitsRequest } from '@/lib/chat/limits';
 import {
   STABLE_SYSTEM,
   caseSystem,
@@ -37,6 +38,12 @@ export async function POST(request: Request): Promise<Response> {
     body = await request.json();
   } catch {
     return json({ error: 'ungueltig' }, 400);
+  }
+  // Ein Gespräch hat höchstens chatLimits.messages Nachrichten, die Antwort mitgezählt. Danach
+  // hilft die Fachkraft weiter (R-11). Die App schickt dann nichts mehr, die Route prüft es trotzdem.
+  const messages = (body as { messages?: unknown } | null)?.messages;
+  if (Array.isArray(messages) && !fitsRequest(messages.length)) {
+    return json({ error: 'voll' }, 413);
   }
   const input = parseRequest(body);
   if (!input) return json({ error: 'ungueltig' }, 400);

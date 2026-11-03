@@ -393,19 +393,18 @@ describe('R-11 Grenze von 40 Nachrichten im Chat', () => {
 
   // lib/chat/useAssistant.ts:49 schiebt ein Fenster über den Verlauf, statt nach 40 Nachrichten
   // aufzuhören. lib/chat/limits.ts nennt die Grenze, aber niemand setzt sie durch.
-  test.failing(
-    'R-11 nach 40 Nachrichten verweist das Gespräch auf die Fachkraft, Senden ist aus',
-    async () => {
-      const id = await fullChat();
-      expect(screen.getByText(de.chat.full)).toBeTruthy();
-      const field = screen.queryByLabelText(de.thread.inputLabel);
-      if (field) {
-        await fireEvent.changeText(field, 'Noch eine Frage');
-        await tapIfOffered(de.chat.send);
-        await flush();
-      }
-      expect(fetchMock).not.toHaveBeenCalled();
-      expect(messagesOf(id)).toHaveLength(chatLimits.messages);
-    },
-  );
+  // Behoben: useAssistant schickt das ganze Gespräch und nichts mehr, wenn es voll ist (chatFull).
+  // Die Route lehnt zu lange Gespräche mit „voll“ ab (Schritt 25).
+  test('R-11 nach 40 Nachrichten verweist das Gespräch auf die Fachkraft, Senden ist aus', async () => {
+    const id = await fullChat();
+    expect(screen.getByText(de.chat.full)).toBeTruthy();
+    const field = screen.queryByLabelText(de.thread.inputLabel);
+    if (field) {
+      await fireEvent.changeText(field, 'Noch eine Frage');
+      await tapIfOffered(de.chat.send);
+      await flush();
+    }
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(messagesOf(id)).toHaveLength(chatLimits.messages);
+  });
 });

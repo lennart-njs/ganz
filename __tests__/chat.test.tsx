@@ -3,6 +3,7 @@ import { act, fireEvent, renderRouter, screen } from 'expo-router/testing-librar
 import { demoConfig } from '@/config/demo.config';
 import { guides } from '@/data/guides';
 import { de } from '@/i18n/de';
+import { chatLimits } from '@/lib/chat/limits';
 import type { DeviceCategory } from '@/model/types';
 import { useAppStore } from '@/store/appStore';
 import { APP } from '@/test/app';
@@ -190,5 +191,86 @@ describe('Reparatur-Assistent', () => {
   test('die Oberfläche sagt nie „KI“ oder „AI“', () => {
     const texts = JSON.stringify(de);
     expect(texts).not.toMatch(/\bKI\b|\bAI\b|künstliche Intelligenz/i);
+  });
+});
+
+describe('Grenze von 40 Nachrichten (R-11)', () => {
+  /** Ein Fall mit Einwilligung und n Nachrichten, abwechselnd vom Haushalt und vom Assistenten */
+  function chatWith(n: number) {
+    const device = setup();
+    const s = useAppStore.getState();
+    const c = s.createCase({
+      deviceId: device.id,
+      entry: 'freitext',
+      problemLabel: 'Es pumpt nicht ab.',
+    });
+    s.grantConsent({
+      purpose: 'chat_assistent',
+      legalBasis: 'einwilligung',
+      recipient: {
+        id: demoConfig.assistant.id,
+        kind: 'dienstleister',
+        name: demoConfig.assistant.name,
+      },
+      dataCategories: [...de.consentData.assistent],
+      textVersion: '2026-10-1',
+    });
+    for (let i = 0; i < n; i++) {
+      s.addChatMessage({
+        caseId: c.id,
+        role: i % 2 === 0 ? 'haushalt' : 'assistent',
+        text: `Nachricht ${i + 1}`,
+      });
+    }
+    return c.id;
+  }
+
+  const count = (id: string) =>
+    useAppStore.getState().chatMessages.filter((m) => m.caseId === id).length;
+
+  test('die letzte Frage geht mit dem ganzen Gespräch, danach ist Senden aus', async () => {
+    const id = chatWith(chatLimits.messages - 2);
+    await renderRouter(APP, { initialUrl: `/fall/${id}` });
+    expect(screen.queryByText(t.full)).toBeNull();
+    fetchMock.mockReturnValueOnce(
+      reply({ reply: 'Dann hol dir besser Hilfe.', suggestion: 'keine', guideId: '' }),
+    );
+    await ask('Noch eine Frage');
+    await flush();
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    // Kein Fenster über den Verlauf: alle Nachrichten, von der ersten an
+    const sent = JSON.parse(fetchMock.mock.calls[0][1].body).messages;
+    expect(sent).toHaveLength(chatLimits.messages - 1);
+    expect(sent[0]).toEqual({ role: 'haushalt', text: 'Nachricht 1' });
+    expect(count(id)).toBe(chatLimits.messages);
+    // Voll: Hinweis auf die Fachkraft, kein Eingabefeld, Hilfe holen
+    expect(screen.getByText(t.full)).toBeTruthy();
+    expect(screen.queryByLabelText(de.thread.inputLabel)).toBeNull();
+    await tap(t.getHelp);
+    expect(useAppStore.getState().cases[id]?.status).toBe('eskaliert');
+  });
+
+  test('meldet die Route ein volles Gespräch, wird die Nachricht zur Notiz', async () => {
+    const id = chatWith(chatLimits.messages - 4);
+    await renderRouter(APP, { initialUrl: `/fall/${id}` });
+    fetchMock.mockReturnValueOnce(reply({ error: 'voll' }, 413));
+    await ask('Noch eine Frage');
+    await flush();
+    expect(screen.getByText(t.fullNoted)).toBeTruthy();
+    expect(screen.queryByText(de.thread.noteFallback)).toBeNull();
+    expect(screen.queryByLabelText(de.thread.inputLabel)).toBeNull();
+    const note = useAppStore
+      .getState()
+      .events.find((e) => e.caseId === id && e.type === 'rueckfrage_beantwortet');
+    expect(note?.payload).toEqual({ question: de.thread.noteQuestion, answer: 'Noch eine Frage' });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  test('in der Anleitung gibt es keine Frage an den Assistenten mehr, wenn das Gespräch voll ist', async () => {
+    const id = chatWith(chatLimits.messages);
+    useAppStore.getState().startGuide(id, 'ablauf');
+    await renderRouter(APP, { initialUrl: `/fall/${id}/anleitung` });
+    expect(screen.getByText(guides.ablauf.steps[0]!.t)).toBeTruthy();
+    expect(screen.queryByRole('button', { name: t.askStep })).toBeNull();
   });
 });

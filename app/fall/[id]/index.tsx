@@ -1069,42 +1069,50 @@ export default function FallGespraech() {
     }
     if (canHelp) reply('fehler-hilfe', de.chat.getHelp, escalate);
   }
+  // Das Gespräch mit dem Assistenten ist voll: Senden ist aus, die Fachkraft hilft weiter (R-11)
+  if (assistant.full && !assistant.pending && !assistant.error && !facts.closed) {
+    tail.push(<InfoBox key="voll">{assistant.noted ? de.chat.fullNoted : de.chat.full}</InfoBox>);
+    if (canHelp && !replies.some((r) => r.label === de.chat.getHelp)) {
+      reply('voll-hilfe', de.chat.getHelp, escalate);
+    }
+  }
 
   const closed = facts.closed;
-  const inputBar = closed ? undefined : (
-    <View
-      style={[
-        styles.inputBar,
-        {
-          paddingBottom: Math.max(insets.bottom, 12) + 8,
-          paddingHorizontal: theme.gutter,
-          borderTopColor: theme.colors.borderSubtle,
-          backgroundColor: theme.colors.bgPage,
-        },
-      ]}
-    >
-      <View style={styles.inputField}>
-        <TextField
-          label={t.inputLabel}
-          labelHidden
-          placeholder={a.otherPlaceholder}
-          multiline
-          rows={1}
-          value={input}
-          error={inputError}
-          onChangeText={(v) => {
-            setInput(v);
-            setInputError(undefined);
-          }}
+  const inputBar =
+    closed || assistant.full ? undefined : (
+      <View
+        style={[
+          styles.inputBar,
+          {
+            paddingBottom: Math.max(insets.bottom, 12) + 8,
+            paddingHorizontal: theme.gutter,
+            borderTopColor: theme.colors.borderSubtle,
+            backgroundColor: theme.colors.bgPage,
+          },
+        ]}
+      >
+        <View style={styles.inputField}>
+          <TextField
+            label={t.inputLabel}
+            labelHidden
+            placeholder={a.otherPlaceholder}
+            multiline
+            rows={1}
+            value={input}
+            error={inputError}
+            onChangeText={(v) => {
+              setInput(v);
+              setInputError(undefined);
+            }}
+          />
+        </View>
+        <Button
+          label={de.chat.send}
+          disabled={!input.trim() || assistant.pending}
+          onPress={sendInput}
         />
       </View>
-      <Button
-        label={de.chat.send}
-        disabled={!input.trim() || assistant.pending}
-        onPress={sendInput}
-      />
-    </View>
-  );
+    );
 
   const footer = (
     <>

@@ -2,6 +2,7 @@
  * @jest-environment node
  */
 import { POST } from '@/app/api/chat+api';
+import { chatLimits } from '@/lib/chat/limits';
 import { STABLE_SYSTEM, caseSystem, parseReply, type ChatContext } from '@/lib/chat/prompt';
 
 const mockCreate = jest.fn();
@@ -69,6 +70,27 @@ describe('Server-Route des Reparatur-Assistenten', () => {
       (await post({ context, messages: [{ role: 'haushalt', text: 'x'.repeat(1300) }] })).status,
     ).toBe(400);
     expect(mockCreate).not.toHaveBeenCalled();
+  });
+
+  test('Grenze von 40 Nachrichten: ein volles Gespräch gibt 413 „voll“ ohne Aufruf (R-11)', async () => {
+    const turns = (n: number) =>
+      Array.from({ length: n }, (_, i) => ({
+        role: i % 2 === 0 ? 'haushalt' : 'assistent',
+        text: `Nachricht ${i + 1}`,
+      }));
+    const last = { role: 'haushalt', text: 'Noch eine Frage' };
+    // 40 Nachrichten in der Anfrage ließen keinen Platz für die Antwort
+    for (const messages of [[...turns(chatLimits.messages - 1), last], turns(41)]) {
+      const res = await post({ context, messages });
+      expect(res.status).toBe(413);
+      expect(await res.json()).toEqual({ error: 'voll' });
+    }
+    expect(mockCreate).not.toHaveBeenCalled();
+    // 39 Nachrichten: Die Antwort ist die 40.
+    mockCreate.mockResolvedValue(answer({ reply: 'Gut.', suggestion: 'keine', guideId: '' }));
+    const res = await post({ context, messages: turns(chatLimits.messages - 1) });
+    expect(res.status).toBe(200);
+    expect(mockCreate.mock.calls[0][0].messages).toHaveLength(chatLimits.messages - 1);
   });
 
   test('Anfrage an Claude: Modell, Format, Cache, Fallback, Verlauf', async () => {

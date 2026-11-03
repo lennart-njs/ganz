@@ -1067,7 +1067,11 @@ export const de = {
     backToGuide: (title: string) => `Zurück zur Anleitung: ${title}`,
     getHelp: 'Hilfe holen',
     tooLong: (max: number) => `Bitte kürzer, höchstens ${max} Zeichen.`,
+    /** Nach chatLimits.messages Nachrichten ist Senden aus (R-11) */
     full: 'Das Gespräch ist lang geworden. Eine Fachkraft hilft dir jetzt schneller weiter.',
+    /** Dasselbe, wenn die letzte Nachricht keine Antwort mehr bekam */
+    fullNoted:
+      'Das Gespräch ist lang geworden. Deine letzte Nachricht geht als Notiz an die Fachkraft. Sie hilft dir jetzt schneller weiter.',
     retry: 'Noch einmal senden',
     errors: {
       kein_schluessel:

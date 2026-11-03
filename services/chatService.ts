@@ -3,7 +3,14 @@
 import type { ChatContext, ChatReply, ChatTurn } from '@/lib/chat/prompt';
 
 export type ChatError =
-  'kein_schluessel' | 'schluessel' | 'abgelehnt' | 'ausgelastet' | 'netz' | 'dienst';
+  | 'kein_schluessel'
+  | 'schluessel'
+  | 'abgelehnt'
+  | 'ausgelastet'
+  | 'netz'
+  | 'dienst'
+  /** Das Gespräch hat die Grenze erreicht (lib/chat/limits.ts). Weiter hilft die Fachkraft. */
+  | 'voll';
 
 export type ChatResult = { ok: true; reply: ChatReply } | { ok: false; error: ChatError };
 
@@ -11,7 +18,7 @@ export interface ChatService {
   ask(context: ChatContext, messages: ChatTurn[]): Promise<ChatResult>;
 }
 
-const known: ChatError[] = ['kein_schluessel', 'schluessel', 'abgelehnt', 'ausgelastet'];
+const known: ChatError[] = ['kein_schluessel', 'schluessel', 'abgelehnt', 'ausgelastet', 'voll'];
 
 export const httpChatService: ChatService = {
   async ask(context, messages) {
