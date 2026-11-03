@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
-import { Button, ChoiceChip, Sheet, Text } from '@/components/ds';
+import { Button, ChoiceChip, Sheet, Text, Toast } from '@/components/ds';
+import { useCommand } from '@/hooks/useCommand';
 import { de } from '@/i18n/de';
 import { can } from '@/model/policies/actions';
 import { selectCaseFacts } from '@/model/policies/caseFacts';
@@ -51,10 +52,16 @@ export function CloseCaseSheet({ caseId, visible, onClose }: CloseCaseSheetProps
     leaveCase();
   };
 
+  // Abbrechen zählt einmal. Lehnt der Store ab, bleibt das Sheet mit einem ruhigen Satz offen.
+  const abort = useCommand(
+    (id: string, cancelReason: string) => runCommand(id, 'abbrechen', { cancelReason }),
+    () => {
+      close();
+      leaveCase();
+    },
+  );
   const cancel = () => {
-    if (caseId && canCancel && reason) runCommand(caseId, 'abbrechen', { cancelReason: reason });
-    close();
-    leaveCase();
+    if (caseId && canCancel && reason) abort.run(caseId, reason);
   };
 
   return (
@@ -63,6 +70,7 @@ export function CloseCaseSheet({ caseId, visible, onClose }: CloseCaseSheetProps
       onClose={close}
       title={cancelling && canCancel ? t.reasonTitle : t.title}
     >
+      {abort.toast ? <Toast message={abort.toast} /> : null}
       {cancelling && canCancel ? (
         <>
           <View style={styles.chips} accessibilityRole="radiogroup">

@@ -307,6 +307,21 @@ export const de = {
     phoneHint: 'Öffnet die Telefon-App.',
   },
 
+  /**
+   * Ruhige Hinweise, wenn ganz einen Befehl ablehnt (hooks/useCommand.ts, Schritt 24). Nie der
+   * Fehlertext der Domäne.
+   */
+  command: {
+    refused: {
+      unbekannt: 'Das gibt es hier nicht mehr. Deine Fälle findest du unter „Fälle“.',
+      bestaetigung: 'Dafür fehlt noch deine Bestätigung.',
+      vertrag: 'Dafür brauchst du einen verknüpften Schutz.',
+      nurBetrieb: 'Dieses Teil baut immer der Betrieb ein.',
+      other: 'Das geht gerade nicht mehr. Im Gespräch siehst du, wie es weitergeht.',
+    },
+    failed: 'Das hat nicht geklappt. Versuch es gleich noch einmal.',
+  },
+
   /** Hinweis, wenn sich der gespeicherte Stand beim Start nicht laden lässt (Schritt 19) */
   recovery: {
     title: 'Deine Daten lassen sich gerade nicht laden.',

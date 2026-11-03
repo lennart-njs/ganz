@@ -364,8 +364,8 @@ module.exports = defineConfig([
     },
   },
   {
-    // Alle Texte in i18n/de.ts (CLAUDE.md). Gilt für Screens und Komponenten.
-    files: ['app/**/*.{ts,tsx}', 'components/**/*.{ts,tsx}'],
+    // Alle Texte in i18n/de.ts (CLAUDE.md). Gilt für Screens, Komponenten und Hooks.
+    files: ['app/**/*.{ts,tsx}', 'components/**/*.{ts,tsx}', 'hooks/**/*.{ts,tsx}'],
     rules: {
       'ganz/text-aus-i18n': 'error',
       'ganz/text-in-ausdruecken': 'error',

@@ -23,9 +23,11 @@ import {
   StarRating,
   Text,
   TextField,
+  Toast,
 } from '@/components/ds';
 import { demoConfig } from '@/config/demo.config';
 import { guides, type GuideId } from '@/data/guides';
+import { useCommand } from '@/hooks/useCommand';
 import { de } from '@/i18n/de';
 import { formatDecimal, formatEuro } from '@/i18n/format';
 import { caseAppliance, hasGuides } from '@/lib/appliance';
@@ -40,7 +42,12 @@ import { selectCaseFacts } from '@/model/policies/caseFacts';
 import { hasProgress } from '@/model/policies/openCase';
 import type { CaseEvent, Diagnosis } from '@/model/types';
 import { services, type FindingOption, type PhotoMode, type QuestionAnswer } from '@/services';
-import { nextSimulationDue, selectCaseEvents, useAppStore } from '@/store/appStore';
+import {
+  nextSimulationDue,
+  selectCaseEvents,
+  useAppStore,
+  type NewConsent,
+} from '@/store/appStore';
 import { useTheme } from '@/theme';
 
 const t = de.thread;
@@ -81,6 +88,25 @@ export default function FallGespraech() {
   const [callbackSlot, setCallbackSlot] = useState<string>();
   const [input, setInput] = useState('');
   const [inputError, setInputError] = useState<string>();
+
+  // Buttons, die nur einmal zählen: Ein Doppeltap löst nichts doppelt aus, eine Ablehnung bekommt
+  // einen ruhigen Satz (hooks/useCommand.ts)
+  const call = useCommand(
+    (confirm: { share: NewConsent; screenshots?: NewConsent }) =>
+      useAppStore.getState().requestVideoCall(caseId, confirm),
+    (session) => router.push(`/fall/${caseId}/warteraum?video=${session.id}`),
+  );
+  const claim = useCommand(
+    () => useAppStore.getState().reportClaim(caseId, CLAIM_TEXT_VERSION),
+    () => setPayment(undefined),
+  );
+  const book = useCommand(requestAppointment, () => {
+    setPartnerId(undefined);
+    setSlot(undefined);
+    setPayment(undefined);
+    setOnSite(false);
+  });
+  const commandToast = call.toast ?? claim.toast ?? book.toast;
 
   // Ein Fall ohne Inhalt bleibt nicht liegen, wenn man das Gespräch verlässt
   useEffect(() => () => useAppStore.getState().discardIfEmpty(caseId), [caseId]);
@@ -180,7 +206,7 @@ export default function FallGespraech() {
   // Der Tap bestätigt die Weitergabe an die Fachkraft. Der Store speichert sie mit dem Call.
   const startCall = () => {
     const recipient = { id: helpPartner.id, kind: 'betrieb' as const, name: helpPartner.name };
-    const session = useAppStore.getState().requestVideoCall(caseId, {
+    call.run({
       share: {
         caseId,
         purpose: 'weitergabe_fachkraft',
@@ -200,7 +226,6 @@ export default function FallGespraech() {
           }
         : undefined,
     });
-    if (session.ok) router.push(`/fall/${caseId}/warteraum?video=${session.value.id}`);
   };
 
   // Läuft dieselbe Anleitung schon, geht startGuide dort weiter (R-06)
@@ -246,24 +271,11 @@ export default function FallGespraech() {
     });
   };
 
-  const report = () => {
-    useAppStore.getState().reportClaim(caseId, CLAIM_TEXT_VERSION);
-    setPayment(undefined);
-  };
+  const report = claim.run;
 
   const request = () => {
     if (!partnerId || !slot) return;
-    requestAppointment({
-      caseId,
-      partnerId,
-      slot,
-      selfPay: payment === 'selbst',
-      diagnosis: onSite,
-    });
-    setPartnerId(undefined);
-    setSlot(undefined);
-    setPayment(undefined);
-    setOnSite(false);
+    book.run({ caseId, partnerId, slot, selfPay: payment === 'selbst', diagnosis: onSite });
   };
 
   const sendInput = () => {
@@ -1086,10 +1098,15 @@ export default function FallGespraech() {
     </View>
   );
 
-  const footer = replies.length ? (
-    <QuickReplies replies={replies} onPick={(key) => handlers[key]?.()} footer={inputBar} />
-  ) : (
-    inputBar
+  const footer = (
+    <>
+      {commandToast ? <Toast message={commandToast} style={styles.toast} /> : null}
+      {replies.length ? (
+        <QuickReplies replies={replies} onPick={(key) => handlers[key]?.()} footer={inputBar} />
+      ) : (
+        inputBar
+      )}
+    </>
   );
 
   return (
@@ -1121,4 +1138,5 @@ const styles = StyleSheet.create({
     borderTopWidth: StyleSheet.hairlineWidth,
   },
   inputField: { flex: 1 },
+  toast: { marginHorizontal: 16, marginBottom: 8 },
 });

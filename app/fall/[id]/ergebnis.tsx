@@ -4,9 +4,19 @@ import { Image, StyleSheet, View } from 'react-native';
 import { DemoHint } from '@/components/app/DemoHint';
 import { CaseScreen, useCaseId } from '@/components/app/CaseScreen';
 import { backToThread } from '@/components/nav/leaveCase';
-import { ActionBar, Button, Card, ConfidenceLabel, FactList, InfoBox, Text } from '@/components/ds';
+import {
+  ActionBar,
+  Button,
+  Card,
+  ConfidenceLabel,
+  FactList,
+  InfoBox,
+  Text,
+  Toast,
+} from '@/components/ds';
 import { demoConfig } from '@/config/demo.config';
 import { guides, type GuideId } from '@/data/guides';
+import { useCommand } from '@/hooks/useCommand';
 import { de } from '@/i18n/de';
 import { formatEuro } from '@/i18n/format';
 import { latestDiagnosis } from '@/lib/caseView';
@@ -39,6 +49,12 @@ export default function Ergebnis() {
   const device = state.devices.find((d) => d.id === c?.deviceId);
   const photo = state.photos.find((p) => p.id === diagnosis?.photoIds[0]);
   const contract = state.contracts.find((k) => k.id === device?.contractId);
+  // Läuft diese Anleitung schon, geht startGuide dort weiter (B-05, R-06). Ein zweiter Tap
+  // startet nichts doppelt.
+  const start = useCommand(
+    (guideId: string) => useAppStore.getState().startGuide(caseId, guideId),
+    () => router.push(`/fall/${caseId}/anleitung`),
+  );
 
   if (!c || !diagnosis || !device) {
     return (
@@ -152,29 +168,28 @@ export default function Ergebnis() {
     [t.facts.damage, diagnosis.visibleDamage ?? t.noDamage],
   ];
 
-  // Läuft diese Anleitung schon, geht startGuide dort weiter (B-05, R-06). Die Leiste sagt, wo.
+  // Die Leiste sagt, wo eine laufende Anleitung steht
   const running = caseFacts?.guideRun?.guideId === guide.id ? caseFacts.guideRun : undefined;
-  const startGuide = () => {
-    useAppStore.getState().startGuide(caseId, guide.id);
-    router.push(`/fall/${caseId}/anleitung`);
-  };
 
   return (
     <CaseScreen
       title={de.screens.ergebnis}
       footer={
-        <ActionBar
-          meta={
-            running
-              ? de.a11y.stepOf(running.currentStep + 1, guide.steps.length)
-              : t.stepsCount(guide.steps.length)
-          }
-          sub={t.source(manufacturer)}
-        >
-          {can(caseFacts, 'anleitung_starten') ? (
-            <Button label={t.startGuide} onPress={startGuide} />
-          ) : null}
-        </ActionBar>
+        <>
+          {start.toast ? <Toast message={start.toast} style={styles.toast} /> : null}
+          <ActionBar
+            meta={
+              running
+                ? de.a11y.stepOf(running.currentStep + 1, guide.steps.length)
+                : t.stepsCount(guide.steps.length)
+            }
+            sub={t.source(manufacturer)}
+          >
+            {can(caseFacts, 'anleitung_starten') ? (
+              <Button label={t.startGuide} onPress={() => start.run(guide.id)} />
+            ) : null}
+          </ActionBar>
+        </>
       }
     >
       <DemoHint id="ergebnis" />
@@ -226,4 +241,5 @@ const styles = StyleSheet.create({
   thumb: { width: 64, height: 64, overflow: 'hidden' },
   fromText: { flex: 1 },
   confidence: { marginTop: 14 },
+  toast: { marginHorizontal: 16, marginBottom: 8 },
 });

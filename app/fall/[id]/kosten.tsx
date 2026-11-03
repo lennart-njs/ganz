@@ -6,8 +6,9 @@ import { CaseFileCard } from '@/components/app/CaseFileCard';
 import { CaseScreen, useCaseId } from '@/components/app/CaseScreen';
 import { CostCompare } from '@/components/app/CostCompare';
 import { backToThread, leaveCase } from '@/components/nav/leaveCase';
-import { ActionBar, Button, Card, Disclosure, FactList, Text } from '@/components/ds';
+import { ActionBar, Button, Card, Disclosure, FactList, Text, Toast } from '@/components/ds';
 import { demoConfig } from '@/config/demo.config';
+import { useCommand } from '@/hooks/useCommand';
 import { de } from '@/i18n/de';
 import { formatEuro } from '@/i18n/format';
 import { latestDiagnosis } from '@/lib/caseView';
@@ -37,6 +38,12 @@ export default function Kosten() {
   const insurer = demoConfig.insurer.shortName;
   const deductible = formatEuro(state.demo.deductible);
   const replacement = finding?.errorPattern === 'ersatzgeraet_noetig';
+  // Der Schadenfall entsteht nur einmal, auch bei einem Doppeltap. Danach weiter zum Termin.
+  const report = useCommand(
+    () => useAppStore.getState().reportClaim(caseId, CLAIM_TEXT_VERSION),
+    () =>
+      replacement ? backToThread(caseId) : router.push(`/fall/${caseId}/termin?art=reparatur`),
+  );
 
   if (!c || !quote) {
     return (
@@ -87,12 +94,6 @@ export default function Kosten() {
     );
   }
 
-  const report = () => {
-    if (!useAppStore.getState().reportClaim(caseId, CLAIM_TEXT_VERSION).ok) return;
-    if (replacement) backToThread(caseId);
-    else toAppointment(false);
-  };
-
   const facts = contract
     ? ([
         [t.payer, t.payerValue(insurer)],
@@ -103,9 +104,12 @@ export default function Kosten() {
 
   // Nach der Meldung kein zweites Melden (R-02). Mit laufendem Termin kein zweiter (R-08).
   const footer = can(caseFacts, 'schaden_melden') ? (
-    <ActionBar meta={t.barMeta(deductible)} sub={t.barSub}>
-      <Button label={t.report} onPress={report} />
-    </ActionBar>
+    <>
+      {report.toast ? <Toast message={report.toast} style={styles.toast} /> : null}
+      <ActionBar meta={t.barMeta(deductible)} sub={t.barSub}>
+        <Button label={t.report} onPress={report.run} />
+      </ActionBar>
+    </>
   ) : can(caseFacts, 'termin_versicherer') ? (
     <ActionBar>
       <Button label={t.toAppointment} size="lg" fullWidth onPress={() => toAppointment(false)} />
@@ -152,4 +156,5 @@ export default function Kosten() {
 
 const styles = StyleSheet.create({
   preview: { gap: 8 },
+  toast: { marginHorizontal: 16, marginBottom: 8 },
 });

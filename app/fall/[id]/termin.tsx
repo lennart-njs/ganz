@@ -17,6 +17,7 @@ import {
   Toast,
 } from '@/components/ds';
 import { demoConfig } from '@/config/demo.config';
+import { useCommand } from '@/hooks/useCommand';
 import { de } from '@/i18n/de';
 import { formatDecimal, formatEuro } from '@/i18n/format';
 import { getManufacturer } from '@/lib/devices';
@@ -60,6 +61,8 @@ export default function Termin() {
   const claimPending = facts?.claim === 'in_pruefung';
 
   const paid = amountToPay(state, caseId, selfPay, diagnosis) > 0;
+  // Einmal anfragen: Ein zweiter Tap bucht nicht doppelt, eine Ablehnung bekommt einen ruhigen Satz
+  const book = useCommand(requestAppointment, () => backToThread(caseId));
 
   // Diesen Termin gibt es nicht: Nach der Ablehnung entscheidest du neu, sonst geht es im Gespräch
   // weiter. Den Preis fürs Selbstzahlen siehst du vor der Wahl.
@@ -101,9 +104,9 @@ export default function Termin() {
       setToast(t.pickSlot);
       return;
     }
-    requestAppointment({ caseId, partnerId, slot, selfPay, diagnosis });
-    backToThread(caseId);
+    book.run({ caseId, partnerId, slot, selfPay, diagnosis });
   };
+  const notice = book.toast ?? toast;
 
   const summary: [string, string][] = [
     [t.facts.partner, partner?.name ?? ''],
@@ -118,7 +121,7 @@ export default function Termin() {
       title={de.screens.termin}
       footer={
         <>
-          {toast ? <Toast message={toast} style={styles.toast} /> : null}
+          {notice ? <Toast message={notice} style={styles.toast} /> : null}
           <ActionBar meta={slot ?? ''} sub={partner?.name}>
             <Button
               label={paid ? t.requestPaid : t.request}

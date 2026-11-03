@@ -1,7 +1,8 @@
 import { StyleSheet, View } from 'react-native';
 
-import { Button, Card, Sheet, Text } from '@/components/ds';
+import { Button, Card, Sheet, Text, Toast } from '@/components/ds';
 import { demoConfig } from '@/config/demo.config';
+import { useCommand } from '@/hooks/useCommand';
 import { de } from '@/i18n/de';
 import type { Id } from '@/model/types';
 import { useAppStore } from '@/store/appStore';
@@ -25,18 +26,21 @@ export function CallbackSheet({ caseId, slot, onClose }: CallbackSheetProps) {
   const expert = demoConfig.expert.name;
   const partner = demoConfig.partners.find((p) => p.id === demoConfig.expert.partnerId)!;
 
-  // Bestätigung und Rückruf speichert der Store in einem Schritt
+  // Bestätigung und Rückruf speichert der Store in einem Schritt. Ein Doppeltap fragt nicht doppelt.
+  const send = useCommand(
+    (time: string) =>
+      useAppStore.getState().requestCallback(caseId, time, {
+        caseId,
+        purpose: 'weitergabe_fachkraft',
+        legalBasis: 'vertrag',
+        recipient: { id: partner.id, kind: 'betrieb', name: partner.name },
+        dataCategories: [...de.help.shareItems],
+        textVersion: CONSENT_TEXT_VERSION,
+      }),
+    onClose,
+  );
   const confirm = () => {
-    if (!slot) return;
-    useAppStore.getState().requestCallback(caseId, slot, {
-      caseId,
-      purpose: 'weitergabe_fachkraft',
-      legalBasis: 'vertrag',
-      recipient: { id: partner.id, kind: 'betrieb', name: partner.name },
-      dataCategories: [...de.help.shareItems],
-      textVersion: CONSENT_TEXT_VERSION,
-    });
-    onClose();
+    if (slot) send.run(slot);
   };
 
   return (
@@ -57,6 +61,7 @@ export function CallbackSheet({ caseId, slot, onClose }: CallbackSheetProps) {
           {de.help.legalBasis}
         </Text>
       </Card>
+      {send.toast ? <Toast message={send.toast} /> : null}
       <Button label={t.requestCallback} fullWidth onPress={confirm} />
       <Button label={de.common.cancel} variant="secondary" fullWidth onPress={onClose} />
     </Sheet>
