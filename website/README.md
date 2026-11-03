@@ -1,6 +1,6 @@
-# machs.io website (image version): installation instructions
+# machs.io website (Register version): installation instructions
 
-Version: 29 October 2026
+Version: 3 November 2026
 Written in ASD-STE100 (Simplified Technical English).
 
 ## 1. Contents of the package
@@ -17,8 +17,6 @@ The folder `site/` contains the full website. Upload only this folder.
 | `site/js/site.js` | The movement and the controls. The script does not load content from other servers. |
 | `site/fonts/` | The font Schibsted Grotesk and its license (`OFL.txt`). |
 | `site/favicon.svg`, `site/favicon-32.png`, `site/apple-touch-icon.png` | The icons for the browser and for the home screen. |
-| `site/img/reparatur-1280.jpg`, `site/img/reparatur-2560.jpg` | The black-and-white photo in two widths. The browser selects the correct width. |
-| `site/img/grain.png` | The film grain on the photo. |
 | `site/og.png` | The preview image for links in LinkedIn, messengers and e-mail. |
 | `site/robots.txt`, `site/sitemap.xml` | Information for search engines. |
 | `site/.htaccess` | The server settings for Apache: HTTPS, security headers, cache, error page. |
@@ -127,32 +125,12 @@ The code is in `site/js/site.js` (section „Navigation: beim Runterscrollen wir
 
 If the visitor selects „reduce motion“ in the operating system, the capsule changes without animation.
 
-## 13. The photo
+## 13. The Register version
 
-The image version shows a black-and-white photo with the headline "Gemeinsam machen wir Reparaturen wieder normal." The photo is in the folder `site/img/`.
+The folder `site/` contains the Register version of the website. This version has no photo. Between the start area and „Ein Weg in drei Stationen.“, the sentence „Ein Gerät steht still. …“ shows. When the visitor scrolls, the words of the sentence become dark one after the other.
 
-On wide screens, the headline is in the dark area on the right side of the photo. On phones and tablets in portrait format, the headline is in the lower third. Thus the face and the hands stay free.
+Four explanation sentences are removed: under „Ein Weg in drei Stationen.“, under „Wo Selbsthilfe endet.“, under „Sprechen wir über Ihre Fälle.“ and under „Ein Gerät streikt.“
 
-To replace the photo, do these steps:
+The file `mach_s_Register.html` (next to the folder `site/`) is the same page as one file: the styles, the script and the font are inside the file. Use it only to look at the page on your computer. Do not upload it. The security settings in `.htaccess` (section 8) block styles, scripts and fonts that are inside an HTML file.
 
-1. Make a black-and-white photo in landscape format with a minimum width of 2560 pixels.
-2. Make sure that the right third of the photo is dark and calm. The headline goes there.
-3. Save the photo as JPG with the name `reparatur-2560.jpg` and a width of 2560 pixels. Use a JPG quality of 75 to 80.
-4. Save a second copy with the name `reparatur-1280.jpg` and a width of 1280 pixels.
-5. Replace the two files in `site/img/` and upload them.
-6. Open the start page on a computer and on a phone. Make sure that you can read the headline easily.
-
-If the headline covers an important part of the new photo, change the value `padding-left:64vw` in `site/css/site.css`. A larger value moves the headline to the right.
-
-The caption "Symbolbild, mit Bildgenerierung erstellt" shows at the bottom right of the photo. If you use a real photo, change or delete this caption in `site/index.html`.
-
-## 14. The Register version (without photo)
-
-The file `mach_s_Register.html` is the version of the website without the black-and-white photo. It is one file: the styles, the script and the font are inside the file.
-
-The file has the same changes as the image version:
-
-1. The navigation capsule becomes the small button „m’“ when the visitor scrolls down (see section 12).
-2. Four explanation sentences are removed: under „Ein Weg in drei Stationen.“, under „Wo Selbsthilfe endet.“, under „Sprechen wir über Ihre Fälle.“ and under „Ein Gerät streikt.“
-
-Do not put this file into the folder `site/` with the file `.htaccess` from this package. The security settings in `.htaccess` (section 8) block styles, scripts and fonts that are inside an HTML file. The page then shows without layout and without movement. To publish the Register version on machs.io, first split it into `index.html`, `css/site.css`, `js/site.js` and the font file, as in the folder `site/`.
+The footer of the website links to the full legal notice (`/impressum/`) and the full privacy policy (`/datenschutz/`). The file `mach_s_Register.html` has only short versions.

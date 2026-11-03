@@ -9,7 +9,6 @@
   function setRM(){doc.classList.toggle("rm",reduced)}setRM();
   if(mq.addEventListener)mq.addEventListener("change",function(e){reduced=e.matches;setRM()});
   var clamp=function(v,a,b){return Math.min(b,Math.max(a,v))};
-  var smooth=function(x){return x*x*(3-2*x)};
 
   function go(){requestAnimationFrame(function(){doc.classList.add("ready")})}
   if(reduced)doc.classList.add("ready");
@@ -127,19 +126,6 @@
   function splitWords(el){el.innerHTML=el.textContent.trim().split(/\s+/).map(function(w){return '<span class="w">'+w+'</span>'}).join(" ");return $$(".w",el)}
   if(say)sw=splitWords(say);
 
-  /* ——— Bild-Abschnitt (nur in der Bild-Variante): Rahmen öffnet sich, Wörter erscheinen ——— */
-  var photo=$("#bild"),pstage=null,pw=[];
-  if(photo){
-    pstage=$(".photo-stage",photo);
-    pw=splitWords($(".photo-h",photo));
-    var pimg=$(".photo-frame img",photo);
-    if(pimg){
-      var miss=function(){photo.classList.add("no-img");pimg.hidden=true};
-      if(pimg.complete&&pimg.naturalWidth===0&&pimg.currentSrc)miss();
-      pimg.addEventListener("error",miss);
-    }
-  }
-
   /* ——— Wortstapel ——— */
   var cards=$$("#card>article");
   var narrow=window.matchMedia("(max-width:860px)");
@@ -170,13 +156,6 @@
     /* Aussage */
     if(say){var r=say.getBoundingClientRect();var p=clamp((vh*.86-r.top)/(r.height+vh*.4),0,1);var n=Math.round(p*sw.length);
     sw.forEach(function(w,k){w.classList.toggle("on",reduced||k<n)})}
-    /* Bild */
-    if(photo){
-      var br=photo.getBoundingClientRect(),bp=clamp(-br.top/Math.max(1,br.height-vh),0,1);
-      var pe=reduced?1:smooth(clamp(bp/.42,0,1)),pt=reduced?1:clamp((bp-.26)/.42,0,1);
-      pstage.style.setProperty("--e",pe.toFixed(4));pstage.style.setProperty("--t",pt.toFixed(3));
-      var pn=Math.round(pt*pw.length);pw.forEach(function(w,k){w.classList.toggle("on",k<pn)});
-    }
     /* Stapel */
     if(!narrow.matches){var tr=strack.getBoundingClientRect();var q=clamp(-tr.top/(tr.height-vh),0,1);setStation(Math.min(2,Math.floor(q*3*.999)))}
     /* Telefon hebt sich */
