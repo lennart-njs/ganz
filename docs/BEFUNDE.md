@@ -1,6 +1,6 @@
 # Abgleich der Befunde aus dem Review
 
-Stand: 03.11.2026 · nach Schritt 20 und den ersten Regelbrüchen aus Phase 1 · Befunde: `docs/REVIEW.md` Abschnitt 2 und `docs/ZUKUNFTSPLAN.md` Anhang B
+Stand: 03.11.2026 · nach Schritt 22 (Eine Regelquelle) · Befunde: `docs/REVIEW.md` Abschnitt 2 und `docs/ZUKUNFTSPLAN.md` Anhang B
 
 Nach Schritt 14 waren alle P0- und P1-Befunde behoben. Die Code-Review vom 03.11.2026 hat acht davon wieder geöffnet: B-04, B-05, B-17, B-18, B-19, B-23, B-40 und B-53. Sie sind offen, bis die Rückfälle R-01 bis R-18 behoben sind (Abschnitt „Rückfälle“ unten). Wieder behoben sind B-04 (R-01), B-17 (R-02), B-18 (R-07), B-40 (R-12) sowie B-19 und B-23 (R-16). Alle anderen P0- und P1-Befunde bleiben behoben. Die Spalte „Nachweis“ nennt den Test, der das Verhalten prüft, oder die Stelle im Code.
 
