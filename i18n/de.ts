@@ -305,6 +305,9 @@ export const de = {
     loading: 'Wird geladen',
     free: 'kostenfrei',
     phoneHint: 'Öffnet die Telefon-App.',
+    /** Die Telefon-App lässt sich nicht öffnen, etwa auf einem Tablet */
+    phoneFailed: (phone: string) =>
+      `Die Telefon-App öffnet sich hier nicht. Die Nummer ist ${phone}.`,
   },
 
   /**
@@ -1100,6 +1103,9 @@ export const de = {
     notifications: 'Mitteilungen zum Fall-Status',
     notificationsSub: 'Wenn sich bei Freigabe oder Termin etwas ändert.',
     notificationsDenied: 'In den Einstellungen deines Telefons ausgeschaltet.',
+    /** Die Einstellungen lassen sich nicht öffnen */
+    notificationsSettings: 'Mitteilungen erlaubst du in den Einstellungen deines Telefons.',
+    notificationsWeb: 'Mitteilungen gibt es nur in der App auf deinem Telefon.',
     appearance: 'Darstellung',
     appearanceOptions: { system: 'Wie System', hell: 'Hell', dunkel: 'Dunkel' },
     privacy: 'Datenschutz',

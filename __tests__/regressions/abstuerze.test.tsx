@@ -171,7 +171,9 @@ describe('R-18 Termin mit unbekannter Fallnummer', () => {
 
   // app/fall/[id]/termin.tsx:58 prüft nicht, ob es den Fall gibt. Das Formular erscheint, und der
   // Tap auf „Termin anfragen“ wirft „Fall nicht gefunden“.
-  test.failing('R-18 statt des Formulars ein Hinweis, kein Absturz', async () => {
+  // Behoben: Ohne Fall zeigt der Termin nur einen Hinweis, und requestBooking lehnt eine unbekannte
+  // Fallnummer ab, statt zu werfen (Schritt 24).
+  test('R-18 statt des Formulars ein Hinweis, kein Absturz', async () => {
     start();
     addWasher();
     await renderRouter(APP, { initialUrl: url });

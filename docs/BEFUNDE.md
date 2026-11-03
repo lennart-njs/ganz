@@ -1,6 +1,6 @@
 # Abgleich der Befunde aus dem Review
 
-Stand: 03.11.2026 · nach Schritt 23 (Ein Weg, einen Fall zu öffnen) · Befunde: `docs/REVIEW.md` Abschnitt 2 und `docs/ZUKUNFTSPLAN.md` Anhang B
+Stand: 03.11.2026 · nach Schritt 24 (Befehle ohne Absturz) · Befunde: `docs/REVIEW.md` Abschnitt 2 und `docs/ZUKUNFTSPLAN.md` Anhang B
 
 Nach Schritt 14 waren alle P0- und P1-Befunde behoben. Die Code-Review vom 03.11.2026 hat acht davon wieder geöffnet: B-04, B-05, B-17, B-18, B-19, B-23, B-40 und B-53. Sie sind offen, bis die Rückfälle R-01 bis R-18 behoben sind (Abschnitt „Rückfälle“ unten). Wieder behoben sind B-04 (R-01), B-05 (R-06), B-17 (R-02), B-18 (R-07), B-40 (R-12) sowie B-19 und B-23 (R-16). Alle anderen P0- und P1-Befunde bleiben behoben. Die Spalte „Nachweis“ nennt den Test, der das Verhalten prüft, oder die Stelle im Code.
 
@@ -100,4 +100,4 @@ R-07, R-12, R-13, R-16 und R-17 brechen eine feste Regel. Solange einer davon of
 | R-15 | Chat-Einwilligung mit `caseId`, andere Fallakten zeigen nichts | – | offen | Schritt 26 | `__tests__/regressions/datenschutz.test.tsx` |
 | R-16 | Rückruf ohne Bestätigung | B-19, B-23 | behoben | Schritt 26 (vorgezogen) | `__tests__/regressions/datenschutz.test.tsx` |
 | R-17 | Mitteilungstexte mit Falldetails auf dem Sperrbildschirm | – | behoben | Schritt 26 (vorgezogen) | `__tests__/regressions/datenschutz.test.tsx` |
-| R-18 | Termin mit unbekannter Fallnummer per Deep Link stürzt ab | – | offen | Schritt 24 | `__tests__/regressions/abstuerze.test.tsx` |
+| R-18 | Termin mit unbekannter Fallnummer per Deep Link stürzt ab | – | behoben | Schritt 24 | `__tests__/regressions/abstuerze.test.tsx` |

@@ -1,6 +1,6 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import type { ReactNode } from 'react';
-import { Linking, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
 import { OpenCaseCard } from '@/components/app/OpenCaseCard';
 import {
@@ -13,13 +13,16 @@ import {
   PhotoFrame,
   Screen,
   Text,
+  Toast,
 } from '@/components/ds';
 import { GUIDE_SOURCE } from '@/data/guides';
+import { useNotice } from '@/hooks/useNotice';
 import { de } from '@/i18n/de';
 import { formatDateTime, formatEuro, formatMonthYear } from '@/i18n/format';
 import { hasGuides } from '@/lib/appliance';
 import { caseProgressLabel, caseStatusLabel, deviceStatusLabel, resumeHref } from '@/lib/caseView';
 import { deviceTitle, getManufacturer } from '@/lib/devices';
+import { openPhone } from '@/lib/linking';
 import { isClosed } from '@/model/caseMachine';
 import { findOpenCase } from '@/model/policies/openCase';
 import { selectDevice, useAppStore } from '@/store/appStore';
@@ -41,6 +44,10 @@ export default function GeraetDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const state = useAppStore();
   const device = selectDevice(state, id);
+  // Lässt sich die Telefon-App nicht öffnen, steht die Nummer im Hinweis
+  const phoneNotice = useNotice();
+  const call = (phone: string) =>
+    openPhone(phone).then((ok) => ok || phoneNotice.show(de.common.phoneFailed(phone)));
 
   if (!device) {
     return (
@@ -75,9 +82,12 @@ export default function GeraetDetail() {
     <Screen
       header={<AppHeader title={title} onBack={() => router.back()} />}
       footer={
-        <ActionBar meta={deviceStatusLabel(state, device.id)} sub={title}>
-          <Button label={t.reportProblem} onPress={report} />
-        </ActionBar>
+        <>
+          {phoneNotice.notice ? <Toast message={phoneNotice.notice} style={styles.toast} /> : null}
+          <ActionBar meta={deviceStatusLabel(state, device.id)} sub={title}>
+            <Button label={t.reportProblem} onPress={report} />
+          </ActionBar>
+        </>
       }
     >
       <PhotoFrame label={title} ratio={4 / 3} />
@@ -190,7 +200,7 @@ export default function GeraetDetail() {
             title={service.label}
             sub={t.serviceSub(service.phone, service.freeOfCharge)}
             accessibilityHint={de.common.phoneHint}
-            onPress={() => Linking.openURL(`tel:${service.phone.replace(/\s/g, '')}`)}
+            onPress={() => call(service.phone)}
           />
         </Section>
       ) : null}
@@ -206,4 +216,5 @@ export default function GeraetDetail() {
 
 const styles = StyleSheet.create({
   section: { gap: 10, marginTop: 8 },
+  toast: { marginHorizontal: 16, marginBottom: 8 },
 });

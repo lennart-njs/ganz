@@ -64,9 +64,18 @@ export default function Termin() {
   // Einmal anfragen: Ein zweiter Tap bucht nicht doppelt, eine Ablehnung bekommt einen ruhigen Satz
   const book = useCommand(requestAppointment, () => backToThread(caseId));
 
+  // Ohne Fall kein Formular, nur ein Hinweis (R-18). Zurück und X führen weiter heraus.
+  if (!c || !facts) {
+    return (
+      <CaseScreen title={de.screens.termin}>
+        <Text variant="body">{de.result.missing}</Text>
+      </CaseScreen>
+    );
+  }
+
   // Diesen Termin gibt es nicht: Nach der Ablehnung entscheidest du neu, sonst geht es im Gespräch
   // weiter. Den Preis fürs Selbstzahlen siehst du vor der Wahl.
-  if (facts && !can(facts, action)) {
+  if (!can(facts, action)) {
     const rejected = can(facts, 'selbst_zahlen_nach_ablehnung');
     return (
       <CaseScreen

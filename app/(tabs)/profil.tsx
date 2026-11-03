@@ -2,7 +2,7 @@ import Constants from 'expo-constants';
 import { router } from 'expo-router';
 import type { ReactNode } from 'react';
 import { useRef, useState } from 'react';
-import { Linking, Pressable, StyleSheet, View } from 'react-native';
+import { Platform, Pressable, StyleSheet, View } from 'react-native';
 
 import { DemoControlSheet } from '@/components/app/DemoControlSheet';
 import { DemoHint } from '@/components/app/DemoHint';
@@ -16,10 +16,13 @@ import {
   Screen,
   SegmentedControl,
   Text,
+  Toast,
 } from '@/components/ds';
 import { demoConfig } from '@/config/demo.config';
+import { useNotice } from '@/hooks/useNotice';
 import { de } from '@/i18n/de';
 import { formatDateTime, formatEuro, formatMonthYear } from '@/i18n/format';
+import { openSystemSettings } from '@/lib/linking';
 import { notifications } from '@/services/notifications';
 import { notificationsOn, selectContract, useAppStore, type Appearance } from '@/store/appStore';
 
@@ -53,6 +56,7 @@ export default function Profil() {
   const version = Constants.expoConfig?.version ?? '';
   const [demoOpen, setDemoOpen] = useState(false);
   const taps = useRef<number[]>([]);
+  const settingsNotice = useNotice();
 
   const tapVersion = () => {
     if (!demoConfig.demo.enabled) return;
@@ -84,7 +88,9 @@ export default function Profil() {
     }
   };
 
-  // Einschalten speichert die Einwilligung, Ausschalten widerruft sie (im Store, R-13)
+  // Einschalten speichert die Einwilligung, Ausschalten widerruft sie (im Store, R-13). Hat das
+  // Telefon Mitteilungen ausgeschaltet, geht es in die Einstellungen. Im Web gibt es sie nicht,
+  // dann bleibt ein ruhiger Hinweis.
   const toggleNotifications = async (on: boolean) => {
     const s = useAppStore.getState();
     if (!on) {
@@ -92,8 +98,12 @@ export default function Profil() {
       return;
     }
     const ok = await notifications.requestPermission();
-    if (ok) s.setNotifications('erlaubt');
-    else Linking.openSettings();
+    if (ok) {
+      s.setNotifications('erlaubt');
+      return;
+    }
+    if (Platform.OS === 'web') settingsNotice.show(t.notificationsWeb);
+    else if (!(await openSystemSettings())) settingsNotice.show(t.notificationsSettings);
   };
 
   return (
@@ -177,6 +187,7 @@ export default function Profil() {
           checked={notificationsOn(state)}
           onChange={toggleNotifications}
         />
+        {settingsNotice.notice ? <Toast message={settingsNotice.notice} /> : null}
       </Section>
 
       <Section title={t.appearance}>

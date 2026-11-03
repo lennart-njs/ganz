@@ -1,6 +1,6 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
-import { Linking, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import type { KeyboardAwareScrollViewRef } from 'react-native-keyboard-controller';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -28,6 +28,7 @@ import {
 import { demoConfig } from '@/config/demo.config';
 import { guides, type GuideId } from '@/data/guides';
 import { useCommand } from '@/hooks/useCommand';
+import { useNotice } from '@/hooks/useNotice';
 import { de } from '@/i18n/de';
 import { formatDecimal, formatEuro } from '@/i18n/format';
 import { caseAppliance, hasGuides } from '@/lib/appliance';
@@ -36,6 +37,7 @@ import { chatLimits } from '@/lib/chat/limits';
 import { retryableChatErrors, useAssistant } from '@/lib/chat/useAssistant';
 import { deviceTitle, getManufacturer } from '@/lib/devices';
 import { guideTools } from '@/lib/guideMeta';
+import { openPhone } from '@/lib/linking';
 import { toDiagnosis } from '@/lib/diagnosis';
 import { can } from '@/model/policies/actions';
 import { selectCaseFacts } from '@/model/policies/caseFacts';
@@ -106,7 +108,9 @@ export default function FallGespraech() {
     setPayment(undefined);
     setOnSite(false);
   });
-  const commandToast = call.toast ?? claim.toast ?? book.toast;
+  // Lässt sich die Telefon-App nicht öffnen, steht die Nummer im Hinweis
+  const phoneNotice = useNotice();
+  const commandToast = call.toast ?? claim.toast ?? book.toast ?? phoneNotice.notice;
 
   // Ein Fall ohne Inhalt bleibt nicht liegen, wenn man das Gespräch verlässt
   useEffect(() => () => useAppStore.getState().discardIfEmpty(caseId), [caseId]);
@@ -1007,7 +1011,10 @@ export default function FallGespraech() {
       reply(
         'kundendienst',
         service.label,
-        () => Linking.openURL(`tel:${service.phone.replace(/\s/g, '')}`),
+        () =>
+          openPhone(service.phone).then(
+            (ok) => ok || phoneNotice.show(de.common.phoneFailed(service.phone)),
+          ),
         de.device.serviceSub(service.phone, service.freeOfCharge),
       );
     }
