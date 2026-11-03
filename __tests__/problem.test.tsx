@@ -381,3 +381,23 @@ describe('Problem melden als Gespräch', () => {
     expect(screen.getByRole('button', { name: new RegExp(`^${de.problem.photo}`) })).toBeTruthy();
   });
 });
+
+describe('IDs für die Maestro-Flows (e2e/)', () => {
+  test('Antworten tragen antwort-<Schlüssel>, der Name bleibt der Text', async () => {
+    await renderRouter(APP, { initialUrl: '/' });
+    await tap(pill);
+    expect(screen.getByTestId('antwort-foto').props.accessibilityLabel).toBe(
+      de.a11y.withSub(de.problem.photo, de.problem.photoSub),
+    );
+  });
+
+  test('im Gespräch: Ergebnis mit Details-Link und Antwort „Anleitung starten“', async () => {
+    const device = setup();
+    const id = photoCase(device.id, 'ablauf');
+    await renderRouter(APP, { initialUrl: `/fall/${id}` });
+    expect(screen.getByTestId('details-ergebnis')).toBeTruthy();
+    expect(screen.getByTestId('antwort-anleitung').props.accessibilityLabel).toMatch(
+      new RegExp(`^${de.result.startGuide}`),
+    );
+  });
+});

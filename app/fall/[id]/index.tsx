@@ -301,6 +301,7 @@ export default function FallGespraech() {
     <Button
       label={t.details}
       variant="link"
+      testID={`details-${path}`}
       onPress={() => router.push(`/fall/${caseId}/${path}`)}
     />
   );

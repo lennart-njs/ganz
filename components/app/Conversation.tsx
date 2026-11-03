@@ -159,6 +159,8 @@ export function QuickReplies({
         {replies.map((r, i) => (
           <Pressable
             key={r.key}
+            // Fester Name für die Maestro-Flows in e2e/, unabhängig vom Text der Antwort
+            testID={`antwort-${r.key}`}
             accessibilityRole="button"
             accessibilityLabel={r.sub ? de.a11y.withSub(r.label, r.sub) : r.label}
             onPress={() => onPick(r.key)}

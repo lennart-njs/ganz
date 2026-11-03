@@ -1,0 +1,110 @@
+# Golden Path für den Pitch (README, Schritte 2 bis 8), als Maestro-Flow.
+# Pflicht vor jedem Pitch-Tag (docs/PITCH_CHECK.md, Prüfung 1), nachts auf iOS, einmal pro
+# Woche im Android-Emulator.
+#
+# Nicht gelaufen: In der Sandbox von Schritt 29 gibt es weder Simulator noch Maestro. Den ersten
+# Lauf macht Schritt 30 mit dem Pitch-Build. __tests__/build/e2eFlows.test.ts prüft bis dahin,
+# dass jeder Text in i18n/de.ts steht und jede ID im Code vorkommt.
+#
+# Lauf: maestro test e2e/golden-path.yaml
+# Die App-ID ist die des Pitch-Builds (app.config.ts, Variante pitch).
+#
+# Texte sind reguläre Ausdrücke: Vor ? . ( ) steht ein Backslash, in doppelten Anführungszeichen
+# als \\. Antworten im Gespräch tragen die ID antwort-<Schlüssel>, Details-Links details-<Ziel>.
+# So steht hier kein Name aus config/demo.config.ts.
+appId: de.ganz.app.pitch
+name: Golden Path
+tags:
+  - pitch
+---
+- runFlow: common/demo-startstand.yaml
+
+# Foto und Intelligente Fehlererkennung
+- tapOn: "Was ist kaputt\\?.*"
+- tapOn:
+    id: 'antwort-foto'
+- tapOn: 'Beispielfoto nehmen'
+- extendedWaitUntil:
+    visible:
+      id: 'antwort-anleitung'
+    timeout: 20000
+- assertVisible: "Wahrscheinlich ist der Laugenfilter verstopft\\."
+- takeScreenshot: golden-1-ergebnis
+
+# Anleitung: vier Schritte erledigt, im fünften geht es nicht weiter
+- tapOn:
+    id: 'antwort-anleitung'
+- repeat:
+    times: 4
+    commands:
+      - tapOn: 'Erledigt'
+      - waitForAnimationToEnd
+- assertVisible: 'Pumpe freimachen'
+- tapOn: 'Geht nicht'
+- assertVisible: "Was klappt nicht\\?"
+- tapOn: 'Hilfe holen'
+
+# Videocall: Vor dem Call steht, wer welche Daten sieht. Erst der Tap gibt sie weiter.
+- extendedWaitUntil:
+    visible:
+      id: 'antwort-call'
+    timeout: 10000
+- assertVisible: "Keine Aufnahme\\. Ton und Bild werden nicht gespeichert\\."
+- takeScreenshot: golden-2-hilfe
+- tapOn:
+    id: 'antwort-call'
+- tapOn:
+    text: "Wartezeit überspringen \\(Demo\\)"
+    optional: true
+- extendedWaitUntil:
+    visible: 'Auflegen'
+    timeout: 20000
+- tapOn: 'Auflegen'
+
+# Befund der Fachkraft, Kosten, Schadenfall erst nach dem Tap
+- extendedWaitUntil:
+    visible:
+      id: 'antwort-befund-ok'
+    timeout: 10000
+- tapOn:
+    id: 'antwort-befund-ok'
+- tapOn: 'Das geht an .*'
+- takeScreenshot: golden-3-kosten
+- tapOn:
+    id: 'antwort-melden'
+
+# Termin: erster Betrieb, erstes Zeitfenster. Vor der Freigabe keine Kostenzusage.
+- tapOn:
+    id: 'antwort-betrieb-.*'
+    index: 0
+- tapOn:
+    id: 'antwort-zeit-.*'
+    index: 0
+- assertNotVisible: 'Du zahlst.*'
+- assertNotVisible: 'Zahlungspflichtig buchen'
+- takeScreenshot: golden-4-termin
+- tapOn:
+    id: 'antwort-anfragen'
+
+# Freigabe, Termin, unterwegs, repariert. Der Timer kann schneller sein als der Tap.
+- repeat:
+    times: 8
+    while:
+      notVisible:
+        id: 'antwort-laeuft'
+    commands:
+      - tapOn:
+          id: 'antwort-demo'
+          optional: true
+      - waitForAnimationToEnd
+- tapOn:
+    id: 'antwort-laeuft'
+- tapOn: '5 von 5 Sternen'
+- takeScreenshot: golden-5-abschluss
+- tapOn:
+    id: 'antwort-fertig'
+
+# Der Fall steht unter „Fälle“
+- tapOn: 'Fälle.*'
+- assertVisible: 'Abgeschlossen'
+- assertVisible: 'Wasserablauf gestört.*'
