@@ -1,6 +1,7 @@
 // Reparatur-Assistent im Fall-Gespräch: Einwilligung, Senden, Fehler, Grenze.
 // Eigene Worte gehen direkt an den Assistenten (Entscheidung 12). Geht das nicht,
-// werden sie zur Notiz für die Fachkraft. Nach chatLimits.messages Nachrichten ist Senden aus,
+// werden sie zur Notiz für die Fachkraft. Ohne Netz entscheidest du: noch einmal senden oder
+// als Notiz speichern. Nach chatLimits.messages Nachrichten ist Senden aus,
 // dann hilft die Fachkraft weiter (R-11).
 import { useState } from 'react';
 
@@ -130,5 +131,23 @@ export function useAssistant(caseId: string) {
 
   const retry = () => void ask();
 
-  return { consent, pending, error, waiting, noted, full, send, accept, decline, retry };
+  /** Ohne Netz: Die letzte eigene Nachricht wird zur Notiz für die Fachkraft, nur einmal */
+  const saveNote = () => {
+    const last = historyOf(caseId).at(-1);
+    if (!noted && last?.role === 'haushalt') toNote(last.text);
+  };
+
+  return {
+    consent,
+    pending,
+    error,
+    waiting,
+    noted,
+    full,
+    send,
+    accept,
+    decline,
+    retry,
+    saveNote,
+  };
 }

@@ -1098,6 +1098,10 @@ export const de = {
     fullNoted:
       'Das Gespräch ist lang geworden. Deine letzte Nachricht geht als Notiz an die Fachkraft. Sie hilft dir jetzt schneller weiter.',
     retry: 'Noch einmal senden',
+    /** Ohne Netz: die Nachricht für die Fachkraft aufheben */
+    saveNote: 'Als Notiz für die Fachkraft speichern',
+    noteSaved:
+      'Deine Nachricht ist als Notiz für die Fachkraft gespeichert. Sie sieht sie, wenn du Hilfe holst.',
     errors: {
       kein_schluessel:
         'Der Assistent ist auf diesem Rechner noch nicht eingerichtet. Eine Fachkraft hilft dir weiter.',
@@ -1105,7 +1109,7 @@ export const de = {
         'Der Assistent ist auf diesem Rechner nicht richtig eingerichtet. Eine Fachkraft hilft dir weiter.',
       abgelehnt: 'Dazu kann der Assistent nichts sagen. Eine Fachkraft hilft dir weiter.',
       ausgelastet: 'Der Assistent ist gerade ausgelastet. Versuch es gleich noch einmal.',
-      netz: 'Keine Verbindung zum Assistenten. Prüf dein Netz und versuch es noch einmal.',
+      netz: 'Gerade gibt es keine Verbindung. Deine Nachricht ist nicht verloren. Du kannst sie noch einmal senden oder als Notiz für die Fachkraft speichern.',
       dienst:
         'Der Assistent ist gerade nicht erreichbar. Versuch es noch einmal oder hol dir Hilfe.',
     },

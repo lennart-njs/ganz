@@ -170,6 +170,65 @@ describe('Reparatur-Assistent', () => {
     );
   });
 
+  test('ohne Netz: ein ruhiger Hinweis mit zwei Wegen, noch einmal senden oder als Notiz', async () => {
+    setup();
+    await renderRouter(APP, { initialUrl: '/fall/neu' });
+    fetchMock.mockRejectedValueOnce(new TypeError('Network request failed'));
+    await ask('Die Tür geht nicht auf.');
+    await tap(t.consentAccept);
+    await flush();
+    expect(screen.getByText(t.errors.netz)).toBeTruthy();
+    expect(screen.getByRole('button', { name: t.retry })).toBeTruthy();
+    expect(screen.getByRole('button', { name: t.saveNote })).toBeTruthy();
+    // Ruhig: kein Ausrufezeichen, kein Fehlerwort
+    expect(t.errors.netz).not.toMatch(/!|Fehler/);
+  });
+
+  test('ohne Netz als Notiz speichern: die Fachkraft bekommt die Nachricht, nichts geht doppelt', async () => {
+    setup();
+    await renderRouter(APP, { initialUrl: '/fall/neu' });
+    fetchMock.mockRejectedValueOnce(new TypeError('Network request failed'));
+    await ask('Die Tür geht nicht auf.');
+    await tap(t.consentAccept);
+    await flush();
+    await tap(t.saveNote);
+    const id = Object.keys(useAppStore.getState().cases)[0]!;
+    const notes = () =>
+      useAppStore
+        .getState()
+        .events.filter((e) => e.caseId === id && e.type === 'rueckfrage_beantwortet');
+    expect(notes().map((e) => e.payload)).toEqual([
+      { question: de.thread.noteQuestion, answer: 'Die Tür geht nicht auf.' },
+    ]);
+    expect(screen.getByText(t.noteSaved)).toBeTruthy();
+    expect(screen.queryByRole('button', { name: t.saveNote })).toBeNull();
+    expect(screen.queryByRole('button', { name: t.retry })).toBeNull();
+    expect(screen.getByRole('button', { name: t.getHelp })).toBeTruthy();
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+
+    // Die nächste Nachricht geht wieder an den Assistenten
+    fetchMock.mockReturnValueOnce(
+      reply({ reply: 'Ist das Programm zu Ende?', suggestion: 'keine', guideId: '' }),
+    );
+    await ask('Jetzt geht das Netz wieder.');
+    await flush();
+    expect(screen.getByText('Ist das Programm zu Ende?')).toBeTruthy();
+    expect(screen.queryByText(t.noteSaved)).toBeNull();
+    expect(notes()).toHaveLength(1);
+  });
+
+  test('andere Fehler bieten keine Notiz zum Speichern an', async () => {
+    setup();
+    await renderRouter(APP, { initialUrl: '/fall/neu' });
+    fetchMock.mockReturnValueOnce(reply({ error: 'ausgelastet' }, 429));
+    await ask('Die Tür geht nicht auf.');
+    await tap(t.consentAccept);
+    await flush();
+    expect(screen.getByText(t.errors.ausgelastet)).toBeTruthy();
+    expect(screen.getByRole('button', { name: t.retry })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: t.saveNote })).toBeNull();
+  });
+
   test('aus der Anleitung: Entwurf mit dem Schritt im Gespräch', async () => {
     setup();
     const s = useAppStore.getState();

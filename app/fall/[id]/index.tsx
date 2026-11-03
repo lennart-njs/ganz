@@ -1055,14 +1055,22 @@ export default function FallGespraech() {
 
   if (assistant.pending) tail.push(<Typing key="typing" label={de.chat.typing} />);
   if (assistant.error && !assistant.waiting) {
+    // Ohne Netz: ein ruhiger Hinweis, dann noch einmal senden oder als Notiz für die Fachkraft
+    const offline = assistant.error === 'netz';
     tail.push(
       <InfoBox key="fehler">
-        {assistant.noted ? t.noteFallback : de.chat.errors[assistant.error]}
+        {assistant.noted
+          ? offline
+            ? de.chat.noteSaved
+            : t.noteFallback
+          : de.chat.errors[assistant.error]}
       </InfoBox>,
     );
-    if (retryableChatErrors.includes(assistant.error) && lastMsg?.role === 'haushalt') {
+    const ownLast = lastMsg?.role === 'haushalt' && !assistant.noted;
+    if (retryableChatErrors.includes(assistant.error) && ownLast) {
       reply('nochmal', de.chat.retry, assistant.retry);
     }
+    if (offline && ownLast) reply('notiz', de.chat.saveNote, assistant.saveNote);
     if (canHelp) reply('fehler-hilfe', de.chat.getHelp, escalate);
   }
   // Das Gespräch mit dem Assistenten ist voll: Senden ist aus, die Fachkraft hilft weiter (R-11)
