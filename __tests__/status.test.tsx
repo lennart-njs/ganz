@@ -4,6 +4,7 @@ import { act, fireEvent, renderRouter, screen } from 'expo-router/testing-librar
 
 import { demoConfig } from '@/config/demo.config';
 import { de } from '@/i18n/de';
+import { statusView } from '@/lib/statusView';
 import { nextSimulationDue, simulationHold, useAppStore } from '@/store/appStore';
 import { APP } from '@/test/app';
 
@@ -245,5 +246,40 @@ describe('Abschluss', () => {
     expect(caseOf(id).status).toBe('eskaliert');
     expect(caseOf(id).closedAt).toBeUndefined();
     expect(r.getPathname()).toBe(`/fall/${id}`);
+  });
+});
+
+describe('Status aus den Fakten', () => {
+  const view = (id: string) => statusView(useAppStore.getState(), caseOf(id));
+
+  test('abgelehnt: Entscheidung bei dir, der Termin vorbehaltlich Freigabe ist verfallen', async () => {
+    const { id } = await bookedCase('ablehnen');
+    expect(bookingOf(id)).toMatchObject({ status: 'angefragt', subjectToApproval: true });
+    await act(async () => {
+      useAppStore.getState().simulateNext(id);
+    });
+    const v = view(id);
+    expect(v.headline).toBe(de.status.headline.abgelehnt('Kranich'));
+    expect(v.next).toBe('kosten');
+    expect(v.timeline.map((x) => x.what)).not.toContain(de.status.timeline.angefragt);
+    expect(v.text).toBeUndefined();
+  });
+
+  test('geschlossen: erledigt und abgebrochen', async () => {
+    const { id } = await bookedCase();
+    const s = useAppStore.getState();
+    let done = caseOf(id);
+    act(() => {
+      done = s.createCase({
+        deviceId: caseOf(id).deviceId,
+        entry: 'symptom',
+        problemLabel: 'Tür geht nicht auf',
+      });
+      s.runCommand(done.id, 'anleitung_starten');
+      s.runCommand(done.id, 'selbst_geloest');
+      s.runCommand(id, 'abbrechen', { cancelReason: de.closeCase.reasons[0] });
+    });
+    expect(view(done.id).headline).toBe(de.status.headline.erledigt);
+    expect(view(id).headline).toBe(de.status.headline.abgebrochen);
   });
 });
