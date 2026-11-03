@@ -107,23 +107,22 @@ describe('R-02 „Schadenfall melden“ nach der Meldung', () => {
   // app/fall/[id]/kosten.tsx:84 bietet „Schadenfall melden“ auch nach der Meldung an. Der zweite
   // Tap wirft einen TransitionError, und store/appStore.ts:740 (heute Zeile 754) hat vorher schon
   // eine zweite Bestätigung an den Versicherer gespeichert.
-  test.failing(
-    'R-02 nach der Meldung kein zweites Melden und keine zweite Bestätigung',
-    async () => {
-      const { id } = await backToCostsAfterClaim();
-      expect(screen.queryByRole('button', { name: de.costs.report })).toBeNull();
-      // Auch der Store legt keine verwaiste Bestätigung an, egal ob er wirft oder ablehnt
-      await act(async () => {
-        try {
-          useAppStore.getState().reportClaim(id, '2026-10-1');
-        } catch {
-          // Ablehnen ist erlaubt, eine zweite Bestätigung nicht
-        }
-      });
-      expect(consentsFor('weitergabe_versicherer', id)).toHaveLength(1);
-      expect(caseOf(id).status).toBe('freigabe_noetig');
-    },
-  );
+  // Behoben: Kosten fragen can(facts, 'schaden_melden'), reportClaim prüft die Regel vor der
+  // Bestätigung (Schritt 22).
+  test('R-02 nach der Meldung kein zweites Melden und keine zweite Bestätigung', async () => {
+    const { id } = await backToCostsAfterClaim();
+    expect(screen.queryByRole('button', { name: de.costs.report })).toBeNull();
+    // Auch der Store legt keine verwaiste Bestätigung an, egal ob er wirft oder ablehnt
+    await act(async () => {
+      try {
+        useAppStore.getState().reportClaim(id, '2026-10-1');
+      } catch {
+        // Ablehnen ist erlaubt, eine zweite Bestätigung nicht
+      }
+    });
+    expect(consentsFor('weitergabe_versicherer', id)).toHaveLength(1);
+    expect(caseOf(id).status).toBe('freigabe_noetig');
+  });
 });
 
 // ---------- R-03 ----------

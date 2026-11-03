@@ -222,7 +222,9 @@ describe('R-08 zweite Buchung', () => {
   // app/fall/[id]/kosten.tsx:112 bietet „Weiter zum Termin“ auch mit bestätigtem Termin an.
   // store/appStore.ts:792 (heute Zeile 802) storniert nur angefragte Termine. Der zweite Termin
   // läuft neben dem ersten, und „Läuft wieder“ kommt nie, weil der neueste Termin nie fertig wird.
-  test.failing('R-08 höchstens ein laufender Termin je Art', async () => {
+  // Behoben: Kosten fragen can(facts, 'termin_selbst'), die Regel lässt höchstens einen Termin je
+  // Art zu (Schritt 22). Dieselbe Regel im Store, in requestBooking, folgt mit Schritt 25.
+  test('R-08 höchstens ein laufender Termin je Art', async () => {
     const { id } = await confirmedSelfPayRepair();
     if (await tapIfOffered(de.costs.toAppointment)) {
       await tapIfOffered(demoConfig.slots[1], 'radio');

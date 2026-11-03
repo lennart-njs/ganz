@@ -11,7 +11,8 @@ import { demoConfig } from '@/config/demo.config';
 import { de } from '@/i18n/de';
 import { formatEuro } from '@/i18n/format';
 import { latestDiagnosis } from '@/lib/caseView';
-import { canTransition } from '@/model/caseMachine';
+import { can } from '@/model/policies/actions';
+import { selectCaseFacts } from '@/model/policies/caseFacts';
 import { useAppStore } from '@/store/appStore';
 
 const t = de.costs;
@@ -20,11 +21,13 @@ const CLAIM_TEXT_VERSION = '2026-10-1';
 /**
  * Kosten und Schadenmeldung: Reparatur gegen Ersatzgerät, Kostenträger, Selbstbeteiligung, was bei
  * Ablehnung passiert und was an den Versicherer geht. Der Schadenfall entsteht nur durch den Tap (B-17).
+ * Welche Wege es gibt, sagen die Regeln in model/policies/actions.ts.
  */
 export default function Kosten() {
   const caseId = useCaseId();
   const state = useAppStore();
   const c = state.cases[caseId];
+  const caseFacts = selectCaseFacts(state, caseId);
   const quote = state.quotes.find((q) => q.id === c?.quoteId);
   const device = state.devices.find((d) => d.id === c?.deviceId);
   const contract = state.contracts.find((k) => k.id === device?.contractId);
@@ -47,7 +50,7 @@ export default function Kosten() {
     router.push(`/fall/${caseId}/termin?art=reparatur${selfPay ? '&zahlung=selbst' : ''}`);
 
   // Abgelehnt: Die Nutzerin entscheidet neu
-  if (c.status === 'abgelehnt') {
+  if (can(caseFacts, 'selbst_zahlen_nach_ablehnung')) {
     return (
       <CaseScreen
         title={de.screens.kosten}
@@ -60,16 +63,18 @@ export default function Kosten() {
               onPress={() => toAppointment(true)}
             />
             <Button label={t.keepQuote} variant="secondary" fullWidth onPress={leaveCase} />
-            <Button
-              label={t.closeCase}
-              variant="link"
-              onPress={() => {
-                useAppStore
-                  .getState()
-                  .runCommand(caseId, 'abbrechen', { cancelReason: t.closeReason });
-                leaveCase();
-              }}
-            />
+            {can(caseFacts, 'abbrechen') ? (
+              <Button
+                label={t.closeCase}
+                variant="link"
+                onPress={() => {
+                  useAppStore
+                    .getState()
+                    .runCommand(caseId, 'abbrechen', { cancelReason: t.closeReason });
+                  leaveCase();
+                }}
+              />
+            ) : null}
           </ActionBar>
         }
       >
@@ -96,26 +101,23 @@ export default function Kosten() {
       ] as [string, string][])
     : ([[t.payer, t.payerSelf]] as [string, string][]);
 
+  // Nach der Meldung kein zweites Melden (R-02). Mit laufendem Termin kein zweiter (R-08).
+  const footer = can(caseFacts, 'schaden_melden') ? (
+    <ActionBar meta={t.barMeta(deductible)} sub={t.barSub}>
+      <Button label={t.report} onPress={report} />
+    </ActionBar>
+  ) : can(caseFacts, 'termin_versicherer') ? (
+    <ActionBar>
+      <Button label={t.toAppointment} size="lg" fullWidth onPress={() => toAppointment(false)} />
+    </ActionBar>
+  ) : !contract && can(caseFacts, 'termin_selbst') ? (
+    <ActionBar>
+      <Button label={t.toAppointment} size="lg" fullWidth onPress={() => toAppointment(true)} />
+    </ActionBar>
+  ) : undefined;
+
   return (
-    <CaseScreen
-      title={de.screens.kosten}
-      footer={
-        contract ? (
-          <ActionBar meta={t.barMeta(deductible)} sub={t.barSub}>
-            <Button label={t.report} onPress={report} />
-          </ActionBar>
-        ) : (
-          <ActionBar>
-            <Button
-              label={t.toAppointment}
-              size="lg"
-              fullWidth
-              onPress={() => toAppointment(true)}
-            />
-          </ActionBar>
-        )
-      }
-    >
+    <CaseScreen title={de.screens.kosten} footer={footer}>
       <DemoHint id="kosten" />
       {finding?.component ? <Text variant="meta">{t.findingMeta(finding.component)}</Text> : null}
       <Text variant="h1" accessibilityRole="header">
@@ -139,7 +141,7 @@ export default function Kosten() {
           </Disclosure>
           <Text variant="meta">{t.legal(insurer)}</Text>
           {/* Selbst zahlen nur als echte Wahl, nicht während der Prüfung (R-07) */}
-          {!replacement && canTransition(c.status, 'selbst_zahlen') ? (
+          {!replacement && can(caseFacts, 'selbst_zahlen') ? (
             <Button label={t.selfPay} variant="link" onPress={() => toAppointment(true)} />
           ) : null}
         </>

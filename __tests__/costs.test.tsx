@@ -1,7 +1,9 @@
-import { fireEvent, renderRouter, screen } from 'expo-router/testing-library';
+import { router } from 'expo-router';
+import { act, fireEvent, renderRouter, screen } from 'expo-router/testing-library';
 
 import { demoConfig } from '@/config/demo.config';
 import { de } from '@/i18n/de';
+import { TransitionError } from '@/model/caseMachine';
 import { useAppStore } from '@/store/appStore';
 import { APP } from '@/test/app';
 
@@ -110,6 +112,23 @@ describe('Betrieb und Termin', () => {
     });
     expect(booking.address?.city).toBe(demoConfig.household.address.city);
     expect(useAppStore.getState().consents.map((c) => c.purpose)).toContain('weitergabe_betrieb');
+  });
+
+  test('nach der Meldung: kein zweites Melden, die Kosten führen zum Termin', async () => {
+    const { id, r } = await bookAfterClaim();
+    await act(async () => router.back());
+    expect(r.getPathname()).toBe(`/fall/${id}/kosten`);
+    expect(screen.queryByRole('button', { name: de.costs.report })).toBeNull();
+    expect(screen.queryByRole('button', { name: de.costs.selfPay })).toBeNull();
+    await tap(de.costs.toAppointment);
+    expect(r.getPathname()).toBe(`/fall/${id}/termin`);
+    expect(screen.getByText(de.appointment.pending)).toBeTruthy();
+    // Auch der Store meldet nicht zweimal und legt keine zweite Bestätigung an
+    expect(() => useAppStore.getState().reportClaim(id, '2026-10-1')).toThrow(TransitionError);
+    const consents = useAppStore
+      .getState()
+      .consents.filter((c) => c.purpose === 'weitergabe_versicherer');
+    expect(consents).toHaveLength(1);
   });
 
   test('bei Selbstbeteiligung über 0 € heißt der Button „Zahlungspflichtig buchen“', async () => {

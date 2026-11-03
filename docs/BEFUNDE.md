@@ -2,7 +2,7 @@
 
 Stand: 03.11.2026 · nach Schritt 20 und den ersten Regelbrüchen aus Phase 1 · Befunde: `docs/REVIEW.md` Abschnitt 2 und `docs/ZUKUNFTSPLAN.md` Anhang B
 
-Nach Schritt 14 waren alle P0- und P1-Befunde behoben. Die Code-Review vom 03.11.2026 hat acht davon wieder geöffnet: B-04, B-05, B-17, B-18, B-19, B-23, B-40 und B-53. Sie sind offen, bis die Rückfälle R-01 bis R-18 behoben sind (Abschnitt „Rückfälle“ unten). Wieder behoben sind B-04 (R-01), B-18 (R-07), B-40 (R-12) sowie B-19 und B-23 (R-16). Alle anderen P0- und P1-Befunde bleiben behoben. Die Spalte „Nachweis“ nennt den Test, der das Verhalten prüft, oder die Stelle im Code.
+Nach Schritt 14 waren alle P0- und P1-Befunde behoben. Die Code-Review vom 03.11.2026 hat acht davon wieder geöffnet: B-04, B-05, B-17, B-18, B-19, B-23, B-40 und B-53. Sie sind offen, bis die Rückfälle R-01 bis R-18 behoben sind (Abschnitt „Rückfälle“ unten). Wieder behoben sind B-04 (R-01), B-17 (R-02), B-18 (R-07), B-40 (R-12) sowie B-19 und B-23 (R-16). Alle anderen P0- und P1-Befunde bleiben behoben. Die Spalte „Nachweis“ nennt den Test, der das Verhalten prüft, oder die Stelle im Code.
 
 ## P0
 
@@ -13,7 +13,7 @@ Nach Schritt 14 waren alle P0- und P1-Befunde behoben. Die Code-Review vom 03.11
 | B-06 | „Geht nicht“ in jedem Schritt, Abbruchschritt im `GuideRun` | `__tests__/guide.test.tsx` |
 | B-11 | Regel-Mock je Modus, Typenschild ohne Diagnose | `__tests__/diagnosis.test.tsx` |
 | B-12 | Sicherheit in drei Stufen, Rückfrage bei „unsicher“, „Passt nicht“ | `__tests__/diagnosis.test.tsx` |
-| B-17 (wieder offen, R-02) | Schadenfall nur durch „Schadenfall melden“ mit gespeicherter Bestätigung | `__tests__/model/caseMachine.test.ts`, `__tests__/costs.test.tsx` |
+| B-17 | Schadenfall nur durch „Schadenfall melden“ mit gespeicherter Bestätigung, genau einmal je Fall | `__tests__/model/caseMachine.test.ts`, `__tests__/costs.test.tsx`, `__tests__/regressions/abstuerze.test.tsx` (R-02) |
 | B-18 | „Die Kosten prüft … nach dem Befund“ statt Zusage. Während der Prüfung kein Selbstzahlen und kein „Du zahlst“ | `__tests__/help.test.tsx`, Test „Kein Text sagt Kosten zu“, `__tests__/regressions/fehlverhalten.test.tsx` (R-07) |
 | B-19 | Hinweis „Das sieht … (Betrieb)“, Bestätigung vor dem Call und vor dem Rückruf, weder Call noch Rückruf ohne Bestätigung | `__tests__/help.test.tsx`, `__tests__/regressions/datenschutz.test.tsx` (R-16) |
 | B-27 | „vorbehaltlich Freigabe“, `freigabe_noetig` nach der Meldung | `__tests__/costs.test.tsx` |
@@ -84,13 +84,13 @@ R-07, R-12, R-13, R-16 und R-17 brechen eine feste Regel. Solange einer davon of
 | ID | Befund | Wieder offen | Stand | Behebung | Test |
 |---|---|---|---|---|---|
 | R-01 | „Fall abbrechen“ in `in_reparatur`, `erledigt` oder `abgebrochen` stürzt ab | B-04 | behoben | Schritt 22 | `__tests__/regressions/abstuerze.test.tsx` |
-| R-02 | „Schadenfall melden“ nach der Meldung, mit verwaister Bestätigung | B-17 | offen | Schritt 22 | `__tests__/regressions/abstuerze.test.tsx` |
+| R-02 | „Schadenfall melden“ nach der Meldung, mit verwaister Bestätigung | B-17 | behoben | Schritt 22 | `__tests__/regressions/abstuerze.test.tsx` |
 | R-03 | „Neues Problem melden“ bei einem Fall in `in_reparatur` stürzt ab | – | offen | Schritt 23 | `__tests__/regressions/abstuerze.test.tsx` |
 | R-04 | Zwei offene Fälle über „Passt nicht“ (Nr. 13) | – | offen | Schritt 23 | `__tests__/regressions/fehlverhalten.test.tsx` |
 | R-05 | Zwei offene Fälle über eine Pflege-Zeile im Gerätedetail (Nr. 13) | – | offen | Schritt 23 | `__tests__/regressions/fehlverhalten.test.tsx` |
 | R-06 | Fortschritt der Anleitung verloren über „Details → Anleitung starten“, Stift lässt eine Anleitung offen | B-05 | offen | Schritt 23 | `__tests__/regressions/fehlverhalten.test.tsx` |
 | R-07 | „Du zahlst 189 €“ während der Prüfung durch den Versicherer | B-18 | behoben | Schritt 22 (vorgezogen) | `__tests__/regressions/fehlverhalten.test.tsx` |
-| R-08 | Zweite Buchung macht einen Selbstzahler-Fall unvollendbar | – | offen | Schritt 25 | `__tests__/regressions/fehlverhalten.test.tsx` |
+| R-08 | Zweite Buchung macht einen Selbstzahler-Fall unvollendbar | – | behoben | Schritt 22 (Kosten fragen `can`), Store-Regel in Schritt 25 | `__tests__/regressions/fehlverhalten.test.tsx` |
 | R-09 | Termin ignoriert die Ablehnung des Schadenfalls | – | offen | Schritt 22 | `__tests__/regressions/fehlverhalten.test.tsx` |
 | R-10 | Befund nach Vor-Ort-Diagnose dem falschen Betrieb zugeschrieben | – | offen | Schritt 25 | `__tests__/regressions/fehlverhalten.test.tsx` |
 | R-11 | Grenze von 40 Nachrichten im Chat fehlt | – | offen | Schritt 25 | `__tests__/regressions/fehlverhalten.test.tsx` |

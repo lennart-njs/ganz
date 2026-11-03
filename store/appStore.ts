@@ -17,10 +17,12 @@ import {
   isClosed,
   pauseCase as pause,
   resumeCase as resume,
+  TransitionError,
   type CaseCommand,
   type CommandContext,
   type CommandResult,
 } from '@/model/caseMachine';
+import { can } from '@/model/policies/actions';
 import { selectCaseFacts } from '@/model/policies/caseFacts';
 import type {
   Booking,
@@ -771,6 +773,10 @@ export function createAppStore(storage: StateStorage = AsyncStorage, env: StoreE
             const device = get().devices.find((d) => d.id === c.deviceId);
             const contract = get().contracts.find((k) => k.id === device?.contractId);
             if (!contract) throw new Error('Kein Vertrag für dieses Gerät');
+            // Erst die Regel, dann die Bestätigung: Nach der Meldung entsteht keine zweite (R-02)
+            if (!can(selectCaseFacts(get(), caseId), 'schaden_melden')) {
+              throw new TransitionError(c.status, 'schaden_melden');
+            }
             get().grantConsent({
               caseId,
               purpose: 'weitergabe_versicherer',
