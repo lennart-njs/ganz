@@ -16,7 +16,8 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "test": "jest",
-    "check": "npm run typecheck && npm run lint && npm run format:check && npm test",
+    "check": "npm run typecheck && npm run lint && npm run format:check && jest --maxWorkers=2",
+    "check:fast": "tsc --noEmit && node scripts/lint-changed.js && jest --maxWorkers=2 --testPathPatterns \"\\.test\\.ts$\"",
     "guides:check": "jest __tests__/guides.test.ts"
   },
   "dependencies": {

@@ -59,7 +59,8 @@ Versicherer, Händler, Hersteller, Betriebe, Fachkraft, Preise und Zeitfenster s
 ## Prüfen
 
 ```bash
-npm run check          # Typecheck, Lint, Prettier und alle Tests
+npm run check          # Typecheck, Lint über das ganze Repo, Prettier und alle Tests
+npm run check:fast     # Typecheck, Lint auf geänderten Dateien, Unit-Tests
 npm test               # nur Tests
 npm run guides:check   # Anleitungen wörtlich gegen die Demo prüfen
 npm run lint           # nur Lint
