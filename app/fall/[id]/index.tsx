@@ -36,15 +36,11 @@ import { hasProgress } from '@/lib/caseView';
 import { deviceTitle, getManufacturer } from '@/lib/devices';
 import { guideTools } from '@/lib/guideMeta';
 import { toDiagnosis } from '@/lib/diagnosis';
+import { can } from '@/model/policies/actions';
+import { selectCaseFacts } from '@/model/policies/caseFacts';
 import type { CaseEvent, Diagnosis } from '@/model/types';
 import { services, type FindingOption, type PhotoMode, type QuestionAnswer } from '@/services';
-import {
-  activeBooking,
-  nextSimulationDue,
-  selectCaseEvents,
-  simulationHold,
-  useAppStore,
-} from '@/store/appStore';
+import { nextSimulationDue, selectCaseEvents, useAppStore } from '@/store/appStore';
 import { useTheme } from '@/theme';
 
 const t = de.thread;
@@ -145,6 +141,8 @@ export default function FallGespraech() {
     );
   }
 
+  // Was im Fall gilt, sagen die Fakten und Regeln (model/policies), nicht ein Vergleich des Status
+  const facts = selectCaseFacts(state, caseId)!;
   const device = state.devices.find((d) => d.id === c.deviceId);
   const contract = state.contracts.find((k) => k.id === device?.contractId);
   const a = caseAppliance(state, caseId);
@@ -161,8 +159,8 @@ export default function FallGespraech() {
   const sessions = state.videoSessions.filter((v) => v.caseId === caseId);
   const quote = state.quotes.find((q) => q.id === c.quoteId);
   const bookings = state.bookings.filter((b) => b.caseId === caseId);
-  const booking = activeBooking(state, caseId);
-  const repairBooking = bookings.find((b) => b.kind === 'reparatur' && b.status !== 'storniert');
+  const booking = facts.booking;
+  const repairBooking = facts.bookings.reparatur;
   const progress = hasProgress(state, c);
   const of = (type: CaseEvent['type']) => events.filter((e) => e.type === type);
   const after = (
@@ -605,7 +603,7 @@ export default function FallGespraech() {
       e.at,
       `${e.id}-a`,
       <BotSays lines={[de.finish.solvedTitle]}>
-        {repairBooking?.status === 'erledigt' ? (
+        {repairBooking && can(facts, 'bewerten') ? (
           <>
             <Text variant="title">{t.rate}</Text>
             <StarRating
@@ -683,46 +681,39 @@ export default function FallGespraech() {
     lastSession?.outcome === 'keine_fachkraft' &&
     !after(lastSession.endedAt, 'videocall_angefragt', (e) => e.payload.art === 'rueckruf') &&
     !booking;
-  const awaitingConfirm = repairBooking?.status === 'erledigt' && c.status === 'in_reparatur';
+  const awaitingConfirm = can(facts, 'reparatur_bestaetigen');
   const latestFinding = diagnoses.findLast(
     (d) => d.source === 'fachkraft' || d.source === 'betrieb',
   );
   const replacement = latestFinding?.errorPattern === 'ersatzgeraet_noetig';
   const costsOpen =
-    !!quote &&
-    !c.claim &&
     !repairBooking &&
     !payment &&
     !replacement &&
-    c.status !== 'abgelehnt' &&
-    c.status !== 'erledigt' &&
-    c.status !== 'abgebrochen';
+    (can(facts, 'schaden_melden') || can(facts, 'selbst_zahlen'));
   // Nach einer Ablehnung: selbst zahlen heißt neuer Termin, der alte Antrag zählt nicht mehr
-  const rejectedRetry = c.status === 'abgelehnt' && payment === 'selbst';
+  const rejected = can(facts, 'selbst_zahlen_nach_ablehnung');
+  const rejectedRetry = rejected && payment === 'selbst';
   const lastCallback = of('videocall_angefragt')
     .filter((e) => e.payload.art === 'rueckruf')
     .at(-1);
   const callbackWaiting =
     !!lastCallback &&
-    c.status === 'eskaliert' &&
+    can(facts, 'videocall_anfragen') &&
     !booking &&
     !onSite &&
     (!lastSession || lastCallback.at >= (lastSession.endedAt ?? lastSession.requestedAt));
   const needsAppointment =
     rejectedRetry ||
     (!repairBooking &&
-      ((c.claim &&
-        !replacement &&
-        (c.status === 'freigabe_noetig' || c.status === 'freigegeben')) ||
-        payment === 'selbst' ||
-        (onSite && !booking)));
+      (can(facts, 'termin_versicherer') || payment === 'selbst' || (onSite && !booking)));
   const demoTap =
     demoConfig.demo.enabled && state.demo.hints && nextSimulationDue(state, caseId) !== undefined;
 
   // Vorschlag des Assistenten zuerst
   const lastMsg = msgs.at(-1);
-  const canGuide = c.status === 'offen' || c.status === 'selbsthilfe';
-  const canHelp = canGuide || c.status === 'eskaliert';
+  const canGuide = can(facts, 'anleitung_starten');
+  const canHelp = can(facts, 'hilfe_holen');
   if (!assistant.pending && lastMsg?.role === 'assistent') {
     const sameGuideRunning = run && !run.endedAt && run.guideId === lastMsg.guideId;
     if (
@@ -735,7 +726,7 @@ export default function FallGespraech() {
       const g = guides[lastMsg.guideId as GuideId];
       reply('vorschlag-anleitung', de.chat.startGuide(g.title), () => openGuide(g.id));
     }
-    if (lastMsg.suggestion === 'hilfe' && canHelp && c.status !== 'eskaliert') {
+    if (lastMsg.suggestion === 'hilfe' && canHelp) {
       reply('vorschlag-hilfe', de.chat.getHelp, escalate);
     }
   }
@@ -756,10 +747,12 @@ export default function FallGespraech() {
       assistant.decline();
       escalate();
     });
-  } else if (c.status === 'abgebrochen') {
+  } else if (facts.closed && !can(facts, 'problem_besteht_weiter')) {
+    // Abgebrochen
     reply('fallakte', t.caseFile, () => router.push(`/fall/${caseId}/fallakte`));
     reply('fertig', t.done, leaveCase);
-  } else if (c.status === 'erledigt') {
+  } else if (facts.closed) {
+    // Erledigt, lässt sich wieder öffnen
     reply('fertig', t.done, () => router.dismissTo('/(tabs)/faelle'));
     reply('weiter-kaputt', t.stillBroken, () =>
       useAppStore.getState().confirmRepair(caseId, false),
@@ -796,16 +789,18 @@ export default function FallGespraech() {
       reply(`rueckruf-${s}`, s, () => setCallbackSlot(s));
     }
     reply('vor-ort', de.waiting.onSiteInstead, () => setOnSite(true));
-  } else if (c.status === 'abgelehnt' && !payment) {
+  } else if (rejected && !payment) {
     reply('selbst', t.rejectedChoice.selfPay(formatEuro(quote?.repair.total ?? 0)), () =>
       setPayment('selbst'),
     );
     reply('behalten', t.rejectedChoice.keep, leaveCase);
-    reply('schliessen', t.rejectedChoice.close, () => {
-      useAppStore
-        .getState()
-        .runCommand(caseId, 'abbrechen', { cancelReason: de.costs.closeReason });
-    });
+    if (can(facts, 'abbrechen')) {
+      reply('schliessen', t.rejectedChoice.close, () => {
+        useAppStore
+          .getState()
+          .runCommand(caseId, 'abbrechen', { cancelReason: de.costs.closeReason });
+      });
+    }
   } else if (costsOpen) {
     if (contract) {
       tail.push(
@@ -839,7 +834,7 @@ export default function FallGespraech() {
       );
       reply('selbst', de.costs.toAppointment, () => setPayment('selbst'));
     }
-  } else if (replacement && quote && contract && !c.claim) {
+  } else if (replacement && can(facts, 'schaden_melden')) {
     reply('melden', de.costs.report, report);
   } else if (needsAppointment) {
     if (payment === 'selbst' && quote) {
@@ -847,7 +842,7 @@ export default function FallGespraech() {
         <View key="zahlung" style={styles.stack}>
           <UserSaid
             text={
-              c.status === 'abgelehnt'
+              rejected
                 ? t.rejectedChoice.selfPay(formatEuro(quote.repair.total))
                 : contract
                   ? de.costs.selfPay
@@ -919,7 +914,7 @@ export default function FallGespraech() {
                 />
               </Card>
             </View>
-            {c.status === 'freigabe_noetig' ? <InfoBox>{de.appointment.pending}</InfoBox> : null}
+            {facts.claim === 'in_pruefung' ? <InfoBox>{de.appointment.pending}</InfoBox> : null}
             {!onSite ? (
               <Text variant="body">
                 {de.appointment.ecoDesign(a.finding.partAcc, demoConfig.ecoDesignDeliveryDays)}
@@ -936,10 +931,10 @@ export default function FallGespraech() {
     // Rückruf angefragt: Die Fachkraft meldet sich. Vor Ort geht immer noch.
     reply('vor-ort', de.waiting.onSiteInstead, () => setOnSite(true));
     reply('fallakte', t.caseFile, () => router.push(`/fall/${caseId}/fallakte`));
-  } else if (booking && booking.status !== 'erledigt') {
+  } else if (facts.bookingOpen) {
     // Widerrufene Weitergabe: Versicherer und Betrieb machen nicht weiter (R-12)
-    const held = !!simulationHold(state, caseId);
-    if (c.status === 'freigabe_noetig')
+    const held = !!facts.hold;
+    if (facts.claim === 'in_pruefung')
       tail.push(
         <BotSays
           key="pruefung"
@@ -950,11 +945,7 @@ export default function FallGespraech() {
     else if (held) tail.push(<BotSays key="angehalten" lines={[de.status.text.paused]} />);
     if (demoTap) reply('demo', t.demoNext, () => useAppStore.getState().simulateNext(caseId));
     reply('status', de.status.caseFile, () => router.push(`/fall/${caseId}/fallakte`));
-  } else if (
-    c.status === 'eskaliert' ||
-    (c.status === 'selbsthilfe' &&
-      (run?.outcome === 'geht_nicht' || run?.outcome === 'laeuft_nicht'))
-  ) {
+  } else if (can(facts, 'videocall_anfragen')) {
     // Hilfe holen: wer welche Daten sieht, steht vor dem Call (B-19)
     tail.push(
       <BotSays key="hilfe" sender={false} lines={[]}>
@@ -1007,7 +998,7 @@ export default function FallGespraech() {
         de.device.serviceSub(service.phone, service.freeOfCharge),
       );
     }
-  } else if (c.status === 'selbsthilfe' && run && !run.endedAt) {
+  } else if (can(facts, 'anleitung_fortsetzen') && run) {
     const g = guides[run.guideId as GuideId];
     if (g)
       tail.push(
@@ -1015,7 +1006,7 @@ export default function FallGespraech() {
       );
     reply('anleitung', t.continueGuide, () => router.push(`/fall/${caseId}/anleitung`));
     reply('hilfe', de.result.helpInstead, escalate);
-  } else if (c.status === 'offen' || c.status === 'selbsthilfe') {
+  } else if (canGuide) {
     const d = diagnoses.findLast((x) => x.source === 'fehlererkennung');
     const guide = d?.guideId ? guides[d.guideId as GuideId] : undefined;
     if (d?.errorPattern === 'geraet_erkannt') {
@@ -1055,10 +1046,10 @@ export default function FallGespraech() {
     if (retryableChatErrors.includes(assistant.error) && lastMsg?.role === 'haushalt') {
       reply('nochmal', de.chat.retry, assistant.retry);
     }
-    if (canHelp && c.status !== 'eskaliert') reply('fehler-hilfe', de.chat.getHelp, escalate);
+    if (canHelp) reply('fehler-hilfe', de.chat.getHelp, escalate);
   }
 
-  const closed = c.status === 'erledigt' || c.status === 'abgebrochen';
+  const closed = facts.closed;
   const inputBar = closed ? undefined : (
     <View
       style={[
