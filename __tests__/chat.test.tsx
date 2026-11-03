@@ -5,12 +5,15 @@ import { demoConfig } from '@/config/demo.config';
 import { guides } from '@/data/guides';
 import { de } from '@/i18n/de';
 import { formatDateTime } from '@/i18n/format';
+import { chatContext } from '@/lib/chat/context';
 import { chatLimits } from '@/lib/chat/limits';
+import { parseRequest } from '@/lib/chat/prompt';
 import { CONSENT_SCOPES } from '@/model/policies/consentScopes';
 import type { DeviceCategory } from '@/model/types';
 import { useAppStore } from '@/store/appStore';
 import { APP } from '@/test/app';
-import { escapeRegExp } from '@/test/regressions';
+import { addWasher, escapeRegExp, photoCase, start } from '@/test/regressions';
+import { unwrap } from '@/test/result';
 
 const t = de.chat;
 const tap = (name: string | RegExp) => fireEvent.press(screen.getByRole('button', { name }));
@@ -93,7 +96,7 @@ describe('Reparatur-Assistent', () => {
     expect(body.messages).toEqual([
       { role: 'haushalt', text: 'Nach dem Waschen steht Wasser in der Trommel.' },
     ]);
-    expect(body.context).toMatchObject({ category: 'waschmaschine', device: 'WKB 130' });
+    expect(body.context).toMatchObject({ category: 'waschmaschine', model: 'WKB 130' });
     // Keine Adresse, keine Vertragsnummer
     const sent = JSON.stringify(body);
     expect(sent).not.toContain(demoConfig.household.address.street);
@@ -431,5 +434,61 @@ describe('Einwilligung ohne Fall (R-15)', () => {
     await ask('Noch eine Frage');
     expect(screen.getByText(t.consentTitle)).toBeTruthy();
     expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('Kontext für die Route', () => {
+  /** So wie die App ihn schickt: ohne leere Felder */
+  const request = (caseId: string) =>
+    JSON.parse(
+      JSON.stringify({
+        context: chatContext(useAppStore.getState(), caseId),
+        messages: [{ role: 'haushalt', text: 'Es pumpt nicht ab.' }],
+      }),
+    );
+
+  test('die App schickt Schlüssel aus dem Katalog, und die Route nimmt sie an', () => {
+    start();
+    const id = photoCase(addWasher().id, 'ablauf');
+    const s = useAppStore.getState();
+    const run = unwrap(s.startGuide(id, 'ablauf'));
+    s.moveGuideStep(run.id, 'next');
+    unwrap(useAppStore.getState().finishGuide(run.id, 'geht_nicht'));
+    const body = request(id);
+    expect(body.context).toEqual({
+      category: 'waschmaschine',
+      manufacturerId: demoConfig.manufacturer.id,
+      model: demoConfig.device.model,
+      problem: guides.ablauf.title,
+      errorPattern: 'wasserablauf',
+      displayMessage: 'Wasserablauf',
+      guide: { id: 'ablauf', step: 2, ended: 'geht_nicht' },
+      hasProtection: true,
+    });
+    expect(parseRequest(body)).toEqual(body);
+  });
+
+  test('was der Katalog nicht kennt, bleibt weg, lange Felder werden gekürzt', () => {
+    start({ contract: false });
+    const s = useAppStore.getState();
+    const device = s.addDevice({
+      manufacturerId: 'unbekannt',
+      category: 'trockner',
+      model: 'M'.repeat(chatLimits.field + 50),
+      identifiedBy: 'manuell',
+    });
+    const c = s.createCase({
+      deviceId: device.id,
+      entry: 'freitext',
+      problemLabel: 'P'.repeat(chatLimits.field + 50),
+    });
+    const body = request(c.id);
+    expect(body.context).toEqual({
+      category: 'trockner',
+      model: 'M'.repeat(chatLimits.field),
+      problem: 'P'.repeat(chatLimits.field),
+      hasProtection: false,
+    });
+    expect(parseRequest(body)).toEqual(body);
   });
 });

@@ -1,14 +1,21 @@
 // Was der Reparatur-Assistent über den Fall erfährt. Bewusst ohne Adresse, Fotos und Vertragsnummer.
 import { demoConfig } from '@/config/demo.config';
 import { guides, type GuideId } from '@/data/guides';
-import { de } from '@/i18n/de';
 import { latestDiagnosis, latestGuideRun } from '@/lib/caseView';
-import { getManufacturer } from '@/lib/devices';
 import type { Id, ISODateTime } from '@/model/types';
 import type { AppData } from '@/store/appStore';
 
+import { CHAT_DISPLAY_MESSAGES, CHAT_MANUFACTURERS, isChatErrorPattern } from './catalog';
+import { chatLimits } from './limits';
 import type { ChatContext } from './prompt';
 
+/** Kürzt ein Feld auf die Länge, die die Route annimmt */
+const clip = (text: string) => text.slice(0, chatLimits.field);
+
+/**
+ * Kontext für den Assistenten. Bis auf Problem und Modell sind es nur Schlüssel aus dem Katalog,
+ * die Route baut daraus den Systemblock. Was der Katalog nicht kennt, bleibt weg.
+ */
 export function chatContext(s: AppData, caseId: Id): ChatContext | undefined {
   const c = s.cases[caseId];
   const device = s.devices.find((d) => d.id === c?.deviceId);
@@ -18,20 +25,17 @@ export function chatContext(s: AppData, caseId: Id): ChatContext | undefined {
   const guide = run ? guides[run.guideId as GuideId] : undefined;
   return {
     category: device.category,
-    categoryLabel: de.deviceCategory[device.category],
-    device: device.model,
-    manufacturer: getManufacturer(device.manufacturerId).name,
-    problem: c.problemLabel,
-    result: result?.component,
-    displayMessage: result?.displayMessage,
+    manufacturerId: device.manufacturerId in CHAT_MANUFACTURERS ? device.manufacturerId : undefined,
+    model: clip(device.model),
+    problem: clip(c.problemLabel),
+    errorPattern: isChatErrorPattern(result?.errorPattern) ? result.errorPattern : undefined,
+    displayMessage: CHAT_DISPLAY_MESSAGES.find((m) => m === result?.displayMessage),
     guide:
       run && guide
         ? {
             id: run.guideId as GuideId,
-            title: guide.title,
             step: Math.min(run.currentStep + 1, guide.steps.length),
-            total: guide.steps.length,
-            ended: run.outcome ? de.file.event.outcome[run.outcome] : undefined,
+            ended: run.outcome,
           }
         : undefined,
     hasProtection: !!device.contractId,

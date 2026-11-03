@@ -111,11 +111,10 @@ afterAll(() => {
 /** Jedes Feld, das an den Assistenten geht, und seine Kategorie. tsc prüft, dass keins fehlt. */
 const contextCategory: Record<keyof ChatContext, DataCategory> = {
   category: 'geraet',
-  categoryLabel: 'geraet',
-  device: 'geraet',
-  manufacturer: 'geraet',
+  manufacturerId: 'geraet',
+  model: 'geraet',
   problem: 'problem',
-  result: 'ergebnis',
+  errorPattern: 'ergebnis',
   displayMessage: 'ergebnis',
   guide: 'schritte',
   hasProtection: 'schutz',

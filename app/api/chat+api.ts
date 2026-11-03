@@ -6,9 +6,11 @@ import { fitsRequest } from '@/lib/chat/limits';
 import {
   STABLE_SYSTEM,
   caseSystem,
+  householdDetails,
   parseReply,
   parseRequest,
   replySchema,
+  type ChatContext,
   type ChatTurn,
 } from '@/lib/chat/prompt';
 
@@ -23,11 +25,22 @@ function getClient(): Anthropic {
 const json = (body: unknown, status = 200) =>
   Response.json(body, { status, headers: { 'Cache-Control': 'no-store' } });
 
-function toMessages(turns: ChatTurn[]): Anthropic.Beta.BetaMessageParam[] {
-  return turns.map((m) => ({
-    role: m.role === 'haushalt' ? 'user' : 'assistant',
-    content: m.text,
-  }));
+/**
+ * Der Verlauf für Claude. Was der Haushalt selbst angegeben hat (Problem, unbekanntes Modell), steht
+ * als eigener Block vor seiner ersten Nachricht, nie im Systemblock.
+ */
+function toMessages(context: ChatContext, turns: ChatTurn[]): Anthropic.Beta.BetaMessageParam[] {
+  return turns.map((m, i) =>
+    i === 0
+      ? {
+          role: 'user',
+          content: [
+            { type: 'text', text: householdDetails(context) },
+            { type: 'text', text: m.text },
+          ],
+        }
+      : { role: m.role === 'haushalt' ? 'user' : 'assistant', content: m.text },
+  );
 }
 
 export async function POST(request: Request): Promise<Response> {
@@ -62,7 +75,7 @@ export async function POST(request: Request): Promise<Response> {
         { type: 'text', text: STABLE_SYSTEM, cache_control: { type: 'ephemeral' } },
         { type: 'text', text: caseSystem(input.context) },
       ],
-      messages: toMessages(input.messages),
+      messages: toMessages(input.context, input.messages),
     });
 
     if (response.stop_reason === 'refusal') return json({ error: 'abgelehnt' }, 422);
