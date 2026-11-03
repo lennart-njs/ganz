@@ -63,11 +63,14 @@ export interface AssistantTransfer {
 }
 
 /**
- * Die Weitergabe an den Assistenten in diesem Fall: Jede eigene Nachricht ging mit dem Gespräch
- * an den Anbieter. Ohne Nachricht im Fall gibt es keine (R-15).
+ * Die Weitergabe an den Assistenten in diesem Fall: jede eigene Nachricht, die mit dem Gespräch
+ * an den Anbieter ging. Nachrichten, die nachweislich nicht dort ankamen (forwarded false), zählen
+ * nicht. Ohne solche Nachricht im Fall gibt es keine Weitergabe (R-15).
  */
 export function assistantTransfer(s: AppData, caseId: Id): AssistantTransfer | undefined {
-  const sent = s.chatMessages.filter((m) => m.caseId === caseId && m.role === 'haushalt');
+  const sent = s.chatMessages.filter(
+    (m) => m.caseId === caseId && m.role === 'haushalt' && m.forwarded !== false,
+  );
   const last = sent.at(-1);
   if (!last) return undefined;
   const latest = s.consents.filter((k) => k.purpose === 'chat_assistent').at(-1);

@@ -27,7 +27,7 @@ Die App erzeugt heute alle Daten lokal (Store `store/appStore.ts`). Ein spätere
 | niemand, lokale Mitteilung auf dem eigenen Telefon (Absender ganz) | Systemdialog nach „Termin anfragen“, Profil: „Mitteilungen zum Fall-Status“ | `mitteilungen`, ohne Fall | lit. a |
 | Hersteller (aggregiert) | immer | – | ohne Personenbezug |
 
-Der Reparatur-Assistent bekommt je Nachricht nur Gerät, Modell, Problem, Ergebnis, Stand der Anleitung und das Gespräch, keine Fotos, keine Adresse und keine Vertragsnummer (`lib/chat/context.ts`). Das Gespräch liegt als `ChatMessage` im Fall. Kein Dashboard liest es, die Fallakte zeigt nur die Zahl der Nachrichten.
+Der Reparatur-Assistent bekommt je Nachricht nur Gerät, Modell, Problem, Ergebnis, Stand der Anleitung und das Gespräch, keine Fotos, keine Adresse und keine Vertragsnummer (`lib/chat/context.ts`). Das Gespräch liegt als `ChatMessage` im Fall. Kein Dashboard liest es, die Fallakte zeigt nur die Zahl der Nachrichten, die beim Anbieter ankommen konnten (`ChatMessage.forwarded`, fehlt das Feld, zählt die Nachricht).
 
 Der Händler bekommt keine Einzelfälle. Er sieht nur Zahlen zu Verträgen, die über ihn verknüpft wurden (`Contract.linkedVia = 'haendler_code'`, `Contract.soldBy`).
 

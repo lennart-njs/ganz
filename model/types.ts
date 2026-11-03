@@ -300,6 +300,13 @@ export interface ChatMessage {
   /** Vorschlag des Assistenten, als Button gezeigt */
   suggestion?: 'anleitung' | 'hilfe';
   guideId?: string;
+  /**
+   * Nur eigene Nachrichten: Ging sie an den Anbieter des Assistenten? true, sobald eine Anfrage
+   * mit ihr bei der Route durchging. false, wenn sie nachweislich nicht dorthin kam (ohne Netz,
+   * ohne Schlüssel, Token, Rate-Limit, Gespräch voll). Ohne Feld (laufende Anfrage, älterer
+   * Stand) zählt sie als weitergegeben, lieber eine zu viel als eine zu wenig.
+   */
+  forwarded?: boolean;
 }
 
 // ---------- Kosten und Buchung ----------

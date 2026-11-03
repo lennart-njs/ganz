@@ -6,7 +6,7 @@ import { demoConfig } from '@/config/demo.config';
 import { guides } from '@/data/guides';
 import { de } from '@/i18n/de';
 import { formatDateTime } from '@/i18n/format';
-import { chatContext } from '@/lib/chat/context';
+import { assistantTransfer, chatContext } from '@/lib/chat/context';
 import { chatLimits } from '@/lib/chat/limits';
 import { textStamp } from '@/lib/legalTexts';
 import { parseRequest, type ChatContext } from '@/lib/chat/prompt';
@@ -404,6 +404,67 @@ describe('Einwilligung ohne Fall (R-15)', () => {
       ),
     ).toBeTruthy();
     expect(screen.queryByText(de.file.none)).toBeNull();
+  });
+
+  test('die Fallakte zählt nur Nachrichten, die beim Anbieter ankommen konnten', async () => {
+    const device = setup();
+    const c = useAppStore
+      .getState()
+      .createCase({ deviceId: device.id, entry: 'freitext', problemLabel: 'Pumpe' });
+    await renderRouter(APP, { initialUrl: `/fall/${c.id}` });
+    const transfer = () => assistantTransfer(useAppStore.getState(), c.id);
+    const forwarded = () =>
+      useAppStore
+        .getState()
+        .chatMessages.filter((m) => m.role === 'haushalt')
+        .map((m) => m.forwarded);
+
+    // Ohne Netz ging nichts raus
+    fetchMock.mockRejectedValueOnce(new TypeError('Network request failed'));
+    await ask('Es pumpt nicht ab.');
+    await tap(t.consentAccept);
+    await flush();
+    expect(transfer()).toBeUndefined();
+    // Die eigene Route lehnt vorher ab: auch nichts
+    fetchMock.mockReturnValueOnce(reply({ error: 'token' }, 401));
+    await tap(t.retry);
+    await flush();
+    expect(transfer()).toBeUndefined();
+    expect(forwarded()).toEqual([false]);
+    await act(async () => router.push(`/fall/${c.id}/fallakte`));
+    expect(screen.getByText(de.file.none)).toBeTruthy();
+    await act(async () => router.back());
+
+    // Geht eine Anfrage durch, geht das ganze Gespräch mit, auch die erste Nachricht
+    fetchMock.mockReturnValueOnce(
+      reply({ reply: 'Steht Wasser drin?', suggestion: 'keine', guideId: '' }),
+    );
+    await ask('Noch einmal.');
+    await flush();
+    expect(forwarded()).toEqual([true, true]);
+    expect(transfer()).toMatchObject({ count: 2 });
+
+    // Ein Fehler hinter der Route: Die Nachricht kann beim Anbieter gewesen sein, sie zählt
+    fetchMock.mockReturnValueOnce(reply({ error: 'dienst' }, 502));
+    await ask('Und jetzt?');
+    await flush();
+    expect(transfer()).toMatchObject({ count: 3 });
+    // Danach ohne Netz: Was schon weiterging, bleibt gezählt
+    fetchMock.mockRejectedValueOnce(new TypeError('Network request failed'));
+    await tap(t.retry);
+    await flush();
+    expect(forwarded()).toEqual([true, true, true]);
+    expect(transfer()).toMatchObject({ count: 3 });
+  });
+
+  test('ein älterer Stand ohne Angabe zählt jede eigene Nachricht', () => {
+    const device = setup();
+    const c = useAppStore
+      .getState()
+      .createCase({ deviceId: device.id, entry: 'freitext', problemLabel: 'Pumpe' });
+    useAppStore.getState().addChatMessage({ caseId: c.id, role: 'haushalt', text: 'Alt.' });
+    expect(useAppStore.getState().chatMessages[0]).not.toHaveProperty('forwarded');
+    expect(assistantTransfer(useAppStore.getState(), c.id)).toMatchObject({ count: 1 });
   });
 
   test('eine Fallakte ohne Nachrichten nennt den Assistenten nicht', async () => {

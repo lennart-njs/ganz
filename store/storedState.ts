@@ -240,6 +240,7 @@ const chatMessage = z.object({
   at: time,
   suggestion: z.enum(['anleitung', 'hilfe']).optional(),
   guideId: z.string().optional(),
+  forwarded: z.boolean().optional(),
 });
 
 const quote = z.object({

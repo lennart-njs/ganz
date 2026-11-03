@@ -9,6 +9,7 @@ import { demoConfig } from '@/config/demo.config';
 import { de } from '@/i18n/de';
 import { textStamp } from '@/lib/legalTexts';
 import { scopedConsent } from '@/model/policies/consentScopes';
+import type { ChatMessage } from '@/model/types';
 import { services, type ChatError } from '@/services';
 import { useAppStore } from '@/store/appStore';
 
@@ -18,15 +19,44 @@ import { chatFull, fitsRequest } from './limits';
 /** Bei diesen Fehlern lohnt ein zweiter Versuch. Sonst wird die Nachricht zur Notiz. */
 export const retryableChatErrors: ChatError[] = ['ausgelastet', 'zu_viele', 'netz', 'dienst'];
 
+/**
+ * Bei diesen Fehlern kam die Anfrage nicht beim Anbieter an: ohne Netz, oder die eigene Route
+ * lehnte vorher ab. Bei allen anderen Fehlern kann sie dort gewesen sein, dann zählt sie in der
+ * Fallakte als weitergegeben.
+ */
+export const unforwardedChatErrors: ChatError[] = [
+  'netz',
+  'kein_schluessel',
+  'token',
+  'zu_viele',
+  'tagesgrenze',
+  'voll',
+];
+
 /** Fehler, die das Gespräch als Hinweis zeigt. Ein volles Gespräch zeigt full statt eines Fehlers. */
 export type AssistantError = Exclude<ChatError, 'voll'>;
 
 /** Nachrichten im Gespräch eines Falls, in der Reihenfolge, in der sie kamen */
+const messagesOf = (caseId: string) =>
+  useAppStore.getState().chatMessages.filter((m) => m.caseId === caseId);
+
 const historyOf = (caseId: string) =>
-  useAppStore
-    .getState()
-    .chatMessages.filter((m) => m.caseId === caseId)
-    .map((m) => ({ role: m.role, text: m.text }));
+  messagesOf(caseId).map((m) => ({ role: m.role, text: m.text }));
+
+/**
+ * Hält nach einer Anfrage fest, ob die eigenen Nachrichten beim Anbieter ankamen. Kam sie nicht
+ * an, betrifft das nur die Nachrichten nach der letzten Antwort. Was davor stand, hatte schon eine
+ * Antwort und ging also weiter.
+ */
+function markForwarded(sent: readonly ChatMessage[], forwarded: boolean) {
+  const lastReply = sent.findLastIndex((m) => m.role === 'assistent');
+  const mine = (forwarded ? sent : sent.slice(lastReply + 1)).filter((m) => m.role === 'haushalt');
+  if (mine.length > 0)
+    useAppStore.getState().markChatForwarded(
+      mine.map((m) => m.id),
+      forwarded,
+    );
+}
 
 export function useAssistant(caseId: string) {
   const [pending, setPending] = useState(false);
@@ -59,12 +89,14 @@ export function useAssistant(caseId: string) {
     if (!context) return;
     // Das ganze Gespräch geht mit, kein Fenster über den Verlauf. Passt die Antwort nicht mehr
     // hinein, geht nichts raus (R-11).
-    const history = historyOf(caseId);
+    const sent = messagesOf(caseId);
+    const history = sent.map((m) => ({ role: m.role, text: m.text }));
     if (!fitsRequest(history.length)) return;
     setPending(true);
     setError(undefined);
     const result = await services.chat.ask(context, history);
     setPending(false);
+    markForwarded(sent, result.ok || !unforwardedChatErrors.includes(result.error));
     if (!result.ok) {
       const last = history.at(-1);
       if (result.error === 'voll') {

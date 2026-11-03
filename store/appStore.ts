@@ -194,6 +194,11 @@ export interface AppActions {
   setAppearance: (appearance: Appearance) => void;
   /** Nachricht im Chat. Eine Frage des Haushalts kommt als Ereignis in die Fallakte. */
   addChatMessage: (input: Omit<ChatMessage, 'id' | 'at'>) => ChatMessage;
+  /**
+   * Hält fest, ob eigene Nachrichten an den Anbieter des Assistenten gingen (ChatMessage.forwarded).
+   * false ändert keine Nachricht, die schon als weitergegeben gilt.
+   */
+  markChatForwarded: (messageIds: readonly Id[], forwarded: boolean) => void;
   addDiagnosis: (input: Omit<Diagnosis, 'id' | 'createdAt'>) => Result<Diagnosis>;
   /** Foto aus der App-Kamera: Zeitstempel, Gerät, Zweck und Fall (B-16) */
   addPhoto: (input: Omit<Photo, 'id' | 'takenAt'>) => Photo;
@@ -638,6 +643,15 @@ export function createAppStore(storage: StateStorage = AsyncStorage, env: StoreE
               const { [caseId]: _removed, ...cases } = s.cases;
               return { cases, events: s.events.filter((e) => e.caseId !== caseId) };
             }),
+
+          markChatForwarded: (messageIds, forwarded) =>
+            set((s) => ({
+              chatMessages: s.chatMessages.map((m) =>
+                messageIds.includes(m.id) && m.role === 'haushalt' && m.forwarded !== true
+                  ? { ...m, forwarded }
+                  : m,
+              ),
+            })),
 
           addChatMessage: (input) => {
             const m: ChatMessage = { ...input, id: env.newId('chat'), at: env.now() };
