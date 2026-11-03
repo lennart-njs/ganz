@@ -2,7 +2,7 @@
 
 Stand: 03.11.2026 · nach Schritt 20 und den ersten Regelbrüchen aus Phase 1 · Befunde: `docs/REVIEW.md` Abschnitt 2 und `docs/ZUKUNFTSPLAN.md` Anhang B
 
-Nach Schritt 14 waren alle P0- und P1-Befunde behoben. Die Code-Review vom 03.11.2026 hat acht davon wieder geöffnet: B-04, B-05, B-17, B-18, B-19, B-23, B-40 und B-53. Sie sind offen, bis die Rückfälle R-01 bis R-18 behoben sind (Abschnitt „Rückfälle“ unten). Wieder behoben ist B-18 (R-07). Alle anderen P0- und P1-Befunde bleiben behoben. Die Spalte „Nachweis“ nennt den Test, der das Verhalten prüft, oder die Stelle im Code.
+Nach Schritt 14 waren alle P0- und P1-Befunde behoben. Die Code-Review vom 03.11.2026 hat acht davon wieder geöffnet: B-04, B-05, B-17, B-18, B-19, B-23, B-40 und B-53. Sie sind offen, bis die Rückfälle R-01 bis R-18 behoben sind (Abschnitt „Rückfälle“ unten). Wieder behoben sind B-18 (R-07) und B-40 (R-12). Alle anderen P0- und P1-Befunde bleiben behoben. Die Spalte „Nachweis“ nennt den Test, der das Verhalten prüft, oder die Stelle im Code.
 
 ## P0
 
@@ -48,7 +48,7 @@ Nach Schritt 14 waren alle P0- und P1-Befunde behoben. Die Code-Review vom 03.11
 | B-36 | Tab „Fälle“ aus dem Store, Fallakte je Fall | `__tests__/casesProfile.test.tsx` |
 | B-38 | Scan prüfen und ändern, manuelle Eingabe | `__tests__/devices.test.tsx` |
 | B-39 | Onboarding mit Vertragsnummer oder Händler-Code | `__tests__/devices.test.tsx`, `__tests__/navigation.test.tsx` |
-| B-40 (wieder offen, R-12) | Profil mit Schutz, Weitergaben, Widerruf, Datenschutz | `__tests__/casesProfile.test.tsx` |
+| B-40 | Profil mit Schutz, Weitergaben, Widerruf, Datenschutz. Nach einem Widerruf hält die Simulation an | `__tests__/casesProfile.test.tsx`, `__tests__/status.test.tsx`, `__tests__/regressions/datenschutz.test.tsx` (R-12) |
 | B-42 | Alle Bedienteile mindestens 44 pt | `__tests__/a11y.test.tsx` |
 | B-43 | Typo skaliert bis 200 %, Spalten stapeln sich | `__tests__/a11y.test.tsx`, Galerie |
 | B-46 | Glossar aus Review Abschnitt 6 in `i18n/de.ts` | Durchsicht der Texte |
@@ -94,7 +94,7 @@ R-07, R-12, R-13, R-16 und R-17 brechen eine feste Regel. Solange einer davon of
 | R-09 | Termin ignoriert die Ablehnung des Schadenfalls | – | offen | Schritt 22 | `__tests__/regressions/fehlverhalten.test.tsx` |
 | R-10 | Befund nach Vor-Ort-Diagnose dem falschen Betrieb zugeschrieben | – | offen | Schritt 25 | `__tests__/regressions/fehlverhalten.test.tsx` |
 | R-11 | Grenze von 40 Nachrichten im Chat fehlt | – | offen | Schritt 25 | `__tests__/regressions/fehlverhalten.test.tsx` |
-| R-12 | Widerruf einer Weitergabe nach lit. b ohne Wirkung | B-40 | offen | Schritt 26 | `__tests__/regressions/datenschutz.test.tsx` |
+| R-12 | Widerruf einer Weitergabe nach lit. b ohne Wirkung | B-40 | behoben | Schritt 26 (vorgezogen) | `__tests__/regressions/datenschutz.test.tsx` |
 | R-13 | Mitteilungen ohne gespeicherte Einwilligung | – | offen | Schritt 26 | `__tests__/regressions/datenschutz.test.tsx` |
 | R-14 | Vorschau „Das geht an …“ zeigt mehr als die bestätigten Kategorien | B-53 | offen | Schritt 26 | `__tests__/regressions/datenschutz.test.tsx` |
 | R-15 | Chat-Einwilligung mit `caseId`, andere Fallakten zeigen nichts | – | offen | Schritt 26 | `__tests__/regressions/datenschutz.test.tsx` |

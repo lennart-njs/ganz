@@ -814,6 +814,8 @@ export const de = {
       bestaetigt: (partner: string, part: string) => `${partner} bringt ${part} mit.`,
       diagnoseFertig: 'Sieh dir die Kosten an und entscheide, wie es weitergeht.',
       rueckruf: 'Die Fachkraft ruft dich an. Deine Fallakte hat sie schon.',
+      /** Die Weitergabe für den nächsten Schritt ist widerrufen (R-12) */
+      paused: 'Du hast die Weitergabe widerrufen. Darum geht es hier gerade nicht weiter.',
     },
     timeline: {
       gemeldet: 'Problem gemeldet',

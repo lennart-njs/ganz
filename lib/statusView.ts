@@ -5,7 +5,7 @@ import { de } from '@/i18n/de';
 import { formatDateTime } from '@/i18n/format';
 import { caseAppliance } from '@/lib/appliance';
 import type { Case } from '@/model/types';
-import { activeBooking, selectCaseEvents, type AppData } from '@/store/appStore';
+import { activeBooking, selectCaseEvents, simulationHold, type AppData } from '@/store/appStore';
 
 export type NextAction = 'abschluss' | 'kosten' | 'fallakte';
 
@@ -117,5 +117,7 @@ export function statusView(s: AppData, c: Case): StatusView {
     headline = t.headline.rueckruf(String(callback.payload.slot ?? ''));
     text = t.text.rueckruf;
   }
+  // Widerrufene Weitergabe: Hier passiert nichts mehr, bis sie wieder gilt (R-12)
+  if (simulationHold(s, c.id)) text = t.text.paused;
   return { headline, text, timeline, next };
 }

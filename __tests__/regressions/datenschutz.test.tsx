@@ -48,7 +48,8 @@ describe('R-12 Widerruf nach lit. b ohne Wirkung', () => {
   // store/appStore.ts:835: simulateNext entscheidet den Schadenfall, ohne nach der Weitergabe zu
   // fragen. B-40 wieder offen, Regel „keine Weitergabe ohne Bestätigung“. Übergangsregel bis zur
   // Antwort des Anwalts: Solange die passende Weitergabe widerrufen ist, hält die Simulation an.
-  test.failing('R-12 nach dem Widerruf entscheidet der Versicherer nicht weiter', () => {
+  // Behoben: simulateNext und nextSimulationDue fragen simulationHold (store/appStore.ts).
+  test('R-12 nach dem Widerruf entscheidet der Versicherer nicht weiter', () => {
     const id = claimWithRevokedTransfer();
     useAppStore.getState().simulateNext(id);
     expect(caseOf(id).status).toBe('freigabe_noetig');

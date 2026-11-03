@@ -102,19 +102,24 @@ export function isClosed(status: CaseStatus): boolean {
   return status === 'erledigt' || status === 'abgebrochen';
 }
 
-/** Gültige Bestätigung: von dieser Person, für diesen Zweck und Fall, nicht widerrufen. */
+/**
+ * Gültige Bestätigung: von dieser Person, für diesen Zweck und Fall, nicht widerrufen.
+ * Mit recipientId nur für genau diesen Empfänger, z. B. den gebuchten Betrieb.
+ */
 export function findActiveConsent(
   consents: readonly Consent[],
   personId: Id,
   purpose: ConsentPurpose,
   caseId?: Id,
+  recipientId?: Id,
 ): Consent | undefined {
   return consents.find(
     (c) =>
       c.personId === personId &&
       c.purpose === purpose &&
       !c.revokedAt &&
-      (c.caseId === undefined || c.caseId === caseId),
+      (c.caseId === undefined || c.caseId === caseId) &&
+      (recipientId === undefined || c.recipient.id === recipientId),
   );
 }
 

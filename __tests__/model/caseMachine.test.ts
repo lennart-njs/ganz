@@ -5,6 +5,7 @@ import {
   canStartVideoCall,
   ConsentRequiredError,
   createQuote,
+  findActiveConsent,
   pauseCase,
   resumeCase,
   TRANSITIONS,
@@ -162,6 +163,24 @@ describe('Videocall', () => {
       canStartVideoCall([consent('weitergabe_fachkraft', { revokedAt: NOW })], PERSON, 'GS-24817'),
     ).toBe(false);
     expect(canStartVideoCall([consent('weitergabe_fachkraft')], PERSON, 'GS-99999')).toBe(false);
+  });
+});
+
+describe('Gültige Bestätigung', () => {
+  const betrieb = (id: string, extra: Partial<Consent> = {}) =>
+    consent('weitergabe_betrieb', {
+      id: `c-${id}`,
+      recipient: { id, kind: 'betrieb', name: id },
+      ...extra,
+    });
+
+  test('mit Empfänger zählt nur eine Bestätigung für genau diesen Empfänger', () => {
+    const consents = [betrieb('brandt', { revokedAt: NOW }), betrieb('neukoelln')];
+    const find = (recipientId?: string) =>
+      findActiveConsent(consents, PERSON, 'weitergabe_betrieb', 'GS-24817', recipientId)?.id;
+    expect(find()).toBe('c-neukoelln');
+    expect(find('neukoelln')).toBe('c-neukoelln');
+    expect(find('brandt')).toBeUndefined();
   });
 });
 

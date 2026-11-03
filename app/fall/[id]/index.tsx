@@ -37,7 +37,13 @@ import { guideTools } from '@/lib/guideMeta';
 import { toDiagnosis } from '@/lib/diagnosis';
 import type { CaseEvent, Diagnosis } from '@/model/types';
 import { services, type FindingOption, type PhotoMode, type QuestionAnswer } from '@/services';
-import { activeBooking, nextSimulationDue, selectCaseEvents, useAppStore } from '@/store/appStore';
+import {
+  activeBooking,
+  nextSimulationDue,
+  selectCaseEvents,
+  simulationHold,
+  useAppStore,
+} from '@/store/appStore';
 import { useTheme } from '@/theme';
 
 const t = de.thread;
@@ -927,14 +933,17 @@ export default function FallGespraech() {
     reply('vor-ort', de.waiting.onSiteInstead, () => setOnSite(true));
     reply('fallakte', t.caseFile, () => router.push(`/fall/${caseId}/fallakte`));
   } else if (booking && booking.status !== 'erledigt') {
+    // Widerrufene Weitergabe: Versicherer und Betrieb machen nicht weiter (R-12)
+    const held = !!simulationHold(state, caseId);
     if (c.status === 'freigabe_noetig')
       tail.push(
         <BotSays
           key="pruefung"
           lines={[de.status.headline.pruefung(insurer)]}
-          hint={de.status.text.pruefung}
+          hint={held ? de.status.text.paused : de.status.text.pruefung}
         />,
       );
+    else if (held) tail.push(<BotSays key="angehalten" lines={[de.status.text.paused]} />);
     if (demoTap) reply('demo', t.demoNext, () => useAppStore.getState().simulateNext(caseId));
     reply('status', de.status.caseFile, () => router.push(`/fall/${caseId}/fallakte`));
   } else if (

@@ -13,6 +13,7 @@ import {
   canTransition,
   ConsentRequiredError,
   createQuote,
+  findActiveConsent,
   isClosed,
   pauseCase as pause,
   resumeCase as resume,
@@ -28,6 +29,7 @@ import type {
   CaseEvent,
   ChatMessage,
   Consent,
+  ConsentPurpose,
   Contract,
   Device,
   Diagnosis,
@@ -161,7 +163,10 @@ export interface AppActions {
     partName?: string;
   }) => Booking;
   setNotifications: (value: NotificationSetting) => void;
-  /** Nächster Schritt der Simulation: Freigabe, Bestätigung, unterwegs, repariert (BUILD_PLAN 5.1) */
+  /**
+   * Nächster Schritt der Simulation: Freigabe, Bestätigung, unterwegs, repariert (BUILD_PLAN 5.1).
+   * Ohne gültige Weitergabe für den Schritt passiert nichts, siehe simulationHold.
+   */
   simulateNext: (caseId: Id) => boolean;
   /** Abschluss nach der Reparatur: „Läuft wieder“ oder „Problem besteht weiter“ */
   confirmRepair: (caseId: Id, works: boolean) => void;
@@ -822,6 +827,8 @@ export function createAppStore(storage: StateStorage = AsyncStorage, env: StoreE
             const cfg = demoConfig;
             const c = get().cases[caseId];
             if (!c) return false;
+            // Widerrufene Weitergabe: Versicherer und Betrieb machen nicht weiter (R-12)
+            if (simulationHold(get(), caseId)) return false;
             const booking = activeBooking(get(), caseId);
             const insurer = cfg.insurer.shortName;
             const partner = booking?.provider.name ?? '';
@@ -1104,10 +1111,36 @@ const bookingEvents: CaseEvent['type'][] = [
   'freigabe_entschieden',
 ];
 
+/**
+ * Übergangsregel für den Widerruf bei lit. b, bis Entscheidung Nr. 16 steht: Die Simulation hält
+ * an, solange die Weitergabe für ihren nächsten Schritt widerrufen ist. Die Entscheidung des
+ * Versicherers braucht weitergabe_versicherer, jeder Schritt des Betriebs weitergabe_betrieb an
+ * genau den gebuchten Betrieb. Gibt den Zweck zurück, dessen Bestätigung fehlt.
+ */
+export function simulationHold(s: AppData, caseId: Id): ConsentPurpose | undefined {
+  const c = s.cases[caseId];
+  if (!c || isClosed(c.status)) return undefined;
+  if (c.status === 'freigabe_noetig') {
+    const ok = findActiveConsent(s.consents, c.reportedBy, 'weitergabe_versicherer', caseId);
+    return ok ? undefined : 'weitergabe_versicherer';
+  }
+  const booking = activeBooking(s, caseId);
+  if (!booking || booking.status === 'erledigt') return undefined;
+  const ok = findActiveConsent(
+    s.consents,
+    c.reportedBy,
+    'weitergabe_betrieb',
+    caseId,
+    booking.provider.id,
+  );
+  return ok ? undefined : 'weitergabe_betrieb';
+}
+
 /** Wann der nächste simulierte Schritt fällig ist (ms seit 1970). Ohne nächsten Schritt: undefined. */
 export function nextSimulationDue(s: AppData, caseId: Id): number | undefined {
   const c = s.cases[caseId];
   if (!c) return undefined;
+  if (simulationHold(s, caseId)) return undefined;
   const { claimMs, bookingStepMs } = demoConfig.timers;
   if (c.status === 'freigabe_noetig' && c.claim) return Date.parse(c.claim.reportedAt) + claimMs;
   const booking = activeBooking(s, caseId);

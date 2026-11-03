@@ -1,9 +1,10 @@
 import * as Notifications from 'expo-notifications';
+import { router } from 'expo-router';
 import { act, fireEvent, renderRouter, screen } from 'expo-router/testing-library';
 
 import { demoConfig } from '@/config/demo.config';
 import { de } from '@/i18n/de';
-import { useAppStore } from '@/store/appStore';
+import { nextSimulationDue, simulationHold, useAppStore } from '@/store/appStore';
 import { APP } from '@/test/app';
 
 const tap = (name: string | RegExp) => fireEvent.press(screen.getByRole('button', { name }));
@@ -124,6 +125,64 @@ describe('Fall-Status', () => {
     expect(screen.getByRole('button', { name: de.thread.rejectedChoice.keep })).toBeTruthy();
     await tap(de.thread.rejectedChoice.close);
     expect(caseOf(id).status).toBe('abgebrochen');
+  });
+});
+
+describe('Widerruf hält die Simulation an (R-12)', () => {
+  const revoke = (purpose: 'weitergabe_versicherer' | 'weitergabe_betrieb', id: string) =>
+    act(async () => {
+      const s = useAppStore.getState();
+      const consent = s.consents.find((c) => c.purpose === purpose && c.caseId === id)!;
+      s.revokeConsent(consent.id);
+    });
+
+  test('Weitergabe an den Versicherer widerrufen: keine Entscheidung, auch nicht per Timer', async () => {
+    const { id, r } = await bookedCase();
+    await revoke('weitergabe_versicherer', id);
+    expect(simulationHold(useAppStore.getState(), id)).toBe('weitergabe_versicherer');
+    expect(nextSimulationDue(useAppStore.getState(), id)).toBeUndefined();
+    await advance(demoConfig.timers.claimMs * 3);
+    expect(caseOf(id).status).toBe('freigabe_noetig');
+    expect(caseOf(id).claim?.decision).toBeUndefined();
+    // Das Gespräch sagt, warum es nicht weitergeht, und bietet keinen Demo-Schritt an
+    expect(r.getPathname()).toBe(`/fall/${id}`);
+    expect(screen.getByText(de.status.text.paused)).toBeTruthy();
+    expect(screen.queryByText(de.status.text.pruefung)).toBeNull();
+    expect(screen.queryByRole('button', { name: de.status.demoNext })).toBeNull();
+  });
+
+  test('Weitergabe an den Betrieb widerrufen: der Betrieb bestätigt nicht', async () => {
+    const { id, r } = await bookedCase();
+    await tap(de.status.demoNext);
+    expect(caseOf(id).status).toBe('freigegeben');
+    await revoke('weitergabe_betrieb', id);
+    expect(simulationHold(useAppStore.getState(), id)).toBe('weitergabe_betrieb');
+    await advance(demoConfig.timers.bookingStepMs * 3);
+    expect(useAppStore.getState().simulateNext(id)).toBe(false);
+    expect(bookingOf(id).status).toBe('angefragt');
+    expect(caseOf(id).status).toBe('freigegeben');
+    await act(async () => router.push(`/fall/${id}/status`));
+    expect(r.getPathname()).toBe(`/fall/${id}/status`);
+    expect(screen.getByText(de.status.text.paused)).toBeTruthy();
+    expect(screen.queryByRole('button', { name: de.status.demoNext })).toBeNull();
+  });
+
+  test('eine Bestätigung für einen anderen Betrieb zählt nicht', async () => {
+    const { id } = await bookedCase();
+    await tap(de.status.demoNext);
+    await revoke('weitergabe_betrieb', id);
+    await act(async () => {
+      useAppStore.getState().grantConsent({
+        caseId: id,
+        purpose: 'weitergabe_betrieb',
+        legalBasis: 'vertrag',
+        recipient: { id: demoConfig.partners[1]!.id, kind: 'betrieb', name: 'anderer Betrieb' },
+        dataCategories: [...de.consentData.betrieb],
+        textVersion: '2026-10-1',
+      });
+    });
+    expect(useAppStore.getState().simulateNext(id)).toBe(false);
+    expect(bookingOf(id).status).toBe('angefragt');
   });
 });
 
