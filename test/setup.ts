@@ -1,5 +1,7 @@
 import mockSafeAreaContext from 'react-native-safe-area-context/jest/mock';
 
+import { timing } from '@/services/mock/timing';
+
 jest.mock('react-native-safe-area-context', () => mockSafeAreaContext);
 
 jest.mock('react-native-keyboard-controller', () =>
@@ -7,7 +9,7 @@ jest.mock('react-native-keyboard-controller', () =>
 );
 
 jest.mock('@react-native-async-storage/async-storage', () =>
-  require('@react-native-async-storage/async-storage/jest/async-storage-mock'),
+  jest.requireActual('@react-native-async-storage/async-storage/jest/async-storage-mock'),
 );
 
 // Schrift gilt in Tests als geladen.
@@ -20,21 +22,24 @@ jest.mock('@expo-google-fonts/schibsted-grotesk', () => ({
 }));
 
 // Mock-Services ohne Wartezeit
-require('@/services/mock/timing').timing.scale = 0;
+timing.scale = 0;
 
 // Kamera: Berechtigung je Test steuerbar, Aufnahme liefert ein Testbild.
 jest.mock('expo-camera', () => {
-  const React = require('react');
-  const { View } = require('react-native');
+  const React = jest.requireActual<typeof import('react')>('react');
+  const { View } = jest.requireActual<typeof import('react-native')>('react-native');
   const permission = { current: { granted: true, canAskAgain: true, status: 'granted' } };
   const CameraView = React.forwardRef(function CameraView(
-    props: { onCameraReady?: () => void },
-    ref: unknown,
+    { onCameraReady }: { onCameraReady?: () => void },
+    ref: React.Ref<unknown>,
   ) {
     React.useImperativeHandle(ref, () => ({
       takePictureAsync: async () => ({ uri: 'file:///test.jpg', width: 1200, height: 900 }),
     }));
-    React.useEffect(() => props.onCameraReady?.(), []);
+    // Nur beim Einhängen melden, wie die echte Kamera. Die Ref hält den neuesten Callback.
+    const ready = React.useRef(onCameraReady);
+    ready.current = onCameraReady;
+    React.useEffect(() => ready.current?.(), []);
     return React.createElement(View, { testID: 'camera-view' });
   });
   return {

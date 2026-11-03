@@ -304,3 +304,15 @@ describe('kein Status-Vergleich in Screens', () => {
     }
   });
 });
+
+describe('Abschluss Phase 1: keine Warnung (Schritt 28)', () => {
+  test('npm run lint und der Lint auf geänderten Dateien dulden keine Warnung', () => {
+    const pkg = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8')) as {
+      scripts: Record<string, string>;
+    };
+    expect(pkg.scripts.lint).toBe('eslint . --max-warnings 0');
+    expect(pkg.scripts.check).toContain('npm run lint');
+    const changed = fs.readFileSync(path.join(root, 'scripts/lint-changed.js'), 'utf8');
+    expect(changed).toContain("'--max-warnings', '0'");
+  });
+});

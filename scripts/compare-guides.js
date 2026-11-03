@@ -1,6 +1,6 @@
 // Vergleicht data/guides.ts mit guides() aus der Demo. Alle Texte müssen gleich sein.
-// Aufruf: npm run guides:check (läuft als Jest-Test, weil data/guides.ts TypeScript ist)
-const { readDemoGuides } = require('./demoGuides');
+// Aufruf: npm run guides:check (läuft als Jest-Test, weil data/guides.ts TypeScript ist).
+// Die Anleitungen der Demo liest scripts/demoGuides.js, der Test reicht beide herein.
 
 function compare(appGuides, demoGuides) {
   const errors = [];

@@ -1,8 +1,12 @@
+import fs from 'fs';
+import path from 'path';
+
 import * as RN from 'react-native';
 import { BackHandler, StyleSheet } from 'react-native';
 import { act, fireEvent, renderRouter, screen } from 'expo-router/testing-library';
 import { router } from 'expo-router';
 
+import FallLayout from '@/app/fall/_layout';
 import { demoConfig } from '@/config/demo.config';
 import { de } from '@/i18n/de';
 import { useAppStore } from '@/store/appStore';
@@ -98,7 +102,7 @@ describe('Jeder Screen hat einen Ausweg', () => {
       .createCase({ deviceId: 'd', entry: 'foto', problemLabel: 'Wasserablauf' });
     const r = await renderRouter(APP, { initialUrl: '/' });
     await act(async () => {
-      require('expo-router').router.push(`/fall/${c.id}`);
+      router.push(`/fall/${c.id}`);
     });
     expect(r.getPathname()).toBe(`/fall/${c.id}`);
     await fireEvent.press(screen.getByRole('button', { name: de.a11y.close }));
@@ -256,14 +260,10 @@ describe('Zurück', () => {
 
   test('Wischgeste: Fall-Stack erlaubt die Zurück-Geste, das Modal lässt sich nicht wegwischen', () => {
     // Die Geste selbst ist nativ. Wir prüfen die Optionen, die sie steuern.
-    const fallLayout = require('../app/fall/_layout').default;
-    const rootSource = require('fs').readFileSync(require.resolve('../app/_layout.tsx'), 'utf8');
-    expect(fallLayout).toBeDefined();
+    const rootSource = fs.readFileSync(path.join(__dirname, '../app/_layout.tsx'), 'utf8');
+    expect(FallLayout).toBeDefined();
     expect(rootSource).toMatch(/presentation: 'fullScreenModal', gestureEnabled: false/);
-    const fallSource = require('fs').readFileSync(
-      require.resolve('../app/fall/_layout.tsx'),
-      'utf8',
-    );
+    const fallSource = fs.readFileSync(path.join(__dirname, '../app/fall/_layout.tsx'), 'utf8');
     expect(fallSource).toMatch(/gestureEnabled: true/);
   });
 });

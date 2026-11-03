@@ -35,6 +35,6 @@ console.log(`Lint: ${files.length} geänderte Datei(en).`);
 // Direkt über node, ohne Shell: Pfade wie app/fall/[id]/index.tsx bleiben unverändert.
 const eslintPackage = require.resolve('eslint/package.json', { paths: [root] });
 const eslint = path.join(path.dirname(eslintPackage), 'bin', 'eslint.js');
-const args = [eslint, '--max-warnings', '10', '--no-warn-ignored', '--', ...files];
+const args = [eslint, '--max-warnings', '0', '--no-warn-ignored', '--', ...files];
 const result = spawnSync(process.execPath, args, { cwd: root, stdio: 'inherit' });
 process.exit(result.status ?? 1);
