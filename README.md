@@ -65,7 +65,7 @@ npm run guides:check   # Anleitungen wörtlich gegen die Demo prüfen
 npm run lint           # nur Lint
 ```
 
-Lint-Regeln: keine Hex-Farben außerhalb von `theme/`, kein Text außerhalb von `i18n/de.ts`, kein `Text` direkt aus `react-native`. Ein Test prüft jeden Screen auf Rolle, Label, 44 pt und Schrift bis 200 %.
+Lint prüft das ganze Repo. Eigene Regeln stehen im Plugin `ganz` in `eslint.config.js`: keine Farbwerte außerhalb von `theme/` (`ganz/farben-aus-theme`), kein Text außerhalb von `i18n/de.ts` (`ganz/text-aus-i18n`, dazu `ganz/text-in-ausdruecken` für Bedingungen, Template-Literale, Verkettungen, Listen und Objekte in JSX). Dazu kein `Text` direkt aus `react-native`. `__tests__/lint.test.ts` zeigt, dass alle Regeln gleichzeitig greifen. Ein Test prüft jeden Screen auf Rolle, Label, 44 pt und Schrift bis 200 %.
 
 ## Ordner
 
