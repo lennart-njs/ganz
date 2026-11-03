@@ -145,3 +145,14 @@ To replace the photo, do these steps:
 If the headline covers an important part of the new photo, change the value `padding-left:64vw` in `site/css/site.css`. A larger value moves the headline to the right.
 
 The caption "Symbolbild, mit Bildgenerierung erstellt" shows at the bottom right of the photo. If you use a real photo, change or delete this caption in `site/index.html`.
+
+## 14. The Register version (without photo)
+
+The file `mach_s_Register.html` is the version of the website without the black-and-white photo. It is one file: the styles, the script and the font are inside the file.
+
+The file has the same changes as the image version:
+
+1. The navigation capsule becomes the small button „m’“ when the visitor scrolls down (see section 12).
+2. Four explanation sentences are removed: under „Ein Weg in drei Stationen.“, under „Wo Selbsthilfe endet.“, under „Sprechen wir über Ihre Fälle.“ and under „Ein Gerät streikt.“
+
+Do not put this file into the folder `site/` with the file `.htaccess` from this package. The security settings in `.htaccess` (section 8) block styles, scripts and fonts that are inside an HTML file. The page then shows without layout and without movement. To publish the Register version on machs.io, first split it into `index.html`, `css/site.css`, `js/site.js` and the font file, as in the folder `site/`.
