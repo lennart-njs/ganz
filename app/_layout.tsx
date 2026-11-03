@@ -64,7 +64,7 @@ export default function RootLayout() {
     SchibstedGrotesk_700Bold,
   });
 
-  const hydrated = useHydrated();
+  const hydrated = useHydrated() === 'ok';
   const appearance = useAppStore((s) => s.appearance);
   const scheme = appearance === 'hell' ? 'light' : appearance === 'dunkel' ? 'dark' : undefined;
 

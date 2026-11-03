@@ -1,7 +1,7 @@
 // Zustand der App, mit persist auf AsyncStorage. Ein offener Fall übersteht den Neustart (B-03).
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { create } from 'zustand';
-import { createJSONStorage, persist, type StateStorage } from 'zustand/middleware';
+import { persist, type StateStorage } from 'zustand/middleware';
 
 import { demoConfig } from '@/config/demo.config';
 import { de } from '@/i18n/de';
@@ -41,9 +41,16 @@ import type {
 } from '@/model/types';
 
 import { defaultEnv, type StoreEnv } from './env';
+import {
+  createLoadState,
+  createSafeStorage,
+  migrateStoredState,
+  STORE_KEY,
+  STORE_VERSION,
+} from './persistence';
+import { parseStoredState } from './storedState';
 
-export const STORE_KEY = 'ganz-app';
-export const STORE_VERSION = 1;
+export { STORE_KEY, STORE_VERSION } from './persistence';
 
 /** Einstellungen für Pitch und Tests. Steuerung im Profil (Schritt 13). */
 export interface DemoSettings {
@@ -203,7 +210,9 @@ export const initialData: AppData = {
 };
 
 export function createAppStore(storage: StateStorage = AsyncStorage, env: StoreEnv = defaultEnv) {
-  return create<AppState>()(
+  const safeStorage = createSafeStorage(storage, env.now);
+  const loading = createLoadState();
+  const store = create<AppState>()(
     persist(
       (set, get) => {
         const person = (): Person => get().ensureHousehold();
@@ -1011,11 +1020,29 @@ export function createAppStore(storage: StateStorage = AsyncStorage, env: StoreE
       {
         name: STORE_KEY,
         version: STORE_VERSION,
-        storage: createJSONStorage(() => storage),
-        // Neue Einstellungen ergänzen gespeicherte Stände, statt sie zu verlieren.
+        storage: safeStorage,
+        // Wirft bei unbekannter Version. Die Form prüft merge gleich danach.
+        migrate: (persisted, version) => migrateStoredState(persisted, version) as AppData,
+        // Prüft die Form, bevor die App etwas davon zeigt. Neue Einstellungen ergänzen
+        // gespeicherte Stände, statt sie zu verlieren. Leerer Speicher: der Anfangsstand.
         merge: (persisted, current) => {
-          const p = (persisted ?? {}) as Partial<AppData>;
+          if (persisted === undefined) return current;
+          const p = parseStoredState(persisted);
           return { ...current, ...p, demo: { ...current.demo, ...p.demo } };
+        },
+        // Meldet jeden Ausgang. Nach einem Fehler sichert es den Rohwert, falls getItem das
+        // nicht schon getan hat. Das Schreiben beginnt, bevor der Fehler sichtbar wird.
+        // Bis zur Entscheidung im Hinweis schreibt die App nichts in den Speicher.
+        onRehydrateStorage: () => {
+          loading.setState({ status: 'laedt' }, true);
+          return (state, error) => {
+            if (state !== undefined && error === undefined) {
+              loading.setState({ status: 'ok' }, true);
+              return;
+            }
+            safeStorage.backupLastRead().catch(() => {});
+            loading.setState({ status: 'fehler', error }, true);
+          };
         },
         partialize: (s): AppData => ({
           onboardingDone: s.onboardingDone,
@@ -1041,6 +1068,8 @@ export function createAppStore(storage: StateStorage = AsyncStorage, env: StoreE
       },
     ),
   );
+  /** Ladezustand des gespeicherten Stands, siehe useHydrated */
+  return Object.assign(store, { loading });
 }
 
 export type AppStore = ReturnType<typeof createAppStore>;

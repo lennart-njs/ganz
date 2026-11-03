@@ -1,0 +1,631 @@
+{
+  "state": {
+    "onboardingDone": true,
+    "appearance": "dunkel",
+    "demo": {
+      "hints": false,
+      "scanScenario": "erkannt",
+      "diagnosisScenario": "standard",
+      "videoScenario": "verbunden",
+      "claimScenario": "freigeben",
+      "deductible": 0,
+      "dismissedHints": ["start"]
+    },
+    "notifications": "erlaubt",
+    "household": {
+      "id": "haushalt-2",
+      "members": [{ "id": "person-1", "displayName": "Sam", "role": "versicherungsnehmer" }],
+      "address": { "street": "Beispielstraße 12", "zip": "12043", "city": "Berlin" },
+      "createdAt": "2026-10-26T19:42:00+01:00"
+    },
+    "persons": [{ "id": "person-1", "displayName": "Sam", "role": "versicherungsnehmer" }],
+    "contracts": [
+      {
+        "id": "vertrag-3",
+        "householdId": "haushalt-2",
+        "kind": "garantieverlaengerung",
+        "provider": { "id": "kranich", "kind": "versicherer", "name": "Kranich Versicherung" },
+        "soldBy": { "id": "haendler", "kind": "haendler", "name": "[HÄNDLER]" },
+        "productName": "Garantieverlängerung",
+        "contractNumber": "KV-2023-0471",
+        "policyholderId": "person-1",
+        "validFrom": "2023-03-15T00:00:00+01:00",
+        "validUntil": "2028-03-31T23:59:59+02:00",
+        "deductible": 0,
+        "coveredDeviceIds": ["geraet-4"],
+        "linkedVia": "vertragsnummer",
+        "linkedAt": "2026-10-26T19:42:00+01:00"
+      }
+    ],
+    "devices": [
+      {
+        "manufacturerId": "miele",
+        "category": "waschmaschine",
+        "model": "WKB 130",
+        "serialNumber": "123",
+        "identifiedBy": "vertrag",
+        "contractId": "vertrag-3",
+        "id": "geraet-4",
+        "householdId": "haushalt-2",
+        "createdAt": "2026-10-26T19:42:00+01:00"
+      }
+    ],
+    "cases": {
+      "GS-24817": {
+        "id": "GS-24817",
+        "householdId": "haushalt-2",
+        "deviceId": "geraet-4",
+        "reportedBy": "person-1",
+        "status": "eskaliert",
+        "entry": "foto",
+        "problemLabel": "Wasserablauf",
+        "diagnosisIds": ["ergebnis-8"],
+        "guideRunIds": ["anleitung-10"],
+        "photoIds": ["foto-6"],
+        "createdAt": "2026-10-26T19:42:00+01:00",
+        "updatedAt": "2026-10-26T19:42:00+01:00",
+        "pausedAt": "2026-10-26T19:42:00+01:00"
+      },
+      "GS-24818": {
+        "id": "GS-24818",
+        "householdId": "haushalt-2",
+        "deviceId": "geraet-4",
+        "reportedBy": "person-1",
+        "status": "erledigt",
+        "entry": "meldung",
+        "problemLabel": "Wasserablauf",
+        "diagnosisIds": ["ergebnis-33"],
+        "guideRunIds": [],
+        "photoIds": ["foto-51"],
+        "createdAt": "2026-10-26T19:42:00+01:00",
+        "updatedAt": "2026-10-26T19:42:00+01:00",
+        "quoteId": "angebot-36",
+        "claim": {
+          "contractId": "vertrag-3",
+          "reportedAt": "2026-10-26T19:42:00+01:00",
+          "reportedBy": "person-1",
+          "confirmationId": "consent-38",
+          "decision": {
+            "result": "freigegeben",
+            "at": "2026-10-26T19:42:00+01:00",
+            "actor": "mensch",
+            "approvedAmount": 18900
+          }
+        },
+        "bookingId": "termin-44",
+        "resolution": "repariert",
+        "closedAt": "2026-10-26T19:42:00+01:00"
+      }
+    },
+    "events": [
+      {
+        "id": "ev-5",
+        "caseId": "GS-24817",
+        "type": "fall_angelegt",
+        "at": "2026-10-26T19:42:00+01:00",
+        "actor": { "kind": "haushalt", "id": "person-1" },
+        "payload": { "entry": "foto", "problemLabel": "Wasserablauf" }
+      },
+      {
+        "id": "ev-7",
+        "caseId": "GS-24817",
+        "type": "foto_aufgenommen",
+        "at": "2026-10-26T19:42:00+01:00",
+        "actor": { "kind": "haushalt", "id": "person-1" },
+        "payload": { "photoId": "foto-6", "purpose": "display", "source": "in_app_camera" }
+      },
+      {
+        "id": "ev-9",
+        "caseId": "GS-24817",
+        "type": "ergebnis_erkannt",
+        "at": "2026-10-26T19:42:00+01:00",
+        "actor": { "kind": "system" },
+        "payload": {
+          "diagnosisId": "ergebnis-8",
+          "mode": "display",
+          "errorPattern": "wasserablauf",
+          "confidence": "hoch",
+          "source": "fehlererkennung"
+        }
+      },
+      {
+        "id": "ev-11",
+        "caseId": "GS-24817",
+        "type": "anleitung_gestartet",
+        "at": "2026-10-26T19:42:00+01:00",
+        "actor": { "kind": "haushalt", "id": "person-1" },
+        "payload": { "guideId": "ablauf", "guideRunId": "anleitung-10" }
+      },
+      {
+        "id": "ev-12",
+        "caseId": "GS-24817",
+        "type": "status_geaendert",
+        "at": "2026-10-26T19:42:00+01:00",
+        "actor": { "kind": "haushalt", "id": "person-1" },
+        "payload": { "from": "offen", "to": "selbsthilfe", "command": "anleitung_starten" }
+      },
+      {
+        "id": "ev-13",
+        "caseId": "GS-24817",
+        "type": "schritt_erledigt",
+        "at": "2026-10-26T19:42:00+01:00",
+        "actor": { "kind": "haushalt", "id": "person-1" },
+        "payload": { "guideRunId": "anleitung-10", "guideId": "ablauf", "step": 1 }
+      },
+      {
+        "caseId": "GS-24817",
+        "type": "sicherheit_bestaetigt",
+        "actor": { "kind": "haushalt", "id": "person-1" },
+        "payload": { "guideRunId": "anleitung-10", "guideId": "ablauf", "step": 2 },
+        "id": "ev-14",
+        "at": "2026-10-26T19:42:00+01:00"
+      },
+      {
+        "id": "ev-15",
+        "caseId": "GS-24817",
+        "type": "schritt_geht_nicht",
+        "at": "2026-10-26T19:42:00+01:00",
+        "actor": { "kind": "haushalt", "id": "person-1" },
+        "payload": {
+          "guideRunId": "anleitung-10",
+          "guideId": "ablauf",
+          "step": 2,
+          "note": "Klappe klemmt"
+        }
+      },
+      {
+        "id": "ev-16",
+        "caseId": "GS-24817",
+        "type": "anleitung_beendet",
+        "at": "2026-10-26T19:42:00+01:00",
+        "actor": { "kind": "haushalt", "id": "person-1" },
+        "payload": {
+          "guideRunId": "anleitung-10",
+          "guideId": "ablauf",
+          "step": 2,
+          "outcome": "geht_nicht"
+        }
+      },
+      {
+        "id": "ev-17",
+        "caseId": "GS-24817",
+        "type": "status_geaendert",
+        "at": "2026-10-26T19:42:00+01:00",
+        "actor": { "kind": "haushalt", "id": "person-1" },
+        "payload": { "from": "selbsthilfe", "to": "eskaliert", "command": "hilfe_holen" }
+      },
+      {
+        "id": "ev-19",
+        "caseId": "GS-24817",
+        "type": "weitergabe_bestaetigt",
+        "at": "2026-10-26T19:42:00+01:00",
+        "actor": { "kind": "haushalt", "id": "person-1" },
+        "payload": {
+          "purpose": "chat_assistent",
+          "recipient": "Assistent",
+          "legalBasis": "einwilligung"
+        }
+      },
+      {
+        "caseId": "GS-24817",
+        "type": "assistent_gefragt",
+        "actor": { "kind": "haushalt", "id": "person-1" },
+        "payload": { "messageId": "chat-20" },
+        "id": "ev-21",
+        "at": "2026-10-26T19:42:00+01:00"
+      },
+      {
+        "caseId": "GS-24817",
+        "type": "einwilligung_widerrufen",
+        "actor": { "kind": "haushalt", "id": "person-1" },
+        "payload": {
+          "consentId": "consent-18",
+          "purpose": "chat_assistent",
+          "recipient": "Assistent"
+        },
+        "id": "ev-23",
+        "at": "2026-10-26T19:42:00+01:00"
+      },
+      {
+        "id": "ev-24",
+        "caseId": "GS-24817",
+        "type": "pausiert",
+        "at": "2026-10-26T19:42:00+01:00",
+        "actor": { "kind": "haushalt", "id": "person-1" },
+        "payload": {}
+      },
+      {
+        "id": "ev-25",
+        "caseId": "GS-24818",
+        "type": "fall_angelegt",
+        "at": "2026-10-26T19:42:00+01:00",
+        "actor": { "kind": "haushalt", "id": "person-1" },
+        "payload": { "entry": "meldung", "problemLabel": "Wasserablauf" }
+      },
+      {
+        "id": "ev-26",
+        "caseId": "GS-24818",
+        "type": "status_geaendert",
+        "at": "2026-10-26T19:42:00+01:00",
+        "actor": { "kind": "haushalt", "id": "person-1" },
+        "payload": { "from": "offen", "to": "eskaliert", "command": "hilfe_holen" }
+      },
+      {
+        "id": "ev-28",
+        "caseId": "GS-24818",
+        "type": "weitergabe_bestaetigt",
+        "at": "2026-10-26T19:42:00+01:00",
+        "actor": { "kind": "haushalt", "id": "person-1" },
+        "payload": {
+          "purpose": "weitergabe_fachkraft",
+          "recipient": "Hausgeräte Brandt",
+          "legalBasis": "vertrag"
+        }
+      },
+      {
+        "caseId": "GS-24818",
+        "type": "videocall_angefragt",
+        "actor": { "kind": "haushalt", "id": "person-1" },
+        "payload": { "sessionId": "video-29", "expert": "Jonas K." },
+        "id": "ev-30",
+        "at": "2026-10-26T19:42:00+01:00"
+      },
+      {
+        "caseId": "GS-24818",
+        "type": "videocall_gestartet",
+        "actor": { "kind": "fachkraft", "name": "Jonas K." },
+        "payload": { "sessionId": "video-29", "outcome": "verbunden", "change": "verbunden" },
+        "id": "ev-31",
+        "at": "2026-10-26T19:42:00+01:00"
+      },
+      {
+        "caseId": "GS-24818",
+        "type": "videocall_beendet",
+        "actor": { "kind": "haushalt", "id": "person-1" },
+        "payload": { "sessionId": "video-29", "outcome": "verbunden", "change": "beendet" },
+        "id": "ev-32",
+        "at": "2026-10-26T19:42:00+01:00"
+      },
+      {
+        "caseId": "GS-24818",
+        "type": "befund_erstellt",
+        "actor": { "kind": "fachkraft", "name": "Jonas K." },
+        "payload": { "diagnosisId": "ergebnis-33", "option": "reparatur" },
+        "id": "ev-35",
+        "at": "2026-10-26T19:42:00+01:00"
+      },
+      {
+        "caseId": "GS-24818",
+        "type": "angebot_erstellt",
+        "actor": { "kind": "fachkraft", "name": "Jonas K." },
+        "payload": {
+          "quoteId": "angebot-36",
+          "repair": 18900,
+          "replacement": 89900,
+          "saving": 71000
+        },
+        "id": "ev-37",
+        "at": "2026-10-26T19:42:00+01:00"
+      },
+      {
+        "id": "ev-39",
+        "caseId": "GS-24818",
+        "type": "weitergabe_bestaetigt",
+        "at": "2026-10-26T19:42:00+01:00",
+        "actor": { "kind": "haushalt", "id": "person-1" },
+        "payload": {
+          "purpose": "weitergabe_versicherer",
+          "recipient": "Kranich Versicherung",
+          "legalBasis": "vertrag"
+        }
+      },
+      {
+        "id": "ev-40",
+        "caseId": "GS-24818",
+        "type": "schaden_gemeldet",
+        "at": "2026-10-26T19:42:00+01:00",
+        "actor": { "kind": "haushalt", "id": "person-1" },
+        "payload": { "contractId": "vertrag-3" }
+      },
+      {
+        "id": "ev-41",
+        "caseId": "GS-24818",
+        "type": "status_geaendert",
+        "at": "2026-10-26T19:42:00+01:00",
+        "actor": { "kind": "haushalt", "id": "person-1" },
+        "payload": { "from": "eskaliert", "to": "freigabe_noetig", "command": "schaden_melden" }
+      },
+      {
+        "id": "ev-43",
+        "caseId": "GS-24818",
+        "type": "weitergabe_bestaetigt",
+        "at": "2026-10-26T19:42:00+01:00",
+        "actor": { "kind": "haushalt", "id": "person-1" },
+        "payload": {
+          "purpose": "weitergabe_betrieb",
+          "recipient": "Hausgeräte Brandt",
+          "legalBasis": "vertrag"
+        }
+      },
+      {
+        "caseId": "GS-24818",
+        "type": "termin_angefragt",
+        "actor": { "kind": "haushalt", "id": "person-1" },
+        "payload": {
+          "bookingId": "termin-44",
+          "kind": "reparatur",
+          "partner": "Hausgeräte Brandt",
+          "slot": "Mo vormittags",
+          "subjectToApproval": true
+        },
+        "id": "ev-45",
+        "at": "2026-10-26T19:42:00+01:00"
+      },
+      {
+        "id": "ev-46",
+        "caseId": "GS-24818",
+        "type": "freigabe_entschieden",
+        "at": "2026-10-26T19:42:00+01:00",
+        "actor": { "kind": "versicherer", "name": "Kranich Versicherung" },
+        "payload": { "result": "freigegeben", "actor": "mensch" }
+      },
+      {
+        "id": "ev-47",
+        "caseId": "GS-24818",
+        "type": "status_geaendert",
+        "at": "2026-10-26T19:42:00+01:00",
+        "actor": { "kind": "versicherer", "name": "Kranich Versicherung" },
+        "payload": { "from": "freigabe_noetig", "to": "freigegeben", "command": "freigabe_erteilt" }
+      },
+      {
+        "id": "ev-48",
+        "caseId": "GS-24818",
+        "type": "termin_bestaetigt",
+        "at": "2026-10-26T19:42:00+01:00",
+        "actor": { "kind": "betrieb", "name": "Hausgeräte Brandt" },
+        "payload": {}
+      },
+      {
+        "id": "ev-49",
+        "caseId": "GS-24818",
+        "type": "status_geaendert",
+        "at": "2026-10-26T19:42:00+01:00",
+        "actor": { "kind": "betrieb", "name": "Hausgeräte Brandt" },
+        "payload": { "from": "freigegeben", "to": "in_reparatur", "command": "termin_bestaetigt" }
+      },
+      {
+        "caseId": "GS-24818",
+        "type": "betrieb_unterwegs",
+        "actor": { "kind": "betrieb", "name": "Hausgeräte Brandt" },
+        "payload": { "bookingId": "termin-44" },
+        "id": "ev-50",
+        "at": "2026-10-26T19:42:00+01:00"
+      },
+      {
+        "id": "ev-52",
+        "caseId": "GS-24818",
+        "type": "foto_aufgenommen",
+        "at": "2026-10-26T19:42:00+01:00",
+        "actor": { "kind": "haushalt", "id": "person-1" },
+        "payload": { "photoId": "foto-51", "purpose": "abschluss", "source": "betrieb" }
+      },
+      {
+        "caseId": "GS-24818",
+        "type": "reparatur_abgeschlossen",
+        "actor": { "kind": "betrieb", "name": "Hausgeräte Brandt" },
+        "payload": { "bookingId": "termin-44", "photoId": "foto-51" },
+        "id": "ev-53",
+        "at": "2026-10-26T19:42:00+01:00"
+      },
+      {
+        "id": "ev-54",
+        "caseId": "GS-24818",
+        "type": "status_geaendert",
+        "at": "2026-10-26T19:42:00+01:00",
+        "actor": { "kind": "haushalt", "id": "person-1" },
+        "payload": { "from": "in_reparatur", "to": "erledigt", "command": "repariert" }
+      },
+      {
+        "caseId": "GS-24818",
+        "type": "abschluss_bestaetigt",
+        "actor": { "kind": "haushalt", "id": "person-1" },
+        "payload": {},
+        "id": "ev-55",
+        "at": "2026-10-26T19:42:00+01:00"
+      },
+      {
+        "caseId": "GS-24818",
+        "type": "bewertet",
+        "actor": { "kind": "haushalt", "id": "person-1" },
+        "payload": { "bookingId": "termin-44", "stars": 5 },
+        "id": "ev-56",
+        "at": "2026-10-26T19:42:00+01:00"
+      }
+    ],
+    "photos": [
+      {
+        "caseId": "GS-24817",
+        "deviceId": "geraet-4",
+        "purpose": "display",
+        "source": "in_app_camera",
+        "uri": "file:///test.jpg",
+        "width": 1200,
+        "height": 900,
+        "id": "foto-6",
+        "takenAt": "2026-10-26T19:42:00+01:00"
+      },
+      {
+        "caseId": "GS-24818",
+        "deviceId": "geraet-4",
+        "purpose": "abschluss",
+        "source": "betrieb",
+        "uri": "",
+        "id": "foto-51",
+        "takenAt": "2026-10-26T19:42:00+01:00"
+      }
+    ],
+    "diagnoses": [
+      {
+        "caseId": "GS-24817",
+        "photoIds": ["foto-6"],
+        "mode": "display",
+        "errorPattern": "wasserablauf",
+        "displayMessage": "Wasserablauf",
+        "component": "Laugenfilter",
+        "confidence": "hoch",
+        "confidenceScore": 0.92,
+        "source": "fehlererkennung",
+        "guideId": "ablauf",
+        "id": "ergebnis-8",
+        "createdAt": "2026-10-26T19:42:00+01:00"
+      },
+      {
+        "caseId": "GS-24818",
+        "photoIds": [],
+        "mode": "bauteil",
+        "errorPattern": "laugenpumpe_defekt",
+        "component": "Laugenpumpe",
+        "confidence": "hoch",
+        "confidenceScore": 1,
+        "source": "fachkraft",
+        "id": "ergebnis-33",
+        "createdAt": "2026-10-26T19:42:00+01:00"
+      }
+    ],
+    "guideRuns": {
+      "anleitung-10": {
+        "id": "anleitung-10",
+        "caseId": "GS-24817",
+        "guideId": "ablauf",
+        "startedAt": "2026-10-26T19:42:00+01:00",
+        "currentStep": 1,
+        "completedSteps": [0],
+        "outcome": "geht_nicht",
+        "endedAt": "2026-10-26T19:42:00+01:00",
+        "abortedAtStep": 1,
+        "abortNote": "Klappe klemmt"
+      }
+    },
+    "consents": [
+      {
+        "caseId": "GS-24817",
+        "purpose": "chat_assistent",
+        "legalBasis": "einwilligung",
+        "recipient": { "id": "assistent", "kind": "dienstleister", "name": "Assistent" },
+        "dataCategories": ["Fragen"],
+        "textVersion": "1",
+        "id": "consent-18",
+        "personId": "person-1",
+        "grantedAt": "2026-10-26T19:42:00+01:00",
+        "revokedAt": "2026-10-26T19:42:00+01:00"
+      },
+      {
+        "caseId": "GS-24818",
+        "purpose": "weitergabe_fachkraft",
+        "legalBasis": "vertrag",
+        "recipient": { "id": "brandt", "kind": "betrieb", "name": "Hausgeräte Brandt" },
+        "dataCategories": ["Fotos"],
+        "textVersion": "1",
+        "id": "consent-27",
+        "personId": "person-1",
+        "grantedAt": "2026-10-26T19:42:00+01:00"
+      },
+      {
+        "caseId": "GS-24818",
+        "purpose": "weitergabe_versicherer",
+        "legalBasis": "vertrag",
+        "recipient": { "id": "kranich", "kind": "versicherer", "name": "Kranich Versicherung" },
+        "dataCategories": ["Gerät", "Fotos", "Ergebnis", "Schritte", "Befund", "Kosten"],
+        "textVersion": "1",
+        "id": "consent-38",
+        "personId": "person-1",
+        "grantedAt": "2026-10-26T19:42:00+01:00"
+      },
+      {
+        "caseId": "GS-24818",
+        "purpose": "weitergabe_betrieb",
+        "legalBasis": "vertrag",
+        "recipient": { "id": "brandt", "kind": "betrieb", "name": "Hausgeräte Brandt" },
+        "dataCategories": ["Gerät", "Typenschild", "Fotos", "Befund", "Schritte", "Adresse"],
+        "textVersion": "2026-10-1",
+        "id": "consent-42",
+        "personId": "person-1",
+        "grantedAt": "2026-10-26T19:42:00+01:00"
+      }
+    ],
+    "quotes": [
+      {
+        "id": "angebot-36",
+        "caseId": "GS-24818",
+        "createdBy": { "kind": "fachkraft", "name": "Jonas K." },
+        "repair": {
+          "partName": "Laugenpumpe",
+          "originalPart": true,
+          "parts": 11900,
+          "labor": 7000,
+          "total": 18900
+        },
+        "replacement": { "total": 89900, "note": "vergleichbares Modell" },
+        "payer": { "kind": "versicherer", "name": "Kranich Versicherung" },
+        "deductible": 0,
+        "isExample": true,
+        "createdAt": "2026-10-26T19:42:00+01:00",
+        "saving": 71000
+      }
+    ],
+    "bookings": [
+      {
+        "id": "termin-44",
+        "caseId": "GS-24818",
+        "kind": "reparatur",
+        "provider": {
+          "id": "brandt",
+          "kind": "betrieb",
+          "name": "Hausgeräte Brandt",
+          "authorized": true
+        },
+        "slotLabel": "Mo vormittags",
+        "status": "erledigt",
+        "subjectToApproval": true,
+        "address": { "street": "Beispielstraße 12", "zip": "12043", "city": "Berlin" },
+        "createdAt": "2026-10-26T19:42:00+01:00",
+        "completionPhotoId": "foto-51",
+        "rating": { "stars": 5, "at": "2026-10-26T19:42:00+01:00" }
+      }
+    ],
+    "videoSessions": [
+      {
+        "id": "video-29",
+        "caseId": "GS-24818",
+        "expert": {
+          "name": "Jonas K.",
+          "provider": { "id": "brandt", "kind": "betrieb", "name": "Hausgeräte Brandt" }
+        },
+        "requestedAt": "2026-10-26T19:42:00+01:00",
+        "recording": false,
+        "startedAt": "2026-10-26T19:42:00+01:00",
+        "outcome": "verbunden",
+        "endedAt": "2026-10-26T19:42:00+01:00"
+      }
+    ],
+    "chatMessages": [
+      {
+        "caseId": "GS-24817",
+        "role": "haushalt",
+        "text": "Was jetzt?",
+        "id": "chat-20",
+        "at": "2026-10-26T19:42:00+01:00"
+      },
+      {
+        "caseId": "GS-24817",
+        "role": "assistent",
+        "text": "Hol dir Hilfe.",
+        "suggestion": "hilfe",
+        "id": "chat-22",
+        "at": "2026-10-26T19:42:00+01:00"
+      }
+    ],
+    "nextCaseNumber": 24819
+  },
+  "version": 1
+}
