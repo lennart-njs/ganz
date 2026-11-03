@@ -105,7 +105,7 @@ scripts/commit-if-green.sh -m "Nachricht"   # committet, was mit git add bereitl
 scripts/pitch-tag.sh   # lokaler Tag pitch-JJJJ-Wxx, nach docs/PITCH_CHECK.md und grünem Check
 ```
 
-`scripts/ci-checks.sh` ist die eine Quelle für alle Prüfungen. CI (`.github/workflows/check.yml`) und `scripts/commit-if-green.sh` rufen es auf. gitleaks und osv-scanner laufen lokal nur, wenn sie installiert sind, sonst steht ein Hinweis da. In CI laufen sie immer, mit fester Version. Ausnahmen für osv-scanner stehen mit Grund und Enddatum in `osv-scanner.toml`.
+`scripts/ci-checks.sh` ist die eine Quelle für alle Prüfungen. CI (`.github/workflows/check.yml`) und `scripts/commit-if-green.sh` rufen es auf. gitleaks und osv-scanner laufen lokal nur, wenn sie installiert sind, sonst steht ein Hinweis da. In CI laufen sie immer, mit fester Version und fester SHA-256 im Workflow. Die Actions stehen auf Commit-SHA. osv-scanner braucht api.osv.dev, ohne Zugang geht nur `osv-scanner scan source --offline-vulnerabilities --download-offline-databases --lockfile package-lock.json`. Ausnahmen für osv-scanner stehen mit Grund und Enddatum in `osv-scanner.toml`, bekannte Fehlalarme von gitleaks einzeln in `.gitleaksignore`. Auf GitHub gelaufen ist der Workflow noch nicht, das geht erst mit Push (Nr. 15).
 
 `scripts/pitch-tag.sh` setzt den Pitch-Tag der Woche nur, wenn der Arbeitsbaum sauber ist, kein regelbrechender Befund offen ist (R-07, R-12, R-13, R-16, R-17, geprüft von `scripts/open-findings.js`) und `scripts/ci-checks.sh` grün ist. Vorher gehst du `docs/PITCH_CHECK.md` auf dem Pitch-Telefon durch.
 

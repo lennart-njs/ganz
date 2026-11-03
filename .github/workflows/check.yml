@@ -1,7 +1,12 @@
 # Prüft jeden Push und jeden Pull Request mit scripts/ci-checks.sh, derselben Quelle wie
 # scripts/commit-if-green.sh. Pflicht für einen Merge wird es erst mit Branch und PR (Nr. 15).
-# gitleaks und osv-scanner kommen als Binärdateien mit fester Version und Prüfsumme,
+# gitleaks und osv-scanner kommen als Binärdateien mit fester Version und fester Prüfsumme,
 # nicht als Actions. gitleaks-action braucht für Repos einer Organisation eine Lizenz.
+# Die SHA-256 stehen hier, nicht aus der Prüfsummen-Datei desselben Releases: Ein verändertes
+# Release mit neuer Prüfsummen-Datei fiele sonst nicht auf. Die Actions stehen auf dem Commit
+# ihres Tags, der Tag steht als Kommentar dahinter.
+# Geprüft am 03.11.2026: Tags per git ls-remote, Dateinamen und Prüfsummen per Download und
+# Vergleich mit der Prüfsummen-Datei des Releases. Bei einer neuen Version beides neu prüfen.
 name: check
 
 on:
@@ -23,14 +28,18 @@ jobs:
     timeout-minutes: 20
     env:
       GITLEAKS_VERSION: 8.30.1
+      # gitleaks_8.30.1_linux_x64.tar.gz
+      GITLEAKS_SHA256: 551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb
       OSV_SCANNER_VERSION: 2.7.0
+      # osv-scanner_linux_amd64
+      OSV_SCANNER_SHA256: 160c6253e2922e9e0a6a9771c5c4c40a4b3c6090b34a3cdd5e80c96cc2e4218b
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0 (Tag v5)
         with:
           # gitleaks prüft den ganzen Verlauf
           fetch-depth: 0
 
-      - uses: actions/setup-node@v5
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0 (Tag v5)
         with:
           node-version-file: .nvmrc
           cache: npm
@@ -47,15 +56,13 @@ jobs:
           base="https://github.com/gitleaks/gitleaks/releases/download/v$GITLEAKS_VERSION"
           file="gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz"
           curl -fsSLO "$base/$file"
-          curl -fsSLO "$base/gitleaks_${GITLEAKS_VERSION}_checksums.txt"
-          grep "  $file\$" "gitleaks_${GITLEAKS_VERSION}_checksums.txt" | sha256sum --check --strict -
+          echo "$GITLEAKS_SHA256  $file" | sha256sum --check --strict -
           tar -xzf "$file" -C "$bin" gitleaks
 
           base="https://github.com/google/osv-scanner/releases/download/v$OSV_SCANNER_VERSION"
           file="osv-scanner_linux_amd64"
           curl -fsSLO "$base/$file"
-          curl -fsSLO "$base/osv-scanner_SHA256SUMS"
-          grep "  $file\$" osv-scanner_SHA256SUMS | sha256sum --check --strict -
+          echo "$OSV_SCANNER_SHA256  $file" | sha256sum --check --strict -
           install -m 0755 "$file" "$bin/osv-scanner"
 
           echo "$bin" >> "$GITHUB_PATH"
