@@ -751,6 +751,7 @@ export const de = {
     saving: (amount: string) => `Ersparnis in diesem Fall: ${amount}`,
     payer: 'Das zahlt',
     payerValue: (insurer: string) => `${insurer}, vorbehaltlich Freigabe`,
+    payerApproved: (insurer: string) => `${insurer}, freigegeben`,
     payerSelf: 'Du selbst',
     deductible: 'Deine Selbstbeteiligung',
     ifRejected: (insurer: string) => `Wenn ${insurer} ablehnt`,
@@ -794,6 +795,9 @@ export const de = {
     jobDiagnosis: 'Vor-Ort-Diagnose mit Kostenvoranschlag',
     costsClaim: (insurer: string, deductible: string) =>
       `${insurer}, vorbehaltlich Freigabe · Selbstbeteiligung ${deductible}`,
+    /** Nach der Freigabe: Der Versicherer zahlt, du die Selbstbeteiligung */
+    costsApproved: (insurer: string, deductible: string) =>
+      `${insurer} hat freigegeben · Selbstbeteiligung ${deductible}`,
     costsSelf: (amount: string) => `Du zahlst ${amount}`,
     costsDiagnosis: 'Den Kostenvoranschlag siehst du vor der Reparatur.',
     pending: 'Der Termin ist vorbehaltlich Freigabe. Gibt es keine Freigabe, entscheidest du neu.',

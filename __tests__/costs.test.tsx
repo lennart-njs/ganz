@@ -269,3 +269,60 @@ describe('Betrieb und Termin', () => {
     expect(useAppStore.getState().cases[c.id]?.status).toBe('eskaliert');
   });
 });
+
+describe('Zahler aus den Fakten: „Du zahlst“ nur, wenn der Haushalt zahlt', () => {
+  test('nach der Freigabe: Kranich zahlt, ohne „vorbehaltlich Freigabe“', async () => {
+    const id = caseAfterFinding();
+    const s = useAppStore.getState();
+    s.reportClaim(id, '2026-10-1');
+    s.simulateNext(id);
+    expect(useAppStore.getState().cases[id]?.status).toBe('freigegeben');
+    const r = await renderRouter(APP, { initialUrl: `/fall/${id}/kosten` });
+    expect(screen.getByText(de.costs.payerApproved('Kranich'))).toBeTruthy();
+    expect(screen.queryByText(de.costs.payerValue('Kranich'))).toBeNull();
+    await tap(de.costs.toAppointment);
+    expect(r.getPathname()).toBe(`/fall/${id}/termin`);
+    expect(screen.getByText(de.appointment.costsApproved('Kranich', '0 €'))).toBeTruthy();
+    expect(screen.queryByText(de.appointment.costsClaim('Kranich', '0 €'))).toBeNull();
+    expect(screen.queryByText(de.appointment.costsSelf('189 €'))).toBeNull();
+  });
+
+  test('mit Schutz selbst gezahlt: die Kosten nennen dich als Zahler, nicht Kranich', async () => {
+    const id = caseAfterFinding();
+    unwrap(
+      useAppStore.getState().requestBooking({
+        caseId: id,
+        kind: 'reparatur',
+        partnerId: demoConfig.partners[0]!.id,
+        slotLabel: demoConfig.slots[0]!,
+        selfPay: true,
+      }),
+    );
+    expect(useAppStore.getState().cases[id]?.status).toBe('in_reparatur');
+    await renderRouter(APP, { initialUrl: `/fall/${id}/kosten` });
+    expect(screen.getByText(de.costs.payerSelf)).toBeTruthy();
+    expect(screen.queryByText(de.costs.payerValue('Kranich'))).toBeNull();
+    expect(screen.queryByText(de.costs.deductible)).toBeNull();
+  });
+
+  test('im Gespräch: Selbst zahlen gewählt, dann gemeldet, kein „Du zahlst“ mehr (R-07)', async () => {
+    const id = caseAfterFinding();
+    await renderRouter(APP, { initialUrl: `/fall/${id}` });
+    await tap(new RegExp(`^${de.costs.selfPay}`));
+    expect(screen.getByText(de.talk.claim.selfPay('189 €'))).toBeTruthy();
+    // Gemeldet über die Details: Kranich prüft, die Wahl zählt nicht mehr
+    await act(async () => {
+      useAppStore.getState().reportClaim(id, '2026-10-1');
+    });
+    expect(useAppStore.getState().cases[id]?.status).toBe('freigabe_noetig');
+    expect(screen.queryByText(de.talk.claim.selfPay('189 €'))).toBeNull();
+    await tap(new RegExp(`^${demoConfig.partners[0]!.name}`));
+    await tap(demoConfig.slots[0]!);
+    expect(screen.getByText(de.appointment.costsClaim('Kranich', '0 €'))).toBeTruthy();
+    expect(screen.queryByText(de.appointment.costsSelf('189 €'))).toBeNull();
+    expect(screen.queryByRole('button', { name: de.appointment.requestPaid })).toBeNull();
+    await tap(de.appointment.request);
+    expect(useAppStore.getState().bookings.at(-1)).toMatchObject({ subjectToApproval: true });
+    expect(useAppStore.getState().cases[id]?.status).toBe('freigabe_noetig');
+  });
+});

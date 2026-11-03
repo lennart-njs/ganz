@@ -173,6 +173,9 @@ export default function FallGespraech() {
 
   // Was im Fall gilt, sagen die Fakten und Regeln (model/policies), nicht ein Vergleich des Status
   const facts = selectCaseFacts(state, caseId)!;
+  // „Selbst zahlen“ gilt nur, wo der Haushalt wirklich zahlt. Ist der Schadenfall inzwischen
+  // gemeldet, zählt die Wahl nicht mehr: kein „Du zahlst …“ während der Prüfung (R-07).
+  const selfPay = payment === 'selbst' && can(facts, 'termin_selbst');
   const device = state.devices.find((d) => d.id === c.deviceId);
   const contract = state.contracts.find((k) => k.id === device?.contractId);
   const a = caseAppliance(state, caseId);
@@ -279,7 +282,7 @@ export default function FallGespraech() {
 
   const request = () => {
     if (!partnerId || !slot) return;
-    book.run({ caseId, partnerId, slot, selfPay: payment === 'selbst', diagnosis: onSite });
+    book.run({ caseId, partnerId, slot, selfPay, diagnosis: onSite });
   };
 
   const sendInput = () => {
@@ -705,12 +708,12 @@ export default function FallGespraech() {
   const replacement = latestFinding?.errorPattern === 'ersatzgeraet_noetig';
   const costsOpen =
     !repairBooking &&
-    !payment &&
+    !selfPay &&
     !replacement &&
     (can(facts, 'schaden_melden') || can(facts, 'selbst_zahlen'));
   // Nach einer Ablehnung: selbst zahlen heißt neuer Termin, der alte Antrag zählt nicht mehr
   const rejected = can(facts, 'selbst_zahlen_nach_ablehnung');
-  const rejectedRetry = rejected && payment === 'selbst';
+  const rejectedRetry = rejected && selfPay;
   const lastCallback = of('videocall_angefragt')
     .filter((e) => e.payload.art === 'rueckruf')
     .at(-1);
@@ -722,8 +725,7 @@ export default function FallGespraech() {
     (!lastSession || lastCallback.at >= (lastSession.endedAt ?? lastSession.requestedAt));
   const needsAppointment =
     rejectedRetry ||
-    (!repairBooking &&
-      (can(facts, 'termin_versicherer') || payment === 'selbst' || (onSite && !booking)));
+    (!repairBooking && (can(facts, 'termin_versicherer') || selfPay || (onSite && !booking)));
   const demoTap =
     demoConfig.demo.enabled && state.demo.hints && nextSimulationDue(state, caseId) !== undefined;
 
@@ -806,7 +808,7 @@ export default function FallGespraech() {
       reply(`rueckruf-${s}`, s, () => setCallbackSlot(s));
     }
     reply('vor-ort', de.waiting.onSiteInstead, () => setOnSite(true));
-  } else if (rejected && !payment) {
+  } else if (rejected && !selfPay) {
     reply('selbst', t.rejectedChoice.selfPay(formatEuro(quote?.repair.total ?? 0)), () =>
       setPayment('selbst'),
     );
@@ -854,7 +856,7 @@ export default function FallGespraech() {
   } else if (replacement && can(facts, 'schaden_melden')) {
     reply('melden', de.costs.report, report);
   } else if (needsAppointment) {
-    if (payment === 'selbst' && quote) {
+    if (selfPay && quote) {
       tail.push(
         <View key="zahlung" style={styles.stack}>
           <UserSaid
@@ -902,7 +904,6 @@ export default function FallGespraech() {
       if (!slot) {
         for (const s of demoConfig.slots) reply(`zeit-${s}`, s, () => setSlot(s));
       } else {
-        const selfPay = payment === 'selbst';
         const address = state.household?.address;
         tail.push(<UserSaid key="zeit" text={slot} onEdit={() => setSlot(undefined)} />);
         tail.push(

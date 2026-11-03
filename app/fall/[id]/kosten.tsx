@@ -94,13 +94,22 @@ export default function Kosten() {
     );
   }
 
-  const facts = contract
-    ? ([
-        [t.payer, t.payerValue(insurer)],
-        [t.deductible, deductible],
-        [t.ifRejected(insurer), t.ifRejectedValue],
-      ] as [string, string][])
-    : ([[t.payer, t.payerSelf]] as [string, string][]);
+  // Wer zahlt, sagen die Fakten: du selbst, Kranich nach der Freigabe oder, solange nichts
+  // entschieden ist, Kranich vorbehaltlich Freigabe. Kein Betrag als Zusage.
+  const payer = caseFacts?.payer;
+  const facts: [string, string][] =
+    payer === 'haushalt' || !contract
+      ? [[t.payer, t.payerSelf]]
+      : payer === 'versicherer'
+        ? [
+            [t.payer, t.payerApproved(insurer)],
+            [t.deductible, deductible],
+          ]
+        : [
+            [t.payer, t.payerValue(insurer)],
+            [t.deductible, deductible],
+            [t.ifRejected(insurer), t.ifRejectedValue],
+          ];
 
   // Nach der Meldung kein zweites Melden (R-02). Mit laufendem Termin kein zweiter (R-08).
   const footer = can(caseFacts, 'schaden_melden') ? (
