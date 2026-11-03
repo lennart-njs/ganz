@@ -769,7 +769,7 @@ export default function FallGespraech() {
       escalate();
     });
   } else if (facts.closed && !can(facts, 'problem_besteht_weiter')) {
-    // Abgebrochen
+    // Abgebrochen, oder erledigt, während für das Gerät ein anderer Fall offen ist (Nr. 13)
     reply('fallakte', t.caseFile, () => router.push(`/fall/${caseId}/fallakte`));
     reply('fertig', t.done, leaveCase);
   } else if (facts.closed) {

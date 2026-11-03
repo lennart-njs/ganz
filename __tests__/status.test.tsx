@@ -332,4 +332,22 @@ describe('Status aus den Fakten', () => {
     expect(view(done.id).headline).toBe(de.status.headline.erledigt);
     expect(view(id).headline).toBe(de.status.headline.abgebrochen);
   });
+
+  test('erledigt bleibt erledigt, auch wenn für das Gerät schon ein neuer Fall offen ist', () => {
+    const s = useAppStore.getState();
+    s.reset();
+    const device = s.addDevice({
+      manufacturerId: 'miele',
+      category: 'waschmaschine',
+      model: 'WKB 130',
+      identifiedBy: 'manuell',
+    });
+    const done = s.createCase({ deviceId: device.id, entry: 'symptom', problemLabel: 'nass' });
+    s.runCommand(done.id, 'anleitung_starten');
+    s.runCommand(done.id, 'selbst_geloest');
+    s.createCase({ deviceId: device.id, entry: 'symptom', problemLabel: 'Tür geht nicht auf' });
+    expect(caseOf(done.id).status).toBe('erledigt');
+    // Wieder öffnen geht gerade nicht, der Fall ist trotzdem erledigt und nicht abgebrochen
+    expect(view(done.id).headline).toBe(de.status.headline.erledigt);
+  });
 });

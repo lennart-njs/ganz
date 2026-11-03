@@ -46,6 +46,11 @@ export interface CaseFacts {
   status: CaseStatus;
   /** erledigt oder abgebrochen */
   closed: boolean;
+  /**
+   * Wie der Fall geschlossen ist. „Erledigt“ bleibt erledigt, auch wenn er sich gerade nicht
+   * wieder öffnen lässt, weil für das Gerät ein anderer Fall offen ist.
+   */
+  closedAs?: 'erledigt' | 'abgebrochen';
   /** „Später weitermachen“ */
   paused: boolean;
   /** Das Gerät hat einen verknüpften Schutz */
@@ -182,6 +187,7 @@ export function selectCaseFacts(s: CaseFactsSource, caseId: Id): CaseFacts | und
     caseId,
     status: c.status,
     closed: isClosed(c.status),
+    closedAs: c.status === 'erledigt' || c.status === 'abgebrochen' ? c.status : undefined,
     paused: !!c.pausedAt,
     hasContract,
     quote,

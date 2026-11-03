@@ -91,9 +91,10 @@ export function statusView(s: AppData, c: Case): StatusView {
   let headline: string = t.headline.hilfe;
   let text: string | undefined;
   let next: NextAction = 'fallakte';
-  // Erledigt lässt sich wieder öffnen („Problem besteht weiter“), abgebrochen nicht
-  if (f?.closed && can(f, 'problem_besteht_weiter')) headline = t.headline.erledigt;
-  else if (f?.closed) headline = t.headline.abgebrochen;
+  // Wie der Fall geschlossen ist, sagt die Tatsache, nicht die Regel zum Wiederöffnen: Ein
+  // erledigter Fall bleibt erledigt, auch wenn für das Gerät schon ein neuer offen ist (Nr. 13)
+  if (f?.closedAs === 'erledigt') headline = t.headline.erledigt;
+  else if (f?.closedAs === 'abgebrochen') headline = t.headline.abgebrochen;
   else if (can(f, 'selbst_zahlen_nach_ablehnung')) {
     headline = t.headline.abgelehnt(insurer);
     next = 'kosten';
