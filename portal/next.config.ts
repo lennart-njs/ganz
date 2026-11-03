@@ -6,6 +6,8 @@ import type { NextConfig } from 'next';
 const config: NextConfig = {
   turbopack: { root: path.join(__dirname, '..') },
   poweredByHeader: false,
+  // Kein Entwickler-Knopf im Bild, auch nicht in der Demo mit `next dev`
+  devIndicators: false,
 };
 
 export default config;

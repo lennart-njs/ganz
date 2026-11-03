@@ -447,7 +447,11 @@ export function seedRecords(now = Date.now()): SharedCaseRecord[] {
     const notes = chance(status === 'erledigt' ? 0.2 : 0.4)
       ? [{ id: `note_seed_${i}`, at: iso(t(0.22)), by: worker, text: pick(portalSeed.notes) }]
       : [];
-    const opened = status === 'neu' ? [] : [{ at: iso(t(0.07)), by: worker }];
+    // Gelesen: Bei „Wartet auf uns“ kam die letzte Nachricht danach, sonst ist alles gelesen
+    const opened =
+      status === 'neu'
+        ? []
+        : [{ at: iso(status === 'wartet_uns' ? t(0.27) : updatedAt), by: worker }];
     return {
       file,
       retailerEvents: events,

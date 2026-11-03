@@ -4,7 +4,9 @@ import 'server-only';
 
 import { redirect } from 'next/navigation';
 
-import type { RetailerAction, SharedCaseRecord } from '@/model/sharing';
+import type { AnonymousOutcome, DealerSettings, SettingsSection } from '@/model/portal';
+import type { RetailerAction, SharedCaseRecord, WorkflowAction } from '@/model/sharing';
+import type { BulkAction } from '@/server/backend/types';
 
 import { sessionToken } from './session';
 
@@ -14,6 +16,7 @@ export interface TenantInfo {
   id: string;
   name: string;
   userName: string;
+  memberId?: string;
 }
 
 async function call(path: string, init: RequestInit = {}): Promise<Response> {
@@ -53,6 +56,44 @@ export async function sendAction(id: string, action: RetailerAction): Promise<bo
     body: JSON.stringify(action),
   });
   return res.ok;
+}
+
+/** Notiz, Zuweisung oder Stand, nur im Portal */
+export async function sendWorkflow(id: string, action: WorkflowAction): Promise<boolean> {
+  const res = await call(`/api/v1/portal/faelle/${encodeURIComponent(id)}/bearbeitung`, {
+    method: 'POST',
+    body: JSON.stringify(action),
+  });
+  return res.ok;
+}
+
+export async function sendBulk(ids: string[], action: BulkAction): Promise<number> {
+  const res = await call('/api/v1/portal/sammelaktion', {
+    method: 'POST',
+    body: JSON.stringify({ ids, action }),
+  });
+  if (!res.ok) return 0;
+  return ((await res.json()) as { count: number }).count;
+}
+
+export async function getSettings(): Promise<{ tenant: TenantInfo; settings: DealerSettings }> {
+  const res = await call('/api/v1/portal/einstellungen');
+  if (!res.ok) throw new Error(`Backend ${res.status}`);
+  return res.json();
+}
+
+export async function saveSettings(section: SettingsSection, value: unknown): Promise<boolean> {
+  const res = await call('/api/v1/portal/einstellungen', {
+    method: 'PUT',
+    body: JSON.stringify({ section, value }),
+  });
+  return res.ok;
+}
+
+export async function getAnonymous(): Promise<AnonymousOutcome[]> {
+  const res = await call('/api/v1/portal/auswertung');
+  if (!res.ok) throw new Error(`Backend ${res.status}`);
+  return ((await res.json()) as { anonymous: AnonymousOutcome[] }).anonymous;
 }
 
 export async function login(

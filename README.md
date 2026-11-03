@@ -87,15 +87,21 @@ Der Import braucht `ANTHROPIC_API_KEY` in der Umgebung und schreibt einen Entwur
 
 Web-App in `portal/` (Next.js), im Look von machs.io. Sie liest die Fälle, die Haushalte in der App an ihren Händler senden („Fall an … senden“), und schickt Antworten zurück ins Gespräch.
 
+- **Fälle:** Warteschlangen (Neu, Wartet auf uns, Wartet auf Kundschaft, Termin, Erledigt), Suche nach Fallnummer, Name, Modell und Seriennummer, „Mir zugewiesen“, Liste oder Tafel (Karten ziehen), Fristenampel, Sammelaktionen.
+- **Fallakte:** Gespräch wie im Messenger, Antwortfeld mit Textbausteinen, Rückfrage, Terminvorschlag, Ersatzteil, Foto anfordern, interne Notiz. Rechts „Als Nächstes“, Gewährleistungsprüfung mit Entscheidung per Klick, Zuständig und Stand, Fallakte, Fotos, Zugriffe. Videocall sichtbar, ohne Verbindung.
+- **Auswertung:** Fälle pro Woche nach Ausgang, Anteil ohne Einsatz gelöst, Ersparnis, Durchlaufzeit, Bewertung, häufigste Fehlerbilder.
+- **Einstellungen:** Profil und Servicezeiten, Begrüßung und Abwesenheit, Textbausteine und Rückfragen, Team, Regeln (annehmen, zuweisen, Kaufbeleg, Gewährleistung, Fristen), Kundendienst, Benachrichtigungen, Datenschutz mit Zugriffsprotokoll, Schnittstellen.
+- **Live:** Neue Fälle und Nachrichten erscheinen ohne Neuladen, mit Hinweis. Tastenkürzel mit `?`.
+
 ```bash
 npx expo start
 ```
 
 ```bash
-cd portal && npm install && npm run dev
+cd portal && npm install && npm run build && npm start
 ```
 
-Dann http://localhost:3000 öffnen. Demo-Zugang: `demo@fruend.example`, Passwort `demo`. Das Portal holt die Daten vom laufenden Expo-Server (`GANZ_API_URL`, Standard `http://127.0.0.1:8081`). Ohne Telefon zeigt es zwei Beispielfälle. Rückfrage, Entscheidung, Betrieb und Stand erscheinen in der App beim nächsten Abruf (alle 15 Sekunden) im Gespräch des Falls. Details: `docs/BACKEND.md`.
+Dann http://localhost:3000 öffnen. Demo-Zugang: `demo@fruend.example` (Sandra K.), Passwort `demo`. Das Portal holt die Daten vom laufenden Expo-Server (`GANZ_API_URL`, Standard `http://127.0.0.1:8081`). Ohne Telefon zeigt es 42 Beispielfälle. Antworten erscheinen in der App nach höchstens 5 Sekunden im Gespräch des Falls. Für die Demo `npm start` statt `npm run dev`: ohne Entwickler-Hinweise im Bild. Beispielfälle ganz neu anlegen: `.data/ganz-backend.json` löschen. Details: `docs/BACKEND.md`.
 
 ## Prüfen
 

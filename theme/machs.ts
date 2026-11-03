@@ -28,6 +28,18 @@ export const machs = {
     shadow: 'rgba(20,32,56,.16)',
     borderControl: '#8A8D93',
     danger: '#C8372D',
+    dangerSoft: '#FBE7E5',
+    /** Fristenampel: knapp */
+    warn: '#8A5300',
+    warnSoft: '#FDF0D8',
+    ok: '#1D6B3A',
+    okSoft: '#E3F3E8',
+    /** Diagramme: Kategorien in fester Reihenfolge (geprüft auf Farbsehschwächen, dataviz) */
+    chart1: '#2A78D6',
+    chart2: '#EB6834',
+    chart3: '#1BAF7A',
+    chart4: '#EDA100',
+    chart5: '#E87BA4',
   },
   dark: {
     bg: '#111316',
@@ -54,6 +66,16 @@ export const machs = {
     shadow: 'rgba(0,0,0,.55)',
     borderControl: '#7E8288',
     danger: '#E5564B',
+    dangerSoft: '#3A1D1B',
+    warn: '#F2B45A',
+    warnSoft: '#36290F',
+    ok: '#6FCF8E',
+    okSoft: '#16301F',
+    chart1: '#3987E5',
+    chart2: '#D95926',
+    chart3: '#199E70',
+    chart4: '#C98500',
+    chart5: '#D55181',
   },
 } as const;
 

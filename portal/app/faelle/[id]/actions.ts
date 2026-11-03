@@ -1,56 +1,94 @@
 'use server';
 
-import { redirect } from 'next/navigation';
+import { revalidatePath } from 'next/cache';
 
-import type { RetailerAction } from '@/model/sharing';
+import { de } from '@/i18n/de';
+import { workflowStatuses, type WorkflowStatus } from '@/model/portal';
+import type { PartStatus, RetailerDecision } from '@/model/sharing';
 
-import { sendAction } from '../../../lib/api';
+import { sendAction, sendWorkflow } from '../../../lib/api';
 
-const back = (id: string, ok: boolean) =>
-  redirect(`/faelle/${encodeURIComponent(id)}?${ok ? 'ok' : 'fehler'}=${Date.now()}`);
-
+const t = de.portal.composer;
 const text = (form: FormData, key: string) => String(form.get(key) ?? '').trim();
 
-async function run(id: string, action: RetailerAction) {
-  back(id, await sendAction(id, action));
+export interface ComposerState {
+  ok?: boolean;
+  /** Zähler: jede Antwort ein neuer Stand, damit das Formular sich leert */
+  n: number;
+  message?: string;
 }
 
-export async function accept(id: string) {
-  await run(id, { type: 'annehmen' });
+/** Antwortfeld: Nachricht, interne Notiz, Rückfrage, Terminvorschlag, Ersatzteil */
+export async function compose(
+  id: string,
+  prev: ComposerState,
+  form: FormData,
+): Promise<ComposerState> {
+  const kind = text(form, 'kind');
+  let ok = false;
+  switch (kind) {
+    case 'nachricht':
+      ok = await sendAction(id, { type: 'nachricht', text: text(form, 'text') });
+      break;
+    case 'notiz':
+      ok = await sendWorkflow(id, { type: 'notiz', text: text(form, 'text') });
+      break;
+    case 'rueckfrage':
+      ok = await sendAction(id, {
+        type: 'rueckfrage',
+        question: text(form, 'question'),
+        options: text(form, 'options')
+          .split(',')
+          .map((x) => x.trim())
+          .filter(Boolean)
+          .slice(0, 4),
+      });
+      break;
+    case 'termin':
+      ok = await sendAction(id, {
+        type: 'termin',
+        partnerName: text(form, 'partner'),
+        slots: form
+          .getAll('slot')
+          .map((x) => String(x).trim())
+          .filter(Boolean)
+          .slice(0, 4),
+      });
+      break;
+    case 'ersatzteil':
+      ok = await sendAction(id, {
+        type: 'ersatzteil',
+        part: text(form, 'part'),
+        status: (text(form, 'partStatus') === 'geliefert' ? 'geliefert' : 'bestellt') as PartStatus,
+        eta: text(form, 'eta') || undefined,
+      });
+      break;
+  }
+  revalidatePath(`/faelle/${id}`);
+  return {
+    ok,
+    n: prev.n + 1,
+    message: ok ? (kind === 'notiz' ? t.saved : t.sent) : t.failed,
+  };
 }
 
-export async function ask(id: string, form: FormData) {
-  const options = text(form, 'options')
-    .split(',')
-    .map((x) => x.trim())
-    .filter(Boolean)
-    .slice(0, 4);
-  await run(id, { type: 'rueckfrage', question: text(form, 'question'), options });
-}
-
-export async function decide(id: string, form: FormData) {
-  await run(id, {
-    type: 'entscheidung',
-    decision: text(form, 'decision') as Extract<
-      RetailerAction,
-      { type: 'entscheidung' }
-    >['decision'],
-    note: text(form, 'note') || undefined,
-  });
-}
-
-export async function assign(id: string, form: FormData) {
-  await run(id, {
-    type: 'betrieb',
-    partnerName: text(form, 'partner'),
-    slot: text(form, 'slot') || undefined,
-  });
-}
-
-export async function report(id: string, form: FormData) {
-  await run(id, {
-    type: 'status',
-    status: text(form, 'status') as Extract<RetailerAction, { type: 'status' }>['status'],
-    note: text(form, 'note') || undefined,
-  });
+/** Ein Klick: annehmen, entscheiden, abschließen, zuweisen, Stand */
+export async function quick(id: string, form: FormData) {
+  const kind = text(form, 'kind');
+  if (kind === 'annehmen') await sendAction(id, { type: 'annehmen' });
+  if (kind === 'entscheidung') {
+    const decision = text(form, 'decision') as RetailerDecision;
+    if (['gewaehrleistung', 'kulanz', 'an_versicherer', 'abgelehnt'].includes(decision))
+      await sendAction(id, { type: 'entscheidung', decision });
+  }
+  if (kind === 'abschliessen') await sendAction(id, { type: 'status', status: 'abgeschlossen' });
+  if (kind === 'zuweisen') {
+    const who = text(form, 'assigneeId');
+    await sendWorkflow(id, { type: 'zuweisen', assigneeId: who || null });
+  }
+  if (kind === 'stand') {
+    const status = text(form, 'status') as WorkflowStatus;
+    if (workflowStatuses.includes(status)) await sendWorkflow(id, { type: 'stand', status });
+  }
+  revalidatePath(`/faelle/${id}`);
 }

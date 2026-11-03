@@ -382,3 +382,18 @@ Lennart: „Überall Erklärtexte entfernen. App und Webseite müssen selbsterkl
 - **Abruf alle 5 Sekunden** statt 15, damit es sich wie ein Chat anfühlt. Später Push.
 - **Bewertung** nach der Reparatur geht mit in die Akte (für die Sterne in der Auswertung).
 - **Text der Weitergabe** nennt jetzt auch „Deine Nachrichten an den Händler“ (Textversion 2026-11-3).
+
+## Portal komplett: Oberfläche (03.11.2026, Entscheidungen 33 bis 37)
+
+- **Startansicht „Offen“:** alle Fälle außer erledigten, das Dringendste oben (Frist zuerst, dann neueste). Beim Suchen zählen alle Warteschlangen.
+- **Fristenampel:** grün, gelb im letzten Viertel oder der letzten Stunde, rot überfällig. Nur für „Neu“ (erste Reaktion) und „Wartet auf uns“ (Antwort).
+- **Ungelesen:** blauer Punkt, wenn die Kundschaft nach dem letzten Öffnen geschrieben hat.
+- **Gespräch in der Fallakte** zeigt die Antworten des Händlers so, wie die Kundschaft sie in der App liest (Du-Form). Die Bedienung des Portals bleibt gesiezt.
+- **Gewährleistungsprüfung** rechnet ab dem Tag, an dem das Problem gemeldet wurde. Kulanz nur, wenn die Reparatur unter der Kulanzgrenze liegt. Nur ein Vorschlag, entschieden wird per Klick.
+- **„Als Nächstes“:** ein Knopf, der den Fall weiterbringt (annehmen, entscheiden, antworten, Termin vorschlagen, abschließen).
+- **Videocall** ist eine Bühne mit Zeitanzeige, Mikrofon, Kamera, Foto und Auflegen, ohne Verbindung (Entscheidung 35).
+- **Auswertung:** „Ohne Einsatz gelöst“ = selbst gelöst oder im Videocall gelöst. „Vermiedene Rücksendung“ = Reparatur beim Kunden statt Einschicken. Werte in den Einstellungen unter Kundendienst.
+- **Diagrammfarben** in `theme/machs.ts` (`chart1` bis `chart5`), geprüft auf Farbsehschwächen, mit Legende und Tabellenansicht.
+- **Schnittstellen:** 33 Werkzeuge in neun Gruppen (Warenwirtschaft, Kalender, Kommunikation, Versand, Shop, CRM, Zahlung, Bewertungen, Automatisierung). Logos von simple-icons (CC0), einfarbig. Für Marken ohne Logo dort ein Kürzel. Marken gehören ihren Inhabern. „Verbinden“ ist in der Demo nur ein Schalter.
+- **Zugriffsprotokoll:** Öffnet dieselbe Person die Akte innerhalb von zehn Minuten wieder (auch durch die Live-Aktualisierung), bleibt es ein Eintrag mit der letzten Zeit.
+- **Team:** Die Anmeldung ist immer Sandra K. (Entscheidung 36). Teammitglieder lassen sich anlegen, zuweisen und deaktivieren, anmelden können sie sich in der Demo nicht.

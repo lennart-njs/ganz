@@ -63,6 +63,9 @@ function latest(x: unknown, until: number): number {
   return 0;
 }
 
+/** Zugriffe derselben Person in diesem Abstand zählen als einer */
+const ACCESS_MERGE_MS = 10 * 60_000;
+
 /** Ab so viel Ruhe rücken die Beispielfälle an die Gegenwart heran */
 const STALE_MS = 6 * 3_600_000;
 
@@ -362,9 +365,19 @@ export class FileCaseStore implements CaseStore {
     const db = this.load();
     const r = db.shares[caseId]?.record;
     if (!r || r.file.recipient.id !== tenant.id) return null;
-    // Zugriffsprotokoll und „gelesen“
+    // Zugriffsprotokoll und „gelesen“. Wer die Akte offen hat (Live-Aktualisierung), steht einmal
+    // im Protokoll, mit der letzten Zeit.
     const at = now();
-    r.access = [...(r.access ?? []), { at, by: tenant.userName }].slice(-200);
+    const access = r.access ?? [];
+    const last = access.at(-1);
+    if (
+      last &&
+      last.by === tenant.userName &&
+      Date.parse(at) - Date.parse(last.at) < ACCESS_MERGE_MS
+    )
+      last.at = at;
+    else access.push({ at, by: tenant.userName });
+    r.access = access.slice(-200);
     if (r.workflow) r.workflow.seenAt = at;
     this.save(db);
     return r;

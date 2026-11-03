@@ -1,26 +1,35 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 
-import { demoConfig } from '@/config/demo.config';
+import { portalSeed } from '@/config/portal.demo';
 import { de } from '@/i18n/de';
-import type { RetailerDecision, RetailerStatus, SharedCaseRecord } from '@/model/sharing';
-import type { CaseEvent } from '@/model/types';
+import { fillTemplate, workflowStatuses } from '@/model/portal';
+import type { RetailerDecision, SharedPhoto } from '@/model/sharing';
 
+import { Avatar, SlaChip, WorkflowChip } from '../../../components/Chips';
+import { Composer } from '../../../components/Composer';
 import { Nav } from '../../../components/Nav';
-import { StateChip } from '../../../components/StateChip';
-import { getCase } from '../../../lib/api';
-import { formatDate, formatEuro, formatWhen, warrantyEnd } from '../../../lib/format';
-import { retailerState } from '../../../lib/state';
-import { accept, ask, assign, decide, report } from './actions';
+import { AutoSelect, OpenComposer, ScrollBox } from '../../../components/Small';
+import { getCase, getSettings } from '../../../lib/api';
+import { warrantyCheck } from '../../../lib/check';
+import { conversation, type ConvItem } from '../../../lib/conversation';
+import { formatDate, formatEuro, formatWhen } from '../../../lib/format';
+import { nextStep } from '../../../lib/next';
+import { sla } from '../../../lib/sla';
+import { decisionOf, member } from '../../../lib/view';
+import { compose, quick } from './actions';
 
 const t = de.portal;
 const f = t.file;
-const a = t.actions;
+const decisions: RetailerDecision[] = ['gewaehrleistung', 'kulanz', 'an_versicherer', 'abgelehnt'];
 
 export const dynamic = 'force-dynamic';
 
-const decisions: RetailerDecision[] = ['gewaehrleistung', 'kulanz', 'an_versicherer', 'abgelehnt'];
-const statuses: RetailerStatus[] = ['in_pruefung', 'ersatzteil_bestellt', 'abgeschlossen'];
+const time = new Intl.DateTimeFormat('de-DE', {
+  hour: '2-digit',
+  minute: '2-digit',
+  timeZone: 'Europe/Berlin',
+});
 
 function Facts({ items }: { items: [string, string | undefined][] }) {
   return (
@@ -28,7 +37,7 @@ function Facts({ items }: { items: [string, string | undefined][] }) {
       {items
         .filter((x): x is [string, string] => !!x[1])
         .map(([k, v]) => (
-          <div key={k} style={{ display: 'contents' }}>
+          <div key={k} className="contents">
             <dt>{k}</dt>
             <dd>{v}</dd>
           </div>
@@ -37,70 +46,140 @@ function Facts({ items }: { items: [string, string | undefined][] }) {
   );
 }
 
-/** Ereignis des Händlers als Zeile im Verlauf */
-function retailerLine(e: CaseEvent): string {
-  const p = e.payload;
-  const base = de.caseEvent[e.type];
-  const extra =
-    e.type === 'haendler_rueckfrage'
-      ? String(p.question ?? '')
-      : e.type === 'haendler_entscheidung'
-        ? de.sharing.eventDetail.decision[p.decision as RetailerDecision]
-        : e.type === 'haendler_betrieb'
-          ? [p.partnerName, p.slot].filter(Boolean).join(' · ')
-          : e.type === 'haendler_status'
-            ? de.sharing.eventDetail.status[p.status as RetailerStatus]
-            : '';
-  const note = p.note ? ` · ${String(p.note)}` : '';
-  return extra ? `${base}: ${extra}${note}` : `${base}${note}`;
+function Photo({ p, alt }: { p: SharedPhoto; alt: string }) {
+  const purpose = de.caseFile.photoPurpose[p.purpose] ?? p.purpose;
+  return (
+    <figure className="photo">
+      {p.jpegBase64 ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={`data:image/jpeg;base64,${p.jpegBase64}`} alt={alt} />
+      ) : (
+        <figcaption>
+          {purpose}
+          <br />
+          {formatWhen(p.takenAt)}
+        </figcaption>
+      )}
+    </figure>
+  );
 }
 
-function timeline(r: SharedCaseRecord) {
-  const app = r.file.timeline.map((x) => ({ at: x.at, text: x.label, who: x.actor, ours: false }));
-  const ours = r.retailerEvents.map((e) => ({
-    at: e.at,
-    text: retailerLine(e),
-    who: String(e.payload.by ?? e.actor.name ?? ''),
-    ours: true,
-  }));
-  const answers = r.file.answers.map((x) => ({
-    at: x.at,
-    text: f.answer(x.answer),
-    who: r.file.customer.name,
-    ours: false,
-  }));
-  return [...app, ...ours, ...answers].sort((x, y) => y.at.localeCompare(x.at));
+function Bubble({ x, customer }: { x: ConvItem; customer: string }) {
+  if (x.kind === 'system') {
+    const lines = x.texts;
+    const show = (l: { at: string; text: string }, i: number) => (
+      <li key={i}>
+        <span className="num">{time.format(new Date(l.at))}</span> {l.text}
+      </li>
+    );
+    return (
+      <div className="sys">
+        <span className="sys-day">{formatWhen(lines[0]!.at).split(' · ')[0]}</span>
+        {lines.length > 4 ? (
+          <details>
+            <summary>
+              <ul>{lines.slice(0, 2).map(show)}</ul>
+              <span className="more">{t.conversation.more(lines.length - 3)}</span>
+            </summary>
+            <ul>{lines.slice(2, -1).map((l, i) => show(l, i + 2))}</ul>
+            <ul>{show(lines.at(-1)!, lines.length - 1)}</ul>
+          </details>
+        ) : (
+          <ul>{lines.map(show)}</ul>
+        )}
+      </div>
+    );
+  }
+  if (x.kind === 'note') {
+    return (
+      <div className="msg note-msg">
+        <div className="bubble">
+          <span className="tag">{f.internal}</span>
+          <p>{x.text}</p>
+        </div>
+        <span className="meta">
+          {x.by} · {time.format(new Date(x.at))}
+        </span>
+      </div>
+    );
+  }
+  if (x.kind === 'customer') {
+    return (
+      <div className="msg them">
+        <div className="bubble">
+          {x.photo ? <Photo p={x.photo} alt={f.photoAlt('', formatWhen(x.at))} /> : null}
+          <p>{x.text}</p>
+        </div>
+        <span className="meta">
+          {customer} · {time.format(new Date(x.at))}
+          {x.answer ? ` · ${t.conversation.answer}` : ''}
+        </span>
+      </div>
+    );
+  }
+  return (
+    <div className="msg ours">
+      <div className="bubble">
+        <p>{x.text}</p>
+        {x.note ? <p className="sub">{x.note}</p> : null}
+        {x.options?.length ? (
+          <div className="opts">
+            {x.options.map((o) => (
+              <span key={o} className={`opt${x.chosen === o ? ' chosen' : ''}`}>
+                {x.chosen === o ? '✓ ' : ''}
+                {o}
+              </span>
+            ))}
+          </div>
+        ) : null}
+        {x.contact ? <span className="opt">{t.conversation.contact}</span> : null}
+      </div>
+      <span className="meta">
+        {x.by}
+        {x.auto ? ` · ${t.conversation.auto}` : ''} · {time.format(new Date(x.at))}
+      </span>
+    </div>
+  );
 }
 
-export default async function Fallakte({
-  params,
-  searchParams,
-}: {
-  params: Promise<{ id: string }>;
-  searchParams: Promise<{ ok?: string; fehler?: string }>;
-}) {
+export default async function Fallakte({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const { ok, fehler } = await searchParams;
-  const data = await getCase(id);
+  const [data, { settings }] = await Promise.all([getCase(id), getSettings()]);
   if (!data) notFound();
   const { tenant, record } = data;
   const file = record.file;
-  const state = retailerState(record);
-  const revoked = state === 'widerrufen';
-  const accepted = record.retailerEvents.length > 0;
-  const dealer = demoConfig.dealers.find((d) => d.id === tenant.id);
+  const revoked = !!record.revokedAt;
+  const status = revoked ? 'erledigt' : (record.workflow?.status ?? 'neu');
+  const due = sla(record, settings.rules);
+  const who = member(settings, record.workflow?.assigneeId);
+  const check = warrantyCheck(file, settings.rules);
+  const decided = decisionOf(record);
+  const next = nextStep(record, settings);
+  const items = conversation(record);
+  const first = file.customer.name.split(' ')[0] ?? file.customer.name;
+  const values = {
+    kunde: first,
+    fall: file.caseId,
+    haendler: settings.profile.shortName,
+    telefon: settings.profile.phone,
+  };
+  const templates = settings.messages.templates.map((x) => ({
+    ...x,
+    text: fillTemplate(x.text, values),
+  }));
   const partners = [
-    ...(dealer && 'service' in dealer && dealer.service ? [dealer.service.name] : []),
-    ...demoConfig.partners.map((p) => p.name),
+    ...(settings.service.ownService ? [settings.service.serviceName] : []),
+    ...settings.service.partners.map((p) => p.name),
   ];
-  const warranty = file.device.purchaseDate ? warrantyEnd(file.device.purchaseDate) : undefined;
+  const team = settings.team.filter((m) => m.active && m.role !== 'lesen');
+  const act = quick.bind(null, file.caseId);
   const g = file.guide;
   const done = g ? g.completed.length : 0;
 
   return (
     <>
-      <Nav dealer={tenant.name} />
-      <section className="panel chambray head">
+      <Nav dealer={tenant.name} user={tenant.userName} current="faelle" />
+      <section className="panel chambray head slim">
         <div className="wrap stack">
           <div className="chips">
             <Link className="back" href="/">
@@ -108,44 +187,29 @@ export default async function Fallakte({
             </Link>
           </div>
           <p className="eyebrow num">
-            {f.case(file.caseId)} · {formatWhen(file.sharedAt)}
+            {f.case(file.caseId)} · {f.shared} {formatWhen(file.sharedAt)}
           </p>
-          <h1 className="h1">{revoked ? f.case(file.caseId) : file.case.problemLabel}</h1>
-          <div className="chips">
-            <StateChip state={state} />
-            {revoked ? null : (
-              <>
+          <h1 className="h1 h1-case">{revoked ? f.case(file.caseId) : file.case.problemLabel}</h1>
+          {revoked ? (
+            <div className="chips">
+              <WorkflowChip status="erledigt" revoked />
+            </div>
+          ) : (
+            <div className="chips">
+              <WorkflowChip status={status} />
+              <SlaChip sla={due} />
+              <span className="chip">{file.customer.name}</span>
+              <span className="chip">
+                {file.device.manufacturer} {file.device.model}
+              </span>
+              {who ? (
                 <span className="chip">
-                  {file.device.manufacturer} {file.device.model}
+                  <Avatar name={who.name} size="sm" /> {who.name}
                 </span>
-                {warranty ? (
-                  <span className={`chip ${warranty.running ? 'accent' : 'muted'}`}>
-                    {f.warranty}{' '}
-                    {warranty.running
-                      ? f.warrantyRunning(warranty.until)
-                      : f.warrantyOver(warranty.until)}
-                  </span>
-                ) : null}
-                {file.protection ? (
-                  <span className="chip">
-                    {f.protection}: {file.protection.provider}
-                  </span>
-                ) : null}
-                {file.isExample ? <span className="chip muted">{t.example}</span> : null}
-              </>
-            )}
-          </div>
-          {ok ? (
-            <p className="flash" role="status">
-              <span className="dot" aria-hidden />
-              {a.saved}
-            </p>
-          ) : fehler ? (
-            <p className="flash bad" role="alert">
-              <span className="dot" aria-hidden />
-              {a.failed}
-            </p>
-          ) : null}
+              ) : null}
+              {file.isExample ? <span className="chip muted">{t.example}</span> : null}
+            </div>
+          )}
         </div>
       </section>
 
@@ -154,267 +218,266 @@ export default async function Fallakte({
           <p className="empty">{f.revoked}</p>
         ) : (
           <div className="file">
-            <div className="stack">
-              <div className="grid2">
-                <section className="card">
-                  <h2 className="h3">{f.customer}</h2>
-                  <p className="h2">{file.customer.name}</p>
-                  {file.customer.address ? (
-                    <p>
-                      {file.customer.address.street}
-                      <br />
-                      {file.customer.address.zip} {file.customer.address.city}
-                    </p>
-                  ) : null}
-                </section>
-                <section className="card">
-                  <h2 className="h3">{f.device}</h2>
-                  <Facts
-                    items={[
-                      [f.model, `${file.device.manufacturer} ${file.device.model}`],
-                      [f.materialNumber, file.device.materialNumber],
-                      [f.serialNumber, file.device.serialNumber],
-                      [
-                        f.purchased,
-                        file.device.purchaseDate ? formatDate(file.device.purchaseDate) : undefined,
-                      ],
-                    ]}
-                  />
-                </section>
-              </div>
+            <section className="card convcard" aria-label={f.conversation}>
+              <ScrollBox count={items.length} label={f.conversation}>
+                {items.length ? (
+                  items.map((x, i) => <Bubble key={i} x={x} customer={file.customer.name} />)
+                ) : (
+                  <p className="empty">{t.conversation.empty}</p>
+                )}
+              </ScrollBox>
+              <Composer
+                action={compose.bind(null, file.caseId)}
+                customer={first}
+                templates={templates}
+                questions={settings.messages.questions}
+                slots={settings.service.slots}
+                partners={partners}
+                parts={portalSeed.parts}
+                photoText={templates.find((x) => x.id === 'foto')?.text}
+                videoHref={`/faelle/${encodeURIComponent(file.caseId)}/videocall`}
+              />
+            </section>
 
-              {file.results.length ? (
+            <aside className="stack side">
+              {next ? (
+                <section className="card paper">
+                  <h2 className="h3">{f.next}</h2>
+                  {next.kind === 'annehmen' ? (
+                    <form action={act}>
+                      <input type="hidden" name="kind" value="annehmen" />
+                      <button className="btn btn-block" type="submit">
+                        {t.next.accept}
+                      </button>
+                    </form>
+                  ) : next.kind === 'entscheiden' ? (
+                    <form action={act}>
+                      <input type="hidden" name="kind" value="entscheidung" />
+                      <input type="hidden" name="decision" value={next.decision} />
+                      <button className="btn btn-block" type="submit">
+                        {t.check.confirm[next.decision]}
+                      </button>
+                    </form>
+                  ) : next.kind === 'antworten' ? (
+                    <OpenComposer what="antworten" label={t.next.reply} />
+                  ) : next.kind === 'termin' ? (
+                    <OpenComposer what="termin" label={t.next.termin} />
+                  ) : next.kind === 'abschliessen' ? (
+                    <form action={act}>
+                      <input type="hidden" name="kind" value="abschliessen" />
+                      <button className="btn btn-block" type="submit">
+                        {t.next.close}
+                      </button>
+                    </form>
+                  ) : (
+                    <p className="h2">{next.kind === 'warten' ? t.next.waiting : t.next.done}</p>
+                  )}
+                </section>
+              ) : null}
+
+              <section className="card">
+                <h2 className="h3">{t.check.title}</h2>
+                <div className="chips">
+                  <span className={`chip ${decided ? 'ink' : `verdict ${check.verdict}`}`}>
+                    {decided
+                      ? `${t.check.decided}: ${t.decisions[decided]}`
+                      : t.check.verdict[check.verdict]}
+                  </span>
+                  <span className={`chip ${check.proof ? 'ok' : 'warn'}`}>
+                    {t.check.proof} {check.proof ? t.check.proofYes : t.check.proofNo}
+                  </span>
+                </div>
+                <Facts
+                  items={[
+                    [
+                      f.purchased,
+                      file.device.purchaseDate && check.months !== undefined
+                        ? t.check.purchased(formatDate(file.device.purchaseDate), check.months)
+                        : t.check.unknown,
+                    ],
+                    [
+                      f.protection,
+                      file.protection
+                        ? `${file.protection.provider} · ${file.protection.product}`
+                        : undefined,
+                    ],
+                    [
+                      t.decisions.kulanz,
+                      check.verdict === 'kulanz'
+                        ? t.check.goodwillMax(formatEuro(settings.rules.goodwillMaxCents))
+                        : undefined,
+                    ],
+                  ]}
+                />
+                {decided ? null : (
+                  <details className="more-actions">
+                    <summary>{t.check.other}</summary>
+                    <div className="choices">
+                      {decisions
+                        .filter((d) => d !== check.verdict)
+                        .map((d) => (
+                          <form key={d} action={act}>
+                            <input type="hidden" name="kind" value="entscheidung" />
+                            <input type="hidden" name="decision" value={d} />
+                            <button className="btn btn-2 btn-sm" type="submit">
+                              {t.check.confirm[d]}
+                            </button>
+                          </form>
+                        ))}
+                    </div>
+                  </details>
+                )}
+              </section>
+
+              <section className="card">
+                <AutoSelect
+                  action={act}
+                  kind="zuweisen"
+                  name="assigneeId"
+                  label={f.assignee}
+                  value={record.workflow?.assigneeId ?? ''}
+                  options={[
+                    { value: '', label: t.list.unassigned },
+                    ...team.map((m) => ({ value: m.id, label: m.name })),
+                  ]}
+                />
+                <AutoSelect
+                  action={act}
+                  kind="stand"
+                  name="status"
+                  label={f.state}
+                  value={status}
+                  options={workflowStatuses.map((s) => ({ value: s, label: t.workflow[s] }))}
+                />
+              </section>
+
+              <section className="card">
+                <h2 className="h3">{f.customer}</h2>
+                <p className="h2">{file.customer.name}</p>
+                {file.customer.address ? (
+                  <p>
+                    {file.customer.address.street}
+                    <br />
+                    {file.customer.address.zip} {file.customer.address.city}
+                  </p>
+                ) : null}
+                {file.rating ? (
+                  <p className="stars" aria-label={f.rating(file.rating)}>
+                    {'★'.repeat(file.rating)}
+                    <span className="off">{'★'.repeat(5 - file.rating)}</span>
+                  </p>
+                ) : null}
+              </section>
+
+              <section className="card">
+                <h2 className="h3">{f.device}</h2>
+                <Facts
+                  items={[
+                    [f.model, `${file.device.manufacturer} ${file.device.model}`],
+                    [f.materialNumber, file.device.materialNumber],
+                    [f.serialNumber, file.device.serialNumber],
+                    [
+                      f.purchased,
+                      file.device.purchaseDate ? formatDate(file.device.purchaseDate) : undefined,
+                    ],
+                  ]}
+                />
+              </section>
+
+              {file.results.length || g || file.finding || file.quote ? (
                 <section className="card">
-                  <h2 className="h3">{f.result}</h2>
+                  <h2 className="h3">{f.details}</h2>
                   {file.results.map((r, i) => (
-                    <div key={i} className="stack" style={{ gap: 4 }}>
-                      <p className="h2">{r.component ?? r.displayMessage}</p>
+                    <div key={i} className="stack tight">
+                      <p className="label">{r.component ?? r.displayMessage}</p>
                       <div className="chips">
                         <span className="chip">{f.source[r.source]}</span>
                         <span className="chip">{f.confidence[r.confidence]}</span>
-                        {r.displayMessage && r.component ? (
-                          <span className="chip">„{r.displayMessage}“</span>
-                        ) : null}
                       </div>
                     </div>
                   ))}
-                </section>
-              ) : null}
-
-              {g ? (
-                <section className="card">
-                  <h2 className="h3">
-                    {f.guide} · {f.guideSteps(done, g.total)}
-                  </h2>
-                  <p className="h2">{g.title}</p>
-                  <div className="steps" aria-hidden>
-                    {Array.from({ length: g.total }, (_, i) => (
-                      <i
-                        key={i}
-                        className={
-                          i < done ? 'f' : g.abortedAt && i === g.abortedAt.step - 1 ? 'x' : ''
-                        }
-                      />
-                    ))}
-                  </div>
-                  <ul className="list">
-                    {g.completed.map((s, i) => (
-                      <li key={i}>{s}</li>
-                    ))}
-                    {g.abortedAt ? (
-                      <li className="x">{f.guideAborted(g.abortedAt.step, g.abortedAt.title)}</li>
-                    ) : null}
-                  </ul>
-                  {g.note ? (
-                    <p className="note">
-                      {f.note}: {g.note}
-                    </p>
-                  ) : null}
-                  <p className="row-sub">{g.source}</p>
-                </section>
-              ) : null}
-
-              {file.finding || file.quote || file.booking ? (
-                <div className="grid2">
-                  {file.finding ? (
-                    <section className="card">
-                      <h2 className="h3">{f.finding}</h2>
-                      <p className="h2">{file.finding.label}</p>
-                      <p className="row-sub">
-                        {file.finding.by} · {formatWhen(file.finding.at)}
+                  {g ? (
+                    <div className="stack tight">
+                      <p className="label">
+                        {f.guide}: {g.title} · {f.guideSteps(done, g.total)}
                       </p>
-                    </section>
+                      <div className="steps" aria-hidden>
+                        {Array.from({ length: g.total }, (_, i) => (
+                          <i
+                            key={i}
+                            className={
+                              i < done ? 'f' : g.abortedAt && i === g.abortedAt.step - 1 ? 'x' : ''
+                            }
+                          />
+                        ))}
+                      </div>
+                      {g.abortedAt ? (
+                        <p className="row-sub">
+                          {f.guideAborted(g.abortedAt.step, g.abortedAt.title)}
+                        </p>
+                      ) : null}
+                      {g.note ? (
+                        <p className="note">
+                          {f.note}: {g.note}
+                        </p>
+                      ) : null}
+                    </div>
+                  ) : null}
+                  {file.finding ? (
+                    <div className="stack tight">
+                      <p className="label">
+                        {f.finding}: {file.finding.label}
+                      </p>
+                      <p className="row-sub">{file.finding.by}</p>
+                    </div>
                   ) : null}
                   {file.quote ? (
-                    <section className="card">
-                      <h2 className="h3">{f.quote}</h2>
-                      <div className="money">
-                        <span>
-                          {f.repair}
-                          {file.quote.repair.partName ? ` · ${file.quote.repair.partName}` : ''}
-                        </span>
-                        <b className="num">{formatEuro(file.quote.repair.total)}</b>
-                        <span>{f.replacement}</span>
-                        <span className="num">{formatEuro(file.quote.replacement.total)}</span>
-                      </div>
-                    </section>
+                    <div className="money">
+                      <span>
+                        {f.repair}
+                        {file.quote.repair.partName ? ` · ${file.quote.repair.partName}` : ''}
+                      </span>
+                      <b className="num">{formatEuro(file.quote.repair.total)}</b>
+                      <span>{f.replacement}</span>
+                      <span className="num">{formatEuro(file.quote.replacement.total)}</span>
+                    </div>
                   ) : null}
-                  {file.booking ? (
-                    <section className="card">
-                      <h2 className="h3">{f.booking}</h2>
-                      <p className="h2">{file.booking.slotLabel}</p>
-                      <p className="row-sub">
-                        {file.booking.provider} · {file.booking.status}
-                      </p>
-                    </section>
-                  ) : null}
-                </div>
+                </section>
               ) : null}
 
               {file.photos.length ? (
                 <section className="card">
                   <h2 className="h3">{f.photos}</h2>
                   <div className="photos">
-                    {file.photos.map((p) => {
-                      const purpose = de.caseFile.photoPurpose[p.purpose] ?? p.purpose;
-                      return (
-                        <figure key={p.id} className="photo" style={{ margin: 0 }}>
-                          {p.jpegBase64 ? (
-                            // eslint-disable-next-line @next/next/no-img-element
-                            <img
-                              src={`data:image/jpeg;base64,${p.jpegBase64}`}
-                              alt={f.photoAlt(purpose, formatWhen(p.takenAt))}
-                            />
-                          ) : (
-                            <figcaption>
-                              {purpose}
-                              <br />
-                              {formatWhen(p.takenAt)}
-                            </figcaption>
-                          )}
-                        </figure>
-                      );
-                    })}
+                    {file.photos.map((p) => (
+                      <Photo
+                        key={p.id}
+                        p={p}
+                        alt={f.photoAlt(
+                          de.caseFile.photoPurpose[p.purpose] ?? p.purpose,
+                          formatWhen(p.takenAt),
+                        )}
+                      />
+                    ))}
                   </div>
                 </section>
               ) : null}
 
-              <section className="card">
-                <h2 className="h3">{f.timeline}</h2>
-                <ol className="log">
-                  {timeline(record).map((x, i) => (
-                    <li key={i}>
-                      <span className="tm">{formatWhen(x.at)}</span>
-                      <span>
-                        <b className={x.ours ? 'by' : undefined}>{x.text}</b>
-                        {x.who ? <span className="row-sub"> · {x.who}</span> : null}
-                      </span>
-                    </li>
-                  ))}
-                </ol>
-              </section>
-            </div>
-
-            <aside className="card paper sticky" aria-label={a.title}>
-              {accepted ? null : (
-                <form action={accept.bind(null, file.caseId)} className="act">
-                  <button className="btn btn-block" type="submit">
-                    {a.accept}
-                  </button>
-                </form>
-              )}
-
-              <form action={ask.bind(null, file.caseId)} className="act">
-                <div className="field">
-                  <label htmlFor="question">{a.question}</label>
-                  <input
-                    id="question"
-                    name="question"
-                    className="input"
-                    placeholder={a.questionPlaceholder}
-                    maxLength={500}
-                    required
-                  />
-                </div>
-                <div className="field">
-                  <label htmlFor="options">{a.optionsLabel}</label>
-                  <input
-                    id="options"
-                    name="options"
-                    className="input"
-                    placeholder={a.optionsPlaceholder}
-                    maxLength={200}
-                  />
-                </div>
-                <button className="btn btn-2 btn-sm" type="submit">
-                  {a.send}
-                </button>
-              </form>
-
-              <form action={decide.bind(null, file.caseId)} className="act">
-                <fieldset>
-                  <legend>{a.decision}</legend>
-                  <div className="choices">
-                    {decisions.map((d, i) => (
-                      <label key={d} className="choice">
-                        <input type="radio" name="decision" value={d} required={i === 0} />
-                        <span>{a.decisions[d]}</span>
-                      </label>
+              {record.access?.length ? (
+                <details className="card">
+                  <summary className="h3">
+                    {f.access} · {record.access.length}
+                  </summary>
+                  <ol className="log">
+                    {[...record.access].reverse().map((a, i) => (
+                      <li key={i}>
+                        <span className="tm">{formatWhen(a.at)}</span>
+                        <span>{a.by}</span>
+                      </li>
                     ))}
-                  </div>
-                </fieldset>
-                <div className="field">
-                  <label htmlFor="decision-note">{a.note}</label>
-                  <textarea id="decision-note" name="note" className="input" maxLength={500} />
-                </div>
-                <button className="btn btn-2 btn-sm" type="submit">
-                  {a.send}
-                </button>
-              </form>
-
-              <form action={assign.bind(null, file.caseId)} className="act">
-                <div className="field">
-                  <label htmlFor="partner">{a.partner}</label>
-                  <select id="partner" name="partner" className="input" required>
-                    {partners.map((p) => (
-                      <option key={p}>{p}</option>
-                    ))}
-                  </select>
-                </div>
-                <div className="field">
-                  <label htmlFor="slot">{a.slot}</label>
-                  <select id="slot" name="slot" className="input" defaultValue="">
-                    <option value="">{a.noSlot}</option>
-                    {demoConfig.slots.map((s) => (
-                      <option key={s}>{s}</option>
-                    ))}
-                  </select>
-                </div>
-                <button className="btn btn-2 btn-sm" type="submit">
-                  {a.send}
-                </button>
-              </form>
-
-              <form action={report.bind(null, file.caseId)} className="act">
-                <fieldset>
-                  <legend>{a.status}</legend>
-                  <div className="choices">
-                    {statuses.map((s, i) => (
-                      <label key={s} className="choice">
-                        <input type="radio" name="status" value={s} required={i === 0} />
-                        <span>{a.statuses[s]}</span>
-                      </label>
-                    ))}
-                  </div>
-                </fieldset>
-                <div className="field">
-                  <label htmlFor="status-note">{a.note}</label>
-                  <textarea id="status-note" name="note" className="input" maxLength={500} />
-                </div>
-                <button className="btn btn-2 btn-sm" type="submit">
-                  {a.send}
-                </button>
-              </form>
+                  </ol>
+                </details>
+              ) : null}
             </aside>
           </div>
         )}
