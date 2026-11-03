@@ -70,6 +70,8 @@ Lint prüft das ganze Repo. Eigene Regeln stehen im Plugin `ganz` in `eslint.con
 
 Jest hat zwei Projekte. `unit` prüft `model/` ohne React Native (Preset `jest-expo/node`), die Tests dazu liegen in `__tests__/model/`. `ui` prüft alles andere mit dem Preset `jest-expo`. `npx jest --selectProjects unit` startet nur die Unit-Tests.
 
+Alle Tests in `ui` laufen mit Fake Timers. Die Zeit läuft nur weiter, wenn ein Test sie weiterstellt. Router-Tests nehmen `APP` aus `test/app.ts`. Die Datei lädt alle Routen, bevor der erste Test startet. Kein Test braucht einen eigenen Timeout.
+
 ## Ordner
 
 - `app/` – Screens (Expo Router): `(onboarding)`, `(tabs)`, `geraet/`, `fall/` (modaler Stack)

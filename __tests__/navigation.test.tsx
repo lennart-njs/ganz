@@ -3,8 +3,7 @@ import { act, fireEvent, renderRouter, screen } from 'expo-router/testing-librar
 
 import { de } from '@/i18n/de';
 import { useAppStore } from '@/store/appStore';
-
-const APP = './app';
+import { APP } from '@/test/app';
 
 // '' ist das Gespräch des Falls, die anderen sind Vollbild-Schritte und Details
 const caseScreens = [

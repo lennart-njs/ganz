@@ -3,8 +3,8 @@ import { fireEvent, renderRouter, screen } from 'expo-router/testing-library';
 import { demoConfig } from '@/config/demo.config';
 import { de } from '@/i18n/de';
 import { useAppStore } from '@/store/appStore';
+import { APP } from '@/test/app';
 
-const APP = './app';
 const tap = (name: string | RegExp) => fireEvent.press(screen.getByRole('button', { name }));
 
 /** Fall nach dem Videocall mit Befund „Reparatur“ und Kostenvoranschlag */

@@ -5,8 +5,8 @@ import { guides } from '@/data/guides';
 import { de } from '@/i18n/de';
 import type { DeviceCategory } from '@/model/types';
 import { useAppStore } from '@/store/appStore';
+import { APP } from '@/test/app';
 
-const APP = './app';
 const t = de.chat;
 const tap = (name: string | RegExp) => fireEvent.press(screen.getByRole('button', { name }));
 

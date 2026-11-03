@@ -5,8 +5,8 @@ import { de } from '@/i18n/de';
 import { eventLabel } from '@/lib/caseEvents';
 import type { CaseEventType } from '@/model/types';
 import { useAppStore } from '@/store/appStore';
+import { APP } from '@/test/app';
 
-const APP = './app';
 const tap = (name: string | RegExp) => fireEvent.press(screen.getByRole('button', { name }));
 
 /** Ein Fall auf dem ganzen Golden Path und ein offener Pflege-Fall */

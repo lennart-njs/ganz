@@ -5,8 +5,8 @@ import { act, fireEvent, renderRouter, screen } from 'expo-router/testing-librar
 
 import { de } from '@/i18n/de';
 import { useAppStore } from '@/store/appStore';
+import { APP } from '@/test/app';
 
-const APP = './app';
 let taps = 0;
 const tap = async (name: string | RegExp) => {
   taps += 1;

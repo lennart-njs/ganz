@@ -4,8 +4,8 @@ import { act, fireEvent, renderRouter, screen } from 'expo-router/testing-librar
 import { de } from '@/i18n/de';
 import { services } from '@/services';
 import { useAppStore } from '@/store/appStore';
+import { APP } from '@/test/app';
 
-const APP = './app';
 const cameraMock = jest.requireMock('expo-camera').__permission;
 let taps = 0;
 const tap = async (name: string | RegExp) => {

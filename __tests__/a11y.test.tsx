@@ -4,8 +4,7 @@ import { StyleSheet } from 'react-native';
 import type { TestInstance } from 'test-renderer';
 
 import { useAppStore } from '@/store/appStore';
-
-const APP = './app';
+import { APP } from '@/test/app';
 
 /** Fall auf dem Golden Path bis zum Abschluss, dazu ein zweiter offener Fall */
 function world() {

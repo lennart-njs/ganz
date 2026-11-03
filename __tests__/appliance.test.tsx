@@ -8,8 +8,8 @@ import { statusView } from '@/lib/statusView';
 import type { DeviceCategory } from '@/model/types';
 import { services } from '@/services';
 import { useAppStore } from '@/store/appStore';
+import { APP } from '@/test/app';
 
-const APP = './app';
 const tap = (name: string | RegExp) => fireEvent.press(screen.getByRole('button', { name }));
 
 function setup(category: DeviceCategory) {

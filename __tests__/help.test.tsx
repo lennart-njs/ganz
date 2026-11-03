@@ -5,8 +5,8 @@ import { de } from '@/i18n/de';
 import { ConsentRequiredError } from '@/model/caseMachine';
 import { services } from '@/services';
 import { useAppStore } from '@/store/appStore';
+import { APP } from '@/test/app';
 
-const APP = './app';
 const tap = (name: string | RegExp) => fireEvent.press(screen.getByRole('button', { name }));
 const flush = async () => {
   for (let i = 0; i < 6; i++) await act(async () => {});

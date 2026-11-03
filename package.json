@@ -88,7 +88,10 @@
           "/design-system/",
           "/reference/",
           "<rootDir>/__tests__/model/"
-        ]
+        ],
+        "fakeTimers": {
+          "enableGlobally": true
+        }
       }
     ]
   }

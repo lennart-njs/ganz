@@ -5,8 +5,8 @@ import { act, fireEvent, renderRouter, screen } from 'expo-router/testing-librar
 import { guides } from '@/data/guides';
 import { de } from '@/i18n/de';
 import { createAppStore, useAppStore } from '@/store/appStore';
+import { APP } from '@/test/app';
 
-const APP = './app';
 const tap = (name: string | RegExp) => fireEvent.press(screen.getByRole('button', { name }));
 const ablauf = guides.ablauf;
 
