@@ -1,6 +1,7 @@
 /**
  * @jest-environment node
  */
+import fs from 'fs';
 import path from 'path';
 
 import { ESLint, type Linter } from 'eslint';
@@ -55,6 +56,7 @@ const OWN_RULES = [
   'ganz/farben-aus-theme',
   'ganz/text-aus-i18n',
   'ganz/text-in-ausdruecken',
+  'ganz/kein-status-vergleich',
   'no-restricted-imports',
 ];
 
@@ -64,8 +66,8 @@ const config: Linter.Config[] = require('../eslint.config.js');
 
 const eslint = new ESLint({ cwd: root, overrideConfigFile: true, overrideConfig: config });
 
-async function lint(file: string): Promise<[string, number][]> {
-  const [result] = await eslint.lintText(fixture, { filePath: path.join(root, file) });
+async function lint(file: string, source = fixture, linter = eslint): Promise<[string, number][]> {
+  const [result] = await linter.lintText(source, { filePath: path.join(root, file) });
   return result!.messages
     .filter((m: Linter.LintMessage) => m.ruleId && OWN_RULES.includes(m.ruleId))
     .map((m: Linter.LintMessage): [string, number] => [m.ruleId!, m.line])
@@ -114,5 +116,108 @@ describe('eigene Lint-Regeln', () => {
     const lib = await lint('lib/__lint-fixture__.tsx');
     expect(lib.map(([rule]) => rule)).toEqual(['ganz/farben-aus-theme', 'ganz/farben-aus-theme']);
     expect(await lint('theme/__lint-fixture__.tsx')).toEqual([]);
+  });
+});
+
+// Status-Vergleiche (Schritt 22): Screens fragen can() und die Fakten aus model/policies.
+const statusFixture = `import { useAppStore } from '@/store/appStore';
+
+export function useStatus(id: string, kind: string) {
+  const c = useAppStore((s) => s.cases[id])!;
+  const offen = c?.status === 'offen';
+  const nichtZu = 'erledigt' !== c.status;
+  const lose = c['status'] == 'abgelehnt';
+  const anfang = ['offen', 'selbsthilfe'].includes(c!.status);
+  switch (c.status) {
+    default:
+      break;
+  }
+  const geladen = c.loading.status === 'ok';
+  const art = kind === 'reparatur';
+  return { offen, nichtZu, lose, anfang, geladen, art, status: c.status };
+}
+`;
+const statusLines = statusFixture.split('\n');
+const statusLine = (snippet: string) => {
+  const i = statusLines.findIndex((l) => l.includes(snippet));
+  if (i < 0) throw new Error(`Nicht in der Vorlage: ${snippet}`);
+  return i + 1;
+};
+const STATUS = 'ganz/kein-status-vergleich';
+const statusHits = async (file: string, linter = eslint) =>
+  (await lint(file, statusFixture, linter)).filter(([rule]) => rule === STATUS);
+
+/** Dieselbe Konfiguration, für app/ mit einer eigenen Allowlist */
+const withAllowlist = (allow: unknown[]) =>
+  new ESLint({
+    cwd: root,
+    overrideConfigFile: true,
+    overrideConfig: [
+      ...config,
+      { files: ['app/**/*.{ts,tsx}'], rules: { [STATUS]: ['error', { allow }] } },
+    ],
+  });
+
+describe('kein Status-Vergleich in Screens', () => {
+  test('meldet ===, !==, ==, includes und switch auf .status in app/ und components/', async () => {
+    const expected = [
+      "c?.status === 'offen'",
+      "'erledigt' !== c.status",
+      "c['status'] == 'abgelehnt'",
+      '.includes(c!.status)',
+      'switch (c.status)',
+      "c.loading.status === 'ok'",
+    ].map((snippet): [string, number] => [STATUS, statusLine(snippet)]);
+    expect(await statusHits('app/__status-fixture__.tsx')).toEqual(expected);
+    expect(await statusHits('components/__status-fixture__.tsx')).toEqual(expected);
+  });
+
+  test('ein Vergleich ohne .status und der Wert selbst sind erlaubt, lib/ und model/ sind frei', async () => {
+    const hits = await statusHits('app/__status-fixture__.tsx');
+    for (const snippet of ["kind === 'reparatur'", 'status: c.status']) {
+      expect(hits.filter(([, line]) => line === statusLine(snippet))).toEqual([]);
+    }
+    expect(await statusHits('lib/__status-fixture__.tsx')).toEqual([]);
+    expect(await statusHits('model/__status-fixture__.ts')).toEqual([]);
+  });
+
+  test('die Allowlist nimmt einen Ausdruck mit Grund aus und meldet Einträge ohne Treffer', async () => {
+    const file = 'app/__status-fixture__.tsx';
+    const linter = withAllowlist([
+      { file, code: "c.loading.status === 'ok'", reason: 'Ladezustand, kein Status eines Falls.' },
+      { file, code: "c.status === 'gibt es nicht'", reason: 'Steht nicht im Code der Vorlage.' },
+      {
+        file: 'app/andere.tsx',
+        code: "c?.status === 'offen'",
+        reason: 'Gilt für eine andere Datei.',
+      },
+    ]);
+    const [result] = await linter.lintText(statusFixture, { filePath: path.join(root, file) });
+    const own = result!.messages.filter((m) => m.ruleId === STATUS);
+    expect(own.map((m) => m.line)).not.toContain(statusLine("c.loading.status === 'ok'"));
+    expect(own.map((m) => m.line)).toContain(statusLine("c?.status === 'offen'"));
+    expect(own.filter((m) => m.messageId === 'unbenutzt').map((m) => m.message)).toEqual([
+      expect.stringContaining("c.status === 'gibt es nicht'"),
+    ]);
+  });
+
+  test('ein Eintrag ohne Grund ist ein Fehler in der Konfiguration', async () => {
+    const file = 'app/__status-fixture__.tsx';
+    const linter = withAllowlist([{ file, code: "c.loading.status === 'ok'" }]);
+    await expect(
+      linter.lintText(statusFixture, { filePath: path.join(root, file) }),
+    ).rejects.toThrow(/kein-status-vergleich/);
+  });
+
+  test('die Allowlist im Repo: jeder Eintrag hat eine Datei, die es gibt, und einen Grund', () => {
+    const entries = config.flatMap((block) => {
+      const setting = block.rules?.[STATUS];
+      return Array.isArray(setting) ? ((setting[1] as { allow?: unknown[] })?.allow ?? []) : [];
+    }) as { file: string; code: string; reason: string }[];
+    for (const e of entries) {
+      expect(fs.existsSync(path.join(root, e.file))).toBe(true);
+      expect(fs.readFileSync(path.join(root, e.file), 'utf8')).toContain(e.code);
+      expect(e.reason.length).toBeGreaterThanOrEqual(10);
+    }
   });
 });

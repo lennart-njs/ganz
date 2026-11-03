@@ -223,12 +223,119 @@ const textInAusdruecken = {
   },
 };
 
+// Status-Vergleiche gehören in die Regeln (model/policies, Schritt 22). Screens fragen can().
+const COMPARISON = new Set(['===', '!==', '==', '!=']);
+
+/** x.status, x?.status oder x['status'] */
+function isStatusMember(node) {
+  let n = node;
+  while (n && ['ChainExpression', 'TSNonNullExpression', 'TSAsExpression'].includes(n.type)) {
+    n = n.expression;
+  }
+  if (!n || n.type !== 'MemberExpression') return false;
+  if (!n.computed) return n.property.type === 'Identifier' && n.property.name === 'status';
+  return isString(n.property) && n.property.value === 'status';
+}
+
+const squash = (s) => s.replace(/\s+/g, ' ').trim();
+
+const keinStatusVergleich = {
+  meta: {
+    type: 'problem',
+    docs: {
+      description:
+        'Kein Vergleich mit .status in Screens und Komponenten. Was erlaubt ist, sagen can() und die Fakten aus model/policies.',
+    },
+    messages: {
+      vergleich:
+        'Kein Status-Vergleich in Screens. Frag can() oder availableActions() aus model/policies/actions.ts oder die Fakten aus caseFacts.ts.',
+      unbenutzt:
+        'Eintrag in der Allowlist ohne Treffer: {{code}}. Entferne ihn aus eslint.config.js.',
+    },
+    schema: [
+      {
+        type: 'object',
+        properties: {
+          allow: {
+            type: 'array',
+            items: {
+              type: 'object',
+              properties: {
+                file: { type: 'string', minLength: 1 },
+                code: { type: 'string', minLength: 1 },
+                reason: { type: 'string', minLength: 10 },
+              },
+              required: ['file', 'code', 'reason'],
+              additionalProperties: false,
+            },
+          },
+        },
+        additionalProperties: false,
+      },
+    ],
+  },
+  create(context) {
+    // Pfad relativ zu dieser Datei, also zum Repo, egal von wo ESLint läuft
+    const file = path.relative(__dirname, context.filename).split(path.sep).join('/');
+    const allow = (context.options[0]?.allow ?? []).filter((entry) => entry.file === file);
+    const used = new Set();
+    const check = (node) => {
+      const code = squash(context.sourceCode.getText(node));
+      const entry = allow.find((e) => squash(e.code) === code);
+      if (entry) used.add(entry);
+      else context.report({ node, messageId: 'vergleich' });
+    };
+    return {
+      BinaryExpression(node) {
+        if (!COMPARISON.has(node.operator)) return;
+        if (isStatusMember(node.left) || isStatusMember(node.right)) check(node);
+      },
+      SwitchStatement(node) {
+        if (isStatusMember(node.discriminant)) check(node.discriminant);
+      },
+      // ['offen', 'selbsthilfe'].includes(c.status) ist auch ein Vergleich
+      CallExpression(node) {
+        const callee = node.callee;
+        if (
+          callee.type === 'MemberExpression' &&
+          !callee.computed &&
+          callee.property.name === 'includes' &&
+          node.arguments.some(isStatusMember)
+        ) {
+          check(node);
+        }
+      },
+      'Program:exit'(node) {
+        for (const entry of allow) {
+          if (!used.has(entry)) {
+            context.report({ node, messageId: 'unbenutzt', data: { code: entry.code } });
+          }
+        }
+      },
+    };
+  },
+};
+
+/**
+ * Status-Vergleiche, die keine Regel eines Falls oder Termins sind. Je Eintrag: Datei, der
+ * Ausdruck genau wie im Code und ein Grund. Die Liste soll leer bleiben. Ein Eintrag ohne Treffer
+ * meldet die Regel selbst.
+ */
+const STATUS_ALLOWLIST = [
+  {
+    file: 'components/app/RecoveryScreen.tsx',
+    code: "store.loading.getState().status === 'ok'",
+    reason: 'Ladezustand des gespeicherten Stands (Schritt 19), kein Status eines Falls.',
+  },
+];
+
 const ganz = {
   meta: { name: 'ganz' },
   rules: {
     'farben-aus-theme': farbenAusTheme,
     'text-aus-i18n': textAusI18n,
     'text-in-ausdruecken': textInAusdruecken,
+    'kein-status-vergleich': keinStatusVergleich,
   },
 };
 
@@ -239,8 +346,8 @@ module.exports = defineConfig([
     ignores: ['dist/*', '.expo/*', 'design-system/*', 'reference/*', 'expo-env.d.ts'],
   },
   {
-    // Werkzeuge laufen in Node, nicht in der App.
-    files: ['scripts/**/*.js'],
+    // Werkzeuge und diese Konfiguration laufen in Node, nicht in der App.
+    files: ['scripts/**/*.js', 'eslint.config.js'],
     languageOptions: {
       sourceType: 'commonjs',
       globals: globals.node,
@@ -262,6 +369,8 @@ module.exports = defineConfig([
     rules: {
       'ganz/text-aus-i18n': 'error',
       'ganz/text-in-ausdruecken': 'error',
+      // Keine Status-Vergleiche in Screens (Schritt 22). Ausnahmen nur mit Grund.
+      'ganz/kein-status-vergleich': ['error', { allow: STATUS_ALLOWLIST }],
     },
   },
   {

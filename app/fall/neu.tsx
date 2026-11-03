@@ -14,6 +14,7 @@ import { chatLimits } from '@/lib/chat/limits';
 import { hasProgress } from '@/lib/caseView';
 import { deviceTitle } from '@/lib/devices';
 import { reportDisplayMessage } from '@/lib/problem';
+import { isClosed } from '@/model/caseMachine';
 import type { CaseEntry, Id } from '@/model/types';
 import { selectOpenCaseForDevice, useAppStore } from '@/store/appStore';
 import { useTheme } from '@/theme';
@@ -82,11 +83,7 @@ export default function ProblemMelden() {
       s.runCommand(open.id, 'abbrechen', { cancelReason: de.thread.newProblemReason });
     }
     const reuse = [draft.current ? s.cases[draft.current] : undefined, open].find(
-      (x) =>
-        x &&
-        x.deviceId === device!.id &&
-        !hasProgress(s, x) &&
-        !['abgebrochen', 'erledigt'].includes(x.status),
+      (x) => x && x.deviceId === device!.id && !hasProgress(s, x) && !isClosed(x.status),
     );
     if (reuse) {
       s.updateCase(reuse.id, { entry, problemLabel });

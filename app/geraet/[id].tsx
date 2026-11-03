@@ -20,6 +20,7 @@ import { formatDateTime, formatEuro, formatMonthYear } from '@/i18n/format';
 import { hasGuides } from '@/lib/appliance';
 import { caseProgressLabel, caseStatusLabel, deviceStatusLabel, resumeHref } from '@/lib/caseView';
 import { deviceTitle, getManufacturer } from '@/lib/devices';
+import { isClosed } from '@/model/caseMachine';
 import { selectDevice, selectOpenCaseForDevice, useAppStore } from '@/store/appStore';
 
 const t = de.device;
@@ -162,11 +163,7 @@ export default function GeraetDetail() {
               title={c.problemLabel}
               sub={de.common.dot(caseStatusLabel(c.status), formatDateTime(c.createdAt))}
               onPress={() =>
-                router.push(
-                  c.status === 'erledigt' || c.status === 'abgebrochen'
-                    ? `/fall/${c.id}/fallakte`
-                    : resumeHref(state, c),
-                )
+                router.push(isClosed(c.status) ? `/fall/${c.id}/fallakte` : resumeHref(state, c))
               }
             />
           ))
