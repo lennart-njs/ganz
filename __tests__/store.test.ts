@@ -1,9 +1,9 @@
 import type { StateStorage } from 'zustand/middleware';
 
 import { de } from '@/i18n/de';
-import { ConsentRequiredError } from '@/model/caseMachine';
 import { createAppStore, selectCaseEvents, selectOpenCases } from '@/store/appStore';
 import type { StoreEnv } from '@/store/env';
+import { unwrap } from '@/test/result';
 
 function memoryStorage(): StateStorage & { data: Map<string, string> } {
   const data = new Map<string, string>();
@@ -64,9 +64,11 @@ describe('Store', () => {
     const s = () => store.getState();
     const c = s().createCase({ deviceId: 'd', entry: 'foto', problemLabel: 'x' });
     s().runCommand(c.id, 'hilfe_holen');
-    expect(() => s().runCommand(c.id, 'schaden_melden', { contractId: 'k-1' })).toThrow(
-      ConsentRequiredError,
-    );
+    expect(s().runCommand(c.id, 'schaden_melden', { contractId: 'k-1' })).toEqual({
+      ok: false,
+      refusal: { code: 'bestaetigung', purpose: 'weitergabe_versicherer' },
+    });
+    expect(s().cases[c.id]?.status).toBe('eskaliert');
     const consent = s().grantConsent({
       caseId: c.id,
       purpose: 'weitergabe_versicherer',
@@ -75,7 +77,7 @@ describe('Store', () => {
       dataCategories: ['Fotos', 'Protokoll', 'Befund'],
       textVersion: '1',
     });
-    expect(s().runCommand(c.id, 'schaden_melden', { contractId: 'k-1' }).status).toBe(
+    expect(unwrap(s().runCommand(c.id, 'schaden_melden', { contractId: 'k-1' })).status).toBe(
       'freigabe_noetig',
     );
     s().revokeConsent(consent.id);
@@ -236,5 +238,61 @@ describe('startGuide: nie zwei offene Anleitungen (B-05, R-06)', () => {
     expect(open(s, id)).toEqual([]);
     // Ohne erledigten Schritt ist das kein Fortschritt, der nächste Versuch ersetzt wieder
     expect(s().openCaseFor('d-1', 'symptom', 'Tür geht nicht auf').art).toBe('ersetzt');
+  });
+});
+
+describe('Befehle ohne Absturz: Result statt Exception', () => {
+  const setup = () => {
+    const store = createAppStore(memoryStorage(), testEnv());
+    return { store, s: () => store.getState() };
+  };
+  const unknown = { code: 'unbekannt', what: 'fall', id: 'GS-99999' };
+
+  test('eine unbekannte Fallnummer wird abgelehnt, ohne etwas zu schreiben', () => {
+    const { s } = setup();
+    const before = s().events.length;
+    expect(s().runCommand('GS-99999', 'hilfe_holen')).toEqual({ ok: false, refusal: unknown });
+    expect(s().escalate('GS-99999')).toEqual({ ok: false, refusal: unknown });
+    expect(s().pauseCase('GS-99999')).toEqual({ ok: false, refusal: unknown });
+    expect(s().resumeCase('GS-99999')).toEqual({ ok: false, refusal: unknown });
+    expect(s().events).toHaveLength(before);
+    expect(s().cases).toEqual({});
+  });
+
+  test('ein verbotener Übergang wird abgelehnt, Fall und Akte bleiben', () => {
+    const { s } = setup();
+    const c = s().createCase({ deviceId: 'd-1', entry: 'foto', problemLabel: 'x' });
+    unwrap(s().runCommand(c.id, 'hilfe_holen'));
+    unwrap(s().runCommand(c.id, 'selbst_zahlen'));
+    const before = { case: s().cases[c.id], events: s().events.length };
+    expect(s().runCommand(c.id, 'abbrechen', { cancelReason: 'x' })).toEqual({
+      ok: false,
+      refusal: { code: 'uebergang', from: 'in_reparatur', command: 'abbrechen' },
+    });
+    expect(s().cases[c.id]).toBe(before.case);
+    expect(s().events).toHaveLength(before.events);
+  });
+
+  test('Hilfe holen gibt den neuen Stand zurück, ein zweites Mal wird abgelehnt', () => {
+    const { s } = setup();
+    const c = s().createCase({ deviceId: 'd-1', entry: 'foto', problemLabel: 'x' });
+    expect(unwrap(s().escalate(c.id)).status).toBe('eskaliert');
+    expect(s().escalate(c.id)).toEqual({
+      ok: false,
+      refusal: { code: 'uebergang', from: 'eskaliert', command: 'hilfe_holen' },
+    });
+  });
+
+  test('ein abgeschlossener Fall lässt sich nicht pausieren', () => {
+    const { s } = setup();
+    const c = s().createCase({ deviceId: 'd-1', entry: 'foto', problemLabel: 'x' });
+    expect(unwrap(s().pauseCase(c.id)).pausedAt).toBeDefined();
+    unwrap(s().runCommand(c.id, 'abbrechen', { cancelReason: 'x' }));
+    const events = s().events.length;
+    expect(s().pauseCase(c.id)).toEqual({
+      ok: false,
+      refusal: { code: 'regel', action: 'pausieren' },
+    });
+    expect(s().events).toHaveLength(events);
   });
 });

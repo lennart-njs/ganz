@@ -417,3 +417,11 @@ Annahmen, die ich beim Bauen getroffen habe. Jede lässt sich ändern.
 - **Fortschritt einer Anleitung:** `hasProgress` zählt jetzt ein Ergebnis statt `endedAt`. Eine Anleitung, die ohne erledigten Schritt für ein anderes Problem endete, ist kein Fortschritt. Der Stift bleibt also, und der nächste Versuch ersetzt den Fall wieder. Bisher hatte jede beendete Anleitung ein Ergebnis, für gespeicherte Stände ändert sich nichts.
 - **Im Gespräch** erscheint eine so beendete Anleitung ohne Schritt nicht mehr als Angebot, sonst stünden zwei Angebote da. Mit erledigtem Schritt bleibt sie im Verlauf stehen, ohne Ergebniszeile. In der Fallakte steht beides.
 - **`STORE_VERSION` bleibt 1:** Kein neues Feld und kein neuer Wert. `replaced` steht in der Nutzlast eines Ereignisses, die das Schema als freien Datensatz prüft.
+
+## Schritt 24: Befehle ohne Absturz
+
+- **`Result` in `model/result.ts`:** `{ ok: true, value }` oder `{ ok: false, refusal }`, mit `ok()` und `refuse()`. Die Ablehnung (`Refusal`) nennt nur Schlüssel: `unbekannt` (Fall, Anleitung, Call, Termin oder Betrieb mit Nummer), `uebergang` (Status und Befehl), `regel` (Aktion aus `model/policies/actions.ts`), `bestaetigung` (Zweck), `vertrag`, `schadenfall` und `nur_betrieb` (Bauteil). Kein Satz für die Oberfläche, den wählt die App.
+- **Die reinen Funktionen bleiben:** `applyCommand` wirft weiter `TransitionError` und `ConsentRequiredError`, mit denselben Meldungen. Neu sind `checkCommand` (prüft, ohne zu rechnen) und `tryApplyCommand` (prüft, dann rechnet). `applyCommand` nutzt dieselbe Prüfung. So gibt es die Regeln der Status-Maschine nur einmal.
+- **Fall-Befehle im Store:** `runCommand`, `escalate`, `pauseCase` und `resumeCase` liefern `Result<Case>`. Eine unbekannte Fallnummer lehnen sie ab, statt „Fall nicht gefunden“ zu werfen. `escalate` ist jetzt `runCommand(…, 'hilfe_holen')`: Ohne erlaubten Übergang bleibt es ohne Wirkung, wie bisher, sagt das aber.
+- **Pausieren** fragt `can(facts, 'pausieren')`. Einen abgeschlossenen Fall pausiert der Store nicht mehr. Das Schließen-Sheet hat das schon vorher geprüft.
+- **`unwrap` nur für Tests** (`test/result.ts`): Eine Ausgangslage, die abgelehnt wird, ist ein Fehler im Test. In der App gibt es kein `unwrap`.

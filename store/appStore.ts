@@ -8,7 +8,6 @@ import { de } from '@/i18n/de';
 import { caseAppliance, caseCategory, findingPattern } from '@/lib/appliance';
 import { notifications } from '@/services/notifications';
 import {
-  applyCommand,
   canStartVideoCall,
   canTransition,
   ConsentRequiredError,
@@ -18,6 +17,7 @@ import {
   pauseCase as pause,
   resumeCase as resume,
   TransitionError,
+  tryApplyCommand,
   type CaseCommand,
   type CommandContext,
   type CommandResult,
@@ -30,6 +30,7 @@ import {
   type OpenCaseArt,
   type OpenCaseOptions,
 } from '@/model/policies/openCase';
+import { ok, refuse, type Refused, type Result } from '@/model/result';
 import type {
   Booking,
   Cents,
@@ -169,7 +170,11 @@ export interface AppActions {
     problemLabel: string,
     options?: OpenCaseOptions,
   ) => OpenCaseResult;
-  runCommand: (caseId: Id, command: CaseCommand, options?: CommandOptions) => Case;
+  /**
+   * Befehl der Status-Maschine. Erst die Prüfung, dann Fall und Ereignisse in einem set.
+   * Verbotene Übergänge und fehlende Bestätigungen lehnt es ab, statt zu werfen.
+   */
+  runCommand: (caseId: Id, command: CaseCommand, options?: CommandOptions) => Result<Case>;
   /** Ändert Einstieg oder Bezeichnung eines Falls, solange er offen ist */
   updateCase: (caseId: Id, patch: Partial<Pick<Case, 'entry' | 'problemLabel'>>) => void;
   /** Entfernt einen Fall ohne Inhalt, siehe isEmptyCase in model/policies/openCase.ts */
@@ -185,8 +190,8 @@ export interface AppActions {
    * Anleitung schon, geht sie weiter. Eine andere offene Anleitung des Falls endet.
    */
   startGuide: (caseId: Id, guideId: string) => GuideRun;
-  /** Hilfe holen, wenn der Status es erlaubt. Sonst ohne Wirkung. */
-  escalate: (caseId: Id) => void;
+  /** Hilfe holen, wenn der Status es erlaubt. Sonst abgelehnt, ohne Wirkung. */
+  escalate: (caseId: Id) => Result<Case>;
   /** Fragt einen Videocall an. Nur mit bestätigter Weitergabe an die Fachkraft (B-19). */
   requestVideoCall: (caseId: Id, screenshotsConsentId?: Id) => VideoSession;
   /** Ergebnis des Warteraums oder Ende des Calls */
@@ -232,8 +237,9 @@ export interface AppActions {
   confirmSafety: (runId: Id, step: number) => void;
   /** Beendet die Anleitung. „Geht nicht“ speichert den Abbruchschritt und die Notiz (B-06). */
   finishGuide: (runId: Id, outcome: NonNullable<GuideRun['outcome']>, note?: string) => void;
-  pauseCase: (caseId: Id) => void;
-  resumeCase: (caseId: Id) => void;
+  /** „Später weitermachen“, solange der Fall nicht abgeschlossen ist */
+  pauseCase: (caseId: Id) => Result<Case>;
+  resumeCase: (caseId: Id) => Result<Case>;
   grantConsent: (input: NewConsent) => Consent;
   revokeConsent: (consentId: Id) => void;
   addEvent: (event: Omit<CaseEvent, 'id' | 'at'>) => CaseEvent;
@@ -280,6 +286,25 @@ export function createAppStore(storage: StateStorage = AsyncStorage, env: StoreE
             cases: { ...s.cases, [result.case.id]: result.case },
             events: [...s.events, ...result.events],
           }));
+
+        /** Ablehnung für eine Fallnummer, die es nicht gibt */
+        const missingCase = (caseId: Id): Refused =>
+          refuse({ code: 'unbekannt', what: 'fall', id: caseId });
+
+        /** Rechnet einen Befehl aus, ohne zu schreiben. Schreiben: commit. */
+        const draftCommand = (
+          c: Case,
+          command: CaseCommand,
+          options: CommandOptions = {},
+          consents: readonly Consent[] = get().consents,
+        ): Result<CommandResult> =>
+          tryApplyCommand(c, command, {
+            ...options,
+            actor: options.actor ?? householdActor(),
+            now: env.now(),
+            newId: env.newId,
+            consents,
+          });
 
         const getCase = (caseId: Id): Case => {
           const c = get().cases[caseId];
@@ -464,15 +489,12 @@ export function createAppStore(storage: StateStorage = AsyncStorage, env: StoreE
           },
 
           runCommand: (caseId, command, options = {}) => {
-            const result = applyCommand(getCase(caseId), command, {
-              ...options,
-              actor: options.actor ?? householdActor(),
-              now: env.now(),
-              newId: env.newId,
-              consents: get().consents,
-            });
-            commit(result);
-            return result.case;
+            const c = get().cases[caseId];
+            if (!c) return missingCase(caseId);
+            const result = draftCommand(c, command, options);
+            if (!result.ok) return result;
+            commit(result.value);
+            return ok(result.value.case);
           },
 
           updateCase: (caseId, patch) =>
@@ -873,7 +895,11 @@ export function createAppStore(storage: StateStorage = AsyncStorage, env: StoreE
               dataCategories: [...de.consentData.versicherer],
               textVersion,
             });
-            return get().runCommand(caseId, 'schaden_melden', { contractId: contract.id });
+            const reported = get().runCommand(caseId, 'schaden_melden', {
+              contractId: contract.id,
+            });
+            if (!reported.ok) throw new TransitionError(c.status, 'schaden_melden');
+            return reported.value;
           },
 
           requestBooking: ({ caseId, kind, partnerId, slotLabel, selfPay, partName }) => {
@@ -888,7 +914,8 @@ export function createAppStore(storage: StateStorage = AsyncStorage, env: StoreE
             if (!partner) throw new Error(`Betrieb nicht gefunden: ${partnerId}`);
             let c = getCase(caseId);
             if (selfPay && canTransition(c.status, 'selbst_zahlen')) {
-              c = get().runCommand(caseId, 'selbst_zahlen');
+              const paid = get().runCommand(caseId, 'selbst_zahlen');
+              if (paid.ok) c = paid.value;
             }
             const provider = { id: partner.id, kind: 'betrieb' as const, name: partner.name };
             get().grantConsent({
@@ -1076,24 +1103,26 @@ export function createAppStore(storage: StateStorage = AsyncStorage, env: StoreE
             });
           },
 
-          escalate: (caseId) => {
-            const c = getCase(caseId);
-            if (canTransition(c.status, 'hilfe_holen')) get().runCommand(caseId, 'hilfe_holen');
+          escalate: (caseId) => get().runCommand(caseId, 'hilfe_holen'),
+
+          pauseCase: (caseId) => {
+            const c = get().cases[caseId];
+            if (!c) return missingCase(caseId);
+            if (!can(selectCaseFacts(get(), caseId), 'pausieren')) {
+              return refuse({ code: 'regel', action: 'pausieren' });
+            }
+            const result = pause(c, { actor: householdActor(), now: env.now(), newId: env.newId });
+            commit(result);
+            return ok(result.case);
           },
 
-          pauseCase: (caseId) =>
-            commit(
-              pause(getCase(caseId), { actor: householdActor(), now: env.now(), newId: env.newId }),
-            ),
-
-          resumeCase: (caseId) =>
-            commit(
-              resume(getCase(caseId), {
-                actor: householdActor(),
-                now: env.now(),
-                newId: env.newId,
-              }),
-            ),
+          resumeCase: (caseId) => {
+            const c = get().cases[caseId];
+            if (!c) return missingCase(caseId);
+            const result = resume(c, { actor: householdActor(), now: env.now(), newId: env.newId });
+            commit(result);
+            return ok(result.case);
+          },
 
           grantConsent: (input) => {
             const p = person();
