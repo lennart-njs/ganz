@@ -20,6 +20,8 @@ export const demoConfig = {
     enabled: true,
     /** Schließbare Tipps im Demo-Modus */
     hints: true,
+    /** Feste Zeit im Demo-Startstand (Schutz verknüpft, Gerät angelegt), siehe store/demoStart.ts */
+    startAt: '2026-11-02T08:00:00.000Z',
   },
 
   insurer: {

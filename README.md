@@ -32,6 +32,7 @@ Der Demo-Modus ist in `config/demo.config.ts` eingeschaltet (`demo.enabled`).
 - **Dort einstellen:** Ergebnis der Intelligenten Fehlererkennung (Standard, unsicher, unscharf), Typenschild erkannt oder nicht, Fachkraft frei oder nicht, Freigabe oder Ablehnung, Selbstbeteiligung 0 € oder 50 €.
 - **Hinweise an/aus:** An zeigt schließbare Tipps, „Wartezeit überspringen“, „Nächster Schritt (Demo)“ und die Kennzeichnung „Beispielwerte“. Aus: keine Demo-Spur in der App.
 - **Offene Fälle einen Schritt weiter:** schaltet Freigabe, Termin, unterwegs, repariert. Ohne Tap läuft das per Timer (Freigabe 10 s, danach je 5 s).
+- **Demo-Startstand laden:** der feste Stand nach dem Onboarding im Golden Path. Schutz verknüpft, die Waschmaschine aus dem Vertrag, kein Fall. Danach steht die App auf der Startseite. So beginnt jeder Pitch gleich (`docs/PITCH_CHECK.md`).
 - **Alles zurücksetzen:** löscht Geräte, Fälle und Einwilligungen und startet das Onboarding neu.
 
 - **Hell oder dunkel:** Profil → „Darstellung“: Wie System, Hell, Dunkel.

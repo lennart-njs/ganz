@@ -40,6 +40,7 @@ import type {
   VideoSession,
 } from '@/model/types';
 
+import { contractFromConfig, demoStartData } from './demoStart';
 import { defaultEnv, type StoreEnv } from './env';
 import {
   createLoadState,
@@ -184,6 +185,8 @@ export interface AppActions {
   addEvent: (event: Omit<CaseEvent, 'id' | 'at'>) => CaseEvent;
   /** Nur Demo: alles auf den Anfang */
   reset: () => void;
+  /** Demo-Steuerung: der feste Startstand für den Pitch, siehe store/demoStart.ts */
+  loadDemoStart: () => void;
 }
 
 export type AppState = AppData & AppActions;
@@ -256,29 +259,20 @@ export function createAppStore(storage: StateStorage = AsyncStorage, env: StoreE
 
           linkContract: (via) => {
             const p = person();
-            const now = env.now();
             const cfg = demoConfig;
-            const contract: Contract = {
-              id: env.newId('vertrag'),
-              householdId: get().household?.id ?? '',
-              kind: cfg.contract.kind,
-              provider: { id: cfg.insurer.id, kind: 'versicherer', name: cfg.insurer.name },
-              soldBy: { id: cfg.dealer.id, kind: 'haendler', name: cfg.dealer.name },
-              productName: cfg.contract.productName,
-              contractNumber: cfg.contract.number,
-              policyholderId: p.id,
-              validFrom: cfg.contract.validFrom,
-              validUntil: cfg.contract.validUntil,
-              deductible: get().demo.deductible,
-              coveredDeviceIds: [],
-              linkedVia: via,
-              linkedAt: now,
-            };
             // Geräte aus dem Vertrag, die schon in der App sind, gehören dazu.
             const covered = get().devices.filter(
               (d) => d.manufacturerId === cfg.manufacturer.id && d.model === cfg.device.model,
             );
-            contract.coveredDeviceIds = covered.map((d) => d.id);
+            const contract = contractFromConfig({
+              id: env.newId('vertrag'),
+              householdId: get().household?.id ?? '',
+              policyholderId: p.id,
+              deductible: get().demo.deductible,
+              linkedVia: via,
+              linkedAt: env.now(),
+              coveredDeviceIds: covered.map((d) => d.id),
+            });
             set((s) => ({
               contracts: [contract],
               devices: s.devices.map((d) =>
@@ -1015,6 +1009,8 @@ export function createAppStore(storage: StateStorage = AsyncStorage, env: StoreE
 
           // Die Darstellung ist eine Einstellung des Telefons, kein Demo-Stand
           reset: () => set({ ...initialData, appearance: get().appearance }),
+
+          loadDemoStart: () => set({ ...demoStartData(initialData), appearance: get().appearance }),
         };
       },
       {

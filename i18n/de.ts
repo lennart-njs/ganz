@@ -1134,6 +1134,9 @@ export const de = {
     advanced: (n: number) =>
       n === 1 ? '1 Fall weitergeschaltet.' : `${n} Fälle weitergeschaltet.`,
     gallery: 'Komponenten ansehen',
+    demoStart: 'Demo-Startstand laden',
+    demoStartHint:
+      'Ersetzt Geräte, Fälle und Einwilligungen. Danach ist der Schutz verknüpft, ein Gerät da und kein Fall offen.',
     reset: 'Alles zurücksetzen',
     resetHint: 'Löscht Geräte, Fälle und Einwilligungen und startet das Onboarding neu.',
     close: 'Fertig',
