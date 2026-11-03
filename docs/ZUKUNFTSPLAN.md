@@ -176,7 +176,7 @@ Ab Phase 5 ruft der Server dasselbe `decide` auf und liefert kanonische Ereignis
 ### 3.5 Fotos, Konfiguration, Regeln
 
 - **Fotos:**
-  - `expo-camera` mit `exif: false` speichert schon heute ohne EXIF und GPS. `skipProcessing` bleibt verboten (Test).
+  - `components/app/CameraCapture.tsx` ruft `takePictureAsync` ohne die Option `exif` auf, sie steht also auf dem Standardwert `false`. Dass die App das Foto damit ohne EXIF und GPS speichert, ist gegen die Expo-Doku zu prüfen (Stand 03.11.2026). `skipProcessing` bleibt verboten. Einen Test dafür gibt es noch nicht.
   - Die Kamera legt das Foto im Cache ab. Das System darf es dort löschen. Deshalb wird es sofort ins Dokumentenverzeichnis kopiert und erst dann gespeichert.
   - Danach werden die Rohbytes gehasht, mit `Crypto.digest(SHA256, bytes)`, nicht ein Base64-Text.
   - Der Server rechnet den Hash beim Upload nach.
@@ -199,19 +199,19 @@ Ab Phase 5 ruft der Server dasselbe `decide` auf und liefert kanonische Ereignis
 
 **Prüfungen**
 - **Lint über das ganze Repo:** `lint` wird `eslint .` statt `expo lint`. `expo lint` prüft nur `app/`, `components/` und `src/`.
-  - Heute meldet der volle Lauf 3 Fehler und 10 Warnungen. Zuerst die Fehler beheben, Start mit `--max-warnings 10`.
+  - Beim Start des Plans meldete der volle Lauf 3 Fehler und 10 Warnungen. Zuerst die Fehler beheben, Start mit `--max-warnings 10`. (Stand nach Schritt 28: 0 Fehler, 0 Warnungen.)
   - Die Warnungen folgen bis Ende Phase 1, dann gilt `--max-warnings 0`.
 - **Neue Prüfungen als eigene lokale Regeln** über ein Plugin-Objekt in `eslint.config.js`. In der Flat-Config ersetzt ein späterer Block mit derselben Regel die Optionen, statt sie zu ergänzen. Ein Fixture-Test zeigt, dass alte und neue Regeln gleichzeitig greifen.
 - **Textregel:** Sie erfasst auch Ternäre, Template-Literale und Arrays in JSX-Attributen und -Kindern.
 - **Selektor-Regel:** Die Regel gegen `useAppStore()` ohne Selektor kommt erst in Phase 3b, dann gleich als Fehler. Heute gibt es 14 Treffer. Sie würden das Warnungsbudget sprengen.
-- **Node 24:** `.nvmrc` mit Node 24 und `engines` in `package.json`. Das README nennt heute „Node 20 oder neuer“, Node 20 hat keinen Support mehr.
+- **Node 24:** `.nvmrc` mit Node 24 und `engines` in `package.json`. Das README nannte beim Start des Plans „Node 20 oder neuer“, Node 20 hat keinen Support mehr. (Seit Schritt 16 nennt es Node 24.)
 - **Script `check:fast`:** tsc, eslint auf geänderten Dateien, Unit-Tests. Für den Stop-Hook der Sitzungen.
 
 **Tests**
 - **Jest-Projekte:**
   - `unit` startet nur mit `model/`, mit dem Preset `jest-expo/node`. `lib/` und `services/` kommen dazu, sobald sie in Phase 3 frei von react-native, Expo und Store sind.
   - `ui` wiederholt `setupFiles`, `moduleNameMapper`, `transformIgnorePatterns` und `testPathIgnorePatterns`. Projekte erben das nicht.
-- **Fake Timers:** Die 3 wackeligen Integrationstests laufen damit. Die Ursache sind echte Timer, unter anderem der 1-Sekunden-Simulationstimer. Ein höherer Timeout ist keine Lösung.
+- **Fake Timers:** Die 3 wackeligen Integrationstests laufen damit. Die Ursache sind echte Timer, unter anderem der 1-Sekunden-Simulationstimer. Ein höherer Timeout ist keine Lösung. (Schritt 17 hat gemessen: Die Hauptursache war das Laden der Module im ersten `renderRouter` einer Datei. Behoben mit Fake Timers und `test/app.ts`, siehe `docs/ANNAHMEN.md` Schritt 17.)
 - **`__tests__/regressions/`:** je ein Test pro Befund R-01 bis R-18, mit Datei und Zeile.
   - Jeder prüft das konkrete Symptom und ist als `test.failing` markiert.
   - Das Umstellen auf `test` gehört in denselben Commit wie die Behebung.
@@ -232,7 +232,7 @@ Ab Phase 5 ruft der Server dasselbe `decide` auf und liefert kanonische Ereignis
 
 **Speicher und Start**
 - **Migration:** `persist` hat schon `version: 1`. Dazu kommt `migrate`, für v1 die Identität. Bei unbekannter Version wirft es.
-- **Form prüfen:** `migrate` und `merge` prüfen die Form mit einem Schema. Bei Abweichung werfen sie. Heute ginge gültiges JSON mit falscher Form durch und stürzt erst beim Rendern ab.
+- **Form prüfen:** `migrate` und `merge` prüfen die Form mit einem Schema. Bei Abweichung werfen sie. Beim Start des Plans ging gültiges JSON mit falscher Form durch und stürzte erst beim Rendern ab. (Seit Schritt 19 behoben.)
 - **Rohwert sichern:** in einem eigenen `StateStorage`-Wrapper in `getItem`, noch vor `JSON.parse`.
 - **Fehlerpfad:** `onRehydrateStorage` meldet Fehler. In zustand 5 bleibt `hasHydrated` sonst `false`, und die App hängt für immer auf dem Splash-Screen.
 - **`store/useHydrated.ts`** liefert `'laedt' | 'ok' | 'fehler'`.
@@ -272,7 +272,7 @@ Ab Phase 5 ruft der Server dasselbe `decide` auf und liefert kanonische Ereignis
 - **Lint-Regel:** kein `.status ===` in `app/` und `components/`.
 
 **Ein Weg, einen Fall zu öffnen**
-- **`model/policies/openCase.ts`:** `findOpenCase`, `isEmptyCase` und `hasProgress`, je genau einmal. Heute gibt es zwei Definitionen für „leer“ und „Fortschritt“.
+- **`model/policies/openCase.ts`:** `findOpenCase`, `isEmptyCase` und `hasProgress`, je genau einmal. Beim Start des Plans gab es zwei Definitionen für „leer“ und „Fortschritt“. (Seit Schritt 23 je eine.)
 - **`openCaseFor(deviceId, entry)`:** Die Store-Aktion setzt Entscheidung Nr. 13 an einer Stelle um und liefert `'neu' | 'ersetzt' | 'frage_weitermachen'`.
   - Sie ersetzt die Kopien in `app/fall/neu.tsx`, in den Pflege-Zeilen von `app/geraet/[id].tsx`, bei „Passt nicht“ und bei „Details → Anleitung starten“.
   - Ein laufender Fall, der nicht abgebrochen werden kann, bekommt nur „Weitermachen“.
@@ -300,7 +300,7 @@ Ab Phase 5 ruft der Server dasselbe `decide` auf und liefert kanonische Ereignis
 - **Zwischenstand für den Widerruf bei lit. b:** Er gilt unabhängig von Nr. 16. Die Simulation prüft vor jedem Schritt den aktiven Consent und hält bei Widerruf an.
 - **Versionierte Texte:** Jeder Hinweis- und Einwilligungstext bekommt `textVersion` und `textHash`. Ein Test schlägt fehl, wenn sich ein Text ohne neue Version ändert.
 - **Hinweis am Eingabefeld:** Eigene Worte gehen an den Assistenten. Der heutige Text verspricht „Nicht dabei sind Fotos, Adresse und Vertragsnummer“. Freitext kann diese Angaben aber enthalten. Bis der Anwalt den Wortlaut festlegt, steht dort ein vorsichtiger Satz.
-- **Ohne Netz:** Der Assistent bietet „Noch einmal senden“ und „Als Notiz für die Fachkraft speichern“, dazu ein ruhiger Hinweis. Heute behandelt der Code `netz` nur als wiederholbaren Fehler.
+- **Ohne Netz:** Der Assistent bietet „Noch einmal senden“ und „Als Notiz für die Fachkraft speichern“, dazu ein ruhiger Hinweis. Beim Start des Plans behandelte der Code `netz` nur als wiederholbaren Fehler. (Seit Schritt 26 behoben.)
 
 **Chat-Route härten**
 - **`parseRequest` wird ein zod-Schema.**
