@@ -62,15 +62,13 @@ describe('R-04 zwei offene Fälle über „Passt nicht“', () => {
 
   // app/fall/neu.tsx:84-98: Der Fall mit Foto hat Fortschritt und wird nicht weiterverwendet.
   // caseFor() legt für das andere Symptom einen zweiten offenen Fall an. Verstößt gegen Nr. 13.
-  test.failing(
-    'R-04 „Passt nicht“ und ein anderes Symptom: höchstens ein offener Fall je Gerät',
-    async () => {
-      const { device } = await doesNotFit();
-      await tap(otherSymptom);
-      await flush();
-      expect(openCasesOf(device.id)).toHaveLength(1);
-    },
-  );
+  // Behoben: „Passt nicht“ ändert das Problem des eigenen Falls (openCaseFor mit aendern).
+  test('R-04 „Passt nicht“ und ein anderes Symptom: höchstens ein offener Fall je Gerät', async () => {
+    const { device } = await doesNotFit();
+    await tap(otherSymptom);
+    await flush();
+    expect(openCasesOf(device.id)).toHaveLength(1);
+  });
 });
 
 // ---------- R-05 ----------

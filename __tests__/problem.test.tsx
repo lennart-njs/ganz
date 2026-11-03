@@ -3,9 +3,12 @@ import * as path from 'path';
 import { Linking } from 'react-native';
 import { act, fireEvent, renderRouter, screen } from 'expo-router/testing-library';
 
+import { guides } from '@/data/guides';
 import { de } from '@/i18n/de';
+import { latestGuideRun } from '@/lib/caseView';
 import { useAppStore } from '@/store/appStore';
 import { APP } from '@/test/app';
+import { caseInRepair, photoCase } from '@/test/regressions';
 
 let taps = 0;
 const tap = async (name: string | RegExp) => {
@@ -150,6 +153,44 @@ describe('Entwürfe', () => {
       cancelReason: de.thread.newProblemReason,
     });
     expect(s.cases['GS-24818']).toMatchObject({ status: 'selbsthilfe' });
+  });
+});
+
+describe('Ein offener Fall pro Gerät (Entscheidung Nr. 13)', () => {
+  test('in der Reparatur: nur „Weitermachen“ mit Satz dazu, das setzt auch eine Pause fort', async () => {
+    const device = useAppStore.getState().devices[0]!;
+    const id = caseInRepair(device.id);
+    useAppStore.getState().pauseCase(id);
+    const r = await renderRouter(APP, { initialUrl: '/fall/neu' });
+    expect(screen.getByText(de.thread.runningCaseOnlyContinue)).toBeTruthy();
+    expect(screen.queryByText(de.thread.runningCaseAsk)).toBeNull();
+    expect(screen.queryByRole('button', { name: de.thread.newProblem })).toBeNull();
+    // Kein Eingabefeld, solange die Frage offen ist
+    expect(screen.queryByPlaceholderText(de.appliance.waschmaschine.otherPlaceholder)).toBeNull();
+    await tap(de.thread.continueCase);
+    expect(r.getPathname()).toBe(`/fall/${id}`);
+    expect(useAppStore.getState().cases[id]).toMatchObject({ status: 'in_reparatur' });
+    expect(useAppStore.getState().cases[id]?.pausedAt).toBeUndefined();
+  });
+
+  test('„Passt nicht“: derselbe Fall mit Foto, das andere Symptom startet seine Anleitung', async () => {
+    const device = useAppStore.getState().devices[0]!;
+    const id = photoCase(device.id, 'ablauf');
+    const r = await renderRouter(APP, { initialUrl: `/fall/${id}` });
+    await tap(de.result.doesNotFit);
+    expect(r.getPathname()).toBe('/fall/neu');
+    expect(screen.queryByText(de.thread.runningCase(guides.ablauf.title))).toBeNull();
+    await tap(new RegExp(`^${de.problems[2]!.label}`));
+    expect(r.getPathname()).toBe(`/fall/${id}/anleitung`);
+    const s = useAppStore.getState();
+    expect(Object.keys(s.cases)).toEqual([id]);
+    expect(s.cases[id]).toMatchObject({
+      status: 'selbsthilfe',
+      entry: 'symptom',
+      problemLabel: guides.tuer.title,
+      photoIds: [expect.any(String)],
+    });
+    expect(latestGuideRun(s, s.cases[id]!)?.guideId).toBe('tuer');
   });
 });
 

@@ -13,8 +13,7 @@ import { appliance, hasGuides } from '@/lib/appliance';
 import { chatLimits } from '@/lib/chat/limits';
 import { deviceTitle } from '@/lib/devices';
 import { reportDisplayMessage } from '@/lib/problem';
-import { isClosed } from '@/model/caseMachine';
-import { findOpenCase, hasProgress } from '@/model/policies/openCase';
+import { planOpenCase } from '@/model/policies/openCase';
 import type { CaseEntry, Id } from '@/model/types';
 import { useAppStore } from '@/store/appStore';
 import { useTheme } from '@/theme';
@@ -52,8 +51,8 @@ export default function ProblemMelden() {
   const [answer, setAnswer] = useState<string>();
   const [text, setText] = useState('');
   const [textError, setTextError] = useState<string>();
-  // Ein offener Fall mit Fortschritt: weitermachen oder neu anfangen
-  const [replaceRunning, setReplaceRunning] = useState(false);
+  // „Neues Problem melden“ beim laufenden Fall gewählt
+  const [newProblem, setNewProblem] = useState(false);
   const draft = useRef<Id | undefined>(resumed?.id);
   const scrollRef = useRef<KeyboardAwareScrollViewRef>(null);
 
@@ -69,30 +68,20 @@ export default function ProblemMelden() {
     return () => clearTimeout(id);
   }, [step, deviceId]);
 
-  const running = device ? findOpenCase(state, device.id) : undefined;
-  const runningWithProgress =
-    running && running.id !== resumed?.id && hasProgress(state, running) && !replaceRunning
-      ? running
-      : undefined;
+  // Entscheidung Nr. 13 steht in model/policies/openCase.ts. Mit Fortschritt fragt ganz zuerst,
+  // ob du weitermachen willst. „Neues Problem melden“ gibt es nur, wo der Fall abbrechbar ist.
+  // Stift und „Passt nicht“ ändern das Problem des eigenen Falls (aendern).
+  const openOptions = { aendern: resumed?.id, neuesProblem: newProblem };
+  const plan = device ? planOpenCase(state, device.id, openOptions) : undefined;
+  const running = plan?.art === 'frage_weitermachen' ? state.cases[plan.caseId] : undefined;
+  const canReplace = plan?.art === 'frage_weitermachen' && plan.canCancel;
 
-  /** Legt den Fall an oder nutzt einen Fall ohne Fortschritt weiter. Pro Gerät ein offener Fall. */
-  const caseFor = (entry: CaseEntry, problemLabel: string): Id => {
-    const s = store.getState();
-    const open = findOpenCase(s, device!.id);
-    if (open && open.id !== resumed?.id && hasProgress(s, open)) {
-      s.runCommand(open.id, 'abbrechen', { cancelReason: de.thread.newProblemReason });
-    }
-    const reuse = [draft.current ? s.cases[draft.current] : undefined, open].find(
-      (x) => x && x.deviceId === device!.id && !hasProgress(s, x) && !isClosed(x.status),
-    );
-    if (reuse) {
-      s.updateCase(reuse.id, { entry, problemLabel });
-      draft.current = reuse.id;
-      return reuse.id;
-    }
-    const c = s.createCase({ deviceId: device!.id, entry, problemLabel });
-    draft.current = c.id;
-    return c.id;
+  /** Öffnet den Fall über openCaseFor und geht weiter. Bei der Frage bleibt alles, wie es ist. */
+  const withCase = (entry: CaseEntry, problemLabel: string, then: (id: Id) => void) => {
+    const r = store.getState().openCaseFor(device!.id, entry, problemLabel, openOptions);
+    if (r.art === 'frage_weitermachen') return;
+    draft.current = r.caseId;
+    then(r.caseId);
   };
 
   /** Weiter im Gespräch des Falls. Der Fall-Entwurf gehört dann dem Gespräch. */
@@ -129,7 +118,7 @@ export default function ProblemMelden() {
 
   const pickProblem = (key: string) => {
     if (key === PHOTO) {
-      toThread(caseFor('foto', t.photoLabel), { weiter: 'kamera' });
+      withCase('foto', t.photoLabel, (id) => toThread(id, { weiter: 'kamera' }));
       return;
     }
     if (key === 'meldung') {
@@ -140,23 +129,26 @@ export default function ProblemMelden() {
     // Ohne Anleitung (alle Geräte außer der Waschmaschine): gleich Hilfe holen
     if (!guided) {
       const label = a.symptoms.find((x) => x.id === key)?.label ?? key;
-      const id = caseFor('symptom', label);
-      store.getState().escalate(id);
-      toThread(id);
+      withCase('symptom', label, (id) => {
+        store.getState().escalate(id);
+        toThread(id);
+      });
       return;
     }
     const guide = guides[key as GuideId];
-    const id = caseFor('symptom', guide.title);
-    store.getState().startGuide(id, guide.id);
-    toThread(id, { weiter: 'anleitung' });
+    withCase('symptom', guide.title, (id) => {
+      store.getState().startGuide(id, guide.id);
+      toThread(id, { weiter: 'anleitung' });
+    });
   };
 
   const pickMessage = (key: string) => {
     const m = de.displayMessages.find((x) => x.guideId === key);
     if (!m) return;
-    const id = caseFor('meldung', m.code);
-    reportDisplayMessage(id, m.guideId as GuideId, m.code);
-    toThread(id, { weiter: 'anleitung' });
+    withCase('meldung', m.code, (id) => {
+      reportDisplayMessage(id, m.guideId as GuideId, m.code);
+      toThread(id, { weiter: 'anleitung' });
+    });
   };
 
   /** Eigene Worte: Der Reparatur-Assistent antwortet im Gespräch des Falls */
@@ -170,7 +162,7 @@ export default function ProblemMelden() {
       setTextError(de.chat.tooLong(chatLimits.chars));
       return;
     }
-    toThread(caseFor('freitext', truncated(value)), { frage: value });
+    withCase('freitext', truncated(value), (id) => toThread(id, { frage: value }));
   };
 
   const editDevice = () => {
@@ -197,14 +189,19 @@ export default function ProblemMelden() {
       })),
       { key: ADD_DEVICE, label: g.addDevice },
     ];
-  } else if (runningWithProgress) {
+  } else if (running) {
     onPick = (key) => {
-      if (key === 'weiter') toThread(runningWithProgress.id);
-      else setReplaceRunning(true);
+      if (key !== 'weiter') {
+        setNewProblem(true);
+        return;
+      }
+      // Weitermachen setzt auch einen pausierten Fall fort
+      if (running.pausedAt) store.getState().resumeCase(running.id);
+      toThread(running.id);
     };
     replies = [
       { key: 'weiter', label: de.thread.continueCase },
-      { key: 'neu', label: de.thread.newProblem },
+      ...(canReplace ? [{ key: 'neu', label: de.thread.newProblem }] : []),
     ];
   } else if (step === 'meldung') {
     onPick = pickMessage;
@@ -219,7 +216,7 @@ export default function ProblemMelden() {
   }
 
   const inputBar =
-    step === 'geraet' || runningWithProgress ? undefined : (
+    step === 'geraet' || running ? undefined : (
       <View
         style={[
           styles.inputBar,
@@ -267,11 +264,11 @@ export default function ProblemMelden() {
         <BotSays lines={[g.forDevice(deviceTitle(device))]} />
       ) : null}
 
-      {runningWithProgress ? (
+      {running ? (
         <BotSays
           sender={askDevice}
-          lines={[de.thread.runningCase(runningWithProgress.problemLabel)]}
-          hint={de.thread.runningCaseAsk}
+          lines={[de.thread.runningCase(running.problemLabel)]}
+          hint={canReplace ? de.thread.runningCaseAsk : de.thread.runningCaseOnlyContinue}
         />
       ) : step !== 'geraet' ? (
         <BotSays

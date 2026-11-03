@@ -146,15 +146,14 @@ describe('R-03 „Neues Problem melden“ bei einem Fall in der Reparatur', () =
 
   // app/fall/neu.tsx:82: caseFor() bricht den laufenden Fall ab. In in_reparatur wirft das einen
   // TransitionError, sobald du nach „Neues Problem melden“ ein Problem wählst.
-  test.failing(
-    'R-03 ein Fall, der sich nicht abbrechen lässt, bietet nur „Weitermachen“',
-    async () => {
-      const { id } = await reportWhileInRepair();
-      expect(screen.queryByRole('button', { name: de.thread.newProblem })).toBeNull();
-      expect(screen.getByRole('button', { name: de.thread.continueCase })).toBeTruthy();
-      expect(caseOf(id).status).toBe('in_reparatur');
-    },
-  );
+  // Behoben: Problem melden fragt planOpenCase (model/policies/openCase.ts) und öffnet den Fall
+  // nur über openCaseFor. „Neues Problem melden“ gibt es nur bei can(facts, 'abbrechen').
+  test('R-03 ein Fall, der sich nicht abbrechen lässt, bietet nur „Weitermachen“', async () => {
+    const { id } = await reportWhileInRepair();
+    expect(screen.queryByRole('button', { name: de.thread.newProblem })).toBeNull();
+    expect(screen.getByRole('button', { name: de.thread.continueCase })).toBeTruthy();
+    expect(caseOf(id).status).toBe('in_reparatur');
+  });
 });
 
 // ---------- R-18 ----------

@@ -1003,6 +1003,9 @@ export const de = {
     cancelled: 'Fall abgebrochen.',
     runningCase: (title: string) => `Für dieses Gerät läuft schon ein Fall: ${title}.`,
     runningCaseAsk: 'Willst du dort weitermachen oder ein neues Problem melden?',
+    /** Der laufende Fall lässt sich nicht abbrechen, z. B. in der Reparatur (Entscheidung Nr. 13) */
+    runningCaseOnlyContinue:
+      'Dieser Fall lässt sich gerade nicht abbrechen. Ein neues Problem meldest du, wenn er abgeschlossen ist.',
     continueCase: 'Weitermachen',
     newProblem: 'Neues Problem melden',
     newProblemReason: 'Neues Problem gemeldet',

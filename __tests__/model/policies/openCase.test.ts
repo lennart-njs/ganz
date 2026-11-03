@@ -287,8 +287,8 @@ describe('Eine Definition je Regel', () => {
     return [-1, -1];
   }
 
-  // Bis die Pflege-Zeilen im Gerätedetail openCaseFor nutzen, rufen app/fall/neu.tsx und
-  // app/geraet/[id].tsx createCase noch selbst auf.
+  // Bis die Pflege-Zeilen im Gerätedetail openCaseFor nutzen, ruft app/geraet/[id].tsx
+  // createCase noch selbst auf.
   test.failing('createCase( steht in der App nur in openCaseFor', () => {
     const outside: string[] = [];
     for (const { file, text } of sources) {
