@@ -111,7 +111,7 @@ scripts/pitch-tag.sh   # lokaler Tag pitch-JJJJ-Wxx, nach docs/PITCH_CHECK.md un
 
 Lint prüft das ganze Repo. Eigene Regeln stehen im Plugin `ganz` in `eslint.config.js`: keine Farbwerte außerhalb von `theme/` (`ganz/farben-aus-theme`), kein Text außerhalb von `i18n/de.ts` (`ganz/text-aus-i18n`, dazu `ganz/text-in-ausdruecken` für Bedingungen, Template-Literale, Verkettungen, Listen und Objekte in JSX). Dazu kein `Text` direkt aus `react-native`. `__tests__/lint.test.ts` zeigt, dass alle Regeln gleichzeitig greifen. Ein Test prüft jeden Screen auf Rolle, Label, 44 pt und Schrift bis 200 %.
 
-Jest hat zwei Projekte. `unit` prüft `model/` ohne React Native (Preset `jest-expo/node`), die Tests dazu liegen in `__tests__/model/`. `ui` prüft alles andere mit dem Preset `jest-expo`. `npx jest --selectProjects unit` startet nur die Unit-Tests.
+Jest hat drei Projekte. `unit` prüft `model/` ohne React Native (Preset `jest-expo/node`), die Tests dazu liegen in `__tests__/model/`. `build` prüft die Build-Konfiguration, ebenfalls ohne React Native mit `jest-expo/node`: `app.config.ts` je Variante, `eas.json` und Texte und IDs in den Maestro-Flows (`__tests__/build/`). `ui` prüft alles andere mit dem Preset `jest-expo`. Projekte erben nichts voneinander, darum steht die Konfiguration in jedem Projekt für sich. `npx jest --selectProjects unit` startet nur die Unit-Tests, `check:fast` startet `unit` und `build`.
 
 Alle Tests in `ui` laufen mit Fake Timers. Die Zeit läuft nur weiter, wenn ein Test sie weiterstellt. Router-Tests nehmen `APP` aus `test/app.ts`. Die Datei lädt alle Routen, bevor der erste Test startet. Kein Test braucht einen eigenen Timeout.
 
