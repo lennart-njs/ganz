@@ -21,6 +21,7 @@ import {
   type CommandContext,
   type CommandResult,
 } from '@/model/caseMachine';
+import { selectCaseFacts } from '@/model/policies/caseFacts';
 import type {
   Booking,
   Cents,
@@ -1151,27 +1152,11 @@ const bookingEvents: CaseEvent['type'][] = [
 
 /**
  * Übergangsregel für den Widerruf bei lit. b, bis Entscheidung Nr. 16 steht: Die Simulation hält
- * an, solange die Weitergabe für ihren nächsten Schritt widerrufen ist. Die Entscheidung des
- * Versicherers braucht weitergabe_versicherer, jeder Schritt des Betriebs weitergabe_betrieb an
- * genau den gebuchten Betrieb. Gibt den Zweck zurück, dessen Bestätigung fehlt.
+ * an, solange die Weitergabe für ihren nächsten Schritt widerrufen ist. Gibt den Zweck zurück,
+ * dessen Bestätigung fehlt. Die Regel steht in model/policies/caseFacts.ts.
  */
 export function simulationHold(s: AppData, caseId: Id): ConsentPurpose | undefined {
-  const c = s.cases[caseId];
-  if (!c || isClosed(c.status)) return undefined;
-  if (c.status === 'freigabe_noetig') {
-    const ok = findActiveConsent(s.consents, c.reportedBy, 'weitergabe_versicherer', caseId);
-    return ok ? undefined : 'weitergabe_versicherer';
-  }
-  const booking = activeBooking(s, caseId);
-  if (!booking || booking.status === 'erledigt') return undefined;
-  const ok = findActiveConsent(
-    s.consents,
-    c.reportedBy,
-    'weitergabe_betrieb',
-    caseId,
-    booking.provider.id,
-  );
-  return ok ? undefined : 'weitergabe_betrieb';
+  return selectCaseFacts(s, caseId)?.hold;
 }
 
 /** Wann der nächste simulierte Schritt fällig ist (ms seit 1970). Ohne nächsten Schritt: undefined. */
