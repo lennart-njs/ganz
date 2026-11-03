@@ -96,6 +96,12 @@ export type NewDevice = Omit<Device, 'id' | 'householdId' | 'createdAt'>;
 export type NotificationSetting = 'offen' | 'erlaubt' | 'abgelehnt';
 
 /**
+ * Welcher Text vor der Einwilligung in Mitteilungen stand: das Kästchen im Profil oder der Satz
+ * vor „Termin anfragen“, nach dem das System fragt. Die Einwilligung speichert genau diesen Text.
+ */
+export type NotificationsText = Extract<LegalTextKey, 'mitteilungen' | 'mitteilungen_termin'>;
+
+/**
  * Empfänger der Einwilligung in Mitteilungen: ganz selbst als Absender. Lokale Mitteilungen
  * verlassen das Telefon nicht. PartnerKind kennt ganz noch nicht, Phase 3 fasst Empfänger neu.
  */
@@ -240,7 +246,7 @@ export interface AppActions {
    * Antwort auf den Systemdialog oder den Schalter im Profil. „erlaubt“ speichert die Einwilligung
    * 'mitteilungen' (lit. a), alles andere widerruft sie (R-13).
    */
-  setNotifications: (value: NotificationSetting) => void;
+  setNotifications: (value: NotificationSetting, shown?: NotificationsText) => void;
   /**
    * Nächster Schritt der Simulation: Freigabe, Bestätigung, unterwegs, repariert (BUILD_PLAN 5.1).
    * Ohne gültige Weitergabe für den Schritt passiert nichts, siehe simulationHold.
@@ -1173,14 +1179,14 @@ export function createAppStore(storage: StateStorage = AsyncStorage, env: StoreE
             return ok(booking);
           },
 
-          setNotifications: (value) => {
+          setNotifications: (value, shown = 'mitteilungen') => {
             set({ notifications: value });
             if (value === 'erlaubt') {
               if (notificationsOn(get())) return;
               get().grantConsent(
                 scopedConsent('mitteilungen', {
                   recipient: { ...NOTIFICATIONS_RECIPIENT },
-                  text: textStamp('mitteilungen'),
+                  text: textStamp(shown),
                 }),
               );
               return;

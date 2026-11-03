@@ -33,7 +33,7 @@ import { useNotice } from '@/hooks/useNotice';
 import { de } from '@/i18n/de';
 import { formatDecimal, formatEuro } from '@/i18n/format';
 import { caseAppliance, hasGuides } from '@/lib/appliance';
-import { amountToPay, costsLine, requestAppointment } from '@/lib/booking';
+import { amountToPay, asksNotifications, costsLine, requestAppointment } from '@/lib/booking';
 import { chatLimits } from '@/lib/chat/limits';
 import { scopeList } from '@/lib/consent';
 import { textStamp } from '@/lib/legalTexts';
@@ -974,6 +974,9 @@ export default function FallGespraech() {
               </Text>
             ) : null}
             <Text variant="meta">{de.appointment.shares(scopeList('weitergabe_betrieb'))}</Text>
+            {asksNotifications(state) ? (
+              <Text variant="meta">{de.appointment.notificationsNotice}</Text>
+            ) : null}
           </BotSays>,
         );
         const paid = amountToPay(state, caseId, selfPay, onSite) > 0;

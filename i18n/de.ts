@@ -836,6 +836,12 @@ export const de = {
       `Der Betrieb bekommt ${part} innerhalb von ${days} Arbeitstagen. So verlangt es das EU-Ökodesign-Recht.`,
     /** data: die Kategorien aus consentScopes (weitergabe_betrieb), mit de.common.list */
     shares: (data: string) => `Der Betrieb bekommt ${data}.`,
+    /**
+     * Steht vor „Termin anfragen“, solange Mitteilungen noch nicht entschieden sind. Danach fragt
+     * das System. Gespeichert wird dieser Text mit der Einwilligung (lib/legalTexts.ts).
+     */
+    notificationsNotice:
+      'Danach fragt dein Telefon, ob ganz dir Mitteilungen zum Fall-Status schicken darf. Sie sagen nur, dass es Neuigkeiten gibt.',
     addressLine: (street: string, zip: string, city: string) => `${street}, ${zip} ${city}`,
     request: 'Termin anfragen',
     requestPaid: 'Zahlungspflichtig buchen',

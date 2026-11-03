@@ -122,11 +122,20 @@ export const LEGAL_TEXTS = {
       de.profile.manufacturerCaseSub(scopeList('hersteller_einzelfall')),
     ],
   },
-  /** Profil: Mitteilungen zum Fall-Status (lit. a). Nach „Termin anfragen“ fragt das System. */
+  /** Profil: das Kästchen „Mitteilungen zum Fall-Status“ (lit. a) */
   mitteilungen: {
     version: '2026-11-1',
     scope: 'mitteilungen',
     parts: () => [de.profile.notifications, de.profile.notificationsSub],
+  },
+  /**
+   * Termin und Gespräch: der Satz vor „Termin anfragen“. Danach fragt das System, die Antwort im
+   * Systemdialog ist die Einwilligung (lit. a). Gespeichert wird dieser Text, nicht der im Profil.
+   */
+  mitteilungen_termin: {
+    version: '2026-11-1',
+    scope: 'mitteilungen',
+    parts: () => [de.appointment.notificationsNotice],
   },
 } satisfies Record<string, LegalText>;
 

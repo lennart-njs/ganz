@@ -5,6 +5,7 @@ import { act, fireEvent, renderRouter, screen, within } from 'expo-router/testin
 import { CASE_FILE_CARD } from '@/components/app/CaseFileCard';
 import { demoConfig } from '@/config/demo.config';
 import { de } from '@/i18n/de';
+import { asksNotifications } from '@/lib/booking';
 import { chatContext } from '@/lib/chat/context';
 import type { ChatContext } from '@/lib/chat/prompt';
 import { categoryLabels, scopeLabels } from '@/lib/consent';
@@ -241,6 +242,32 @@ const flows: Record<ConsentPurpose, Record<string, () => Promise<void> | void>> 
       expectShown('mitteilungen');
       await act(async () => useAppStore.getState().setNotifications('erlaubt'));
       expect(expectStored('mitteilungen', 'mitteilungen').caseId).toBeUndefined();
+    },
+    'Termin: der Satz vor dem Systemdialog ist der gespeicherte Text, nicht der im Profil':
+      async () => {
+        start();
+        const id = caseAfterFinding(addWasher().id);
+        await renderRouter(APP, { initialUrl: `/fall/${id}/kosten` });
+        await tap(de.costs.report);
+        expectShown('mitteilungen_termin');
+        expect(screen.queryByText(de.profile.notificationsSub)).toBeNull();
+        await fireEvent.press(screen.getByRole('radio', { name: demoConfig.slots[0] }));
+        await tap(de.appointment.request);
+        await flush();
+        expect(expectStored('mitteilungen', 'mitteilungen_termin').caseId).toBeUndefined();
+        expect(useAppStore.getState().notifications).toBe('erlaubt');
+        // Ist entschieden, fragt das System nicht mehr, und der Satz steht nicht mehr davor
+        expect(asksNotifications(useAppStore.getState())).toBe(false);
+      },
+    'Gespräch: der Satz steht vor „Termin anfragen“': async () => {
+      start();
+      const id = caseAfterFinding(addWasher().id);
+      useAppStore.getState().reportClaim(id);
+      await renderRouter(APP, { initialUrl: `/fall/${id}` });
+      await tap(new RegExp(`^${escapeRegExp(demoConfig.partners[0]!.name)}`));
+      await tap(demoConfig.slots[0]!);
+      expectShown('mitteilungen_termin');
+      expect(screen.getByRole('button', { name: de.appointment.request })).toBeTruthy();
     },
   },
   chat_assistent: {

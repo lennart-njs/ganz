@@ -22,7 +22,7 @@ import { de } from '@/i18n/de';
 import { formatDecimal, formatEuro } from '@/i18n/format';
 import { getManufacturer } from '@/lib/devices';
 import { caseAppliance } from '@/lib/appliance';
-import { amountToPay, costsLine, requestAppointment } from '@/lib/booking';
+import { amountToPay, asksNotifications, costsLine, requestAppointment } from '@/lib/booking';
 import { scopeList } from '@/lib/consent';
 import { can, type ActionKey } from '@/model/policies/actions';
 import { selectCaseFacts } from '@/model/policies/caseFacts';
@@ -204,6 +204,8 @@ export default function Termin() {
       ) : null}
       {/* Dieselben Kategorien speichert die Bestätigung mit der Anfrage (R-14) */}
       <Text variant="meta">{t.shares(scopeList('weitergabe_betrieb'))}</Text>
+      {/* Danach fragt das System nach Mitteilungen. Die Einwilligung speichert diesen Satz. */}
+      {asksNotifications(state) ? <Text variant="meta">{t.notificationsNotice}</Text> : null}
     </CaseScreen>
   );
 }

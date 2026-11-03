@@ -33,6 +33,11 @@ export function amountToPay(s: AppData, caseId: Id, selfPay: boolean, diagnosis 
   return amountDue(costsOf(s, caseId, selfPay, diagnosis));
 }
 
+/** Fragt das System nach „Termin anfragen“ nach Mitteilungen? Dann steht der Satz dazu davor. */
+export function asksNotifications(s: AppData): boolean {
+  return s.notifications === 'offen';
+}
+
 /** Kostenzeile der Zusammenfassung. Den Preis einer Selbstzahler-Buchung zeigt sie immer vorher. */
 export function costsLine(s: AppData, caseId: Id, selfPay: boolean, diagnosis = false): string {
   const t = de.appointment;
@@ -48,7 +53,8 @@ export function costsLine(s: AppData, caseId: Id, selfPay: boolean, diagnosis = 
 
 /**
  * Fragt den Termin an. Der Systemdialog für Mitteilungen kommt erst jetzt, beim ersten Bedarf
- * (Review 4.1), und nur, wenn der Termin angefragt ist.
+ * (Review 4.1), und nur, wenn der Termin angefragt ist. Vorher steht im Termin und im Gespräch
+ * de.appointment.notificationsNotice (asksNotifications). Die Einwilligung speichert diesen Text.
  */
 export function requestAppointment(input: {
   caseId: Id;
@@ -68,10 +74,14 @@ export function requestAppointment(input: {
     selfPay: input.selfPay,
     partName: quote?.repair.partName,
   });
-  if (result.ok && useAppStore.getState().notifications === 'offen') {
+  if (result.ok && asksNotifications(useAppStore.getState())) {
     notifications
       .requestPermission()
-      .then((ok) => useAppStore.getState().setNotifications(ok ? 'erlaubt' : 'abgelehnt'))
+      .then((ok) =>
+        useAppStore
+          .getState()
+          .setNotifications(ok ? 'erlaubt' : 'abgelehnt', 'mitteilungen_termin'),
+      )
       .catch(() => undefined);
   }
   return result;
