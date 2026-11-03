@@ -39,6 +39,26 @@ Lennart: „Die Formular/Chat logik macht noch nicht richtig sinn. Das muss ein 
 4. **Selbstbeteiligung im Pitch:** Standard 0 €. In der Konfiguration auf einen Betrag umschaltbar, dann mit Button „Zahlungspflichtig buchen“.
 5. **Termin:** Anfrage „vorbehaltlich Freigabe“.
 
+## Zukunftsplan (03.11.2026)
+
+Lennart im Chat: „setze den plan um“. Damit ist `docs/ZUKUNFTSPLAN.md` freigegeben. Die Schritte stehen in `docs/BUILD_PLAN.md` Abschnitt 8.
+
+Offen, mit Empfehlung im Zukunftsplan Abschnitt 6. Bis zur Antwort gilt die dort genannte Empfehlung oder die strengere Variante:
+
+- [ ] E1 Branch und PR je Schritt (bis Ende Woche 1)
+- [ ] E2 Wirkung eines Widerrufs bei lit. b (vor Phase 3a). Bis dahin: Die Simulation hält bei Widerruf an.
+- [ ] E3 Eigener Build für den Pitch, Apple Developer Program (Konto bis Ende Woche 2)
+- [ ] E4 Host für den Assistenten, später EU-Inferenz und Kerndaten
+- [ ] E5 Pflichthinweis nach Art. 50 KI-VO (vor dem Gate in Phase 4)
+- [ ] E6 Crash-Reporting als Opt-in (vor Phase 4)
+- [ ] E7 Co-Branding statt vollem Whitelabel (vor Phase 3b)
+- [ ] E8 Rolle von ganz nach DSGVO (vor Phase 5)
+- [ ] E9 Concierge-Pilot (mit dem LOI)
+- [ ] E10 Anmeldung per E-Mail-Code (vor Phase 5)
+- [ ] E11 Löschfristen (Entwurf Ende Phase 4)
+- [ ] E12 Lizenz der Anleitungstexte (vor dem Gate in Phase 4)
+- [ ] E13 Selbstzahler im Pilot (vor Phase 6)
+
 ## Werte für `config/demo.config.ts`
 
 Alles fiktiv und als Beispielwert gekennzeichnet.

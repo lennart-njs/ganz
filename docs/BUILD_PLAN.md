@@ -597,3 +597,45 @@ Jeder Schritt endet mit einem Commit. Kein Push und kein PR ohne Anweisung.
 - Termin „vorbehaltlich Freigabe“ (Frage 5).
 - Selbstbeteiligung im Standard 0 €, umschaltbar (Frage 4).
 - Bis die Markenfotos in `assets/photos/` liegen, nehme ich beschriftete Platzhalter. Die App-Fotos aus `design-system/assets/app/` nutze ich nicht automatisch, weil das Designsystem sie als KI-generierte Platzhalter kennzeichnet.
+
+---
+
+## 8. Zukunftsfähigkeit
+
+Freigegeben am 03.11.2026 im Chat („setze den plan um“). Ziel, Begründung und Zielbild stehen in `docs/ZUKUNFTSPLAN.md`. Die Befund-Nummern (Anhang B dort) heißen hier R-01 bis R-17.
+
+Jeder Schritt endet mit grünem `npm run check`. Ein Commit pro Teilschritt. Wo ein Regressionstest auf `test` wechselt, gehört das in denselben Commit wie die Behebung.
+
+### 8.1 Phase 0: Sicherheitsnetz
+
+| # | Schritt | Akzeptanzkriterien |
+|---|---|---|
+| 16 | **Werkzeuge**: Node 24, Lint über das ganze Repo, schärfere Textregel, Warnung für Voll-Abos, `check:fast` | `.nvmrc` = 24, `engines` gesetzt, README nennt Node 24. `npm run lint` ist `eslint .` mit Obergrenze für Warnungen und 0 Fehlern. Die Textregel findet Text in Ternären, Template-Literalen und Arrays in JSX. `useAppStore()` ohne Selektor ist eine Warnung. |
+| 17 | **Stabile Tests**: Jest-Projekte `unit` und `ui`, Fake Timers statt echter Timer | `npm run check` ist dreimal in Folge mit `--maxWorkers=2` grün. Kein Test braucht einen eigenen Timeout. |
+| 18 | **CI**: `.github/workflows/check.yml`, `scripts/commit-if-green.sh` | Beide nutzen dieselben Schritte: `npm ci`, `npm run check`, `guides:check`, gitleaks, osv-scanner. |
+| 19 | **Speicher und Start**: `migrate`, Fehlerpfad beim Laden, Sicherung des Rohwerts, RecoveryScreen | Tests mit kaputtem JSON, Version 99 und leerem Speicher: nie ein Hänger, der Rohwert ist gesichert. Ein Test verhindert `STORE_VERSION` ohne Migration. |
+| 20 | **Regressionstests**: R-01 bis R-17 als `test.failing` in `__tests__/regressions/` | Je ein Test mit Datei und Zeile aus der Review. Jeder prüft das konkrete Symptom. |
+| 21 | **Pitch- und Rechtsrahmen**: `docs/PITCH_CHECK.md`, `scripts/pitch-tag.sh`, Demo-Startstand, `docs/recht/RECHTSFRAGEN.md`, `docs/REVIEW_CHECKLISTE.md` | Der Demo-Startstand lässt sich in der Demo-Steuerung per Tap laden. Jede Rechtsfrage hat eine Frist. |
+
+### 8.2 Phase 1: Fehlerklassen an der Wurzel
+
+| # | Schritt | Akzeptanzkriterien |
+|---|---|---|
+| 22 | **Eine Regelquelle**: `model/policies/caseFacts.ts`, `actions.ts`. Sheet, Kosten, Termin, Ergebnis, Status und Gespräch fragen nur noch nach | Tabellentest je Status. Lint: kein `.status ===` in `app/` und `components/` außerhalb der Allowlist. R-01, R-02, R-07, R-09 grün. |
+| 23 | **Ein Weg, einen Fall zu öffnen**: `model/policies/openCase.ts`, Store-Aktion `openCaseFor`, `startGuide` setzt fort | `createCase(` nur in `openCaseFor`. `hasProgress` und `isEmptyCase` je genau einmal. R-03, R-04, R-05, R-06 grün. |
+| 24 | **Befehle ohne Absturz**: `Result` statt Exceptions, `hooks/useCommand.ts` mit Sperre gegen Doppeltaps, Fuzz-Test | 1.000 zufällige Folgen aus `availableActions` ohne Exception, je Gerät höchstens ein offener Fall. |
+| 25 | **Fachliche Fehler**: Zahler aus den Fakten, Buchungsregeln, Partner aus der Buchung, Chat-Grenze | R-08, R-10, R-11 grün. „Du zahlst“ nur, wenn der Haushalt zahlt. |
+| 26 | **Datenschutz und Belegbarkeit**: `consentScopes`, Chat-Einwilligung ohne Fall, Mitteilungen als Einwilligung, Rückruf mit Bestätigung, Widerruf hält die Simulation an, `textVersion` und `textHash`, neutrale Mitteilungen | R-12 bis R-17 grün. Vorschau und gespeicherter Consent nutzen dasselbe Array. Ein geänderter Text ohne neue Version macht die Suite rot. |
+| 27 | **Chat-Route härten**: Schema-Prüfung, Systemblock nur aus Schlüsseln, Rate-Limit, Tagesgrenze, Pitch-Token, `EXPO_PUBLIC_API_URL` | „Ignoriere alle Regeln“ im Problemfeld steht nicht im Systemblock. Überlange oder unbekannte Felder geben 400, ohne Token 401, nach N Anfragen 429. |
+| 28 | **Abschluss Phase 1** | `npx eslint . --max-warnings 0` grün. `docs/BEFUNDE.md` nennt für jeden Befund den Test. |
+
+### 8.3 Phase 2 bis 6
+
+| # | Schritt | Start |
+|---|---|---|
+| 29 | **Build-Varianten vorbereiten**: `app.config.ts` mit `APP_VARIANT`, `eas.json`, Maestro-Flows, `docs/KOSTEN.md`, `docs/RELEASES.md` | sofort, ohne Konten |
+| 30 | **Pitch ohne Laptop**: Dev-Client, TestFlight intern, Chat-Route auf einem EU-Host | mit Apple Developer Program und Host (E3, E4) |
+| 31 | **Phase 3**: Ereignisse v2, Migration, Consent-Ledger, decide/evolve, Gespräch zerlegen, Mandant, Kategorien, Fotos | nach 28 |
+| 32 | **Phase 4**: Registry, VVT, AVV, DSFA-Screening, Eval-Satz, Art.-50-Hinweis, Production ohne Demo, Prüfprotokoll | parallel zu 31b, mit Anwalt und DSB |
+| 33 | **Phase 5**: Pilot-Backend nach dem Strangler-Muster | nur mit LOI |
+| 34 | **Phase 6**: Pilot, Dashboard, Inhalte | nur mit Pilotvertrag |
