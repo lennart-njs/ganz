@@ -190,7 +190,7 @@ describe('R-07 „Du zahlst 189 €“ während der Prüfung', () => {
   // Der Termin zeigt dann „Du zahlst 189 €“ und „Zahlungspflichtig buchen“, und requestBooking
   // überspringt selbst_zahlen. B-18 wieder offen, Regel „keine Kostenzusage vor der Freigabe“.
   // Behoben: Kosten bieten Selbstzahlen nur bei canTransition(status, 'selbst_zahlen'), Termin
-  // nimmt zahlung=selbst nur bei canPaySelf (lib/booking.ts).
+  // nimmt zahlung=selbst nur bei can(facts, 'termin_selbst') (model/policies/actions.ts).
   test('R-07 während der Prüfung kein Selbstzahlen und kein „Du zahlst“', async () => {
     const { id } = await backToCostsAfterClaim();
     expect(screen.queryByRole('button', { name: de.costs.selfPay })).toBeNull();
@@ -262,7 +262,9 @@ describe('R-09 Termin nach der Ablehnung', () => {
   // app/fall/[id]/termin.tsx:67 und lib/booking.ts:15-23 fragen nicht nach der Ablehnung. Die
   // Kostenzeile sagt weiter „vorbehaltlich Freigabe“, und „Termin anfragen“ legt einen Termin auf
   // den abgelehnten Fall, der nie weiterläuft.
-  test.failing('R-09 nach der Ablehnung kein Termin auf Kosten des Versicherers', async () => {
+  // Behoben: Termin fragt can(facts, 'termin_versicherer') und zeigt nach der Ablehnung die
+  // Entscheidung statt des Formulars (Schritt 22).
+  test('R-09 nach der Ablehnung kein Termin auf Kosten des Versicherers', async () => {
     const { id } = await rejectedWhileBooking();
     expect(
       screen.queryByText(de.appointment.costsClaim(demoConfig.insurer.shortName, '0 €')),

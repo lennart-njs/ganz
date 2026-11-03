@@ -1,4 +1,4 @@
-import { useLocalSearchParams } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
@@ -18,10 +18,12 @@ import {
 } from '@/components/ds';
 import { demoConfig } from '@/config/demo.config';
 import { de } from '@/i18n/de';
-import { formatDecimal } from '@/i18n/format';
+import { formatDecimal, formatEuro } from '@/i18n/format';
 import { getManufacturer } from '@/lib/devices';
 import { caseAppliance } from '@/lib/appliance';
-import { amountToPay, canPaySelf, costsLine, requestAppointment } from '@/lib/booking';
+import { amountToPay, costsLine, requestAppointment } from '@/lib/booking';
+import { can, type ActionKey } from '@/model/policies/actions';
+import { selectCaseFacts } from '@/model/policies/caseFacts';
 import { useAppStore } from '@/store/appStore';
 
 const t = de.appointment;
@@ -29,6 +31,8 @@ const t = de.appointment;
 /**
  * Betrieb und Termin: Betrieb, Zeitfenster, Adresse und Zusammenfassung vor dem Tap (B-29, B-32).
  * Muss die Nutzerin etwas zahlen, heißt der Button „Zahlungspflichtig buchen“ (§ 312j BGB).
+ * Ob es den Termin gibt, sagen die Regeln: nach der Ablehnung keiner auf Kosten des Versicherers
+ * (R-09), und höchstens einer je Art.
  */
 export default function Termin() {
   const caseId = useCaseId();
@@ -36,8 +40,14 @@ export default function Termin() {
   const diagnosis = params.art === 'diagnose';
   const state = useAppStore();
   const c = state.cases[caseId];
+  const facts = selectCaseFacts(state, caseId);
   // Während der Prüfung oder nach der Freigabe zählt ein alter Link mit zahlung=selbst nicht (R-07)
-  const selfPay = params.zahlung === 'selbst' && canPaySelf(c);
+  const selfPay = params.zahlung === 'selbst' && can(facts, 'termin_selbst');
+  const action: ActionKey = diagnosis
+    ? 'termin_diagnose'
+    : selfPay
+      ? 'termin_selbst'
+      : 'termin_versicherer';
   const quote = state.quotes.find((q) => q.id === c?.quoteId);
   const device = state.devices.find((d) => d.id === c?.deviceId);
   const address = state.household?.address;
@@ -47,9 +57,44 @@ export default function Termin() {
   const [toast, setToast] = useState<string>();
   const manufacturer = device ? getManufacturer(device.manufacturerId).name : '';
   const partner = partners.find((p) => p.id === partnerId);
-  const claimPending = c?.status === 'freigabe_noetig';
+  const claimPending = facts?.claim === 'in_pruefung';
 
   const paid = amountToPay(state, caseId, selfPay, diagnosis) > 0;
+
+  // Diesen Termin gibt es nicht: Nach der Ablehnung entscheidest du neu, sonst geht es im Gespräch
+  // weiter. Den Preis fürs Selbstzahlen siehst du vor der Wahl.
+  if (facts && !can(facts, action)) {
+    const rejected = can(facts, 'selbst_zahlen_nach_ablehnung');
+    return (
+      <CaseScreen
+        title={de.screens.termin}
+        footer={
+          <ActionBar>
+            {rejected && facts.quote ? (
+              <Button
+                label={de.costs.rejectedSelfPay(formatEuro(facts.quote.repair.total))}
+                size="lg"
+                fullWidth
+                onPress={() => router.setParams({ zahlung: 'selbst' })}
+              />
+            ) : null}
+            <Button
+              label={de.thread.toThread}
+              variant={rejected ? 'secondary' : 'primary'}
+              size={rejected ? 'md' : 'lg'}
+              fullWidth
+              onPress={() => backToThread(caseId)}
+            />
+          </ActionBar>
+        }
+      >
+        <Text variant="h1" accessibilityRole="header">
+          {rejected ? de.costs.rejectedTitle(demoConfig.insurer.shortName) : t.unavailableTitle}
+        </Text>
+        <Text variant="bodyLg">{rejected ? de.costs.rejectedText : t.unavailableText}</Text>
+      </CaseScreen>
+    );
+  }
 
   const request = () => {
     if (!slot || !partnerId) {

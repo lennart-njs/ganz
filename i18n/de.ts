@@ -789,6 +789,9 @@ export const de = {
     pickSlot: 'Wähl bitte ein Zeitfenster.',
     noPartner:
       'Gerade hat kein Betrieb in deiner Nähe Zeit. Wir melden uns, sobald einer frei ist.',
+    /** Für diesen Fall gibt es gerade keinen Termin, z. B. weil schon einer läuft */
+    unavailableTitle: 'Hier gibt es gerade keinen Termin.',
+    unavailableText: 'Wie es weitergeht, siehst du im Gespräch zu deinem Fall.',
   },
 
   status: {

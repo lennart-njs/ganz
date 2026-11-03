@@ -160,6 +160,8 @@ const routes = (w: ReturnType<typeof world>) => [
   `/fall/${w.done}/videocall?video=${w.video}`,
   `/fall/${w.done}/kosten`,
   `/fall/${w.done}/termin?art=reparatur`,
+  // Das Formular: Der Fall mit Kostenvoranschlag, selbst bezahlt
+  `/fall/${w.claim}/termin?art=reparatur&zahlung=selbst`,
   `/fall/${w.done}/status`,
   `/fall/${w.done}/fallakte`,
   // Das Gespräch des Falls in drei Lagen: Anleitung mit Assistent, Kosten, abgeschlossen

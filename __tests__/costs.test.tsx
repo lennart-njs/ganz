@@ -182,6 +182,38 @@ describe('Betrieb und Termin', () => {
     expect(useAppStore.getState().cases[id]?.status).toBe('in_reparatur');
   });
 
+  test('Ablehnung während des Termins: die Entscheidung statt des Formulars (R-09)', async () => {
+    const { id } = await bookAfterClaim();
+    await act(async () => {
+      useAppStore.getState().setDemo({ claimScenario: 'ablehnen' });
+      useAppStore.getState().simulateNext(id);
+    });
+    expect(useAppStore.getState().cases[id]?.status).toBe('abgelehnt');
+    expect(screen.getByRole('header', { name: de.costs.rejectedTitle('Kranich') })).toBeTruthy();
+    expect(screen.queryByRole('radio', { name: demoConfig.slots[0] })).toBeNull();
+    expect(screen.queryByText(de.appointment.costsClaim('Kranich', '0 €'))).toBeNull();
+    // Selbst zahlen ist eine eigene Wahl, mit dem Preis vor dem Buchen
+    await tap(de.costs.rejectedSelfPay('189 €'));
+    expect(screen.getByText(de.appointment.costsSelf('189 €'))).toBeTruthy();
+    await fireEvent.press(screen.getByRole('radio', { name: demoConfig.slots[1] }));
+    await tap(de.appointment.requestPaid);
+    expect(useAppStore.getState().cases[id]?.status).toBe('in_reparatur');
+    expect(useAppStore.getState().bookings.filter((b) => b.status !== 'storniert')).toHaveLength(1);
+  });
+
+  test('mit laufendem Termin kein zweiter: Hinweis und zurück ins Gespräch', async () => {
+    const { id, r } = await bookAfterClaim();
+    await fireEvent.press(screen.getByRole('radio', { name: demoConfig.slots[0] }));
+    await tap(de.appointment.request);
+    expect(r.getPathname()).toBe(`/fall/${id}`);
+    await act(async () => router.push(`/fall/${id}/termin?art=reparatur`));
+    expect(screen.getByRole('header', { name: de.appointment.unavailableTitle })).toBeTruthy();
+    expect(screen.queryByRole('radio', { name: demoConfig.slots[0] })).toBeNull();
+    await tap(de.thread.toThread);
+    expect(r.getPathname()).toBe(`/fall/${id}`);
+    expect(useAppStore.getState().bookings).toHaveLength(1);
+  });
+
   test('die Pumpe geht nie an den Haushalt', async () => {
     const { id } = await bookAfterClaim();
     expect(
