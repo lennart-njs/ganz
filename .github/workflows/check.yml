@@ -1,0 +1,65 @@
+# Prüft jeden Push und jeden Pull Request mit scripts/ci-checks.sh, derselben Quelle wie
+# scripts/commit-if-green.sh. Pflicht für einen Merge wird es erst mit Branch und PR (Nr. 15).
+# gitleaks und osv-scanner kommen als Binärdateien mit fester Version und Prüfsumme,
+# nicht als Actions. gitleaks-action braucht für Repos einer Organisation eine Lizenz.
+name: check
+
+on:
+  push:
+    branches: ['**']
+  pull_request:
+
+# Je Branch und Ereignis läuft nur der neueste Commit, ältere Läufe brechen ab.
+concurrency:
+  group: check-${{ github.event_name }}-${{ github.head_ref || github.ref_name }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    env:
+      GITLEAKS_VERSION: 8.30.1
+      OSV_SCANNER_VERSION: 2.7.0
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          # gitleaks prüft den ganzen Verlauf
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - run: npm ci
+
+      - name: gitleaks und osv-scanner laden
+        run: |
+          set -euo pipefail
+          bin="$RUNNER_TEMP/bin"
+          mkdir -p "$bin"
+          cd "$RUNNER_TEMP"
+
+          base="https://github.com/gitleaks/gitleaks/releases/download/v$GITLEAKS_VERSION"
+          file="gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz"
+          curl -fsSLO "$base/$file"
+          curl -fsSLO "$base/gitleaks_${GITLEAKS_VERSION}_checksums.txt"
+          grep "  $file\$" "gitleaks_${GITLEAKS_VERSION}_checksums.txt" | sha256sum --check --strict -
+          tar -xzf "$file" -C "$bin" gitleaks
+
+          base="https://github.com/google/osv-scanner/releases/download/v$OSV_SCANNER_VERSION"
+          file="osv-scanner_linux_amd64"
+          curl -fsSLO "$base/$file"
+          curl -fsSLO "$base/osv-scanner_SHA256SUMS"
+          grep "  $file\$" osv-scanner_SHA256SUMS | sha256sum --check --strict -
+          install -m 0755 "$file" "$bin/osv-scanner"
+
+          echo "$bin" >> "$GITHUB_PATH"
+          "$bin/gitleaks" version
+          "$bin/osv-scanner" --version
+
+      - run: scripts/ci-checks.sh

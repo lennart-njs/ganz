@@ -64,7 +64,11 @@ npm run check:fast     # Typecheck, Lint auf geänderten Dateien, Jest-Projekt u
 npm test               # nur Tests
 npm run guides:check   # Anleitungen wörtlich gegen die Demo prüfen
 npm run lint           # nur Lint
+scripts/ci-checks.sh   # alles wie in CI: check, guides:check, gitleaks, osv-scanner
+scripts/commit-if-green.sh -m "Nachricht"   # committet, was mit git add bereitliegt, nur wenn alles grün ist
 ```
+
+`scripts/ci-checks.sh` ist die eine Quelle für alle Prüfungen. CI (`.github/workflows/check.yml`) und `scripts/commit-if-green.sh` rufen es auf. gitleaks und osv-scanner laufen lokal nur, wenn sie installiert sind, sonst steht ein Hinweis da. In CI laufen sie immer, mit fester Version. Ausnahmen für osv-scanner stehen mit Grund und Enddatum in `osv-scanner.toml`.
 
 Lint prüft das ganze Repo. Eigene Regeln stehen im Plugin `ganz` in `eslint.config.js`: keine Farbwerte außerhalb von `theme/` (`ganz/farben-aus-theme`), kein Text außerhalb von `i18n/de.ts` (`ganz/text-aus-i18n`, dazu `ganz/text-in-ausdruecken` für Bedingungen, Template-Literale, Verkettungen, Listen und Objekte in JSX). Dazu kein `Text` direkt aus `react-native`. `__tests__/lint.test.ts` zeigt, dass alle Regeln gleichzeitig greifen. Ein Test prüft jeden Screen auf Rolle, Label, 44 pt und Schrift bis 200 %.
 

@@ -1,0 +1,92 @@
+# Ausnahmen für osv-scanner (scripts/ci-checks.sh). Jede Ausnahme hat einen Grund und ein Ende.
+# Danach ist die Prüfung wieder rot, und jemand entscheidet neu: Upgrade oder neue Frist.
+# Upgrades kommen als eigener Schritt (ZUKUNFTSPLAN Abschnitt 5, Abhängigkeiten).
+# Stand: 03.11.2026. Alle Pakete stecken nur in Werkzeugen für Build, Lint und Tests
+# (Expo CLI, Config-Plugins, Jest, ESLint). Keins davon landet im Bundle der App.
+
+# node-forge 1.4.0, nur in @expo/cli (Zertifikate des Dev-Servers, Signatur von Updates).
+# Behoben in 1.4.1, ein Patch innerhalb des Bereichs von @expo/cli.
+[[IgnoredVulns]]
+id = "GHSA-4487-j8r4-4g2f"
+ignoreUntil = 2026-12-04
+reason = "node-forge nur in @expo/cli auf dem Rechner, nicht in der App. Fix 1.4.1 im Schritt für Abhängigkeiten."
+
+[[IgnoredVulns]]
+id = "GHSA-4642-5mcj-2rqw"
+ignoreUntil = 2026-12-04
+reason = "node-forge nur in @expo/cli auf dem Rechner, nicht in der App. Fix 1.4.1 im Schritt für Abhängigkeiten."
+
+[[IgnoredVulns]]
+id = "GHSA-525v-9gp9-w22h"
+ignoreUntil = 2026-12-04
+reason = "node-forge nur in @expo/cli auf dem Rechner, nicht in der App. Fix 1.4.1 im Schritt für Abhängigkeiten."
+
+[[IgnoredVulns]]
+id = "GHSA-5cwg-6vw7-rj6p"
+ignoreUntil = 2026-12-04
+reason = "node-forge nur in @expo/cli auf dem Rechner, nicht in der App. Fix 1.4.1 im Schritt für Abhängigkeiten."
+
+[[IgnoredVulns]]
+id = "GHSA-5x38-2vff-x55p"
+ignoreUntil = 2026-12-04
+reason = "node-forge nur in @expo/cli auf dem Rechner, nicht in der App. Fix 1.4.1 im Schritt für Abhängigkeiten."
+
+[[IgnoredVulns]]
+id = "GHSA-6wvx-3r32-xmcg"
+ignoreUntil = 2026-12-04
+reason = "node-forge nur in @expo/cli auf dem Rechner, nicht in der App. Fix 1.4.1 im Schritt für Abhängigkeiten."
+
+[[IgnoredVulns]]
+id = "GHSA-7wch-p9px-956x"
+ignoreUntil = 2026-12-04
+reason = "node-forge nur in @expo/cli auf dem Rechner, nicht in der App. Fix 1.4.1 im Schritt für Abhängigkeiten."
+
+[[IgnoredVulns]]
+id = "GHSA-8hrf-8g6f-7xwp"
+ignoreUntil = 2026-12-04
+reason = "node-forge nur in @expo/cli auf dem Rechner, nicht in der App. Fix 1.4.1 im Schritt für Abhängigkeiten."
+
+[[IgnoredVulns]]
+id = "GHSA-h6cr-wjv9-3cpp"
+ignoreUntil = 2026-12-04
+reason = "node-forge nur in @expo/cli auf dem Rechner, nicht in der App. Fix 1.4.1 im Schritt für Abhängigkeiten."
+
+[[IgnoredVulns]]
+id = "GHSA-hqq3-7jhf-c5jx"
+ignoreUntil = 2026-12-04
+reason = "node-forge nur in @expo/cli auf dem Rechner, nicht in der App. Fix 1.4.1 im Schritt für Abhängigkeiten."
+
+[[IgnoredVulns]]
+id = "GHSA-jc66-7q78-782g"
+ignoreUntil = 2026-12-04
+reason = "node-forge nur in @expo/cli auf dem Rechner, nicht in der App. Fix 1.4.1 im Schritt für Abhängigkeiten."
+
+# Ohne Fix in 1.4.x. Prüfung der RSA-Signatur in @expo/code-signing-certificates.
+[[IgnoredVulns]]
+id = "GHSA-86w9-cpqp-85rv"
+ignoreUntil = 2026-12-04
+reason = "node-forge nur in @expo/cli auf dem Rechner, nicht in der App. Noch kein Fix, mit dem Expo-Upgrade prüfen."
+
+# deepmerge 4.3.1, in @expo/config und jest-config. Noch kein Fix.
+[[IgnoredVulns]]
+id = "GHSA-gcqx-w48m-w2h4"
+ignoreUntil = 2026-12-04
+reason = "deepmerge nur in @expo/config und jest-config, nicht in der App. Noch kein Fix."
+
+# glob 10 und 13, in Expo CLI, Config-Plugins und Jest. Fix erst in 14, außerhalb der Bereiche.
+[[IgnoredVulns]]
+id = "GHSA-3g3m-2fjr-6pw4"
+ignoreUntil = 2026-12-04
+reason = "glob nur in Expo CLI, Config-Plugins und Jest, nicht in der App. Fix 14 braucht neue Versionen dieser Werkzeuge."
+
+# minimatch 3, 9 und 10, in ESLint, Jest und Expo. Fix erst in 11, außerhalb der Bereiche.
+[[IgnoredVulns]]
+id = "GHSA-g3hv-75wg-m249"
+ignoreUntil = 2026-12-04
+reason = "minimatch nur in ESLint, Jest und Expo-Werkzeugen, nicht in der App. Fix 11 braucht neue Versionen dieser Werkzeuge."
+
+# zod 3.25.76, nur in @expo/cli. Die App nutzt zod 4.6.7, dort ist es behoben.
+[[IgnoredVulns]]
+id = "GHSA-mrhx-c7xc-m3w5"
+ignoreUntil = 2026-12-04
+reason = "zod 3 nur in @expo/cli, nicht in der App. Die App nutzt zod 4.6.7 mit Fix."
