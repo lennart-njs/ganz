@@ -88,6 +88,8 @@ APP_VARIANT=pitch npx expo config --type public   # Konfiguration einer Variante
 
 Ein unbekannter Wert bricht ab. Die Variante steht in jedem Build unter `extra.appVariant`, mit `EXPO_PUBLIC_APP_VARIANT` auch fest im Bundle.
 
+`eas.json` hat dieselben drei Profile und setzt die Variante je Profil. Gebaut wird erst mit Expo-Konto und Apple Developer Program (Schritt 30), etwa `eas build --profile pitch`. `eas update` liest nur die Variablen der EAS-Umgebung, darum `eas update --channel pitch --environment preview` (`docs/ANNAHMEN.md`, Schritt 29).
+
 ## Prüfen
 
 ```bash
