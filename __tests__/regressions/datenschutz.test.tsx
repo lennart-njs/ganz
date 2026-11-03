@@ -299,7 +299,7 @@ describe('R-16 Rückruf ohne Bestätigung', () => {
   // Widerruf der Weitergabe an die Fachkraft geht der Rückruf trotzdem raus, ohne Hinweis, wer
   // welche Daten bekommt. B-19 und B-23 wieder offen.
   // Behoben: Ein Sheet nennt Empfänger und Daten (components/app/CallbackSheet.tsx), erst sein Tap
-  // bestätigt. requestCallback wirft ohne gültige Bestätigung ConsentRequiredError.
+  // bestätigt. requestCallback lehnt ohne gültige Bestätigung ab (seit Schritt 24 als Result).
   test('R-16 ohne gültige Bestätigung kein Rückruf, auch nicht im Store', async () => {
     const { id } = await noExpertAfterCall();
     await act(async () => {

@@ -10,7 +10,6 @@ import { notifications } from '@/services/notifications';
 import {
   canStartVideoCall,
   canTransition,
-  ConsentRequiredError,
   createQuote,
   findActiveConsent,
   isClosed,
@@ -191,15 +190,25 @@ export interface AppActions {
   startGuide: (caseId: Id, guideId: string) => GuideRun;
   /** Hilfe holen, wenn der Status es erlaubt. Sonst abgelehnt, ohne Wirkung. */
   escalate: (caseId: Id) => Result<Case>;
-  /** Fragt einen Videocall an. Nur mit bestätigter Weitergabe an die Fachkraft (B-19). */
-  requestVideoCall: (caseId: Id, screenshotsConsentId?: Id) => VideoSession;
-  /** Ergebnis des Warteraums oder Ende des Calls */
+  /**
+   * Fragt einen Videocall an, wo die Regeln es erlauben, und holt dabei Hilfe. Nur mit
+   * bestätigter Weitergabe an die Fachkraft (B-19): schon gespeichert oder als confirm.share mit
+   * dem Tap. Bestätigungen, Status, Call und Ereignisse stehen in einem set.
+   */
+  requestVideoCall: (
+    caseId: Id,
+    confirm?: { share?: NewConsent; screenshots?: NewConsent },
+  ) => Result<VideoSession>;
+  /** Ergebnis des Warteraums oder Ende des Calls. Verbinden nur mit gültiger Bestätigung. */
   updateVideoCall: (
     sessionId: Id,
     change: 'verbunden' | 'keine_fachkraft' | 'abgebrochen' | 'beendet',
-  ) => void;
-  /** Rückruf der Fachkraft. Nur mit bestätigter Weitergabe an die Fachkraft (R-16). */
-  requestCallback: (caseId: Id, slot: string) => void;
+  ) => Result<VideoSession>;
+  /**
+   * Rückruf der Fachkraft. Nur mit bestätigter Weitergabe an die Fachkraft (R-16): schon
+   * gespeichert oder als confirm mit dem Tap im Sheet, dann in einem set mit dem Rückruf.
+   */
+  requestCallback: (caseId: Id, slot: string, confirm?: NewConsent) => Result<void>;
   /**
    * Meldet den Schadenfall: speichert die Bestätigung und wechselt auf „freigabe_noetig“ (B-17).
    * Erst die Regel, dann Bestätigung, Meldung und Status in einem set. Ohne Vertrag oder nach
@@ -770,10 +779,27 @@ export function createAppStore(storage: StateStorage = AsyncStorage, env: StoreE
             }
           },
 
-          requestVideoCall: (caseId, screenshotsConsentId) => {
-            const c = getCase(caseId);
-            if (!canStartVideoCall(get().consents, c.reportedBy, caseId)) {
-              throw new ConsentRequiredError('weitergabe_fachkraft');
+          requestVideoCall: (caseId, confirm = {}) => {
+            const c = get().cases[caseId];
+            if (!c) return missingCase(caseId);
+            if (!can(selectCaseFacts(get(), caseId), 'videocall_anfragen')) {
+              return refuse({ code: 'regel', action: 'videocall_anfragen' });
+            }
+            // Wer einen Call startet, holt Hilfe. Das geht auch aus der Selbsthilfe.
+            const escalated = canTransition(c.status, 'hilfe_holen')
+              ? draftCommand(c, 'hilfe_holen')
+              : undefined;
+            if (escalated && !escalated.ok) return escalated;
+            const share = confirm.share ? draftConsent(confirm.share) : undefined;
+            const shots = confirm.screenshots ? draftConsent(confirm.screenshots) : undefined;
+            const consents = [
+              ...get().consents,
+              ...(share ? [share.consent] : []),
+              ...(shots ? [shots.consent] : []),
+            ];
+            // Erst die Bestätigung an die Fachkraft, dann der Call (B-19)
+            if (!canStartVideoCall(consents, c.reportedBy, caseId)) {
+              return refuse({ code: 'bestaetigung', purpose: 'weitergabe_fachkraft' });
             }
             const cfg = demoConfig;
             const partner = cfg.partners.find((p) => p.id === cfg.expert.partnerId)!;
@@ -787,61 +813,92 @@ export function createAppStore(storage: StateStorage = AsyncStorage, env: StoreE
               },
               requestedAt: now,
               recording: false,
-              screenshotsConsentId,
+              screenshotsConsentId: shots?.consent.id,
             };
-            set((s) => ({ videoSessions: [...s.videoSessions, session] }));
-            get().addEvent({
+            const requested: CaseEvent = {
+              id: env.newId('ev'),
               caseId,
               type: 'videocall_angefragt',
+              at: env.now(),
               actor: householdActor(),
               payload: { sessionId: session.id, expert: session.expert.name },
-            });
-            return session;
+            };
+            // Hilfe holen, Bestätigungen, Call und Ereignisse in einem Schritt
+            set((s) => ({
+              cases: escalated ? { ...s.cases, [caseId]: escalated.value.case } : s.cases,
+              consents,
+              videoSessions: [...s.videoSessions, session],
+              events: [
+                ...s.events,
+                ...(escalated?.value.events ?? []),
+                ...(share?.events ?? []),
+                ...(shots?.events ?? []),
+                requested,
+              ],
+            }));
+            return ok(session);
           },
 
           updateVideoCall: (sessionId, change) => {
             const session = get().videoSessions.find((v) => v.id === sessionId);
-            if (!session) return;
-            const now = env.now();
-            let next: VideoSession = session;
-            if (change === 'verbunden') {
-              // Auch beim Verbinden gilt: nur mit gültiger Bestätigung
-              const c = getCase(session.caseId);
-              if (!canStartVideoCall(get().consents, c.reportedBy, c.id)) {
-                throw new ConsentRequiredError('weitergabe_fachkraft');
-              }
-              next = { ...session, startedAt: now, outcome: 'verbunden' };
-            } else if (change === 'beendet') {
-              next = { ...session, endedAt: now };
-            } else {
-              next = { ...session, endedAt: now, outcome: change };
+            if (!session) return refuse({ code: 'unbekannt', what: 'videocall', id: sessionId });
+            const c = get().cases[session.caseId];
+            if (!c) return missingCase(session.caseId);
+            // Auch beim Verbinden gilt: nur mit gültiger Bestätigung
+            if (change === 'verbunden' && !canStartVideoCall(get().consents, c.reportedBy, c.id)) {
+              return refuse({ code: 'bestaetigung', purpose: 'weitergabe_fachkraft' });
             }
-            set((s) => ({
-              videoSessions: s.videoSessions.map((v) => (v.id === sessionId ? next : v)),
-            }));
-            get().addEvent({
+            const now = env.now();
+            const next: VideoSession =
+              change === 'verbunden'
+                ? { ...session, startedAt: now, outcome: 'verbunden' }
+                : change === 'beendet'
+                  ? { ...session, endedAt: now }
+                  : { ...session, endedAt: now, outcome: change };
+            const ev: CaseEvent = {
+              id: env.newId('ev'),
               caseId: session.caseId,
               type: change === 'verbunden' ? 'videocall_gestartet' : 'videocall_beendet',
+              at: env.now(),
               actor:
                 change === 'verbunden'
                   ? { kind: 'fachkraft', name: session.expert.name }
                   : householdActor(),
               payload: { sessionId, outcome: next.outcome, change },
-            });
+            };
+            set((s) => ({
+              videoSessions: s.videoSessions.map((v) => (v.id === sessionId ? next : v)),
+              events: [...s.events, ev],
+            }));
+            return ok(next);
           },
 
-          requestCallback: (caseId, slot) => {
-            const c = getCase(caseId);
-            // Wie beim Videocall: ohne gültige Bestätigung geht nichts an die Fachkraft
-            if (!canStartVideoCall(get().consents, c.reportedBy, caseId)) {
-              throw new ConsentRequiredError('weitergabe_fachkraft');
+          requestCallback: (caseId, slot, confirm) => {
+            const c = get().cases[caseId];
+            if (!c) return missingCase(caseId);
+            const share = confirm ? draftConsent(confirm) : undefined;
+            const consents = share ? [...get().consents, share.consent] : get().consents;
+            // Wie beim Videocall: ohne gültige Bestätigung geht nichts an die Fachkraft (R-16)
+            if (!canStartVideoCall(consents, c.reportedBy, caseId)) {
+              return refuse({ code: 'bestaetigung', purpose: 'weitergabe_fachkraft' });
             }
-            get().addEvent({
+            if (!can(selectCaseFacts({ ...get(), consents }, caseId), 'rueckruf_anfragen')) {
+              return refuse({ code: 'regel', action: 'rueckruf_anfragen' });
+            }
+            const requested: CaseEvent = {
+              id: env.newId('ev'),
               caseId,
               type: 'videocall_angefragt',
+              at: env.now(),
               actor: householdActor(),
               payload: { art: 'rueckruf', slot },
-            });
+            };
+            // Bestätigung und Rückruf in einem Schritt
+            set((s) => ({
+              consents,
+              events: [...s.events, ...(share?.events ?? []), requested],
+            }));
+            return ok();
           },
 
           setFinding: (caseId, option, by) => {

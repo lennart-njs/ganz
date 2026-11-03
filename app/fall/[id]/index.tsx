@@ -177,30 +177,30 @@ export default function FallGespraech() {
 
   const escalate = () => useAppStore.getState().escalate(caseId);
 
+  // Der Tap bestätigt die Weitergabe an die Fachkraft. Der Store speichert sie mit dem Call.
   const startCall = () => {
-    const s = useAppStore.getState();
-    escalate();
     const recipient = { id: helpPartner.id, kind: 'betrieb' as const, name: helpPartner.name };
-    s.grantConsent({
-      caseId,
-      purpose: 'weitergabe_fachkraft',
-      legalBasis: 'vertrag',
-      recipient,
-      dataCategories: [...de.help.shareItems],
-      textVersion: CONSENT_TEXT_VERSION,
+    const session = useAppStore.getState().requestVideoCall(caseId, {
+      share: {
+        caseId,
+        purpose: 'weitergabe_fachkraft',
+        legalBasis: 'vertrag',
+        recipient,
+        dataCategories: [...de.help.shareItems],
+        textVersion: CONSENT_TEXT_VERSION,
+      },
+      screenshots: screenshots
+        ? {
+            caseId,
+            purpose: 'screenshots_im_call',
+            legalBasis: 'einwilligung',
+            recipient,
+            dataCategories: [de.help.screenshots],
+            textVersion: CONSENT_TEXT_VERSION,
+          }
+        : undefined,
     });
-    const shot = screenshots
-      ? s.grantConsent({
-          caseId,
-          purpose: 'screenshots_im_call',
-          legalBasis: 'einwilligung',
-          recipient,
-          dataCategories: [de.help.screenshots],
-          textVersion: CONSENT_TEXT_VERSION,
-        })
-      : undefined;
-    const session = s.requestVideoCall(caseId, shot?.id);
-    router.push(`/fall/${caseId}/warteraum?video=${session.id}`);
+    if (session.ok) router.push(`/fall/${caseId}/warteraum?video=${session.value.id}`);
   };
 
   // Läuft dieselbe Anleitung schon, geht startGuide dort weiter (R-06)

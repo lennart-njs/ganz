@@ -4,10 +4,10 @@ import { StyleSheet } from 'react-native';
 
 import { demoConfig } from '@/config/demo.config';
 import { de } from '@/i18n/de';
-import { ConsentRequiredError } from '@/model/caseMachine';
 import { services } from '@/services';
 import { useAppStore } from '@/store/appStore';
 import { APP } from '@/test/app';
+import { unwrap } from '@/test/result';
 import { colors } from '@/theme/colors';
 
 const tap = (name: string | RegExp) => fireEvent.press(screen.getByRole('button', { name }));
@@ -49,7 +49,11 @@ describe('Ohne bestätigte Weitergabe startet kein Call', () => {
   test('der Store verweigert den Videocall', () => {
     const id = setup();
     useAppStore.getState().escalate(id);
-    expect(() => useAppStore.getState().requestVideoCall(id)).toThrow(ConsentRequiredError);
+    expect(useAppStore.getState().requestVideoCall(id)).toEqual({
+      ok: false,
+      refusal: { code: 'bestaetigung', purpose: 'weitergabe_fachkraft' },
+    });
+    expect(useAppStore.getState().videoSessions).toHaveLength(0);
   });
 
   test('Warteraum und Videocall leiten ohne Bestätigung zu „Hilfe holen“ um', async () => {
@@ -72,9 +76,13 @@ describe('Ohne bestätigte Weitergabe startet kein Call', () => {
       dataCategories: [],
       textVersion: '1',
     });
-    const session = s.requestVideoCall(id);
+    const session = unwrap(s.requestVideoCall(id));
     s.revokeConsent(consent.id);
-    expect(() => s.updateVideoCall(session.id, 'verbunden')).toThrow(ConsentRequiredError);
+    expect(s.updateVideoCall(session.id, 'verbunden')).toEqual({
+      ok: false,
+      refusal: { code: 'bestaetigung', purpose: 'weitergabe_fachkraft' },
+    });
+    expect(useAppStore.getState().videoSessions[0]?.startedAt).toBeUndefined();
   });
 });
 
@@ -255,7 +263,10 @@ describe('Keine Fachkraft frei', () => {
 
   test('der Store verweigert den Rückruf ohne gültige Bestätigung', () => {
     const id = caseWithAbort();
-    expect(() => useAppStore.getState().requestCallback(id, slot)).toThrow(ConsentRequiredError);
+    expect(useAppStore.getState().requestCallback(id, slot)).toEqual({
+      ok: false,
+      refusal: { code: 'bestaetigung', purpose: 'weitergabe_fachkraft' },
+    });
     expect(callbacks(id)).toHaveLength(0);
   });
 });

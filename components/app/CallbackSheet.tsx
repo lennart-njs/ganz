@@ -25,10 +25,10 @@ export function CallbackSheet({ caseId, slot, onClose }: CallbackSheetProps) {
   const expert = demoConfig.expert.name;
   const partner = demoConfig.partners.find((p) => p.id === demoConfig.expert.partnerId)!;
 
+  // Bestätigung und Rückruf speichert der Store in einem Schritt
   const confirm = () => {
     if (!slot) return;
-    const s = useAppStore.getState();
-    s.grantConsent({
+    useAppStore.getState().requestCallback(caseId, slot, {
       caseId,
       purpose: 'weitergabe_fachkraft',
       legalBasis: 'vertrag',
@@ -36,7 +36,6 @@ export function CallbackSheet({ caseId, slot, onClose }: CallbackSheetProps) {
       dataCategories: [...de.help.shareItems],
       textVersion: CONSENT_TEXT_VERSION,
     });
-    s.requestCallback(caseId, slot);
     onClose();
   };
 

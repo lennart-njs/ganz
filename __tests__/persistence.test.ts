@@ -133,9 +133,9 @@ function playThrough(store: AppStore) {
     dataCategories: ['Fotos'],
     textVersion: '1',
   });
-  const video = s().requestVideoCall(b.id);
-  s().updateVideoCall(video.id, 'verbunden');
-  s().updateVideoCall(video.id, 'beendet');
+  const video = unwrap(s().requestVideoCall(b.id));
+  unwrap(s().updateVideoCall(video.id, 'verbunden'));
+  unwrap(s().updateVideoCall(video.id, 'beendet'));
   s().setFinding(b.id, 'reparatur', 'fachkraft');
   unwrap(s().reportClaim(b.id, '1'));
   const booking = unwrap(

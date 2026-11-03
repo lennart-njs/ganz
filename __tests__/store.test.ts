@@ -409,3 +409,82 @@ describe('Schadenfall und Termin: erst prüfen, dann in einem Schritt schreiben'
     expect(s().bookings).toEqual([]);
   });
 });
+
+describe('Videocall und Rückruf: Bestätigung und Anfrage in einem Schritt', () => {
+  const partner = demoConfig.partners[0]!;
+  const share = (caseId: string) => ({
+    caseId,
+    purpose: 'weitergabe_fachkraft' as const,
+    legalBasis: 'vertrag' as const,
+    recipient: { id: partner.id, kind: 'betrieb' as const, name: partner.name },
+    dataCategories: ['Fotos'],
+    textVersion: '1',
+  });
+  const setup = () => {
+    const store = createAppStore(memoryStorage(), testEnv());
+    const s = () => store.getState();
+    s().ensureHousehold();
+    const c = s().createCase({ deviceId: 'd-1', entry: 'foto', problemLabel: 'x' });
+    let writes = 0;
+    store.subscribe(() => {
+      writes += 1;
+    });
+    return { s, id: c.id, writes: () => writes };
+  };
+
+  test('vor „Hilfe holen“ kein Call, nichts wird gespeichert', () => {
+    const { s, id, writes } = setup();
+    expect(s().requestVideoCall(id, { share: share(id) })).toEqual({
+      ok: false,
+      refusal: { code: 'regel', action: 'videocall_anfragen' },
+    });
+    expect(writes()).toBe(0);
+  });
+
+  test('ohne Bestätigung kein Call, auch die Einwilligung in Screenshots bleibt ungespeichert', () => {
+    const { s, id, writes } = setup();
+    unwrap(s().escalate(id));
+    const screenshots = { ...share(id), purpose: 'screenshots_im_call' as const };
+    expect(s().requestVideoCall(id, { screenshots })).toEqual({
+      ok: false,
+      refusal: { code: 'bestaetigung', purpose: 'weitergabe_fachkraft' },
+    });
+    expect(writes()).toBe(1);
+    expect(s().consents).toEqual([]);
+  });
+
+  test('mit dem Tap: Bestätigungen, Call und Ereignisse auf einmal', () => {
+    const { s, id, writes } = setup();
+    unwrap(s().escalate(id));
+    const screenshots = { ...share(id), purpose: 'screenshots_im_call' as const };
+    const session = unwrap(s().requestVideoCall(id, { share: share(id), screenshots }));
+    expect(writes()).toBe(2);
+    expect(s().consents.map((c) => c.purpose)).toEqual([
+      'weitergabe_fachkraft',
+      'screenshots_im_call',
+    ]);
+    expect(session.screenshotsConsentId).toBe(s().consents[1]?.id);
+    expect(unwrap(s().updateVideoCall(session.id, 'verbunden')).outcome).toBe('verbunden');
+    expect(s().updateVideoCall('video-x', 'beendet')).toEqual({
+      ok: false,
+      refusal: { code: 'unbekannt', what: 'videocall', id: 'video-x' },
+    });
+  });
+
+  test('Rückruf: Bestätigung und Anfrage auf einmal, vor „Hilfe holen“ keiner', () => {
+    const { s, id, writes } = setup();
+    expect(s().requestCallback(id, 'heute', share(id))).toEqual({
+      ok: false,
+      refusal: { code: 'regel', action: 'rueckruf_anfragen' },
+    });
+    expect(s().consents).toEqual([]);
+    unwrap(s().escalate(id));
+    expect(s().requestCallback(id, 'heute', share(id))).toEqual({ ok: true, value: undefined });
+    expect(writes()).toBe(2);
+    expect(
+      selectCaseEvents(s(), id)
+        .slice(-2)
+        .map((e) => e.type),
+    ).toEqual(['weitergabe_bestaetigt', 'videocall_angefragt']);
+  });
+});

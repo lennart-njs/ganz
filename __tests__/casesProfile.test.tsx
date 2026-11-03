@@ -7,6 +7,7 @@ import { eventLabel } from '@/lib/caseEvents';
 import type { CaseEventType } from '@/model/types';
 import { useAppStore } from '@/store/appStore';
 import { APP } from '@/test/app';
+import { unwrap } from '@/test/result';
 
 const tap = (name: string | RegExp) => fireEvent.press(screen.getByRole('button', { name }));
 
@@ -46,7 +47,7 @@ function fullHistory() {
     dataCategories: [],
     textVersion: '1',
   });
-  const v = s.requestVideoCall(c.id);
+  const v = unwrap(s.requestVideoCall(c.id));
   s.updateVideoCall(v.id, 'verbunden');
   s.updateVideoCall(v.id, 'beendet');
   s.setFinding(c.id, 'reparatur', 'fachkraft');

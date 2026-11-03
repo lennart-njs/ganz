@@ -5,6 +5,7 @@ import type { TestInstance } from 'test-renderer';
 
 import { useAppStore } from '@/store/appStore';
 import { APP } from '@/test/app';
+import { unwrap } from '@/test/result';
 
 /** Fall auf dem Golden Path bis zum Abschluss, dazu ein zweiter offener Fall */
 function world() {
@@ -61,7 +62,7 @@ function world() {
   const g2 = s.startGuide(open.id, 'zulauf');
   s.moveGuideStep(g2.id, 'next');
   s.finishGuide(run.id, 'geht_nicht');
-  const v = s.requestVideoCall(c.id);
+  const v = unwrap(s.requestVideoCall(c.id));
   s.updateVideoCall(v.id, 'verbunden');
   s.setFinding(c.id, 'reparatur', 'fachkraft');
   s.reportClaim(c.id, '1');
