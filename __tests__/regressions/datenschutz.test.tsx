@@ -9,6 +9,7 @@ import { router } from 'expo-router';
 import { demoConfig } from '@/config/demo.config';
 import { de } from '@/i18n/de';
 import { requestAppointment } from '@/lib/booking';
+import type { DataCategory } from '@/model/policies/consentScopes';
 import type { Id } from '@/model/types';
 import { useAppStore } from '@/store/appStore';
 import { APP } from '@/test/app';
@@ -140,23 +141,26 @@ async function costsWithFullCaseFile() {
   return c.id;
 }
 
-/** Was die Vorschau zeigen kann: die Bezeichnung und woran man sie auf dem Screen erkennt */
-const previewCategories: [category: string, text: string | RegExp][] = [
-  [de.help.facts.device, de.help.facts.device],
-  [de.help.facts.problem, de.help.facts.problem],
-  [de.help.facts.result, de.help.facts.result],
-  [de.chat.fileTitle, de.chat.fileTitle],
-  [de.help.facts.steps, de.help.facts.steps],
-  [de.caseFile.photos, de.caseFile.photos],
-  [de.caseFile.finding, de.caseFile.finding],
-  [de.caseFile.costs, de.caseFile.costs],
-  [de.help.facts.note, new RegExp(escapeRegExp(de.a11y.fact(de.help.facts.note, '')))],
+/**
+ * Was die Vorschau zeigen kann: die Kategorie und woran man sie auf dem Screen erkennt. Seit
+ * Schritt 26 speichert die Bestätigung Schlüssel aus consentScopes, nicht mehr Bezeichnungen.
+ */
+const previewCategories: [category: DataCategory, text: string | RegExp][] = [
+  ['geraet', de.help.facts.device],
+  ['problem', de.help.facts.problem],
+  ['ergebnis', de.help.facts.result],
+  ['nachrichten', de.chat.fileTitle],
+  ['schritte', de.help.facts.steps],
+  ['fotos', de.caseFile.photos],
+  ['befund', de.caseFile.finding],
+  ['kosten', de.caseFile.costs],
+  ['notiz', new RegExp(escapeRegExp(de.a11y.fact(de.help.facts.note, '')))],
 ];
 
 const counts = () => previewCategories.map(([, text]) => screen.queryAllByText(text).length);
 
 /** Öffnet „Das geht an …“ und gibt zurück, welche Kategorien dabei dazukommen */
-async function openPreview(): Promise<string[]> {
+async function openPreview(): Promise<DataCategory[]> {
   const before = counts();
   await tap(de.costs.preview(insurer));
   const after = counts();
@@ -167,7 +171,7 @@ describe('R-14 Vorschau zeigt mehr als die bestätigten Kategorien', () => {
   test('R-14 Ausgangslage: die Vorschau zeigt die Fallakte, die Meldung speichert Kategorien', async () => {
     const id = await costsWithFullCaseFile();
     const shown = await openPreview();
-    expect(shown).toEqual(expect.arrayContaining([de.help.facts.device, de.caseFile.costs]));
+    expect(shown).toEqual(expect.arrayContaining(['geraet', 'kosten']));
     const c = caseOf(id);
     expect(useAppStore.getState().guideRuns[c.guideRunIds[0]!]?.abortNote).toBe(
       'Pumpenflügel klemmt',
@@ -180,16 +184,14 @@ describe('R-14 Vorschau zeigt mehr als die bestätigten Kategorien', () => {
   // components/app/CaseFileCard.tsx:108 (detail 'voll') zeigt in „Das geht an …“ die Notiz zum
   // Abbruch, das Problem und die Zahl der Chat-Nachrichten. Gespeichert wird mit der Bestätigung
   // nur de.consentData.versicherer. B-53 wieder offen.
-  test.failing(
-    'R-14 die Vorschau zeigt nur Kategorien, die die Bestätigung speichert',
-    async () => {
-      const id = await costsWithFullCaseFile();
-      const shown = await openPreview();
-      await tap(de.costs.report);
-      const stored = consentsFor('weitergabe_versicherer', id)[0]!.dataCategories;
-      expect(shown.filter((category) => !stored.includes(category))).toEqual([]);
-    },
-  );
+  // Behoben: Vorschau und Bestätigung nutzen dasselbe Array aus model/policies/consentScopes.ts.
+  test('R-14 die Vorschau zeigt nur Kategorien, die die Bestätigung speichert', async () => {
+    const id = await costsWithFullCaseFile();
+    const shown = await openPreview();
+    await tap(de.costs.report);
+    const stored = consentsFor('weitergabe_versicherer', id)[0]!.dataCategories;
+    expect(shown.filter((category) => !stored.includes(category))).toEqual([]);
+  });
 });
 
 // ---------- R-15 ----------

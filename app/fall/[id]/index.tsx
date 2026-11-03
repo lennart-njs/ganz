@@ -10,6 +10,7 @@ import { CaseScreen, useCaseId } from '@/components/app/CaseScreen';
 import { BotSays, QuickReplies, Typing, UserSaid, type Reply } from '@/components/app/Conversation';
 import { CostCompare } from '@/components/app/CostCompare';
 import { DemoHint } from '@/components/app/DemoHint';
+import { ScopeItems } from '@/components/app/ScopeItems';
 import { leaveCase } from '@/components/nav/leaveCase';
 import {
   Button,
@@ -34,6 +35,7 @@ import { formatDecimal, formatEuro } from '@/i18n/format';
 import { caseAppliance, hasGuides } from '@/lib/appliance';
 import { amountToPay, costsLine, requestAppointment } from '@/lib/booking';
 import { chatLimits } from '@/lib/chat/limits';
+import { scopeList } from '@/lib/consent';
 import { retryableChatErrors, useAssistant } from '@/lib/chat/useAssistant';
 import { deviceTitle, getManufacturer } from '@/lib/devices';
 import { guideTools } from '@/lib/guideMeta';
@@ -41,6 +43,7 @@ import { openPhone } from '@/lib/linking';
 import { toDiagnosis } from '@/lib/diagnosis';
 import { can } from '@/model/policies/actions';
 import { selectCaseFacts } from '@/model/policies/caseFacts';
+import { CONSENT_SCOPES, scopedConsent } from '@/model/policies/consentScopes';
 import { hasProgress } from '@/model/policies/openCase';
 import type { CaseEvent, Diagnosis } from '@/model/types';
 import { services, type FindingOption, type PhotoMode, type QuestionAnswer } from '@/services';
@@ -211,27 +214,13 @@ export default function FallGespraech() {
   const escalate = () => useAppStore.getState().escalate(caseId);
 
   // Der Tap bestätigt die Weitergabe an die Fachkraft. Der Store speichert sie mit dem Call.
+  // Umfang und Rechtsgrundlage kommen aus CONSENT_SCOPES, wie in der Liste darüber (R-14).
   const startCall = () => {
     const recipient = { id: helpPartner.id, kind: 'betrieb' as const, name: helpPartner.name };
+    const input = { caseId, recipient, textVersion: CONSENT_TEXT_VERSION };
     call.run({
-      share: {
-        caseId,
-        purpose: 'weitergabe_fachkraft',
-        legalBasis: 'vertrag',
-        recipient,
-        dataCategories: [...de.help.shareItems],
-        textVersion: CONSENT_TEXT_VERSION,
-      },
-      screenshots: screenshots
-        ? {
-            caseId,
-            purpose: 'screenshots_im_call',
-            legalBasis: 'einwilligung',
-            recipient,
-            dataCategories: [de.help.screenshots],
-            textVersion: CONSENT_TEXT_VERSION,
-          }
-        : undefined,
+      share: scopedConsent('weitergabe_fachkraft', input),
+      screenshots: screenshots ? scopedConsent('screenshots_im_call', input) : undefined,
     });
   };
 
@@ -757,6 +746,8 @@ export default function FallGespraech() {
         <UserSaid text={assistant.waiting} />
         <BotSays name={de.chat.title} lines={[de.chat.consentTitle]}>
           <Text variant="bodyLg">{de.chat.consentText(demoConfig.assistant.name)}</Text>
+          <ScopeItems purpose="chat_assistent" />
+          <Text variant="body">{de.chat.consentExcluded}</Text>
           <Text variant="meta">{de.chat.consentBasis}</Text>
         </BotSays>
       </View>,
@@ -831,10 +822,10 @@ export default function FallGespraech() {
           {/* Was beim Versicherer ankommt (B-53) */}
           <View style={styles.full}>
             <Disclosure title={de.costs.preview(insurer)}>
-              <View style={styles.stack}>
-                <Text variant="meta">{de.costs.previewContract(contract.contractNumber)}</Text>
-                <CaseFileCard caseId={caseId} detail="voll" />
-              </View>
+              <CaseFileCard
+                caseId={caseId}
+                categories={CONSENT_SCOPES.weitergabe_versicherer.dataCategories}
+              />
             </Disclosure>
           </View>
           <Text variant="meta">{de.costs.legal(insurer)}</Text>
@@ -938,7 +929,7 @@ export default function FallGespraech() {
                 {de.appointment.ecoDesign(a.finding.partAcc, demoConfig.ecoDesignDeliveryDays)}
               </Text>
             ) : null}
-            <Text variant="meta">{de.appointment.shares}</Text>
+            <Text variant="meta">{de.appointment.shares(scopeList('weitergabe_betrieb'))}</Text>
           </BotSays>,
         );
         const paid = amountToPay(state, caseId, selfPay, onSite) > 0;
@@ -969,20 +960,17 @@ export default function FallGespraech() {
       <BotSays key="hilfe" sender={false} lines={[]}>
         {/* Was die Fachkraft vorab sieht: das echte Protokoll (B-22) */}
         <View style={styles.full}>
-          <CaseFileCard caseId={caseId} />
+          <CaseFileCard
+            caseId={caseId}
+            categories={CONSENT_SCOPES.weitergabe_fachkraft.dataCategories}
+          />
         </View>
         <View style={styles.full}>
           <Card>
             <Text variant="labelStrong" accessibilityRole="header">
               {de.help.shareTitle(expert, helpPartner.name)}
             </Text>
-            <View style={styles.items}>
-              {de.help.shareItems.map((item) => (
-                <Text key={item} variant="body">
-                  {de.help.item(item)}
-                </Text>
-              ))}
-            </View>
+            <ScopeItems purpose="weitergabe_fachkraft" />
             <Text variant="labelStrong" style={styles.gapTop}>
               {de.help.noRecording}
             </Text>
@@ -994,7 +982,7 @@ export default function FallGespraech() {
         <View style={styles.full}>
           <Checkbox
             label={de.help.screenshots}
-            sub={de.help.screenshotsSub}
+            sub={de.help.screenshotsSub(scopeList('screenshots_im_call'))}
             checked={screenshots}
             onChange={setScreenshots}
           />

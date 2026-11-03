@@ -1,5 +1,5 @@
 import { router } from 'expo-router';
-import { StyleSheet, View } from 'react-native';
+import { StyleSheet } from 'react-native';
 
 import { DemoHint } from '@/components/app/DemoHint';
 import { CaseFileCard } from '@/components/app/CaseFileCard';
@@ -14,6 +14,7 @@ import { formatEuro } from '@/i18n/format';
 import { latestDiagnosis } from '@/lib/caseView';
 import { can } from '@/model/policies/actions';
 import { selectCaseFacts } from '@/model/policies/caseFacts';
+import { CONSENT_SCOPES } from '@/model/policies/consentScopes';
 import { useAppStore } from '@/store/appStore';
 
 const t = de.costs;
@@ -145,12 +146,12 @@ export default function Kosten() {
 
       {contract ? (
         <>
-          {/* Was beim Versicherer ankommt (B-53, Q-9) */}
+          {/* Was beim Versicherer ankommt, genau das speichert die Bestätigung (B-53, R-14) */}
           <Disclosure title={t.preview(insurer)}>
-            <View style={styles.preview}>
-              <Text variant="meta">{t.previewContract(contract.contractNumber)}</Text>
-              <CaseFileCard caseId={caseId} detail="voll" />
-            </View>
+            <CaseFileCard
+              caseId={caseId}
+              categories={CONSENT_SCOPES.weitergabe_versicherer.dataCategories}
+            />
           </Disclosure>
           <Text variant="meta">{t.legal(insurer)}</Text>
           {/* Selbst zahlen nur als echte Wahl, nicht während der Prüfung (R-07) */}
@@ -164,6 +165,5 @@ export default function Kosten() {
 }
 
 const styles = StyleSheet.create({
-  preview: { gap: 8 },
   toast: { marginHorizontal: 16, marginBottom: 8 },
 });

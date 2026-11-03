@@ -1,5 +1,7 @@
 // Alle Texte der App. Platzhalter sind Funktionen.
 // Glossar: docs/REVIEW.md Abschnitt 6.
+import type { DataCategory } from '@/model/policies/consentScopes';
+
 export const de = {
   app: {
     name: 'ganz',
@@ -114,14 +116,28 @@ export const de = {
     status_geaendert: 'Status geändert',
   },
 
-  /** Datenumfang je Weitergabe, so gespeichert und im Profil gezeigt */
-  consentData: {
-    versicherer: ['Gerät', 'Fotos', 'Ergebnis', 'Schritte', 'Befund', 'Kosten'],
-    betrieb: ['Gerät', 'Typenschild', 'Fotos', 'Befund', 'Schritte', 'Adresse'],
-    assistent: ['Deine Nachrichten', 'Gerät und Modell', 'Problem', 'Erledigte Schritte'],
-    /** Lokale Mitteilungen auf diesem Telefon (lit. a) */
-    mitteilungen: ['Stand deiner Fälle'],
-  },
+  /**
+   * Bezeichnungen der Datenkategorien aus model/policies/consentScopes.ts. Welche Kategorien eine
+   * Weitergabe umfasst, steht nur dort (R-14). Die Bezeichnungen stehen in Listen und mitten im Satz.
+   */
+  dataCategory: {
+    vertrag: 'Vertragsnummer',
+    geraet: 'Gerät und Modell',
+    typenschild: 'Typenschild-Nummern',
+    seriennummer: 'Seriennummer',
+    problem: 'Problem',
+    ergebnis: 'Ergebnis',
+    schritte: 'Schritte der Anleitung',
+    notiz: 'Notizen zu diesem Fall',
+    nachrichten: 'Nachrichten an den Assistenten',
+    fotos: 'Fotos aus diesem Fall',
+    standbilder: 'Standbilder aus dem Videocall',
+    befund: 'Befund',
+    kosten: 'Kostenvoranschlag',
+    adresse: 'Adresse',
+    schutz: 'Angabe, ob ein Schutz besteht',
+    fallstand: 'Stand deiner Fälle',
+  } satisfies Record<DataCategory, string>,
 
   consentPurpose: {
     weitergabe_fachkraft: 'Weitergabe an die Fachkraft',
@@ -298,6 +314,9 @@ export const de = {
     /** Mittelpunkt als Trenner wie im Designsystem */
     dot: (...parts: string[]) => parts.filter(Boolean).join(' · '),
     sentences: (...parts: string[]) => parts.filter(Boolean).join(' '),
+    /** „A, B und C“ */
+    list: (items: readonly string[]) =>
+      items.length < 2 ? (items[0] ?? '') : `${items.slice(0, -1).join(', ')} und ${items.at(-1)}`,
     exampleValues: 'Beispielwerte',
     later: 'Später',
     cancel: 'Abbrechen',
@@ -648,18 +667,13 @@ export const de = {
     abortedAt: (step: number, title: string) => `Ging nicht bei Schritt ${step}: ${title}`,
     notStarted: 'Anleitung nicht gestartet',
     shareTitle: (expert: string, company: string) => `Das sieht ${expert} (${company})`,
-    shareItems: [
-      'Gerät und Modell',
-      'Fotos aus diesem Fall',
-      'Ergebnis und erledigte Schritte',
-      'Deine Notiz',
-    ],
     noRecording: 'Keine Aufnahme. Ton und Bild werden nicht gespeichert.',
     legalBasis:
       'Grundlage ist deine Anfrage (Art. 6 Abs. 1 lit. b DSGVO). Ohne deinen Tap geht nichts weiter.',
     screenshots: 'Screenshots als Nachweis erlauben',
-    screenshotsSub:
-      'Freiwillig. Die Fachkraft darf Standbilder für die Fallakte speichern. Du kannst das im Profil widerrufen.',
+    /** data: die Kategorien aus consentScopes (screenshots_im_call), mit de.common.list */
+    screenshotsSub: (data: string) =>
+      `Freiwillig. Die Fachkraft darf ${data} für die Fallakte speichern. Du kannst das im Profil widerrufen.`,
     others: 'Andere Wege',
     onSite: 'Vor-Ort-Diagnose',
     onSiteSub: 'Ein Fachbetrieb kommt und schaut es sich an',
@@ -808,8 +822,8 @@ export const de = {
     pending: 'Der Termin ist vorbehaltlich Freigabe. Gibt es keine Freigabe, entscheidest du neu.',
     ecoDesign: (part: string, days: number) =>
       `Der Betrieb bekommt ${part} innerhalb von ${days} Arbeitstagen. So verlangt es das EU-Ökodesign-Recht.`,
-    shares:
-      'Der Betrieb bekommt Modell, Typenschild-Nummern, Fotos, Befund, deine erledigten Schritte und deine Adresse.',
+    /** data: die Kategorien aus consentScopes (weitergabe_betrieb), mit de.common.list */
+    shares: (data: string) => `Der Betrieb bekommt ${data}.`,
     addressLine: (street: string, zip: string, city: string) => `${street}, ${zip} ${city}`,
     request: 'Termin anfragen',
     requestPaid: 'Zahlungspflichtig buchen',
@@ -1051,8 +1065,9 @@ export const de = {
       'Beschreib, was passiert. Der Assistent fragt nach und sagt dir, ob eine Anleitung passt oder ob besser eine Fachkraft hilft.',
     who: 'Ein Computerprogramm, kein Mensch. Es kann sich irren. Bei Gefahr: Stecker ziehen und Hilfe holen.',
     consentTitle: 'Bevor du schreibst',
-    consentText: (provider: string) =>
-      `Deine Nachrichten gehen zur Auswertung an ${provider}. Mit dabei sind Gerät, Modell, Problem und deine erledigten Schritte. Nicht dabei sind Fotos, Adresse und Vertragsnummer.`,
+    /** Darunter stehen die Kategorien aus consentScopes (chat_assistent) als Liste */
+    consentText: (provider: string) => `Zur Auswertung bekommt ${provider}:`,
+    consentExcluded: 'Nicht dabei sind Fotos, Adresse und Vertragsnummer.',
     consentBasis:
       'Freiwillig, mit deiner Einwilligung (Art. 6 Abs. 1 lit. a DSGVO). Du kannst sie im Profil widerrufen. Ohne Einwilligung hilft dir eine Fachkraft im Videocall.',
     consentAccept: 'Einverstanden',
@@ -1111,8 +1126,9 @@ export const de = {
     revokedOn: (date: string) => `Widerrufen am ${date}`,
     optional: 'Freiwillig',
     manufacturerCase: (manufacturer: string) => `Einzelfälle an ${manufacturer} weitergeben`,
-    manufacturerCaseSub:
-      'Mit Gerät und Seriennummer, damit der Hersteller Fehler besser versteht. Ohne dein Ja gehen nur Zahlen ohne Personenbezug an den Hersteller.',
+    /** data: die Kategorien aus consentScopes (hersteller_einzelfall), mit de.common.list */
+    manufacturerCaseSub: (data: string) =>
+      `Mit ${data}, damit der Hersteller Fehler besser versteht. Ohne dein Ja gehen nur Zahlen ohne Personenbezug an den Hersteller.`,
     notifications: 'Mitteilungen zum Fall-Status',
     notificationsSub: 'Wenn sich bei Freigabe oder Termin etwas ändert.',
     notificationsDenied: 'In den Einstellungen deines Telefons ausgeschaltet.',

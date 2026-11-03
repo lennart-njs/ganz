@@ -5,6 +5,7 @@ import { act, fireEvent, renderRouter, screen } from 'expo-router/testing-librar
 import { demoConfig } from '@/config/demo.config';
 import { de } from '@/i18n/de';
 import { statusView } from '@/lib/statusView';
+import { CONSENT_SCOPES } from '@/model/policies/consentScopes';
 import { nextSimulationDue, simulationHold, useAppStore } from '@/store/appStore';
 import { APP } from '@/test/app';
 
@@ -106,7 +107,7 @@ describe('Fall-Status', () => {
     const consent = useAppStore.getState().consents.find((c) => c.purpose === 'mitteilungen')!;
     expect(consent).toMatchObject({
       legalBasis: 'einwilligung',
-      dataCategories: [...de.consentData.mitteilungen],
+      dataCategories: [...CONSENT_SCOPES.mitteilungen.dataCategories],
     });
     expect(consent.caseId).toBeUndefined();
     await act(async () => useAppStore.getState().revokeConsent(consent.id));
@@ -202,7 +203,7 @@ describe('Widerruf hält die Simulation an (R-12)', () => {
         purpose: 'weitergabe_betrieb',
         legalBasis: 'vertrag',
         recipient: { id: demoConfig.partners[1]!.id, kind: 'betrieb', name: 'anderer Betrieb' },
-        dataCategories: [...de.consentData.betrieb],
+        dataCategories: [...CONSENT_SCOPES.weitergabe_betrieb.dataCategories],
         textVersion: '2026-10-1',
       });
     });

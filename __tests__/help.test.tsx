@@ -4,6 +4,8 @@ import { StyleSheet } from 'react-native';
 
 import { demoConfig } from '@/config/demo.config';
 import { de } from '@/i18n/de';
+import { scopeLabels } from '@/lib/consent';
+import { CONSENT_SCOPES } from '@/model/policies/consentScopes';
 import { services } from '@/services';
 import { useAppStore } from '@/store/appStore';
 import { APP } from '@/test/app';
@@ -205,7 +207,7 @@ describe('Keine Fachkraft frei', () => {
     expect(screen.getByRole('header', { name: de.waiting.confirmTitle(slot) })).toBeTruthy();
     const partner = demoConfig.partners.find((p) => p.id === demoConfig.expert.partnerId)!;
     expect(screen.getByText(de.help.shareTitle(demoConfig.expert.name, partner.name))).toBeTruthy();
-    for (const item of de.help.shareItems) {
+    for (const item of scopeLabels('weitergabe_fachkraft')) {
       expect(screen.getAllByText(de.help.item(item)).length).toBeGreaterThan(0);
     }
     expect(callbacks(id)).toHaveLength(0);
@@ -218,7 +220,7 @@ describe('Keine Fachkraft frei', () => {
     expect(consent).toMatchObject({
       legalBasis: 'vertrag',
       recipient: { id: partner.id, kind: 'betrieb' },
-      dataCategories: [...de.help.shareItems],
+      dataCategories: [...CONSENT_SCOPES.weitergabe_fachkraft.dataCategories],
     });
   });
 

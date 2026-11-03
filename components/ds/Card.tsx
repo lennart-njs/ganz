@@ -15,10 +15,19 @@ interface CardProps {
   float?: boolean;
   children?: ReactNode;
   style?: StyleProp<ViewStyle>;
+  testID?: string;
 }
 
 /** Karte ohne Rahmen, Radius 14. Liegt auf dem Seitengrund, nie weiß auf weiß. */
-export function Card({ tone = 'white', padding = 20, media, float, children, style }: CardProps) {
+export function Card({
+  tone = 'white',
+  padding = 20,
+  media,
+  float,
+  children,
+  style,
+  testID,
+}: CardProps) {
   const theme = useTheme();
   const bg =
     tone === 'inverse'
@@ -28,6 +37,7 @@ export function Card({ tone = 'white', padding = 20, media, float, children, sty
         : theme.colors.surfaceCard;
   return (
     <View
+      testID={testID}
       style={[
         styles.card,
         { borderRadius: theme.radius.lg, backgroundColor: bg },

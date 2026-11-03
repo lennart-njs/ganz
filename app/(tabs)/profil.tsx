@@ -22,7 +22,9 @@ import { demoConfig } from '@/config/demo.config';
 import { useNotice } from '@/hooks/useNotice';
 import { de } from '@/i18n/de';
 import { formatDateTime, formatEuro, formatMonthYear } from '@/i18n/format';
+import { categoryLabels, scopeList } from '@/lib/consent';
 import { openSystemSettings } from '@/lib/linking';
+import { scopedConsent } from '@/model/policies/consentScopes';
 import { notifications } from '@/services/notifications';
 import { notificationsOn, selectContract, useAppStore, type Appearance } from '@/store/appStore';
 
@@ -72,17 +74,16 @@ export default function Profil() {
   const toggleManufacturer = (on: boolean) => {
     const s = useAppStore.getState();
     if (on) {
-      s.grantConsent({
-        purpose: 'hersteller_einzelfall',
-        legalBasis: 'einwilligung',
-        recipient: {
-          id: demoConfig.manufacturer.id,
-          kind: 'hersteller',
-          name: demoConfig.manufacturer.name,
-        },
-        dataCategories: [t.manufacturerCase(demoConfig.manufacturer.name)],
-        textVersion: '2026-10-1',
-      });
+      s.grantConsent(
+        scopedConsent('hersteller_einzelfall', {
+          recipient: {
+            id: demoConfig.manufacturer.id,
+            kind: 'hersteller',
+            name: demoConfig.manufacturer.name,
+          },
+          textVersion: '2026-10-1',
+        }),
+      );
     } else if (manufacturerConsent) {
       s.revokeConsent(manufacturerConsent.id);
     }
@@ -158,6 +159,10 @@ export default function Profil() {
             <Text variant="meta">
               {t.consentLine(c.recipient.name, t.basis[c.legalBasis], formatDateTime(c.grantedAt))}
             </Text>
+            {/* Welche Daten, so wie die Bestätigung sie gespeichert hat */}
+            {c.dataCategories.length ? (
+              <Text variant="meta">{de.common.list(categoryLabels(c.dataCategories))}</Text>
+            ) : null}
             {c.revokedAt ? (
               <Text variant="meta" tone="strong" style={styles.gap}>
                 {t.revokedOn(formatDateTime(c.revokedAt))}
@@ -177,7 +182,7 @@ export default function Profil() {
       <Section title={t.optional}>
         <Checkbox
           label={t.manufacturerCase(demoConfig.manufacturer.name)}
-          sub={t.manufacturerCaseSub}
+          sub={t.manufacturerCaseSub(scopeList('hersteller_einzelfall'))}
           checked={!!manufacturerConsent}
           onChange={toggleManufacturer}
         />

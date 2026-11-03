@@ -24,6 +24,7 @@ import {
 import { can } from '@/model/policies/actions';
 import { planBooking } from '@/model/policies/bookingRules';
 import { selectCaseFacts } from '@/model/policies/caseFacts';
+import { scopedConsent } from '@/model/policies/consentScopes';
 import {
   isEmptyCase,
   planOpenCase,
@@ -1046,14 +1047,14 @@ export function createAppStore(storage: StateStorage = AsyncStorage, env: StoreE
             if (!can(selectCaseFacts(get(), caseId), 'schaden_melden')) {
               return refuse({ code: 'regel', action: 'schaden_melden' });
             }
-            const confirmed = draftConsent({
-              caseId,
-              purpose: 'weitergabe_versicherer',
-              legalBasis: 'vertrag',
-              recipient: contract.provider,
-              dataCategories: [...de.consentData.versicherer],
-              textVersion,
-            });
+            // Umfang aus CONSENT_SCOPES, wie in der Vorschau „Das geht an …“ (R-14)
+            const confirmed = draftConsent(
+              scopedConsent('weitergabe_versicherer', {
+                caseId,
+                recipient: contract.provider,
+                textVersion,
+              }),
+            );
             const reported = draftCommand(c, 'schaden_melden', { contractId: contract.id }, [
               ...get().consents,
               confirmed.consent,
@@ -1096,14 +1097,13 @@ export function createAppStore(storage: StateStorage = AsyncStorage, env: StoreE
             if (paid && !paid.ok) return paid;
             const c = paid?.value.case ?? before;
             const provider = { id: partner.id, kind: 'betrieb' as const, name: partner.name };
-            const confirmed = draftConsent({
-              caseId,
-              purpose: 'weitergabe_betrieb',
-              legalBasis: 'vertrag',
-              recipient: provider,
-              dataCategories: [...de.consentData.betrieb],
-              textVersion: '2026-10-1',
-            });
+            const confirmed = draftConsent(
+              scopedConsent('weitergabe_betrieb', {
+                caseId,
+                recipient: provider,
+                textVersion: '2026-10-1',
+              }),
+            );
             const booking: Booking = {
               id: env.newId('termin'),
               caseId,
@@ -1149,13 +1149,12 @@ export function createAppStore(storage: StateStorage = AsyncStorage, env: StoreE
             set({ notifications: value });
             if (value === 'erlaubt') {
               if (notificationsOn(get())) return;
-              get().grantConsent({
-                purpose: 'mitteilungen',
-                legalBasis: 'einwilligung',
-                recipient: { ...NOTIFICATIONS_RECIPIENT },
-                dataCategories: [...de.consentData.mitteilungen],
-                textVersion: NOTIFICATIONS_TEXT_VERSION,
-              });
+              get().grantConsent(
+                scopedConsent('mitteilungen', {
+                  recipient: { ...NOTIFICATIONS_RECIPIENT },
+                  textVersion: NOTIFICATIONS_TEXT_VERSION,
+                }),
+              );
               return;
             }
             for (const c of get().consents) {

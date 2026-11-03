@@ -36,7 +36,7 @@ export default function Fallakte() {
       </Text>
       <Text variant="body">{t.status(caseStatusLabel(c.status))}</Text>
 
-      <CaseFileCard caseId={caseId} detail="voll" />
+      <CaseFileCard caseId={caseId} />
 
       <View style={styles.section}>
         <Text variant="title" accessibilityRole="header">

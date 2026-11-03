@@ -23,6 +23,7 @@ import { formatDecimal, formatEuro } from '@/i18n/format';
 import { getManufacturer } from '@/lib/devices';
 import { caseAppliance } from '@/lib/appliance';
 import { amountToPay, costsLine, requestAppointment } from '@/lib/booking';
+import { scopeList } from '@/lib/consent';
 import { can, type ActionKey } from '@/model/policies/actions';
 import { selectCaseFacts } from '@/model/policies/caseFacts';
 import { useAppStore } from '@/store/appStore';
@@ -201,7 +202,8 @@ export default function Termin() {
           )}
         </Text>
       ) : null}
-      <Text variant="meta">{t.shares}</Text>
+      {/* Dieselben Kategorien speichert die Bestätigung mit der Anfrage (R-14) */}
+      <Text variant="meta">{t.shares(scopeList('weitergabe_betrieb'))}</Text>
     </CaseScreen>
   );
 }

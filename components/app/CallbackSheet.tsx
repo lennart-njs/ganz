@@ -1,9 +1,11 @@
-import { StyleSheet, View } from 'react-native';
+import { StyleSheet } from 'react-native';
 
+import { ScopeItems } from '@/components/app/ScopeItems';
 import { Button, Card, Sheet, Text, Toast } from '@/components/ds';
 import { demoConfig } from '@/config/demo.config';
 import { useCommand } from '@/hooks/useCommand';
 import { de } from '@/i18n/de';
+import { scopedConsent } from '@/model/policies/consentScopes';
 import type { Id } from '@/model/types';
 import { useAppStore } from '@/store/appStore';
 
@@ -29,14 +31,15 @@ export function CallbackSheet({ caseId, slot, onClose }: CallbackSheetProps) {
   // Bestätigung und Rückruf speichert der Store in einem Schritt. Ein Doppeltap fragt nicht doppelt.
   const send = useCommand(
     (time: string) =>
-      useAppStore.getState().requestCallback(caseId, time, {
+      useAppStore.getState().requestCallback(
         caseId,
-        purpose: 'weitergabe_fachkraft',
-        legalBasis: 'vertrag',
-        recipient: { id: partner.id, kind: 'betrieb', name: partner.name },
-        dataCategories: [...de.help.shareItems],
-        textVersion: CONSENT_TEXT_VERSION,
-      }),
+        time,
+        scopedConsent('weitergabe_fachkraft', {
+          caseId,
+          recipient: { id: partner.id, kind: 'betrieb', name: partner.name },
+          textVersion: CONSENT_TEXT_VERSION,
+        }),
+      ),
     onClose,
   );
   const confirm = () => {
@@ -50,13 +53,7 @@ export function CallbackSheet({ caseId, slot, onClose }: CallbackSheetProps) {
         <Text variant="labelStrong" accessibilityRole="header">
           {de.help.shareTitle(expert, partner.name)}
         </Text>
-        <View style={styles.items}>
-          {de.help.shareItems.map((item) => (
-            <Text key={item} variant="body">
-              {de.help.item(item)}
-            </Text>
-          ))}
-        </View>
+        <ScopeItems purpose="weitergabe_fachkraft" />
         <Text variant="meta" style={styles.gapTop}>
           {de.help.legalBasis}
         </Text>
@@ -69,6 +66,5 @@ export function CallbackSheet({ caseId, slot, onClose }: CallbackSheetProps) {
 }
 
 const styles = StyleSheet.create({
-  items: { marginTop: 8, gap: 2 },
   gapTop: { marginTop: 8 },
 });

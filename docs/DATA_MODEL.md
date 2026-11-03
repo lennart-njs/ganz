@@ -122,7 +122,7 @@ Ereignisse, die ein Dashboard besonders braucht:
 |---|---|---|---|---|
 | `Consent.purpose`, `recipient` | ✓ | – | ✓ | jeder Empfänger sieht nur seine eigenen |
 | `Consent.legalBasis` | ✓ | – | ✓ | `vertrag` (lit. b) oder `einwilligung` (lit. a) |
-| `Consent.dataCategories` | ✓ | – | ✓ | Datenumfang, so wie in der App gezeigt |
+| `Consent.dataCategories` | ✓ | – | ✓ | Datenumfang als Schlüssel aus `model/policies/consentScopes.ts` (`geraet`, `fotos`, …), so wie in der Vorschau gezeigt. Stände vor Schritt 26 enthalten Bezeichnungen |
 | `Consent.textVersion` | ✓ | – | ✓ | Version des Hinweistexts |
 | `Consent.grantedAt`, `revokedAt` | ✓ | – | ✓ | Widerruf beendet die Weitergabe |
 

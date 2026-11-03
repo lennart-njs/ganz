@@ -11,6 +11,7 @@ import { de } from '@/i18n/de';
 import { hasChatConsent } from '@/lib/chat/context';
 import { chatLimits } from '@/lib/chat/limits';
 import { latestGuideRun } from '@/lib/caseView';
+import { CONSENT_SCOPES } from '@/model/policies/consentScopes';
 import type { Id } from '@/model/types';
 import { activeBooking, useAppStore } from '@/store/appStore';
 import { APP } from '@/test/app';
@@ -368,7 +369,7 @@ describe('R-11 Grenze von 40 Nachrichten im Chat', () => {
         kind: 'dienstleister',
         name: demoConfig.assistant.name,
       },
-      dataCategories: [...de.consentData.assistent],
+      dataCategories: [...CONSENT_SCOPES.chat_assistent.dataCategories],
       textVersion: '2026-10-1',
     });
     for (let i = 0; i < chatLimits.messages; i++) {

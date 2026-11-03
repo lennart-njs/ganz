@@ -4,6 +4,7 @@ import { demoConfig } from '@/config/demo.config';
 import { guides } from '@/data/guides';
 import { de } from '@/i18n/de';
 import { chatLimits } from '@/lib/chat/limits';
+import { CONSENT_SCOPES } from '@/model/policies/consentScopes';
 import type { DeviceCategory } from '@/model/types';
 import { useAppStore } from '@/store/appStore';
 import { APP } from '@/test/app';
@@ -212,7 +213,7 @@ describe('Grenze von 40 Nachrichten (R-11)', () => {
         kind: 'dienstleister',
         name: demoConfig.assistant.name,
       },
-      dataCategories: [...de.consentData.assistent],
+      dataCategories: [...CONSENT_SCOPES.chat_assistent.dataCategories],
       textVersion: '2026-10-1',
     });
     for (let i = 0; i < n; i++) {

@@ -6,6 +6,7 @@ import { useState } from 'react';
 
 import { demoConfig } from '@/config/demo.config';
 import { de } from '@/i18n/de';
+import { scopedConsent } from '@/model/policies/consentScopes';
 import { services, type ChatError } from '@/services';
 import { useAppStore } from '@/store/appStore';
 
@@ -104,18 +105,17 @@ export function useAssistant(caseId: string) {
   };
 
   const accept = () => {
-    useAppStore.getState().grantConsent({
-      caseId,
-      purpose: 'chat_assistent',
-      legalBasis: 'einwilligung',
-      recipient: {
-        id: demoConfig.assistant.id,
-        kind: 'dienstleister',
-        name: demoConfig.assistant.name,
-      },
-      dataCategories: [...de.consentData.assistent],
-      textVersion: CONSENT_TEXT_VERSION,
-    });
+    useAppStore.getState().grantConsent(
+      scopedConsent('chat_assistent', {
+        caseId,
+        recipient: {
+          id: demoConfig.assistant.id,
+          kind: 'dienstleister',
+          name: demoConfig.assistant.name,
+        },
+        textVersion: CONSENT_TEXT_VERSION,
+      }),
+    );
     const text = waiting;
     setWaiting(undefined);
     if (text) post(text);
