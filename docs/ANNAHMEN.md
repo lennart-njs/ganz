@@ -308,3 +308,16 @@ Annahmen, die ich beim Bauen getroffen habe. Jede lässt sich ändern.
 - **R-16:** Ohne gültige Bestätigung (hier nach dem Widerruf) entsteht kein Rückruf, weder per Tap noch über `requestCallback`. Den Text des neuen Bestätigungs-Sheets kennt der Test noch nicht.
 - **R-17** prüft die Mitteilungen, die die Simulation wirklich schickt: Freigabe bis zur Reparatur, Ablehnung und Vor-Ort-Diagnose. Verboten sind Versicherer, Hersteller, Modell, Gerätearten und „Maschine“, Betriebe, Zeitfenster, Beträge, Fallnummer und Wörter zur Entscheidung.
 - **R-18:** Der Hinweis statt des Formulars nutzt `de.result.missing` wie die anderen Fall-Screens ohne Fall.
+
+## Schritt 21: Pitch- und Rechtsrahmen
+
+- **`docs/PITCH_CHECK.md`** hat sieben Prüfungen auf dem Pitch-Telefon: Golden Path, Dark Mode, Schrift 200 %, VoiceOver-Stichprobe, Anleitung ohne Netz, Assistent mit und ohne Schlüssel. Dazu eine Tabelle mit dem Datum je Prüfung und eine eigene Zeile für den Assistenten ohne Laptop (Abnahme Phase 2). Ältere Stände zeigt der Git-Verlauf der Datei.
+- **200 % auf dem iPhone** ist die Stufe AX2 bei „Größere Schriftgrößen“: 33 pt statt 17 pt für Fließtext, also etwa 194 %. Eine Stufe genau bei 200 % gibt es nicht.
+- **Was ein Test schon prüft, steht nicht in der Liste.** Die Liste deckt ab, was nur auf dem Gerät sichtbar wird: echte Schrift, echter Screenreader, echtes Netz, echter Schlüssel.
+- **Reihenfolge in `pitch-tag.sh`:** Erst die schnellen Prüfungen (sauberer Arbeitsbaum, offene Befunde, vorhandener Tag), dann `scripts/ci-checks.sh`. So wartet niemand eine Minute auf einen Abbruch, der schon vorher feststeht. Gesetzt wird der Tag nur, wenn alles grün ist.
+- **Sauberer Arbeitsbaum ist Pflicht:** Die Prüfungen laufen auf dem Arbeitsbaum, der Tag kommt auf `HEAD`. Mit offenen Änderungen gälte das Ergebnis nicht für den getaggten Commit.
+- **Wann ein Befund offen ist** (`scripts/open-findings.js`): solange sein Test in `__tests__/regressions/` noch `test.failing` ist, es keinen aktiven Test zu ihm gibt (auch `test.skip` zählt nicht) oder `docs/BEFUNDE.md` ihn nicht als „behoben“ führt. Beides muss stimmen, Test und Liste. Die „Ausgangslage“ zählt nicht als Test des Befunds. Mit Argumenten prüft das Script andere Befunde, zum Beispiel `node scripts/open-findings.js R-18`.
+- **Geprüft ohne Tag:** `pitch-tag.sh` lief nicht. `open-findings.js` lief auf dem Repo (meldet R-07, R-12, R-13, R-16, R-17 als offen) und auf einer Kopie, in der alle fünf auf `test` und „behoben“ standen (meldet keinen). Eine zweite Kopie mit `test.skip` und einer offenen Zeile in `BEFUNDE.md` meldete beides.
+- **Tagname** aus der ISO-Woche (`date +%G-W%V`), zum Beispiel `pitch-2026-W45`. Steht der Tag schon auf `HEAD`, ist das kein Fehler. Steht er auf einem anderen Commit, bricht das Script ab und nennt `git tag -d`. Verschieben ist eine bewusste Entscheidung.
+- **Annotierter Tag** mit Datum, Name und einem Satz zu den Prüfungen. Das Script pusht nicht. Mit Nr. 15 lässt sich der Tag pushen. CI läuft bei Tags nicht, der Commit ist schon geprüft.
+- **`PITCH_CHECK.md` prüft das Script nicht.** Ob die Tabelle für diese Woche ausgefüllt ist, weiß nur, wer geprüft hat. Das Script erinnert beim Start daran.
