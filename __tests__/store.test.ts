@@ -1,5 +1,6 @@
 import type { StateStorage } from 'zustand/middleware';
 
+import { demoConfig } from '@/config/demo.config';
 import { de } from '@/i18n/de';
 import { createAppStore, selectCaseEvents, selectOpenCases } from '@/store/appStore';
 import type { StoreEnv } from '@/store/env';
@@ -294,5 +295,117 @@ describe('Befehle ohne Absturz: Result statt Exception', () => {
       refusal: { code: 'regel', action: 'pausieren' },
     });
     expect(s().events).toHaveLength(events);
+  });
+});
+
+describe('Schadenfall und Termin: erst prüfen, dann in einem Schritt schreiben', () => {
+  const partner = demoConfig.partners[1]!;
+  /** Fall mit Schutz und Kostenvoranschlag, bereit für die Meldung */
+  const setup = (contract = true) => {
+    const store = createAppStore(memoryStorage(), testEnv());
+    const s = () => store.getState();
+    s().ensureHousehold();
+    if (contract) s().linkContract('vertragsnummer');
+    const device = s().addDevice({
+      category: 'waschmaschine',
+      manufacturerId: demoConfig.manufacturer.id,
+      model: demoConfig.device.model,
+      contractId: s().contracts[0]?.id,
+      identifiedBy: 'manuell',
+    });
+    const c = s().createCase({ deviceId: device.id, entry: 'foto', problemLabel: 'x' });
+    unwrap(s().escalate(c.id));
+    s().setFinding(c.id, 'reparatur', 'fachkraft');
+    /** Zählt, wie oft der Store sich ändert */
+    let writes = 0;
+    store.subscribe(() => {
+      writes += 1;
+    });
+    return { s, id: c.id, writes: () => writes };
+  };
+
+  test('die Meldung schreibt Bestätigung, Meldung und Status auf einmal', () => {
+    const { s, id, writes } = setup();
+    const reported = unwrap(s().reportClaim(id, '1'));
+    expect(reported.status).toBe('freigabe_noetig');
+    expect(writes()).toBe(1);
+    const consent = s().consents.find((c) => c.purpose === 'weitergabe_versicherer');
+    expect(reported.claim?.confirmationId).toBe(consent?.id);
+    expect(
+      selectCaseEvents(s(), id)
+        .slice(-3)
+        .map((e) => e.type),
+    ).toEqual(['weitergabe_bestaetigt', 'schaden_gemeldet', 'status_geaendert']);
+  });
+
+  test('ein zweites Melden wird abgelehnt, ohne zweite Bestätigung', () => {
+    const { s, id, writes } = setup();
+    unwrap(s().reportClaim(id, '1'));
+    expect(s().reportClaim(id, '1')).toEqual({
+      ok: false,
+      refusal: { code: 'regel', action: 'schaden_melden' },
+    });
+    expect(writes()).toBe(1);
+    expect(s().consents.filter((c) => c.purpose === 'weitergabe_versicherer')).toHaveLength(1);
+  });
+
+  test('ohne Schutz und ohne Fall keine Meldung', () => {
+    const without = setup(false);
+    expect(without.s().reportClaim(without.id, '1')).toEqual({
+      ok: false,
+      refusal: { code: 'vertrag' },
+    });
+    expect(without.s().reportClaim('GS-99999', '1')).toEqual({
+      ok: false,
+      refusal: { code: 'unbekannt', what: 'fall', id: 'GS-99999' },
+    });
+    expect(without.writes()).toBe(0);
+  });
+
+  test('selbst zahlen: Status, Bestätigung, Termin und Ereignisse auf einmal', () => {
+    const { s, id, writes } = setup(false);
+    const booking = unwrap(
+      s().requestBooking({
+        caseId: id,
+        kind: 'reparatur',
+        partnerId: partner.id,
+        slotLabel: demoConfig.slots[0]!,
+        selfPay: true,
+      }),
+    );
+    expect(writes()).toBe(1);
+    expect(s().cases[id]).toMatchObject({ status: 'in_reparatur', bookingId: booking.id });
+    expect(booking).toMatchObject({ provider: { id: partner.id }, subjectToApproval: false });
+    expect(
+      selectCaseEvents(s(), id)
+        .slice(-3)
+        .map((e) => e.type),
+    ).toEqual(['status_geaendert', 'weitergabe_bestaetigt', 'termin_angefragt']);
+  });
+
+  test('unbekannter Betrieb, unbekannter Fall und die Pumpe werden abgelehnt', () => {
+    const { s, id, writes } = setup();
+    const input = {
+      caseId: id,
+      kind: 'reparatur' as const,
+      partnerId: partner.id,
+      slotLabel: demoConfig.slots[0]!,
+      selfPay: false,
+    };
+    expect(s().requestBooking({ ...input, partnerId: 'niemand' })).toEqual({
+      ok: false,
+      refusal: { code: 'unbekannt', what: 'betrieb', id: 'niemand' },
+    });
+    expect(s().requestBooking({ ...input, caseId: 'GS-99999' })).toEqual({
+      ok: false,
+      refusal: { code: 'unbekannt', what: 'fall', id: 'GS-99999' },
+    });
+    const pump = de.appliance.waschmaschine.finding.component;
+    expect(s().requestBooking({ ...input, kind: 'ersatzteil_versand', partName: pump })).toEqual({
+      ok: false,
+      refusal: { code: 'nur_betrieb', part: pump },
+    });
+    expect(writes()).toBe(0);
+    expect(s().bookings).toEqual([]);
   });
 });

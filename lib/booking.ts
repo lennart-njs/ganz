@@ -4,7 +4,8 @@ import { de } from '@/i18n/de';
 import { formatEuro } from '@/i18n/format';
 import { can } from '@/model/policies/actions';
 import { selectCaseFacts } from '@/model/policies/caseFacts';
-import type { Id } from '@/model/types';
+import type { Result } from '@/model/result';
+import type { Booking, Id } from '@/model/types';
 import { notifications } from '@/services/notifications';
 import { useAppStore, type AppData } from '@/store/appStore';
 
@@ -34,18 +35,21 @@ export function costsLine(s: AppData, caseId: Id, selfPay: boolean, diagnosis = 
   return t.costsClaim(demoConfig.insurer.shortName, formatEuro(s.demo.deductible));
 }
 
-/** Fragt den Termin an. Der Systemdialog für Mitteilungen kommt erst jetzt, beim ersten Bedarf (Review 4.1). */
+/**
+ * Fragt den Termin an. Der Systemdialog für Mitteilungen kommt erst jetzt, beim ersten Bedarf
+ * (Review 4.1), und nur, wenn der Termin angefragt ist.
+ */
 export function requestAppointment(input: {
   caseId: Id;
   partnerId: string;
   slot: string;
   selfPay: boolean;
   diagnosis?: boolean;
-}) {
+}): Result<Booking> {
   const s = useAppStore.getState();
   const c = s.cases[input.caseId];
   const quote = s.quotes.find((q) => q.id === c?.quoteId);
-  s.requestBooking({
+  const result = s.requestBooking({
     caseId: input.caseId,
     kind: input.diagnosis ? 'vor_ort_diagnose' : 'reparatur',
     partnerId: input.partnerId,
@@ -53,10 +57,11 @@ export function requestAppointment(input: {
     selfPay: input.selfPay,
     partName: quote?.repair.partName,
   });
-  if (useAppStore.getState().notifications === 'offen') {
+  if (result.ok && useAppStore.getState().notifications === 'offen') {
     notifications
       .requestPermission()
       .then((ok) => useAppStore.getState().setNotifications(ok ? 'erlaubt' : 'abgelehnt'))
       .catch(() => undefined);
   }
+  return result;
 }

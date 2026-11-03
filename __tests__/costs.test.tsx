@@ -3,7 +3,6 @@ import { act, fireEvent, renderRouter, screen } from 'expo-router/testing-librar
 
 import { demoConfig } from '@/config/demo.config';
 import { de } from '@/i18n/de';
-import { TransitionError } from '@/model/caseMachine';
 import { useAppStore } from '@/store/appStore';
 import { APP } from '@/test/app';
 
@@ -124,7 +123,10 @@ describe('Betrieb und Termin', () => {
     expect(r.getPathname()).toBe(`/fall/${id}/termin`);
     expect(screen.getByText(de.appointment.pending)).toBeTruthy();
     // Auch der Store meldet nicht zweimal und legt keine zweite Bestätigung an
-    expect(() => useAppStore.getState().reportClaim(id, '2026-10-1')).toThrow(TransitionError);
+    expect(useAppStore.getState().reportClaim(id, '2026-10-1')).toEqual({
+      ok: false,
+      refusal: { code: 'regel', action: 'schaden_melden' },
+    });
     const consents = useAppStore
       .getState()
       .consents.filter((c) => c.purpose === 'weitergabe_versicherer');
@@ -219,7 +221,8 @@ describe('Betrieb und Termin', () => {
     expect(
       screen.getByText(de.appointment.ecoDesign(de.appliance.waschmaschine.finding.partAcc, 15)),
     ).toBeTruthy();
-    expect(() =>
+    const events = useAppStore.getState().events.length;
+    expect(
       useAppStore.getState().requestBooking({
         caseId: id,
         kind: 'ersatzteil_versand',
@@ -228,7 +231,11 @@ describe('Betrieb und Termin', () => {
         selfPay: false,
         partName: de.appliance.waschmaschine.finding.component,
       }),
-    ).toThrow();
+    ).toEqual({
+      ok: false,
+      refusal: { code: 'nur_betrieb', part: de.appliance.waschmaschine.finding.component },
+    });
+    expect(useAppStore.getState().events).toHaveLength(events);
     expect(useAppStore.getState().bookings.some((b) => b.kind === 'ersatzteil_versand')).toBe(
       false,
     );

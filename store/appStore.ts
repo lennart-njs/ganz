@@ -16,7 +16,6 @@ import {
   isClosed,
   pauseCase as pause,
   resumeCase as resume,
-  TransitionError,
   tryApplyCommand,
   type CaseCommand,
   type CommandContext,
@@ -201,9 +200,16 @@ export interface AppActions {
   ) => void;
   /** Rückruf der Fachkraft. Nur mit bestätigter Weitergabe an die Fachkraft (R-16). */
   requestCallback: (caseId: Id, slot: string) => void;
-  /** Meldet den Schadenfall: speichert die Bestätigung und wechselt auf „freigabe_noetig“ (B-17) */
-  reportClaim: (caseId: Id, textVersion: string) => Case;
-  /** Termin anfragen. Die Pumpe geht nie an den Haushalt (B-28). */
+  /**
+   * Meldet den Schadenfall: speichert die Bestätigung und wechselt auf „freigabe_noetig“ (B-17).
+   * Erst die Regel, dann Bestätigung, Meldung und Status in einem set. Ohne Vertrag oder nach
+   * der Meldung abgelehnt.
+   */
+  reportClaim: (caseId: Id, textVersion: string) => Result<Case>;
+  /**
+   * Termin anfragen. Die Pumpe geht nie an den Haushalt (B-28). Erst die Prüfung, dann Status,
+   * Bestätigung, Termin und Ereignisse in einem set.
+   */
   requestBooking: (input: {
     caseId: Id;
     kind: Booking['kind'];
@@ -211,7 +217,7 @@ export interface AppActions {
     slotLabel: string;
     selfPay: boolean;
     partName?: string;
-  }) => Booking;
+  }) => Result<Booking>;
   /**
    * Antwort auf den Systemdialog oder den Schalter im Profil. „erlaubt“ speichert die Einwilligung
    * 'mitteilungen' (lit. a), alles andere widerruft sie (R-13).
@@ -305,6 +311,34 @@ export function createAppStore(storage: StateStorage = AsyncStorage, env: StoreE
             newId: env.newId,
             consents,
           });
+
+        /** Baut eine Bestätigung mit ihrem Ereignis in der Fallakte, ohne zu schreiben */
+        const draftConsent = (input: NewConsent): { consent: Consent; events: CaseEvent[] } => {
+          const p = person();
+          const consent: Consent = {
+            ...input,
+            id: env.newId('consent'),
+            personId: p.id,
+            grantedAt: env.now(),
+          };
+          const events: CaseEvent[] = consent.caseId
+            ? [
+                {
+                  id: env.newId('ev'),
+                  caseId: consent.caseId,
+                  type: 'weitergabe_bestaetigt',
+                  at: consent.grantedAt,
+                  actor: { kind: 'haushalt', id: p.id },
+                  payload: {
+                    purpose: consent.purpose,
+                    recipient: consent.recipient.name,
+                    legalBasis: consent.legalBasis,
+                  },
+                },
+              ]
+            : [];
+          return { consent, events };
+        };
 
         const getCase = (caseId: Id): Case => {
           const c = get().cases[caseId];
@@ -879,15 +913,16 @@ export function createAppStore(storage: StateStorage = AsyncStorage, env: StoreE
           },
 
           reportClaim: (caseId, textVersion) => {
-            const c = getCase(caseId);
+            const c = get().cases[caseId];
+            if (!c) return missingCase(caseId);
             const device = get().devices.find((d) => d.id === c.deviceId);
             const contract = get().contracts.find((k) => k.id === device?.contractId);
-            if (!contract) throw new Error('Kein Vertrag für dieses Gerät');
+            if (!contract) return refuse({ code: 'vertrag' });
             // Erst die Regel, dann die Bestätigung: Nach der Meldung entsteht keine zweite (R-02)
             if (!can(selectCaseFacts(get(), caseId), 'schaden_melden')) {
-              throw new TransitionError(c.status, 'schaden_melden');
+              return refuse({ code: 'regel', action: 'schaden_melden' });
             }
-            get().grantConsent({
+            const confirmed = draftConsent({
               caseId,
               purpose: 'weitergabe_versicherer',
               legalBasis: 'vertrag',
@@ -895,30 +930,41 @@ export function createAppStore(storage: StateStorage = AsyncStorage, env: StoreE
               dataCategories: [...de.consentData.versicherer],
               textVersion,
             });
-            const reported = get().runCommand(caseId, 'schaden_melden', {
-              contractId: contract.id,
-            });
-            if (!reported.ok) throw new TransitionError(c.status, 'schaden_melden');
-            return reported.value;
+            const reported = draftCommand(c, 'schaden_melden', { contractId: contract.id }, [
+              ...get().consents,
+              confirmed.consent,
+            ]);
+            if (!reported.ok) return reported;
+            // Bestätigung, Meldung und Status in einem Schritt
+            set((s) => ({
+              consents: [...s.consents, confirmed.consent],
+              cases: { ...s.cases, [caseId]: reported.value.case },
+              events: [...s.events, ...confirmed.events, ...reported.value.events],
+            }));
+            return ok(reported.value.case);
           },
 
           requestBooking: ({ caseId, kind, partnerId, slotLabel, selfPay, partName }) => {
+            const before = get().cases[caseId];
+            if (!before) return missingCase(caseId);
             // Ökodesign: Pumpen sind Teile für fachlich kompetente Reparateure, nicht für Endnutzer
             const pumpOrSensor = Object.values(de.appliance).some(
               (a) => a.finding.component === partName,
             );
-            if (kind === 'ersatzteil_versand' && pumpOrSensor) {
-              throw new Error(`${partName} bestellt und baut immer der Betrieb ein`);
+            if (kind === 'ersatzteil_versand' && pumpOrSensor && partName) {
+              return refuse({ code: 'nur_betrieb', part: partName });
             }
             const partner = demoConfig.partners.find((p) => p.id === partnerId);
-            if (!partner) throw new Error(`Betrieb nicht gefunden: ${partnerId}`);
-            let c = getCase(caseId);
-            if (selfPay && canTransition(c.status, 'selbst_zahlen')) {
-              const paid = get().runCommand(caseId, 'selbst_zahlen');
-              if (paid.ok) c = paid.value;
-            }
+            if (!partner) return refuse({ code: 'unbekannt', what: 'betrieb', id: partnerId });
+            // Selbst zahlen wechselt in die Reparatur, wo die Status-Maschine es erlaubt
+            const paid =
+              selfPay && canTransition(before.status, 'selbst_zahlen')
+                ? draftCommand(before, 'selbst_zahlen')
+                : undefined;
+            if (paid && !paid.ok) return paid;
+            const c = paid?.value.case ?? before;
             const provider = { id: partner.id, kind: 'betrieb' as const, name: partner.name };
-            get().grantConsent({
+            const confirmed = draftConsent({
               caseId,
               purpose: 'weitergabe_betrieb',
               legalBasis: 'vertrag',
@@ -937,20 +983,11 @@ export function createAppStore(storage: StateStorage = AsyncStorage, env: StoreE
               address: get().household?.address,
               createdAt: env.now(),
             };
-            set((s) => ({
-              bookings: [
-                ...s.bookings.map((b) =>
-                  b.caseId === caseId && b.status === 'angefragt'
-                    ? { ...b, status: 'storniert' as const }
-                    : b,
-                ),
-                booking,
-              ],
-              cases: { ...s.cases, [caseId]: { ...getCase(caseId), bookingId: booking.id } },
-            }));
-            get().addEvent({
+            const requested: CaseEvent = {
+              id: env.newId('ev'),
               caseId,
               type: 'termin_angefragt',
+              at: env.now(),
               actor: householdActor(),
               payload: {
                 bookingId: booking.id,
@@ -959,8 +996,22 @@ export function createAppStore(storage: StateStorage = AsyncStorage, env: StoreE
                 slot: slotLabel,
                 subjectToApproval: booking.subjectToApproval,
               },
-            });
-            return booking;
+            };
+            // Status, Bestätigung, Termin und Ereignisse in einem Schritt
+            set((s) => ({
+              consents: [...s.consents, confirmed.consent],
+              bookings: [
+                ...s.bookings.map((b) =>
+                  b.caseId === caseId && b.status === 'angefragt'
+                    ? { ...b, status: 'storniert' as const }
+                    : b,
+                ),
+                booking,
+              ],
+              cases: { ...s.cases, [caseId]: { ...c, bookingId: booking.id } },
+              events: [...s.events, ...(paid?.value.events ?? []), ...confirmed.events, requested],
+            }));
+            return ok(booking);
           },
 
           setNotifications: (value) => {
@@ -1125,29 +1176,7 @@ export function createAppStore(storage: StateStorage = AsyncStorage, env: StoreE
           },
 
           grantConsent: (input) => {
-            const p = person();
-            const consent: Consent = {
-              ...input,
-              id: env.newId('consent'),
-              personId: p.id,
-              grantedAt: env.now(),
-            };
-            const events: CaseEvent[] = consent.caseId
-              ? [
-                  {
-                    id: env.newId('ev'),
-                    caseId: consent.caseId,
-                    type: 'weitergabe_bestaetigt',
-                    at: consent.grantedAt,
-                    actor: { kind: 'haushalt', id: p.id },
-                    payload: {
-                      purpose: consent.purpose,
-                      recipient: consent.recipient.name,
-                      legalBasis: consent.legalBasis,
-                    },
-                  },
-                ]
-              : [];
+            const { consent, events } = draftConsent(input);
             set((s) => ({ consents: [...s.consents, consent], events: [...s.events, ...events] }));
             return consent;
           },

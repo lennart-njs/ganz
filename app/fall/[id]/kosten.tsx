@@ -88,7 +88,7 @@ export default function Kosten() {
   }
 
   const report = () => {
-    useAppStore.getState().reportClaim(caseId, CLAIM_TEXT_VERSION);
+    if (!useAppStore.getState().reportClaim(caseId, CLAIM_TEXT_VERSION).ok) return;
     if (replacement) backToThread(caseId);
     else toAppointment(false);
   };

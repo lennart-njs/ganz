@@ -16,6 +16,7 @@ import {
 } from '@/store/persistence';
 import { parseStoredState } from '@/store/storedState';
 import { useHydrated } from '@/store/useHydrated';
+import { unwrap } from '@/test/result';
 
 import storeV1 from './fixtures/store-v1.json';
 
@@ -136,14 +137,16 @@ function playThrough(store: AppStore) {
   s().updateVideoCall(video.id, 'verbunden');
   s().updateVideoCall(video.id, 'beendet');
   s().setFinding(b.id, 'reparatur', 'fachkraft');
-  s().reportClaim(b.id, '1');
-  const booking = s().requestBooking({
-    caseId: b.id,
-    kind: 'reparatur',
-    partnerId: partner.id,
-    slotLabel: demoConfig.slots[0]!,
-    selfPay: false,
-  });
+  unwrap(s().reportClaim(b.id, '1'));
+  const booking = unwrap(
+    s().requestBooking({
+      caseId: b.id,
+      kind: 'reparatur',
+      partnerId: partner.id,
+      slotLabel: demoConfig.slots[0]!,
+      selfPay: false,
+    }),
+  );
   while (s().simulateNext(b.id));
   s().confirmRepair(b.id, true);
   s().rateBooking(booking.id, 5);
