@@ -1,6 +1,6 @@
 # Rechtsfragen und ungeprüfte Annahmen
 
-Stand: 03.11.2026 · Startbestand aus `docs/ZUKUNFTSPLAN.md` Abschnitt 10
+Stand: 03.11.2026 · Startbestand aus `docs/ZUKUNFTSPLAN.md` Abschnitt 10, Nr. 46 aus Schritt 28
 
 Diese Liste geht an Anwalt und Datenschutzbeauftragte (DSB). Den ersten Termin mit beiden buchst du für Woche 2 (KW 46). Danach gibt es feste Termine im Monat. Bis eine Antwort da ist, baut ihr die strengere Variante (ZUKUNFTSPLAN Grundsatz 5). Die Antwort kann dann nur lockern.
 
@@ -87,11 +87,12 @@ Die Frist nennt die Phase oder das Gate, vor dem die Antwort da sein muss. Phase
 | 31 | Das Europäische Formular für Reparaturinformationen stellt laut Recherche freiwillig der Reparaturbetrieb aus (Art. 245 EGBGB). Stimmt das, und was folgt daraus für ganz? | RA | vor Phase 6 | offen | – |
 | 32 | Ökodesign: Frist von 15 Arbeitstagen für Ersatzteile gegen EUR-Lex prüfen (REVIEW 4.1). Die App zeigt den Wert heute schon (`ecoDesignDeliveryDays` in `config/demo.config.ts`). | RA | vor Gate externe Tests | offen | – |
 | 33 | Marktplatz: Pflichten von ganz als Vermittler (§ 312l BGB mit Art. 246d EGBGB), P2B-Verordnung (EU) 2019/1150, § 5b UWG zur Reihenfolge der Betriebe. Ab welcher Größe gelten Art. 30 bis 32 DSA? | RA | vor Phase 6 | offen | – |
-| 34 | Selbstzahler: Button-Lösung nach § 312j Abs. 3 BGB und Widerrufsrecht im Namen des Fachbetriebs (Nr. 27) | RA | vor Phase 6 | offen | – |
+| 34 | Selbstzahler: Button-Lösung nach § 312j Abs. 3 BGB und Widerrufsrecht im Namen des Fachbetriebs (Nr. 27). Dazu die Vor-Ort-Diagnose ohne festen Preis: Die App fragt sie mit „Termin anfragen“ an, und der Betrieb nennt den Preis vor dem Termin. Reicht das? Wo muss dann der Schritt mit „Zahlungspflichtig buchen“ kommen? | RA | vor Phase 6 | offen | – |
 | 35 | BFSG (gilt seit dem 28.06.2025): Sind Buchungen in der App eine Dienstleistung im elektronischen Geschäftsverkehr? Wer ist Dienstleistungserbringer, ganz oder der Versicherer im Co-Branding? Die Ausnahme für Kleinstunternehmen nach § 3 Abs. 3 hilft nur dem Anbieter selbst. | RA | vor Pilot-Gate | offen | – |
 | 36 | Produkthaftung: Sind App, Anleitungen und Fehlererkennung ein Produkt nach der Richtlinie (EU) 2024/2853? Sie ist laut Recherche bis 09.12.2026 umzusetzen. | RA | vor Pilot-Gate | offen | – |
 | 37 | Wer haftet, wenn eine Anleitung oder ein Befund zu einem Schaden führt? Was dürfen die Nutzungsbedingungen begrenzen? Welche Versicherung braucht ganz vor dem Pilot? (Nr. 26) | RA | vor Pilot-Gate | offen | – |
 | 38 | Lizenz der Anleitungstexte des Herstellers (Nr. 26) | RA | vor Gate externe Tests | offen | – |
+| 46 | Selbstbeteiligung bei einem Termin vorbehaltlich Freigabe (Nr. 4, Nr. 5): Die App bucht heute mit „Zahlungspflichtig buchen“ und nennt die Selbstbeteiligung „falls Kranich freigibt“. Reicht das? Oder muss die Anfrage während der Prüfung unverbindlich sein und nach der Freigabe ein eigener Schritt mit Zusammenfassung und „Zahlungspflichtig buchen“ folgen? Folgt die Pflicht zur Selbstbeteiligung aus dem Versicherungsvertrag oder aus dem Auftrag an den Betrieb? (Nachtrag aus Schritt 28) | RA | vor Gate externe Tests | offen | – |
 
 ## App Store
 

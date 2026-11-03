@@ -819,8 +819,12 @@ export const de = {
     },
     jobRepair: (part: string) => `${part} tauschen, Original-Teil`,
     jobDiagnosis: 'Vor-Ort-Diagnose mit Kostenvoranschlag',
+    /**
+     * Während der Prüfung: Die Selbstbeteiligung fällt nur an, wenn der Versicherer freigibt.
+     * Kein Betrag, den du jetzt schon schuldest (CLAUDE.md, keine Kostenzusage vor der Freigabe).
+     */
     costsClaim: (insurer: string, deductible: string) =>
-      `${insurer}, vorbehaltlich Freigabe · Selbstbeteiligung ${deductible}`,
+      `${insurer}, vorbehaltlich Freigabe · Selbstbeteiligung ${deductible}, falls ${insurer} freigibt`,
     /** Nach der Freigabe: Der Versicherer zahlt, du die Selbstbeteiligung */
     costsApproved: (insurer: string, deductible: string) =>
       `${insurer} hat freigegeben · Selbstbeteiligung ${deductible}`,

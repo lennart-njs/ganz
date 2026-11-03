@@ -32,7 +32,11 @@ const t = de.appointment;
 
 /**
  * Betrieb und Termin: Betrieb, Zeitfenster, Adresse und Zusammenfassung vor dem Tap (B-29, B-32).
- * Muss die Nutzerin etwas zahlen, heißt der Button „Zahlungspflichtig buchen“ (§ 312j BGB).
+ * Steht ein Betrag fest, den die Nutzerin mit der Buchung zahlen kann, heißt der Button
+ * „Zahlungspflichtig buchen“ (§ 312j BGB): der Preis beim Selbstzahlen, die Selbstbeteiligung über
+ * 0 €, auch vorbehaltlich Freigabe (Entscheidung Nr. 4). Die Vor-Ort-Diagnose zahlt der Haushalt,
+ * einen Preis gibt es aber noch nicht. Sie bleibt „Termin anfragen“, den Preis nennt der Betrieb
+ * vorher (docs/recht/RECHTSFRAGEN.md Nr. 34 und 46).
  * Ob es den Termin gibt, sagen die Regeln: nach der Ablehnung keiner auf Kosten des Versicherers
  * (R-09), und höchstens einer je Art.
  */
