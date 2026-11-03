@@ -1139,6 +1139,11 @@ export const de = {
     reasons: ['Hat sich erledigt', 'Ich mache es anders', 'Falsches Gerät', 'Anderer Grund'],
     confirmCancel: 'Fall abbrechen',
     keep: 'Weitermachen',
+    /** Erledigt oder abgebrochen: nichts mehr zu pausieren oder abzubrechen (R-01) */
+    closedText: 'Der Fall ist abgeschlossen. Du findest ihn unter „Fälle“.',
+    leave: 'Zur Übersicht',
+    /** Offen, aber nicht mehr abbrechbar, z. B. in der Reparatur */
+    noCancel: 'Abbrechen geht gerade nicht. Der Auftrag läuft schon.',
   },
 
   galerie: {

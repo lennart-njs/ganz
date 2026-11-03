@@ -2,7 +2,7 @@
 
 Stand: 03.11.2026 · nach Schritt 20 und den ersten Regelbrüchen aus Phase 1 · Befunde: `docs/REVIEW.md` Abschnitt 2 und `docs/ZUKUNFTSPLAN.md` Anhang B
 
-Nach Schritt 14 waren alle P0- und P1-Befunde behoben. Die Code-Review vom 03.11.2026 hat acht davon wieder geöffnet: B-04, B-05, B-17, B-18, B-19, B-23, B-40 und B-53. Sie sind offen, bis die Rückfälle R-01 bis R-18 behoben sind (Abschnitt „Rückfälle“ unten). Wieder behoben sind B-18 (R-07), B-40 (R-12) sowie B-19 und B-23 (R-16). Alle anderen P0- und P1-Befunde bleiben behoben. Die Spalte „Nachweis“ nennt den Test, der das Verhalten prüft, oder die Stelle im Code.
+Nach Schritt 14 waren alle P0- und P1-Befunde behoben. Die Code-Review vom 03.11.2026 hat acht davon wieder geöffnet: B-04, B-05, B-17, B-18, B-19, B-23, B-40 und B-53. Sie sind offen, bis die Rückfälle R-01 bis R-18 behoben sind (Abschnitt „Rückfälle“ unten). Wieder behoben sind B-04 (R-01), B-18 (R-07), B-40 (R-12) sowie B-19 und B-23 (R-16). Alle anderen P0- und P1-Befunde bleiben behoben. Die Spalte „Nachweis“ nennt den Test, der das Verhalten prüft, oder die Stelle im Code.
 
 ## P0
 
@@ -24,7 +24,7 @@ Nach Schritt 14 waren alle P0- und P1-Befunde behoben. Die Code-Review vom 03.11
 | ID | Behoben durch | Nachweis |
 |---|---|---|
 | B-01 | Gerätekarte öffnet das Gerätedetail, Suchpille „Problem melden“ | `app/(tabs)/index.tsx`, `app/geraet/[id].tsx` |
-| B-04 (wieder offen, R-01) | X im Fall: „Später weitermachen“ oder „Fall abbrechen“ mit Grund | `__tests__/navigation.test.tsx` |
+| B-04 | X im Fall: „Später weitermachen“ oder „Fall abbrechen“ mit Grund, beides nur, wo die Regeln es erlauben | `__tests__/navigation.test.tsx`, `__tests__/regressions/abstuerze.test.tsx` (R-01) |
 | B-07 | „Läuft noch nicht“ und „Läuft wieder“ | `__tests__/guide.test.tsx` |
 | B-08 | Anleitungstyp, Pflege endet mit „Fertig“ | `__tests__/guide.test.tsx` |
 | B-09 | Zuerst entfernt. Seit Entscheidung 6: „Frag den Assistenten zu diesem Schritt“ öffnet den Reparatur-Assistenten in der App, nicht nach außen | `__tests__/chat.test.tsx` |
@@ -83,7 +83,7 @@ R-07, R-12, R-13, R-16 und R-17 brechen eine feste Regel. Solange einer davon of
 
 | ID | Befund | Wieder offen | Stand | Behebung | Test |
 |---|---|---|---|---|---|
-| R-01 | „Fall abbrechen“ in `in_reparatur`, `erledigt` oder `abgebrochen` stürzt ab | B-04 | offen | Schritt 22 | `__tests__/regressions/abstuerze.test.tsx` |
+| R-01 | „Fall abbrechen“ in `in_reparatur`, `erledigt` oder `abgebrochen` stürzt ab | B-04 | behoben | Schritt 22 | `__tests__/regressions/abstuerze.test.tsx` |
 | R-02 | „Schadenfall melden“ nach der Meldung, mit verwaister Bestätigung | B-17 | offen | Schritt 22 | `__tests__/regressions/abstuerze.test.tsx` |
 | R-03 | „Neues Problem melden“ bei einem Fall in `in_reparatur` stürzt ab | – | offen | Schritt 23 | `__tests__/regressions/abstuerze.test.tsx` |
 | R-04 | Zwei offene Fälle über „Passt nicht“ (Nr. 13) | – | offen | Schritt 23 | `__tests__/regressions/fehlverhalten.test.tsx` |

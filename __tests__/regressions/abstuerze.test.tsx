@@ -69,31 +69,29 @@ describe('R-01 „Fall abbrechen“ in jedem Status', () => {
 
   // components/nav/CloseCaseSheet.tsx:37 bietet „Fall abbrechen“ in jedem Status an. In
   // erledigt, in_reparatur und abgebrochen wirft der Tap auf „Fall abbrechen“ einen TransitionError.
-  test.failing(
-    'R-01 „Fall abbrechen“ steht nur da, wo der Fall abbrechbar ist, und wirft nie',
-    async () => {
-      const { done, repair, cancelled } = closedAndRepairCases();
-      await openSheetInCaseFile(done);
-      expect(screen.queryByRole('button', { name: de.closeCase.cancel })).toBeNull();
+  // Behoben: Das Sheet fragt can(facts, 'abbrechen') und can(facts, 'pausieren') (Schritt 22).
+  test('R-01 „Fall abbrechen“ steht nur da, wo der Fall abbrechbar ist, und wirft nie', async () => {
+    const { done, repair, cancelled } = closedAndRepairCases();
+    await openSheetInCaseFile(done);
+    expect(screen.queryByRole('button', { name: de.closeCase.cancel })).toBeNull();
 
-      // Dasselbe im Gespräch eines Falls in der Reparatur und in der Fallakte eines abgebrochenen
-      for (const url of [`/fall/${repair}`, `/fall/${cancelled}/fallakte`]) {
-        await act(async () => router.replace(url));
-        await tap(de.a11y.close);
-        expect(screen.getByRole('header', { name: de.closeCase.title })).toBeTruthy();
-        if (await tapIfOffered(de.closeCase.cancel)) {
-          await fireEvent.press(screen.getByRole('radio', { name: de.closeCase.reasons[1] }));
-          await tap(de.closeCase.confirmCancel);
-        }
+    // Dasselbe im Gespräch eines Falls in der Reparatur und in der Fallakte eines abgebrochenen
+    for (const url of [`/fall/${repair}`, `/fall/${cancelled}/fallakte`]) {
+      await act(async () => router.replace(url));
+      await tap(de.a11y.close);
+      expect(screen.getByRole('header', { name: de.closeCase.title })).toBeTruthy();
+      if (await tapIfOffered(de.closeCase.cancel)) {
+        await fireEvent.press(screen.getByRole('radio', { name: de.closeCase.reasons[1] }));
+        await tap(de.closeCase.confirmCancel);
       }
-      expect(caseOf(done).status).toBe('erledigt');
-      expect(caseOf(repair).status).toBe('in_reparatur');
-      expect(caseOf(cancelled)).toMatchObject({
-        status: 'abgebrochen',
-        cancelReason: de.closeCase.reasons[0],
-      });
-    },
-  );
+    }
+    expect(caseOf(done).status).toBe('erledigt');
+    expect(caseOf(repair).status).toBe('in_reparatur');
+    expect(caseOf(cancelled)).toMatchObject({
+      status: 'abgebrochen',
+      cancelReason: de.closeCase.reasons[0],
+    });
+  });
 });
 
 // ---------- R-02 ----------
