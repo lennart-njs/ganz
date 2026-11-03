@@ -194,6 +194,7 @@ const diagnosis = z.object({
   source: z.enum(['fehlererkennung', 'nutzerangabe', 'fachkraft', 'betrieb']),
   guideId: z.string().optional(),
   createdAt: time,
+  discardedAt: time.optional(),
 });
 
 const guideRun = z.object({

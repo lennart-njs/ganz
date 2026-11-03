@@ -1057,7 +1057,8 @@ export default function FallGespraech() {
     reply('anleitung', t.continueGuide, () => router.push(`/fall/${caseId}/anleitung`));
     reply('hilfe', de.result.helpInstead, escalate);
   } else if (canGuide) {
-    const d = diagnoses.findLast((x) => x.source === 'fehlererkennung');
+    // Ein verworfenes Ergebnis („Passt nicht“) bietet seine Anleitung nicht mehr an
+    const d = diagnoses.findLast((x) => x.source === 'fehlererkennung' && !x.discardedAt);
     const guide = d?.guideId ? guides[d.guideId as GuideId] : undefined;
     if (d?.errorPattern === 'geraet_erkannt') {
       reply('foto', de.result.photoDisplay, () => router.push(`/fall/${caseId}/kamera`));

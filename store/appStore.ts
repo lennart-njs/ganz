@@ -401,6 +401,22 @@ export function createAppStore(storage: StateStorage = AsyncStorage, env: StoreE
           };
         };
 
+        /**
+         * Ergebnisse der Fehlererkennung und eigene Angaben gelten nicht mehr, weil das Problem
+         * des Falls wechselt. Befunde von Fachkraft und Betrieb bleiben.
+         */
+        const discardResults = (caseId: Id) => {
+          const now = env.now();
+          const stale = (d: Diagnosis) =>
+            d.caseId === caseId &&
+            !d.discardedAt &&
+            (d.source === 'fehlererkennung' || d.source === 'nutzerangabe');
+          if (!get().diagnoses.some(stale)) return;
+          set((s) => ({
+            diagnoses: s.diagnoses.map((d) => (stale(d) ? { ...d, discardedAt: now } : d)),
+          }));
+        };
+
         const endRuns = (runs: GuideRun[]) => {
           if (!runs.length) return;
           const ended = draftEndRuns(runs);
@@ -571,6 +587,8 @@ export function createAppStore(storage: StateStorage = AsyncStorage, env: StoreE
               if (get().cases[plan.caseId]?.pausedAt) get().resumeCase(plan.caseId);
               // Eine offene Anleitung bleibt nur, wenn es mit ihr weitergeht (R-06)
               endRuns(openRuns(plan.caseId).filter((r) => r.guideId !== options.guideId));
+              // Das bisherige Ergebnis gehört zum alten Problem, etwa nach „Passt nicht“
+              discardResults(plan.caseId);
               get().updateCase(plan.caseId, { entry, problemLabel });
               return ok({ art: plan.art, caseId: plan.caseId });
             }

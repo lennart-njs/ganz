@@ -104,6 +104,7 @@ Ereignisse, die ein Dashboard besonders braucht:
 | `Diagnosis.confidence` | ✓ | – | (✓) | in der App nur als Wort |
 | `Diagnosis.confidenceScore` | – | – | (✓) | nur intern und für die Qualität der Erkennung |
 | `Diagnosis.source` | ✓ | – | (✓) | Fehlererkennung, Nutzerangabe, Fachkraft, Betrieb |
+| `Diagnosis.discardedAt` | ✓ | – | (✓) | „Passt nicht“ oder ein anderes Problem im selben Fall: Das Ergebnis gilt nicht mehr und geht nicht mehr als Ergebnis an Assistent, Fachkraft oder Versicherer |
 
 ### Anleitung
 

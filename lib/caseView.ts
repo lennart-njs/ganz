@@ -79,9 +79,10 @@ export function guideSummary(s: AppData, c: Case): GuideSummary | undefined {
   };
 }
 
+/** Neuestes gültiges Ergebnis oder neuester Befund. Ein verworfenes Ergebnis zählt nicht. */
 export function latestDiagnosis(s: AppData, c: Case, source?: Diagnosis['source']) {
   return [...c.diagnosisIds]
     .reverse()
     .map((id) => s.diagnoses.find((d) => d.id === id))
-    .find((d) => d && (!source || d.source === source));
+    .find((d) => d && !d.discardedAt && (!source || d.source === source));
 }

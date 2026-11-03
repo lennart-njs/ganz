@@ -221,6 +221,11 @@ export interface Diagnosis {
   source: 'fehlererkennung' | 'nutzerangabe' | 'fachkraft' | 'betrieb';
   guideId?: string;
   createdAt: ISODateTime;
+  /**
+   * „Passt nicht“ oder ein anderes Problem im selben Fall: Das Ergebnis gilt nicht mehr. Es
+   * bleibt im Verlauf, geht aber nicht mehr als Ergebnis an Assistent, Fachkraft oder Versicherer.
+   */
+  discardedAt?: ISODateTime;
 }
 
 // ---------- Anleitung ----------

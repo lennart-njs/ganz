@@ -1,12 +1,16 @@
 import { Linking } from 'react-native';
-import { act, fireEvent, renderRouter, screen } from 'expo-router/testing-library';
+import { act, fireEvent, renderRouter, screen, within } from 'expo-router/testing-library';
 import { router } from 'expo-router';
 
+import { CASE_FILE_CARD } from '@/components/app/CaseFileCard';
 import { guides } from '@/data/guides';
 import { de } from '@/i18n/de';
+import { latestDiagnosis } from '@/lib/caseView';
+import { chatContext } from '@/lib/chat/context';
 import { services } from '@/services';
 import { useAppStore } from '@/store/appStore';
 import { APP } from '@/test/app';
+import * as regressions from '@/test/regressions';
 import { unwrap } from '@/test/result';
 
 const cameraMock = jest.requireMock('expo-camera').__permission;
@@ -207,5 +211,68 @@ describe('Kein Text sagt Kosten zu', () => {
   test('das Ergebnis nennt Prüfung und Selbstbeteiligung', async () => {
     await photoFlow('display');
     expect(screen.getByText(de.result.costNote('Kranich', '0 €'))).toBeTruthy();
+  });
+});
+
+describe('„Passt nicht“ verwirft das Ergebnis', () => {
+  /** Startseite → Foto → Ergebnis → „Passt nicht“ → anderes Symptom, wie R-04 */
+  async function rejectedResult() {
+    regressions.start();
+    regressions.addWasher();
+    const r = await renderRouter(APP, { initialUrl: '/' });
+    await regressions.tap(new RegExp(`^${de.home.searchTitle}`));
+    await regressions.tap(new RegExp(`^${de.problem.photo}`));
+    await regressions.tap(de.camera.shutter);
+    await regressions.flush(10);
+    const id = 'GS-24817';
+    expect(r.getPathname()).toBe(`/fall/${id}`);
+    await regressions.tap(de.result.doesNotFit);
+    await regressions.tap(new RegExp(`^${de.problems[2]!.label}`));
+    await regressions.flush();
+    return { id, r };
+  }
+
+  test('Assistent, Fachkraft und Versicherer bekommen das abgelehnte Ergebnis nicht mehr', async () => {
+    const { id } = await rejectedResult();
+    const s = useAppStore.getState();
+    const c = s.cases[id]!;
+    expect(c.problemLabel).toBe(de.problems[2]!.label);
+    // Das Ergebnis bleibt im Verlauf, gilt aber nicht mehr
+    const old = s.diagnoses.find((d) => d.caseId === id && d.source === 'fehlererkennung');
+    expect(old?.discardedAt).toBeDefined();
+    expect(latestDiagnosis(s, c, 'fehlererkennung')).toBeUndefined();
+    expect(chatContext(s, id)).toMatchObject({
+      problem: de.problems[2]!.label,
+      errorPattern: undefined,
+      displayMessage: undefined,
+    });
+    // Vorschau für die Fachkraft im Gespräch: ohne Zeile „Ergebnis“
+    await act(async () => {
+      unwrap(useAppStore.getState().escalate(id));
+      router.replace(`/fall/${id}`);
+    });
+    const card = within(screen.getByTestId(CASE_FILE_CARD));
+    expect(card.getByText(de.help.facts.problem)).toBeTruthy();
+    expect(card.queryByText(de.help.facts.result)).toBeNull();
+  });
+
+  test('ein neues Foto im selben Fall ist wieder das Ergebnis', async () => {
+    const { id } = await rejectedResult();
+    await act(async () => {
+      unwrap(
+        useAppStore.getState().addDiagnosis({
+          caseId: id,
+          photoIds: [],
+          mode: 'display',
+          errorPattern: 'wasserablauf',
+          confidence: 'hoch',
+          confidenceScore: 1,
+          source: 'fehlererkennung',
+        }),
+      );
+    });
+    const s = useAppStore.getState();
+    expect(latestDiagnosis(s, s.cases[id]!, 'fehlererkennung')?.discardedAt).toBeUndefined();
+    expect(chatContext(s, id)?.errorPattern).toBe('wasserablauf');
   });
 });
