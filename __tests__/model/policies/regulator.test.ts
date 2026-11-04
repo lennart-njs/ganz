@@ -128,9 +128,24 @@ describe('regulatorOptions: Reihenfolge und Grenzen', () => {
       [SELF],
     ],
     [
+      'Stichtag genau am Beginn des Vertrags: Versicherung',
+      input({}, { ...KRANICH, validFrom: AS_OF }),
+      [['versicherer', 'versicherung', 'sicher'], SELF],
+    ],
+    [
+      'Stichtag genau am Ende des Vertrags: Versicherung',
+      input({}, { ...KRANICH, validUntil: AS_OF }),
+      [['versicherer', 'versicherung', 'sicher'], SELF],
+    ],
+    [
       'Vertrag mit unlesbarem Ende: keine Versicherung',
       input({}, { ...KRANICH, validUntil: 'unbekannt' }),
       [SELF],
+    ],
+    [
+      'Unlesbarer Stichtag, lesbares Kaufdatum: Gewährleistung, der Händler prüft',
+      { ...input({ soldBy: FRUEND, purchaseDate: BOUGHT_03_2025 }, KRANICH), asOf: 'unlesbar' },
+      [['haendler', 'gewaehrleistung', 'pruefen'], SELF],
     ],
     [
       'Vertrag eines Händlers: kein Regulierer aus dem Vertrag',
