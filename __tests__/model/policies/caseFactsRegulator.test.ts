@@ -248,6 +248,20 @@ describe('Kaufdatum und Regeln', () => {
     ).toBe('kulanz');
   });
 
+  test('Kaufdatum aus einem kaputten Speicher: Fakten ohne Absturz, der Händler prüft', () => {
+    for (const purchaseDate of [
+      '+275759-01-01T00:00:00.000Z',
+      '-271821-04-20T00:00:00.000Z',
+      '0050-06-01T00:00:00.000Z',
+    ]) {
+      const f = factsOf(makeCase(), makeDevice({ soldBy: FRUEND, purchaseDate }));
+      expect(f.regulator).toMatchObject({ basis: 'gewaehrleistung', certainty: 'pruefen' });
+      expect(f.regulator?.until).toBeUndefined();
+      expect(f.payer).toBeUndefined();
+      expect(can(f, 'selbst_zahlen')).toBe(true);
+    }
+  });
+
   test('Regeln aus der Quelle gelten, sonst DEFAULT_REGULATOR_RULES', () => {
     const old = makeDevice({ soldBy: FRUEND, purchaseDate: '2023-03-15T00:00:00+01:00' });
     const rules = { ...DEFAULT_REGULATOR_RULES, purchaseWarrantyMonths: 48 };

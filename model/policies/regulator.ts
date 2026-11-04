@@ -159,20 +159,33 @@ function addCalendarMonths({ y, m, d }: Day, months: number): Day {
 }
 
 /**
+ * Kaufdaten, mit denen die Frist rechnet: vom Jahr 100 bis zum Jahr 9999. Davor macht Date.UTC
+ * aus den Jahren 0 bis 99 die Jahre 1900 bis 1999, und vor Christus verliert das Jahr in Berlin
+ * sein Vorzeichen. Danach braucht ein ISO-Datum ein Vorzeichen, und am Rand des Datumsbereichs gibt
+ * es kein Ende mehr. Die App legt solche Daten nicht an, ein kaputter Speicher kann sie enthalten.
+ */
+const FIRST_PURCHASE = Date.UTC(100, 0, 1);
+const AFTER_LAST_PURCHASE = Date.UTC(10000, 0, 1);
+
+/**
  * Ende der Gewährleistung auf den Kauf: der letzte Augenblick des Tages in Berlin, der nach seiner
  * Zahl dem Kauftag entspricht, months Monate später (§§ 187 Abs. 1, 188 Abs. 2 und 3 BGB). Der
  * Kauftag ist der Tag in Berlin, gleich mit welcher Zeitzone das Datum gespeichert ist. Kauf am
  * 14.06.2025 ergibt das Ende des 14.06.2027, Kauf am 31.01. plus 1 Monat das Ende des 28.02.
- * Ohne lesbares Datum undefined.
+ * Ohne lesbares Datum undefined, ebenso außerhalb der Jahre 100 bis 9999 und ohne darstellbares
+ * Ende. Das Gerät gilt dann wie ohne Kaufdatum: Der Händler prüft.
  */
 export function purchaseWarrantyUntil(
   purchase: ISODateTime,
   months: number,
 ): ISODateTime | undefined {
   const bought = time(purchase);
-  if (bought === undefined) return undefined;
+  if (bought === undefined || bought < FIRST_PURCHASE || bought >= AFTER_LAST_PURCHASE) {
+    return undefined;
+  }
   const last = addCalendarMonths(berlinClock(bought), months);
   const next = new Date(Date.UTC(last.y, last.m - 1, last.d + 1));
+  if (Number.isNaN(next.getTime())) return undefined;
   const end = startOfBerlinDay({
     y: next.getUTCFullYear(),
     m: next.getUTCMonth() + 1,

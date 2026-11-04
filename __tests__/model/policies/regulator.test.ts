@@ -389,6 +389,35 @@ describe('withinPurchaseWarranty: Kalendermonate, Kalendertage in Berlin', () =>
     expect(purchaseWarrantyUntil('', 24)).toBeUndefined();
     expect(purchaseWarrantyUntil('irgendwann', 24)).toBeUndefined();
   });
+
+  test('Kaufdatum außerhalb der Jahre 100 bis 9999: kein Ende, ohne Absturz', () => {
+    // Am Rand des Datumsbereichs gibt es kein Ende mehr, vor Christus verliert das Jahr in Berlin
+    // sein Vorzeichen, und Date.UTC macht aus den Jahren 0 bis 99 die Jahre 1900 bis 1999
+    for (const bought of [
+      '+275759-01-01T00:00:00.000Z',
+      '+275758-09-13T00:00:00.000Z',
+      '+010000-01-01T00:00:00.000Z',
+      '-271821-04-20T00:00:00.000Z',
+      '-000500-06-01T00:00:00.000Z',
+      '0050-06-01T00:00:00.000Z',
+      '0099-12-31T12:00:00.000Z',
+    ]) {
+      expect(purchaseWarrantyUntil(bought, 24)).toBeUndefined();
+      expect(withinPurchaseWarranty(bought, AS_OF, 24)).toBe(false);
+      expect(regulatorOptions(input({ soldBy: FRUEND, purchaseDate: bought })).map(shape)).toEqual([
+        ['haendler', 'gewaehrleistung', 'pruefen'],
+        SELF,
+      ]);
+    }
+    // Die Ränder selbst rechnen noch
+    expect(purchaseWarrantyUntil('0100-01-01T12:00:00.000Z', 24)).toMatch(/^0102-01-01T/);
+    expect(purchaseWarrantyUntil('9999-12-31T12:00:00.000Z', 24)).toMatch(/^\+010001-12-31T/);
+  });
+
+  test('ohne darstellbares Ende: kein Ende, ohne Absturz', () => {
+    expect(purchaseWarrantyUntil(BOUGHT_03_2025, 4_000_000)).toBeUndefined();
+    expect(withinPurchaseWarranty(BOUGHT_03_2025, AS_OF, 4_000_000)).toBe(false);
+  });
 });
 
 describe('REGULATOR_CONSENT', () => {
