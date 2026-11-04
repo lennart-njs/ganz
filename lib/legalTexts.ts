@@ -12,9 +12,11 @@ import { demoConfig } from '@/config/demo.config';
 import { de } from '@/i18n/de';
 import { CONSENT_SCOPES, type TextStamp } from '@/model/policies/consentScopes';
 import { sha256Hex } from '@/model/sha256';
-import type { ConsentPurpose } from '@/model/types';
+import type { ConsentPurpose, Id } from '@/model/types';
+import type { AppData } from '@/store/appStore';
 
 import { scopeLabels, scopeList } from './consent';
+import { caseService, insurerShortName } from './service';
 
 /** Namen, die in den Texten stehen */
 export interface TextNames {
@@ -168,6 +170,25 @@ export function demoNames(): TextNames {
     fachbetrieb: partner?.name ?? '',
     assistent: demoConfig.assistant.name,
     hersteller: demoConfig.manufacturer.name,
+  };
+}
+
+/**
+ * Die Namen, die der Screen im Fall zeigt: Versicherer aus dem Vertrag des Geräts, Fachkraft und
+ * Betrieb aus lib/service.ts (beim Händler-Gerät sein Kundendienst, Entscheidung 16). So belegt der
+ * Stempel denselben Text, den der Haushalt gesehen hat. Ohne Händler und mit dem Versicherer der
+ * Konfiguration sind es dieselben Namen wie in demoNames().
+ */
+export function caseNames(
+  s: Pick<AppData, 'cases' | 'devices' | 'contracts'>,
+  caseId: Id,
+): TextNames {
+  const { expert } = caseService(s, caseId);
+  return {
+    ...demoNames(),
+    versicherer: insurerShortName(s, caseId),
+    fachkraft: expert.name,
+    fachbetrieb: expert.partner.name,
   };
 }
 

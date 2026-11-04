@@ -2,10 +2,10 @@ import { StyleSheet } from 'react-native';
 
 import { ScopeItems } from '@/components/app/ScopeItems';
 import { Button, Card, Sheet, Text, Toast } from '@/components/ds';
-import { demoConfig } from '@/config/demo.config';
 import { useCommand } from '@/hooks/useCommand';
 import { de } from '@/i18n/de';
-import { textStamp } from '@/lib/legalTexts';
+import { caseNames, textStamp } from '@/lib/legalTexts';
+import { serviceFor } from '@/lib/service';
 import { scopedConsent } from '@/model/policies/consentScopes';
 import type { Id } from '@/model/types';
 import { useAppStore } from '@/store/appStore';
@@ -20,13 +20,17 @@ interface CallbackSheetProps {
 /**
  * Bestätigung vor dem Rückruf: wer welche Daten sieht, wie vor dem Videocall (B-19, B-23).
  * Erst der Tap speichert die Weitergabe an die Fachkraft (lit. b) und fragt den Rückruf an (R-16).
+ * Fachkraft und Betrieb sind dieselben wie im Videocall: beim Händler-Gerät sein Kundendienst
+ * (Entscheidung 16), sonst die aus der Konfiguration (lib/service.ts).
  */
 export function CallbackSheet({ caseId, slot, onClose }: CallbackSheetProps) {
   const t = de.waiting;
-  const expert = demoConfig.expert.name;
-  const partner = demoConfig.partners.find((p) => p.id === demoConfig.expert.partnerId)!;
+  const device = useAppStore((s) => s.devices.find((d) => d.id === s.cases[caseId]?.deviceId));
+  const { expert } = serviceFor(device);
+  const partner = expert.partner;
 
   // Bestätigung und Rückruf speichert der Store in einem Schritt. Ein Doppeltap fragt nicht doppelt.
+  // Der Stempel trägt die Namen, die das Sheet zeigt.
   const send = useCommand(
     (time: string) =>
       useAppStore.getState().requestCallback(
@@ -35,7 +39,7 @@ export function CallbackSheet({ caseId, slot, onClose }: CallbackSheetProps) {
         scopedConsent('weitergabe_fachkraft', {
           caseId,
           recipient: { id: partner.id, kind: 'betrieb', name: partner.name },
-          text: textStamp('fachkraft_rueckruf'),
+          text: textStamp('fachkraft_rueckruf', caseNames(useAppStore.getState(), caseId)),
         }),
       ),
     onClose,
@@ -49,7 +53,7 @@ export function CallbackSheet({ caseId, slot, onClose }: CallbackSheetProps) {
       <Text variant="body">{t.confirmText}</Text>
       <Card>
         <Text variant="labelStrong" accessibilityRole="header">
-          {de.help.shareTitle(expert, partner.name)}
+          {de.help.shareTitle(expert.name, partner.name)}
         </Text>
         <ScopeItems purpose="weitergabe_fachkraft" />
         <Text variant="meta" style={styles.gapTop}>

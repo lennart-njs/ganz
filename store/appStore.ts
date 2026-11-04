@@ -7,7 +7,7 @@ import { demoConfig } from '@/config/demo.config';
 import { de } from '@/i18n/de';
 import { caseAppliance, caseCategory, findingPattern } from '@/lib/appliance';
 import { getGuide, registerCatalogEntry } from '@/lib/guideCatalog';
-import { demoNames, textStamp, type LegalTextKey } from '@/lib/legalTexts';
+import { caseNames, textStamp, type LegalTextKey } from '@/lib/legalTexts';
 import { caseService, insurerName } from '@/lib/service';
 import { deleteInstallationId } from '@/services/installation';
 import { notifications } from '@/services/notifications';
@@ -411,6 +411,15 @@ export function createAppStore(storage: StateStorage = AsyncStorage, env: StoreE
         const missingCase = (caseId: Id): Refused =>
           refuse({ code: 'unbekannt', what: 'fall', id: caseId });
 
+        /**
+         * Eine Bestätigung für Videocall oder Rückruf gilt nur, wenn sie den Betrieb der Fachkraft
+         * nennt, die den Fall übernimmt (lib/service.ts): beim Händler-Gerät sein Kundendienst.
+         */
+        const namesExpert = (caseId: Id, ...confirms: (NewConsent | undefined)[]) => {
+          const partnerId = caseService(get(), caseId).expert.partner.id;
+          return confirms.every((k) => !k || k.recipient.id === partnerId);
+        };
+
         /** Rechnet einen Befehl aus, ohne zu schreiben. Schreiben: commit. */
         const draftCommand = (
           c: Case,
@@ -551,7 +560,7 @@ export function createAppStore(storage: StateStorage = AsyncStorage, env: StoreE
         ): { booking: Booking; event: CaseEvent } => {
           const at = env.now();
           const stamp = textStamp('verbindliche_buchung', {
-            ...demoNames(),
+            ...caseNames(get(), b.caseId),
             fachbetrieb: b.provider.name,
           });
           return {
@@ -1157,6 +1166,9 @@ export function createAppStore(storage: StateStorage = AsyncStorage, env: StoreE
               ? draftCommand(c, 'hilfe_holen')
               : undefined;
             if (escalated && !escalated.ok) return escalated;
+            if (!namesExpert(caseId, confirm.share, confirm.screenshots)) {
+              return refuse({ code: 'bestaetigung', purpose: 'weitergabe_fachkraft' });
+            }
             const share = confirm.share ? draftConsent(confirm.share) : undefined;
             const shots = confirm.screenshots ? draftConsent(confirm.screenshots) : undefined;
             const consents = [
@@ -1243,6 +1255,9 @@ export function createAppStore(storage: StateStorage = AsyncStorage, env: StoreE
           requestCallback: (caseId, slot, confirm) => {
             const c = get().cases[caseId];
             if (!c) return missingCase(caseId);
+            if (!namesExpert(caseId, confirm)) {
+              return refuse({ code: 'bestaetigung', purpose: 'weitergabe_fachkraft' });
+            }
             const share = confirm ? draftConsent(confirm) : undefined;
             const consents = share ? [...get().consents, share.consent] : get().consents;
             // Wie beim Videocall: ohne gültige Bestätigung geht nichts an die Fachkraft (R-16)
@@ -1378,7 +1393,7 @@ export function createAppStore(storage: StateStorage = AsyncStorage, env: StoreE
               scopedConsent('weitergabe_versicherer', {
                 caseId,
                 recipient: contract.provider,
-                text: textStamp(TRANSFER_TEXT.weitergabe_versicherer),
+                text: textStamp(TRANSFER_TEXT.weitergabe_versicherer, caseNames(get(), caseId)),
               }),
             );
             const reported = draftCommand(c, 'schaden_melden', { contractId: contract.id }, [
@@ -1427,7 +1442,7 @@ export function createAppStore(storage: StateStorage = AsyncStorage, env: StoreE
               scopedConsent('weitergabe_betrieb', {
                 caseId,
                 recipient: provider,
-                text: textStamp(TRANSFER_TEXT.weitergabe_betrieb),
+                text: textStamp(TRANSFER_TEXT.weitergabe_betrieb, caseNames(get(), caseId)),
               }),
             );
             const requestedBooking: Booking = {
@@ -1925,7 +1940,7 @@ export function createAppStore(storage: StateStorage = AsyncStorage, env: StoreE
               scopedConsent(purpose, {
                 caseId,
                 recipient,
-                text: textStamp(TRANSFER_TEXT[purpose]),
+                text: textStamp(TRANSFER_TEXT[purpose], caseNames(get(), caseId)),
               }),
             );
             set((s) => ({ consents: [...s.consents, consent], events: [...s.events, ...events] }));

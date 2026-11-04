@@ -908,6 +908,7 @@ Je Schritt ein Commit. Die Nummern stehen unten bei den Annahmen.
 - **Entfallen:** `appointment.unavailableText` (Erklärtext, Entscheidung 20). Der Screen behält Überschrift und „Zum Gespräch“.
 - **Entfallen:** `notify.freigegeben` und die anderen Mitteilungen mit Namen, dazu `appliance.*.examined`. Auf dem Sperrbildschirm stehen nur neutrale Texte (ganz R-17).
 - **Neu:** `common.mailFailed` für die E-Mail-Adresse im Kontakt des Händlers, wie `phoneFailed` bei der Nummer.
+- **Namen im Stempel.** Jeder Stempel in einem Fall nimmt die Namen, die der Screen zeigt: `caseNames` in `lib/legalTexts.ts`, mit dem Versicherer aus dem Vertrag des Geräts und Fachkraft und Betrieb aus `caseService`. Das gilt für Videocall, Screenshots, Rückruf, Schadenmeldung, Termin, erneute Bestätigung und „Zahlungspflichtig buchen“. Ohne Händler und mit dem Versicherer der Konfiguration sind es die Namen der Demo, die Hashes bleiben gleich. Schritt 3.1 ergänzt nur noch den Namen des Händlers.
 - **Bezeichnungen der neuen Kategorien** (bis zum Anwalt): „Name“, „Kaufdatum“, „Schutz mit Anbieter, Produkt und Laufzeit“ (`versicherung`; auch Garantieverlängerung und Herstellergarantie), „Termin“, „Verlauf des Falls“, „Nachrichten und Antworten an den Händler“, „Bewertung des Betriebs“ und „Fotos, die du im Gespräch für den Assistenten aufnimmst“. Die letzte ist Teil von `assistent_einwilligung` 2026-11-4.
 
 ## Chat
@@ -920,6 +921,7 @@ Je Schritt ein Commit. Die Nummern stehen unten bei den Annahmen.
 ## Store
 
 - **Kundendienst des Händlers.** Befund (`setFinding`) und Termin (`requestBooking`) nehmen Fachkraft und Betriebe aus `caseService`. Bei einem Gerät mit Händler ist das sein Kundendienst. Die Freigabe in `simulateNext` nimmt den Versicherer des Geräts. Ein Betrieb, der für das Gerät nicht vorgesehen ist, wird abgelehnt. Vor Ort schreibt weiter der gebuchte Betrieb den Befund (ganz R-10).
+- **Videocall und Rückruf nur an den Betrieb der Fachkraft.** Das Sheet vor dem Rückruf nennt Fachkraft und Betrieb aus `caseService`, beim Händler-Gerät also seinen Kundendienst, wie der Satz vor dem Videocall. `requestVideoCall` und `requestCallback` lehnen eine Bestätigung ab, die einen anderen Betrieb nennt (`bestaetigung`), und schreiben dann nichts.
 - **Anleitungen aus dem Katalog.** `startGuide` nimmt jede Anleitung, die `getGuide` im Katalog findet, auch eine, die der Katalog zur Laufzeit aufnimmt (Entscheidung 24). Eine unbekannte Anleitung lehnt der Store ab, wie auf ganz.
 
 ## Gespräch

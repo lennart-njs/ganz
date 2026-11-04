@@ -145,7 +145,9 @@ describe('Buttons, die nur einmal zählen', () => {
     const id = photoCase(addWasher().id);
     const s = useAppStore.getState();
     unwrap(s.escalate(id));
-    const recipient = { id: 'betrieb', kind: 'betrieb' as const, name: 'Betrieb' };
+    // Die Bestätigung nennt den Betrieb der Fachkraft, sonst lehnt der Store den Call ab
+    const partner = demoConfig.partners.find((p) => p.id === demoConfig.expert.partnerId)!;
+    const recipient = { id: partner.id, kind: 'betrieb' as const, name: partner.name };
     const video = unwrap(
       s.requestVideoCall(id, {
         share: scopedConsent('weitergabe_fachkraft', {

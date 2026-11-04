@@ -50,7 +50,7 @@ import {
 import { chatLimits } from '@/lib/chat/limits';
 import { chatInputOpen, chatRecipient } from '@/lib/chat/recipient';
 import { scopeList } from '@/lib/consent';
-import { textStamp } from '@/lib/legalTexts';
+import { caseNames, textStamp } from '@/lib/legalTexts';
 import { retryableChatErrors, useAssistant } from '@/lib/chat/useAssistant';
 import { formatServiceHours } from '@/lib/serviceHours';
 import { deviceTitle, getManufacturer } from '@/lib/devices';
@@ -396,19 +396,21 @@ export default function FallGespraech() {
 
   // Der Tap bestätigt die Weitergabe an die Fachkraft. Der Store speichert sie mit dem Call.
   // Umfang und Rechtsgrundlage kommen aus CONSENT_SCOPES, wie in der Liste darüber (R-14).
+  // Der Stempel trägt die Namen, die der Satz darüber zeigt (beim Händler-Gerät sein Kundendienst).
   const startCall = () => {
     const recipient = { id: helpPartner.id, kind: 'betrieb' as const, name: helpPartner.name };
+    const names = caseNames(state, caseId);
     call.run({
       share: scopedConsent('weitergabe_fachkraft', {
         caseId,
         recipient,
-        text: textStamp('fachkraft_videocall'),
+        text: textStamp('fachkraft_videocall', names),
       }),
       screenshots: screenshots
         ? scopedConsent('screenshots_im_call', {
             caseId,
             recipient,
-            text: textStamp('screenshots'),
+            text: textStamp('screenshots', names),
           })
         : undefined,
     });

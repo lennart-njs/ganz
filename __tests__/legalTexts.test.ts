@@ -16,6 +16,7 @@ import {
   LEGAL_TEXTS,
   LEGAL_TEXT_KEYS,
   PLACEHOLDER_NAMES,
+  caseNames,
   demoNames,
   legalParts,
   legalText,
@@ -97,6 +98,44 @@ describe('Versionierte Texte', () => {
       });
     }
     expect(legalText('schadenmeldung')).toContain(demoConfig.insurer.shortName);
+  });
+
+  test('caseNames: die Namen, die der Fall zeigt, ohne Händler und Fremdversicherer die der Demo', () => {
+    start();
+    const s = useAppStore.getState();
+    const kranich = s.createCase({ deviceId: addWasher().id, entry: 'foto', problemLabel: 'x' });
+    // Gerät aus dem Vertrag der Demo: dieselben Namen, also dieselben Hashes wie bisher
+    expect(caseNames(useAppStore.getState(), kranich.id)).toEqual(demoNames());
+
+    // Gekauft bei Fründ, ohne Versicherung: Fachkraft und Betrieb sind sein Kundendienst
+    const fruendDevice = s.addDevice({
+      manufacturerId: 'miele',
+      category: 'geschirrspueler',
+      model: 'G 5833 SC',
+      identifiedBy: 'katalog',
+    });
+    s.setDeviceDealer(fruendDevice.id, 'fruend');
+    const fruend = s.createCase({ deviceId: fruendDevice.id, entry: 'foto', problemLabel: 'x' });
+    const service = demoConfig.dealers[0]!.service!;
+    expect(caseNames(useAppStore.getState(), fruend.id)).toEqual({
+      ...demoNames(),
+      fachkraft: service.expert,
+      fachbetrieb: service.name,
+    });
+
+    // Eigene Police bei einem anderen Versicherer: dessen Kurzname, wie im Gespräch
+    const other = demoConfig.insurers.find((i) => i.id !== demoConfig.insurer.id)!;
+    const policyDevice = s.addDevice({
+      manufacturerId: 'miele',
+      category: 'trockner',
+      model: 'TWB 140',
+      identifiedBy: 'katalog',
+    });
+    s.linkPolicy({ deviceId: policyDevice.id, insurerId: other.id, policyNumber: 'P-1' });
+    const policy = s.createCase({ deviceId: policyDevice.id, entry: 'foto', problemLabel: 'x' });
+    const names = caseNames(useAppStore.getState(), policy.id);
+    expect(names.versicherer).toBe(other.shortName);
+    expect(legalText('schadenmeldung', names)).toContain(other.shortName);
   });
 });
 

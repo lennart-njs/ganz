@@ -2,6 +2,9 @@ import { act, fireEvent, renderRouter, screen, within } from 'expo-router/testin
 
 import { demoConfig } from '@/config/demo.config';
 import { de } from '@/i18n/de';
+import { scopeList } from '@/lib/consent';
+import { caseNames, legalText, textStamp } from '@/lib/legalTexts';
+import { scopedConsent } from '@/model/policies/consentScopes';
 import { useAppStore } from '@/store/appStore';
 import { unwrap } from '@/test/result';
 
@@ -137,5 +140,80 @@ describe('Händler statt Versicherer (Fründ-Demo)', () => {
         screen.getByRole('radio', { name: new RegExp(`^${SERVICE.replace(/[()]/g, '\\$&')}`) }),
       ).getByText(new RegExp(de.partner.dealerService)),
     ).toBeTruthy();
+  });
+});
+
+describe('Videocall und Rückruf beim Händler-Gerät', () => {
+  const EXPERT = demoConfig.dealers[0]!.service!.expert;
+  const configPartner = demoConfig.partners.find((p) => p.id === demoConfig.expert.partnerId)!;
+  const expertConsents = (id: string) =>
+    useAppStore
+      .getState()
+      .consents.filter((k) => k.purpose === 'weitergabe_fachkraft' && k.caseId === id);
+
+  function escalatedCase() {
+    const deviceId = setup();
+    const s = useAppStore.getState();
+    const c = s.createCase({
+      deviceId,
+      entry: 'symptom',
+      problemLabel: 'Wasser bleibt im Spülraum',
+    });
+    const run = unwrap(s.startGuide(c.id, 'g5833_ablauf'));
+    // „Geht nicht“ holt Hilfe: der Fall ist danach eskaliert
+    unwrap(s.finishGuide(run.id, 'geht_nicht', 'Laufrad klemmt'));
+    return c.id;
+  }
+
+  test('keine Fachkraft frei: Sheet, Bestätigung und Stempel nennen den Kundendienst des Händlers', async () => {
+    const id = escalatedCase();
+    useAppStore.getState().setDemo({ videoScenario: 'keine_fachkraft' });
+    await renderRouter(APP, { initialUrl: `/fall/${id}` });
+    await flush();
+    // Der Satz vor dem Call nennt den Kundendienst, der Stempel belegt genau diesen Satz
+    const summary = de.help.shareSummary(EXPERT, SERVICE, scopeList('weitergabe_fachkraft'));
+    expect(screen.getByText(summary)).toBeTruthy();
+    await tap(new RegExp(`^${de.thread.callStart}`));
+    await flush();
+    const names = caseNames(useAppStore.getState(), id);
+    expect(names).toMatchObject({ fachkraft: EXPERT, fachbetrieb: SERVICE });
+    const call = expertConsents(id).at(-1)!;
+    expect(call.recipient.name).toBe(SERVICE);
+    expect(legalText('fachkraft_videocall', names)).toContain(summary);
+    expect(call.textHash).toBe(textStamp('fachkraft_videocall', names).textHash);
+    expect(call.textHash).not.toBe(textStamp('fachkraft_videocall').textHash);
+
+    // Rückruf: dieselbe Fachkraft und derselbe Betrieb wie im Call, nicht die der Konfiguration
+    const slot = de.waiting.callbackSlots[0]!;
+    await tap(new RegExp(`^${slot}`));
+    await flush();
+    expect(screen.getByText(de.help.shareTitle(EXPERT, SERVICE))).toBeTruthy();
+    expect(
+      screen.queryByText(de.help.shareTitle(demoConfig.expert.name, configPartner.name)),
+    ).toBeNull();
+    await tap(de.waiting.requestCallback);
+    await flush();
+    const consents = expertConsents(id);
+    expect(consents).toHaveLength(2);
+    expect(consents.map((k) => k.recipient.name)).toEqual([SERVICE, SERVICE]);
+    expect(consents[1]!.textHash).toBe(textStamp('fachkraft_rueckruf', names).textHash);
+    expect(tree()).not.toContain(configPartner.name);
+  });
+
+  test('eine Bestätigung an einen anderen Betrieb lehnt der Store ab, ohne zu schreiben', () => {
+    const id = escalatedCase();
+    const other = scopedConsent('weitergabe_fachkraft', {
+      caseId: id,
+      recipient: { id: configPartner.id, kind: 'betrieb', name: configPartner.name },
+      text: textStamp('fachkraft_videocall'),
+    });
+    const before = useAppStore.getState();
+    const refused = {
+      ok: false,
+      refusal: { code: 'bestaetigung', purpose: 'weitergabe_fachkraft' },
+    };
+    expect(before.requestVideoCall(id, { share: other })).toEqual(refused);
+    expect(before.requestCallback(id, de.waiting.callbackSlots[0]!, other)).toEqual(refused);
+    expect(useAppStore.getState()).toBe(before);
   });
 });
