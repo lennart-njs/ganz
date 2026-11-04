@@ -122,13 +122,13 @@ export const demoConfig = {
 
   /**
    * Demo-Startstand für den Händler-Weg (store/demoStart.ts): das Gerät aus dem Katalog, gekauft
-   * beim ersten Händler aus `dealers`, ohne Versicherung. Das Kaufdatum ist ein Beispielwert,
-   * weniger als 24 Monate vor `demo.startAt`. Das Onboarding fragt nicht danach.
+   * beim ersten Händler aus `dealers`, ohne Versicherung. Das Kaufdatum ist ein Beispielwert wie
+   * alle Werte hier (`isExample` oben), weniger als 24 Monate vor `demo.startAt`. Das Onboarding
+   * fragt nicht danach. Die App kennzeichnet es nicht eigens, wie `device.purchaseDate`.
    */
   dealerDemo: {
     catalogId: 'miele-g5833sc',
     purchaseDate: '2025-06-14T00:00:00+02:00',
-    isExample: true,
   },
 
   household: {

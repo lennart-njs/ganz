@@ -293,8 +293,10 @@ describe('Demo-Startstand', () => {
     expect(dealer.id).toBe('fruend');
     expect(fruendModel.model).toBe('G 5833 SC');
 
-    // Das Kaufdatum ist ein Beispielwert, weniger als 24 Monate vor dem Startstand
-    expect(demoConfig.dealerDemo.isExample).toBe(true);
+    // Das Kaufdatum ist ein Beispielwert wie alle Werte der Demo-Konfiguration. Das Portal zeigt
+    // die Akte darum als Beispiel. Es liegt weniger als 24 Monate vor dem Startstand.
+    expect(demoConfig.isExample).toBe(true);
+    expect(demoConfig.dealerDemo).not.toHaveProperty('isExample');
     const months = monthsBetween(demoConfig.dealerDemo.purchaseDate, demoConfig.demo.startAt);
     expect(months).toBeGreaterThanOrEqual(0);
     expect(months).toBeLessThan(24);
