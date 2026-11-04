@@ -105,6 +105,35 @@ describe('Hinweis zum Wiederherstellen', () => {
     expect(next).not.toBe(before);
   });
 
+  test('Zurücksetzen wartet, bis die Installations-ID gelöscht ist, erst dann geht die App auf', async () => {
+    await startWith('{kaputt');
+    forgetInstallationId();
+    const before = await installationId();
+    expect(before).toMatch(INSTALLATION_ID);
+    // Das Löschen der ID dauert ein paar Schritte länger als alles andere
+    const removeItem = jest.mocked(AsyncStorage.removeItem);
+    const remove = removeItem.getMockImplementation()!;
+    removeItem.mockImplementation(async (key: string) => {
+      if (key === INSTALLATION_KEY) for (let i = 0; i < 50; i++) await Promise.resolve();
+      return remove(key);
+    });
+    // Was im Speicher steht, wenn die App den Stand neu lädt und wieder aufgeht
+    const atReopen: (string | null)[] = [];
+    const rehydrate = useAppStore.persist.rehydrate;
+    jest.spyOn(useAppStore.persist, 'rehydrate').mockImplementation(async () => {
+      atReopen.push(await AsyncStorage.getItem(INSTALLATION_KEY));
+      return rehydrate();
+    });
+    try {
+      await renderRouter(APP, { initialUrl: '/' });
+      await tap(t.reset);
+      expect(await screen.findByText(de.onboarding.welcomeTitle)).toBeTruthy();
+      expect(atReopen).toEqual([null]);
+    } finally {
+      removeItem.mockImplementation(remove);
+    }
+  });
+
   test('Zurücksetzen löscht nichts, was es nicht sichern konnte', async () => {
     const raw = stored(initialData);
     // Beim Start und beim ersten Zurücksetzen lässt sich der Speicher nicht lesen

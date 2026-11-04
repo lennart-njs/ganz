@@ -262,6 +262,50 @@ describe('R-08 zweite Buchung', () => {
     expect(runningBookings(id, 'reparatur')).toHaveLength(1);
     expect(activeBooking(useAppStore.getState(), id)?.status).toBe('bestaetigt');
   });
+
+  // Die beiden Tests oben laufen in in_reparatur. Dort sperrt schon die Status-Maschine jede
+  // Buchung, die Regel je Art kommt gar nicht zum Zug (Gegenprüfung zu Schritt 28). Während der
+  // Prüfung erlaubt termin_versicherer einen Termin, und nur booked() verhindert den zweiten.
+  test('R-08 während der Prüfung bucht der Store keinen zweiten Termin', () => {
+    start();
+    const id = caseAfterFinding(addWasher().id);
+    unwrap(useAppStore.getState().reportClaim(id));
+    const book = (partner: number) =>
+      useAppStore.getState().requestBooking({
+        caseId: id,
+        kind: 'reparatur',
+        partnerId: demoConfig.partners[partner]!.id,
+        slotLabel: demoConfig.slots[partner]!,
+        selfPay: false,
+      });
+    expect(unwrap(book(0))).toMatchObject({ status: 'angefragt', subjectToApproval: true });
+    expect(caseOf(id).status).toBe('freigabe_noetig');
+    expect(book(1)).toEqual({ ok: false, refusal: { code: 'termin_laeuft', kind: 'reparatur' } });
+    expect(runningBookings(id, 'reparatur')).toHaveLength(1);
+  });
+
+  test('R-08 während der Prüfung bieten Kosten und Gespräch keinen zweiten Termin an', async () => {
+    start();
+    const id = caseAfterFinding(addWasher().id);
+    unwrap(useAppStore.getState().reportClaim(id));
+    unwrap(
+      useAppStore.getState().requestBooking({
+        caseId: id,
+        kind: 'reparatur',
+        partnerId: demoConfig.partners[0]!.id,
+        slotLabel: demoConfig.slots[0]!,
+        selfPay: false,
+      }),
+    );
+    const r = await renderRouter(APP, { initialUrl: `/fall/${id}/kosten` });
+    expect(screen.queryByRole('button', { name: de.costs.toAppointment })).toBeNull();
+    await act(async () => router.replace(`/fall/${id}`));
+    expect(r.getPathname()).toBe(`/fall/${id}`);
+    for (const p of demoConfig.partners) {
+      expect(screen.queryByTestId(`antwort-betrieb-${p.id}`)).toBeNull();
+    }
+    expect(runningBookings(id, 'reparatur')).toHaveLength(1);
+  });
 });
 
 // ---------- R-09 ----------
