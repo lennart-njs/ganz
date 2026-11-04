@@ -125,6 +125,8 @@ export const demoConfig = {
    * beim ersten Händler aus `dealers`, ohne Versicherung. Das Kaufdatum ist ein Beispielwert wie
    * alle Werte hier (`isExample` oben), weniger als 24 Monate vor `demo.startAt`. Das Onboarding
    * fragt nicht danach. Die App kennzeichnet es nicht eigens, wie `device.purchaseDate`.
+   * Die Prüfung im Portal rechnet mit dem echten Tag: Ab 24 Monaten schlägt sie „Kulanz“ vor.
+   * __tests__/demo.test.tsx wird 60 Tage vorher rot, dann das Datum nach vorn setzen.
    */
   dealerDemo: {
     catalogId: 'miele-g5833sc',

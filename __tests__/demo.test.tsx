@@ -3,9 +3,12 @@ import * as path from 'path';
 import { act, fireEvent, renderRouter, screen } from 'expo-router/testing-library';
 
 import { demoConfig } from '@/config/demo.config';
+import { fruendSettings } from '@/config/portal.demo';
 import { de } from '@/i18n/de';
 import { catalog } from '@/data/catalog';
 import { deviceTitle } from '@/lib/devices';
+import { warrantyCheck } from '@/portal/lib/check';
+import { seedRecords } from '@/server/backend/seed';
 import { defaultDemoSettings, initialData, useAppStore, type AppData } from '@/store/appStore';
 import { DEMO_START_IDS, demoStartData } from '@/store/demoStart';
 import { parseStoredState } from '@/store/storedState';
@@ -317,6 +320,21 @@ describe('Demo-Startstand', () => {
     }
     // Ein gültiger gespeicherter Stand: nach einem Neustart lädt er ohne Hinweis.
     expect(() => parseStoredState(s)).not.toThrow();
+  });
+
+  // Die Prüfung im Portal rechnet ab dem Anlegen des Falls, also mit dem echten Tag und nicht mit
+  // demo.startAt. Darum hier die echte Uhr: Der Test wird 60 Tage vor dem Wechsel auf „Kulanz“ rot.
+  test('Kaufdatum im Startstand: Das Portal schlägt in 60 Tagen noch „Gewährleistung“ vor, sonst dealerDemo.purchaseDate in config/demo.config.ts nach vorn setzen', () => {
+    const now = jest.getRealSystemTime();
+    const base = seedRecords(now)[0]!.file;
+    const file = {
+      ...base,
+      case: { ...base.case, createdAt: new Date(now + 60 * 86_400_000).toISOString() },
+      device: { ...base.device, purchaseDate: demoStartData(initialData).devices[0]!.purchaseDate },
+      quote: undefined,
+      protection: undefined,
+    };
+    expect(warrantyCheck(file, fruendSettings.rules).verdict).toBe('gewaehrleistung');
   });
 
   test('gleicht dem Stand nach dem Onboarding mit Fründ (Entscheidung 31), bis auf das Kaufdatum', async () => {
