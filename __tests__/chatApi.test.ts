@@ -20,7 +20,13 @@ import {
   parseRequest,
   type ChatContext,
 } from '@/lib/chat/prompt';
-import { demoCatalogEntry, guidesForDevice } from '@/lib/guideCatalog';
+import {
+  demoCatalogEntry,
+  guidesForDevice,
+  registerCatalogEntry,
+  resetCatalog,
+} from '@/lib/guideCatalog';
+import type { GuideCatalogEntry } from '@/model/types';
 
 const mockCreate = jest.fn();
 
@@ -752,6 +758,57 @@ describe('Anleitung und Schritt nur aus dem Katalog des Geräts', () => {
     expect(caseSystem({ ...context, guide: { id: 'ablauf', step: 200 } })).toContain(
       `Schritt ${n} von ${n}`,
     );
+  });
+
+  test('eine Anleitung aus dem Katalog des Servers (Id „eintrag/anleitung“) geht durch, ihr Schritt steht wörtlich im Fall', async () => {
+    // So vergibt scripts/guides-import.mjs die Ids
+    const entry: GuideCatalogEntry = {
+      id: 'test-wkb999',
+      manufacturerId: demoConfig.manufacturer.id,
+      category: 'waschmaschine',
+      models: ['WKB 999'],
+      materialNumbers: [],
+      document: { title: 'Gebrauchsanweisung WKB 999', license: 'hersteller' },
+      review: { status: 'freigegeben', by: 'Prüfung' },
+      origin: 'import',
+      guides: [
+        {
+          id: 'test-wkb999/sieb',
+          kind: 'pflege',
+          title: 'Sieb reinigen',
+          code: 'Sieb',
+          sourceDocument: 'Gebrauchsanweisung WKB 999',
+          steps: [
+            { t: 'Klappe öffnen', d: 'Öffne die Klappe unten links.' },
+            { t: 'Sieb', d: 'Dreh das Sieb heraus.' },
+          ],
+        },
+      ],
+    };
+    registerCatalogEntry(entry);
+    try {
+      const body = {
+        context: { ...context, model: 'WKB 999', guide: { id: 'test-wkb999/sieb', step: 2 } },
+        messages: ask.messages,
+      };
+      expect(parseRequest(body)).not.toBeNull();
+      mockCreate.mockResolvedValueOnce(
+        answer({ reply: 'Gut.', suggestion: 'keine', guideId: '', assessment: 'keine' }),
+      );
+      const res = await post(body);
+      expect(res.status).toBe(200);
+      const system = mockCreate.mock.calls[0][0].system[2].text as string;
+      expect(system).toContain('Aktueller Schritt wörtlich: Sieb: Dreh das Sieb heraus.');
+      // Mehr als ein Schrägstrich oder leere Teile bleiben ungültig
+      for (const id of ['a/b/c', '/sieb', 'test-wkb999/', 'a//b', '../sieb']) {
+        expect([
+          id,
+          parseRequest({ ...body, context: { ...body.context, guide: { id, step: 1 } } }),
+        ]).toEqual([id, null]);
+      }
+    } finally {
+      resetCatalog();
+    }
   });
 
   test('kein Satz darüber, wer zahlt, nur dass es sich nach dem Befund klärt', () => {

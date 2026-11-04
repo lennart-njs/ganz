@@ -14,6 +14,7 @@ import { chatInputOpen, chatRecipient } from '@/lib/chat/recipient';
 import { useAssistant } from '@/lib/chat/useAssistant';
 import { legalParts, textStamp } from '@/lib/legalTexts';
 import { parseRequest, type ChatContext } from '@/lib/chat/prompt';
+import { resetCatalog } from '@/lib/guideCatalog';
 import { CHAT_HEADERS, INSTALLATION_ID } from '@/lib/chat/protocol';
 import { CONSENT_SCOPES, scopedConsent } from '@/model/policies/consentScopes';
 import { services } from '@/services';
@@ -714,6 +715,54 @@ describe('Kontext für die Route', () => {
       hasProtection: true,
     });
     expect(parseRequest(body)).toEqual(body);
+  });
+
+  test('eine Anleitung aus dem Katalog des Servers (Id mit Schrägstrich) nimmt die Route an', () => {
+    start({ contract: false });
+    const s = useAppStore.getState();
+    const device = s.addDevice({
+      manufacturerId: 'miele',
+      category: 'trockner',
+      model: 'TWB 140',
+      identifiedBy: 'katalog',
+    });
+    // Id wie aus scripts/guides-import.mjs: Eintrag und Anleitung
+    s.addCatalogEntry({
+      id: 'miele-twb140',
+      manufacturerId: 'miele',
+      category: 'trockner',
+      models: ['TWB 140'],
+      materialNumbers: [],
+      document: { title: 'Gebrauchsanweisung TWB 140', license: 'hersteller' },
+      review: { status: 'freigegeben', by: 'Prüfung' },
+      origin: 'import',
+      guides: [
+        {
+          id: 'miele-twb140/flusensieb',
+          kind: 'pflege',
+          title: 'Flusensieb reinigen',
+          code: 'Flusen',
+          sourceDocument: 'Gebrauchsanweisung TWB 140',
+          steps: [
+            { t: 'Tür öffnen', d: 'Öffne die Tür.' },
+            { t: 'Sieb', d: 'Zieh das Sieb heraus.' },
+          ],
+        },
+      ],
+    });
+    try {
+      const c = s.createCase({
+        deviceId: device.id,
+        entry: 'pflege',
+        problemLabel: 'Flusensieb reinigen',
+      });
+      unwrap(useAppStore.getState().startGuide(c.id, 'miele-twb140/flusensieb'));
+      const body = request(c.id);
+      expect(body.context.guide).toEqual({ id: 'miele-twb140/flusensieb', step: 1 });
+      expect(parseRequest(body)).toEqual(body);
+    } finally {
+      resetCatalog();
+    }
   });
 
   test('was der Katalog nicht kennt, bleibt weg, lange Felder werden gekürzt', () => {

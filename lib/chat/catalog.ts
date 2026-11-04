@@ -14,8 +14,12 @@ export const CHAT_CATEGORIES = Object.keys(de.deviceCategory) as [
   ...DeviceCategory[],
 ];
 
-/** Form einer Anleitungs-Id. Ob es sie für das Gerät gibt, prüft die Route im Katalog. */
-export const CHAT_GUIDE_ID = /^[A-Za-z0-9_-]{1,60}$/;
+/**
+ * Form einer Anleitungs-Id: eingebaut ein Teil („ablauf“), aus dem Katalog des Servers Eintrag und
+ * Anleitung („miele-twb140/flusensieb“, scripts/guides-import.mjs). Ob es sie für das Gerät gibt,
+ * prüft die Route im Katalog.
+ */
+export const CHAT_GUIDE_ID = /^[A-Za-z0-9_-]{1,60}(\/[A-Za-z0-9_-]{1,60})?$/;
 
 /** Hersteller, die die App kennt: Schlüssel und Name */
 export const CHAT_MANUFACTURERS: Readonly<Record<string, string>> = {
