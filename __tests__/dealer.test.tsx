@@ -3,6 +3,7 @@ import { act, fireEvent, renderRouter, screen, within } from 'expo-router/testin
 import { demoConfig } from '@/config/demo.config';
 import { de } from '@/i18n/de';
 import { useAppStore } from '@/store/appStore';
+import { unwrap } from '@/test/result';
 
 const APP = './app';
 const tap = (name: string | RegExp) => fireEvent.press(screen.getByRole('button', { name }));
@@ -53,7 +54,7 @@ describe('Händler statt Versicherer (Fründ-Demo)', () => {
       entry: 'symptom',
       problemLabel: 'Wasser bleibt im Spülraum',
     });
-    const run = s.startGuide(c.id, 'g5833_ablauf');
+    const run = unwrap(s.startGuide(c.id, 'g5833_ablauf'));
     s.finishGuide(run.id, 'geht_nicht', 'Laufrad klemmt');
     s.grantConsent({
       caseId: c.id,
@@ -63,22 +64,24 @@ describe('Händler statt Versicherer (Fründ-Demo)', () => {
       dataCategories: [],
       textVersion: '1',
     });
-    const session = s.requestVideoCall(c.id);
+    const session = unwrap(s.requestVideoCall(c.id));
     expect(session.expert.provider.name).toBe(SERVICE);
     expect(session.expert.name).toBe(demoConfig.dealers[0]!.service!.expert);
 
-    s.setFinding(c.id, 'reparatur', 'fachkraft');
+    unwrap(s.setFinding(c.id, 'reparatur', 'fachkraft'));
     const quote = useAppStore.getState().quotes[0]!;
     expect(quote.payer.kind).toBe('haushalt');
     expect(quote.deductible).toBe(0);
 
-    const booking = s.requestBooking({
-      caseId: c.id,
-      kind: 'reparatur',
-      partnerId: 'fruend-kundendienst',
-      slotLabel: demoConfig.slots[0]!,
-      selfPay: true,
-    });
+    const booking = unwrap(
+      s.requestBooking({
+        caseId: c.id,
+        kind: 'reparatur',
+        partnerId: 'fruend-kundendienst',
+        slotLabel: demoConfig.slots[0]!,
+        selfPay: true,
+      }),
+    );
     expect(booking.provider).toMatchObject({ name: SERVICE, kind: 'betrieb' });
     expect(booking.subjectToApproval).toBe(false);
     expect(useAppStore.getState().cases[c.id]?.claim).toBeUndefined();
@@ -113,7 +116,17 @@ describe('Händler statt Versicherer (Fründ-Demo)', () => {
       problemLabel: 'Wasser bleibt im Spülraum',
     });
     s.escalate(c.id);
-    s.setFinding(c.id, 'reparatur', 'betrieb');
+    // Den Befund vor Ort schreibt nur ein gebuchter Betrieb (R-10): erst die Vor-Ort-Diagnose
+    unwrap(
+      s.requestBooking({
+        caseId: c.id,
+        kind: 'vor_ort_diagnose',
+        partnerId: 'fruend-kundendienst',
+        slotLabel: demoConfig.slots[0]!,
+        selfPay: false,
+      }),
+    );
+    unwrap(s.setFinding(c.id, 'reparatur', 'betrieb'));
     await renderRouter(APP, { initialUrl: `/fall/${c.id}/termin?zahlung=selbst` });
     await flush();
     const radios = screen.getAllByRole('radio').map((x) => x.props.accessibilityLabel as string);

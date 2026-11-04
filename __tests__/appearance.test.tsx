@@ -4,6 +4,7 @@ import { fireEvent, renderRouter, screen } from 'expo-router/testing-library';
 import { openAll } from '../test/sections';
 import { de } from '@/i18n/de';
 import { useAppStore } from '@/store/appStore';
+import { APP } from '@/test/app';
 import { colors } from '@/theme/colors';
 
 const t = de.profile;
@@ -22,7 +23,7 @@ beforeEach(() => {
 
 describe('Darstellung', () => {
   test('im Profil wählbar: Wie System, Hell, Dunkel', async () => {
-    await renderRouter('./app', { initialUrl: '/profil' });
+    await renderRouter(APP, { initialUrl: '/profil' });
     await openAll();
     expect(screen.getByRole('radio', { name: t.appearanceOptions.system })).toBeChecked();
     await fireEvent.press(screen.getByRole('radio', { name: t.appearanceOptions.dunkel }));

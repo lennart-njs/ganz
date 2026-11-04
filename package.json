@@ -3,17 +3,21 @@
   "version": "0.1.0",
   "private": true,
   "main": "expo-router/entry",
+  "engines": {
+    "node": ">=24"
+  },
   "scripts": {
     "start": "expo start",
     "android": "expo start --android",
     "ios": "expo start --ios",
     "web": "expo start --web",
-    "lint": "expo lint",
+    "lint": "eslint . --max-warnings 0",
     "typecheck": "tsc --noEmit",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "test": "jest",
-    "check": "npm run typecheck && npm run lint && npm run format:check && npm test",
+    "check": "npm run typecheck && npm run lint && npm run format:check && jest --maxWorkers=2",
+    "check:fast": "tsc --noEmit && node scripts/lint-changed.js && jest --maxWorkers=2 --selectProjects unit build",
     "guides:check": "jest __tests__/guides.test.ts",
     "guides:import": "node scripts/guides-import.mjs",
     "guides:approve": "node scripts/guides-approve.mjs"
@@ -46,6 +50,7 @@
     "react-native-svg": "15.16.0",
     "react-native-web": "~0.21.4",
     "react-native-worklets": "0.13.0",
+    "zod": "^4.6.7",
     "zustand": "^5.0.16"
   },
   "devDependencies": {
@@ -56,27 +61,63 @@
     "eslint-config-expo": "~58.0.4",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-prettier": "^5.5.7",
+    "fast-check": "^4.10.2",
     "jest": "^30.5.2",
     "jest-expo": "~58.0.12",
     "prettier": "^3.9.10",
     "typescript": "~6.0.3"
   },
   "jest": {
-    "preset": "jest-expo",
-    "testPathIgnorePatterns": [
-      "/node_modules/",
-      "/design-system/",
-      "/reference/",
-      "/portal/"
-    ],
-    "transformIgnorePatterns": [
-      "node_modules/(?!((jest-)?react-native|@react-native(-community)?)|expo(nent)?|@expo(nent)?/.*|@expo-google-fonts/.*|react-navigation|@react-navigation/.*|standard-navigation|react-native-svg)"
-    ],
-    "moduleNameMapper": {
-      "^lucide-react-native$": "<rootDir>/node_modules/lucide-react-native/dist/cjs/lucide-react-native.js"
-    },
-    "setupFiles": [
-      "<rootDir>/test/setup.ts"
+    "projects": [
+      {
+        "displayName": "unit",
+        "preset": "jest-expo/node",
+        "testMatch": [
+          "<rootDir>/__tests__/model/**/*.test.ts"
+        ],
+        "testPathIgnorePatterns": [
+          "/node_modules/",
+          "/portal/",
+          "/website/"
+        ]
+      },
+      {
+        "displayName": "build",
+        "preset": "jest-expo/node",
+        "testMatch": [
+          "<rootDir>/__tests__/build/**/*.test.ts"
+        ],
+        "testPathIgnorePatterns": [
+          "/node_modules/",
+          "/portal/",
+          "/website/"
+        ]
+      },
+      {
+        "displayName": "ui",
+        "preset": "jest-expo",
+        "setupFiles": [
+          "<rootDir>/test/setup.ts"
+        ],
+        "moduleNameMapper": {
+          "^lucide-react-native$": "<rootDir>/node_modules/lucide-react-native/dist/cjs/lucide-react-native.js"
+        },
+        "transformIgnorePatterns": [
+          "node_modules/(?!((jest-)?react-native|@react-native(-community)?)|expo(nent)?|@expo(nent)?/.*|@expo-google-fonts/.*|react-navigation|@react-navigation/.*|standard-navigation|react-native-svg)"
+        ],
+        "testPathIgnorePatterns": [
+          "/node_modules/",
+          "/design-system/",
+          "/reference/",
+          "/portal/",
+          "/website/",
+          "<rootDir>/__tests__/model/",
+          "<rootDir>/__tests__/build/"
+        ],
+        "fakeTimers": {
+          "enableGlobally": true
+        }
+      }
     ]
   }
 }

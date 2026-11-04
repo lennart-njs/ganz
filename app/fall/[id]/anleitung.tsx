@@ -23,6 +23,7 @@ import type { GuideId } from '@/data/guides';
 import { de } from '@/i18n/de';
 import { appliance } from '@/lib/appliance';
 import { latestGuideRun } from '@/lib/caseView';
+import { chatFull } from '@/lib/chat/limits';
 import { getManufacturer } from '@/lib/devices';
 import { guideEnding, guideTools, SAFETY_CONFIRM } from '@/lib/guideMeta';
 import { useAppStore } from '@/store/appStore';
@@ -40,6 +41,8 @@ export default function Anleitung() {
   const run = c ? latestGuideRun(state, c) : undefined;
   const guide = run ? getGuide(run.guideId) : undefined;
   const device = state.devices.find((d) => d.id === c?.deviceId);
+  // Ist das Gespräch mit dem Assistenten voll, gibt es keine Frage zum Schritt mehr (R-11)
+  const askable = !chatFull(state.chatMessages.filter((m) => m.caseId === caseId).length);
   const [notWorking, setNotWorking] = useState(false);
   const [note, setNote] = useState('');
   const [toast, setToast] = useState<string>();
@@ -219,11 +222,13 @@ export default function Anleitung() {
         </Text>
       ) : null}
 
-      <Button
-        label={de.chat.askStep}
-        variant="link"
-        onPress={() => askAssistant(de.chat.stepDraft(step + 1, current.t))}
-      />
+      {askable ? (
+        <Button
+          label={de.chat.askStep}
+          variant="link"
+          onPress={() => askAssistant(de.chat.stepDraft(step + 1, current.t))}
+        />
+      ) : null}
 
       <Sheet visible={notWorking} onClose={() => setNotWorking(false)} title={t.notWorkingTitle}>
         <TextField

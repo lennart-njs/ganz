@@ -1,0 +1,140 @@
+# Gewährleistung: Hilft die Reparatur nicht, bessert der Betrieb nach (Entscheidung Nr. 32).
+# Wie der Golden Path bis „Repariert.“, dann „Problem besteht weiter“. Prüft auf dem Gerät: keine
+# neue Schadenmeldung, kein Betrag, kein „Zahlungspflichtig buchen“, ein Termin beim selben
+# Betrieb. Hilft auch die Nachbesserung nicht, beginnt eine neue Runde mit Hilfe holen.
+# Den Weg nach Ablauf der Frist zeigt die Demo-Steuerung mit „Reparatur liegt länger zurück“
+# (docs/PITCH_CHECK.md), ohne eigenen Flow.
+#
+# Nicht gelaufen: In der Sandbox gibt es weder Simulator noch Maestro. Den ersten Lauf macht
+# Schritt 30 mit dem Pitch-Build. __tests__/build/e2eFlows.test.ts prüft bis dahin, dass jeder
+# Text in i18n/de.ts steht und jede ID im Code vorkommt.
+#
+# Lauf: maestro test e2e/gewaehrleistung.yaml
+appId: io.machs.app.pitch
+name: Gewährleistung
+tags:
+  - pitch
+---
+- runFlow: common/demo-startstand.yaml
+
+# Foto und Intelligente Fehlererkennung
+- tapOn: "Was ist kaputt\\?.*"
+- tapOn:
+    id: 'antwort-foto'
+- tapOn: 'Beispielfoto nehmen'
+- extendedWaitUntil:
+    visible:
+      id: 'antwort-anleitung'
+    timeout: 20000
+- assertVisible: "Wahrscheinlich ist der Laugenfilter verstopft\\."
+- takeScreenshot: golden-1-ergebnis
+
+# Anleitung: vier Schritte erledigt, im fünften geht es nicht weiter
+- tapOn:
+    id: 'antwort-anleitung'
+- repeat:
+    times: 4
+    commands:
+      - tapOn: 'Erledigt'
+      - waitForAnimationToEnd
+- assertVisible: 'Pumpe freimachen'
+- tapOn: 'Geht nicht'
+- assertVisible: "Was klappt nicht\\?"
+- tapOn: 'Hilfe holen'
+
+# Videocall: Vor dem Call steht, wer welche Daten sieht. Erst der Tap gibt sie weiter.
+- extendedWaitUntil:
+    visible:
+      id: 'antwort-call'
+    timeout: 10000
+- assertVisible: "Keine Aufnahme\\. Ton und Bild werden nicht gespeichert\\."
+- takeScreenshot: golden-2-hilfe
+- tapOn:
+    id: 'antwort-call'
+- tapOn:
+    text: "Wartezeit überspringen \\(Demo\\)"
+    optional: true
+- extendedWaitUntil:
+    visible: 'Auflegen'
+    timeout: 20000
+- tapOn: 'Auflegen'
+
+# Befund der Fachkraft, Kosten, Schadenfall erst nach dem Tap
+- extendedWaitUntil:
+    visible:
+      id: 'antwort-befund-ok'
+    timeout: 10000
+- tapOn:
+    id: 'antwort-befund-ok'
+- tapOn: 'Das geht an .*'
+- takeScreenshot: golden-3-kosten
+- tapOn:
+    id: 'antwort-melden'
+
+# Termin: erster Betrieb, erstes Zeitfenster. Vor der Freigabe keine Kostenzusage.
+# Der Startstand hat 0 € Selbstbeteiligung: Nach der Freigabe gibt es keinen zweiten Schritt
+# (Entscheidung Nr. 31). Den Schritt mit 50 € prüft e2e/selbstbeteiligung.yaml.
+- tapOn:
+    id: 'antwort-betrieb-.*'
+    index: 0
+- tapOn:
+    id: 'antwort-zeit-.*'
+    index: 0
+- assertNotVisible: 'Du zahlst.*'
+- assertNotVisible: 'Zahlungspflichtig buchen'
+- takeScreenshot: golden-4-termin
+- tapOn:
+    id: 'antwort-anfragen'
+
+# Freigabe, Termin, unterwegs, repariert. Der Timer kann schneller sein als der Tap.
+- repeat:
+    times: 8
+    while:
+      notVisible:
+        id: 'antwort-laeuft'
+    commands:
+      - tapOn:
+          id: 'antwort-demo'
+          optional: true
+      - waitForAnimationToEnd
+# „Problem besteht weiter“: Die Reparatur ist in der Gewährleistung, der Betrieb bessert nach
+- tapOn:
+    id: 'antwort-weiter-kaputt'
+- assertVisible: "Die Reparatur ist noch in der Gewährleistung\\."
+- assertVisible: ".* muss die Reparatur nachbessern\\. Für die Nachbesserung zahlst du nichts Neues\\."
+- assertNotVisible:
+    id: 'antwort-melden'
+- assertNotVisible: 'Zahlungspflichtig buchen'
+- assertNotVisible: 'Du zahlst.*'
+- takeScreenshot: gewaehrleistung-1-nachbesserung
+- tapOn:
+    id: 'antwort-zeit-.*'
+    index: 0
+- assertVisible: 'Keine neuen Kosten für dich, Gewährleistung'
+- tapOn:
+    id: 'antwort-nachbesserung'
+
+# Der Betrieb kommt ohne „Zahlungspflichtig buchen“ und bessert nach
+- repeat:
+    times: 6
+    while:
+      notVisible:
+        id: 'antwort-laeuft'
+    commands:
+      - tapOn:
+          id: 'antwort-demo'
+          optional: true
+      - waitForAnimationToEnd
+- assertNotVisible: 'Zahlungspflichtig buchen'
+- takeScreenshot: gewaehrleistung-2-nachgebessert
+
+# Hilft auch das nicht: neue Runde, Hilfe holen. Ein Schadenfall entsteht nur mit eigenem Tap.
+- tapOn:
+    id: 'antwort-weiter-kaputt'
+- assertVisible: "Auch die Nachbesserung hat nicht geholfen\\."
+- assertVisible: "Darum beginnt eine neue Runde\\."
+- extendedWaitUntil:
+    visible:
+      id: 'antwort-call'
+    timeout: 10000
+- takeScreenshot: gewaehrleistung-3-neue-runde

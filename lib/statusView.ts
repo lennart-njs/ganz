@@ -1,11 +1,14 @@
 // Fall-Status als Überschrift, Text, Zeitstrahl und nächste Aktion. Alles aus einer Quelle: Case und CaseEvent (B-33).
+// Was im Fall gilt, sagen die Fakten und Regeln aus model/policies, nicht ein Vergleich des Status.
 import type { TimelineItem } from '@/components/ds';
 import { de } from '@/i18n/de';
-import { formatDateTime } from '@/i18n/format';
+import { formatDateTime, formatEuro } from '@/i18n/format';
 import { caseAppliance } from '@/lib/appliance';
-import type { Case } from '@/model/types';
-import { activeBooking, selectCaseEvents, type AppData } from '@/store/appStore';
 import { insurerShortName } from '@/lib/service';
+import { can } from '@/model/policies/actions';
+import { selectCaseFacts } from '@/model/policies/caseFacts';
+import type { Case } from '@/model/types';
+import { notificationsOn, selectCaseEvents, type AppData } from '@/store/appStore';
 
 export type NextAction = 'abschluss' | 'kosten' | 'fallakte';
 
@@ -19,7 +22,8 @@ export interface StatusView {
 export function statusView(s: AppData, c: Case): StatusView {
   const t = de.status;
   const insurer = insurerShortName(s, c.id);
-  const booking = activeBooking(s, c.id);
+  const f = selectCaseFacts(s, c.id);
+  const booking = f?.booking;
   const a = caseAppliance(s, c.id);
   const events = selectCaseEvents(s, c.id);
   const at = (type: string) => events.filter((e) => e.type === type).at(-1);
@@ -58,10 +62,21 @@ export function statusView(s: AppData, c: Case): StatusView {
     } else pending(t.timeline.freigabe(insurer));
   }
   if (callback) done(t.timeline.rueckruf, callback.at);
-  // Nach einer Ablehnung kommt kein Termin mehr. Er erscheint nur, wenn neu gebucht wird.
-  if (booking && c.status !== 'abgelehnt') {
+  // Nachbesserung in der Gewährleistung (Nr. 32): ohne Schadenfall, mit dem Termin darunter
+  if (f?.rework) done(t.timeline.nachbesserung, f.rework.claimedAt);
+  // Ein Termin vorbehaltlich Freigabe verfällt mit der Ablehnung (caseFacts). Er erscheint erst
+  // wieder, wenn neu gebucht wird.
+  if (booking) {
     const reached = (st: string[]) => st.includes(booking.status);
     byEvent('termin_angefragt', t.timeline.angefragt, true);
+    // Zur Vor-Ort-Diagnose nennt der Betrieb erst den Preis (Nr. 33)
+    const named = events.find(
+      (e) => e.type === 'preis_genannt' && e.payload.bookingId === booking.id,
+    );
+    if (named) done(t.timeline.preis, named.at);
+    // Zahlungspflichtig gebucht, oder der Tap steht noch aus (Nr. 31)
+    if (booking.binding) done(t.timeline.gebucht, booking.binding.at);
+    else if (f?.bindingDue?.booking.id === booking.id) pending(t.timeline.buchen);
     byEvent(
       'termin_bestaetigt',
       t.timeline.bestaetigt,
@@ -83,18 +98,34 @@ export function statusView(s: AppData, c: Case): StatusView {
   ];
 
   const partner = booking?.provider.name ?? '';
+  // Eine Mitteilung versprechen nur, wenn sie kommt: mit Einwilligung und Erlaubnis (R-13)
+  const notify = notificationsOn(s);
   let headline: string = t.headline.hilfe;
   let text: string | undefined;
   let next: NextAction = 'fallakte';
-  if (c.status === 'erledigt') headline = t.headline.erledigt;
-  else if (c.status === 'abgebrochen') headline = t.headline.abgebrochen;
-  else if (c.status === 'abgelehnt') {
+  // Wie der Fall geschlossen ist, sagt die Tatsache, nicht die Regel zum Wiederöffnen: Ein
+  // erledigter Fall bleibt erledigt, auch wenn für das Gerät schon ein neuer offen ist (Nr. 13)
+  if (f?.closedAs === 'erledigt') headline = t.headline.erledigt;
+  else if (f?.closedAs === 'abgebrochen') headline = t.headline.abgebrochen;
+  else if (can(f, 'selbst_zahlen_nach_ablehnung')) {
     headline = t.headline.abgelehnt(insurer);
     next = 'kosten';
-  } else if (c.status === 'freigabe_noetig') {
+  } else if (f?.claim === 'in_pruefung') {
     headline = t.headline.pruefung(insurer);
-    text = t.text.pruefung;
-  } else if (replacement && c.status === 'freigegeben') {
+    text = notify ? t.text.pruefung : t.text.pruefungImFall;
+  } else if (f?.bindingDue) {
+    // Der Termin wartet auf „Zahlungspflichtig buchen“ im Gespräch (Nr. 31, Nr. 33)
+    const due = f.bindingDue;
+    headline =
+      due.reason === 'preis'
+        ? t.headline.preis(due.booking.provider.name, formatEuro(due.amount))
+        : t.headline.freigegeben(insurer);
+    text = t.text.buchen(due.booking.provider.name);
+  } else if (f?.rework && !booking) {
+    // Der Betrieb der Reparatur bessert nach, der Termin fehlt noch (Nr. 32)
+    headline = t.headline.nachbesserung(f.rework.provider.name);
+    text = t.text.nachbesserung;
+  } else if (replacement && f?.claim === 'freigegeben') {
     headline = t.headline.ersatzgeraet(insurer);
   } else if (booking?.status === 'erledigt' && booking.kind === 'vor_ort_diagnose') {
     headline = t.headline.diagnoseFertig;
@@ -111,11 +142,18 @@ export function statusView(s: AppData, c: Case): StatusView {
     headline = t.headline.bestaetigt(booking.slotLabel);
     text = booking.kind === 'reparatur' ? t.text.bestaetigt(partner, a.finding.partAcc) : undefined;
   } else if (booking?.status === 'angefragt') {
-    headline = c.status === 'freigegeben' ? t.headline.freigegeben(insurer) : t.headline.angefragt;
-    text = t.text.angefragt(partner);
+    headline = f?.claim === 'freigegeben' ? t.headline.freigegeben(insurer) : t.headline.angefragt;
+    text =
+      booking.kind === 'vor_ort_diagnose'
+        ? t.text.angefragtDiagnose(partner)
+        : notify
+          ? t.text.angefragt(partner)
+          : t.text.angefragtImFall(partner);
   } else if (callback) {
     headline = t.headline.rueckruf(String(callback.payload.slot ?? ''));
     text = t.text.rueckruf;
   }
+  // Widerrufene Weitergabe: Hier passiert nichts mehr, bis sie wieder gilt (R-12)
+  if (f?.hold) text = t.text.paused;
   return { headline, text, timeline, next };
 }

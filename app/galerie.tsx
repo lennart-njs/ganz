@@ -98,7 +98,7 @@ function Preview() {
 
       <Section title={t.sections.forms}>
         <TextField label={s.fieldLabel} placeholder={s.fieldPlaceholder} hint={s.fieldHint} />
-        <TextField label={s.fieldLabel} defaultValue="KV-0000" error={s.fieldError} />
+        <TextField label={s.fieldLabel} defaultValue={s.fieldValue} error={s.fieldError} />
         <TextField label={s.noteLabel} multiline rows={3} value={note} onChangeText={setNote} />
         <Checkbox label={s.checkbox} checked={checked} onChange={setChecked} />
         <View style={styles.wrap} accessibilityRole="radiogroup">

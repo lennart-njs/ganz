@@ -4,9 +4,12 @@ import { act, fireEvent, renderRouter, screen } from 'expo-router/testing-librar
 
 import { demoConfig } from '@/config/demo.config';
 import { de } from '@/i18n/de';
-import { useAppStore } from '@/store/appStore';
+import { deviceTitle } from '@/lib/devices';
+import { defaultDemoSettings, initialData, useAppStore, type AppData } from '@/store/appStore';
+import { DEMO_START_IDS, demoStartData } from '@/store/demoStart';
+import { parseStoredState } from '@/store/storedState';
+import { APP } from '@/test/app';
 
-const APP = './app';
 const tap = (name: string | RegExp) => fireEvent.press(screen.getByRole('button', { name }));
 const tree = () => JSON.stringify(screen.toJSON());
 
@@ -183,7 +186,7 @@ describe('Demo-Modus', () => {
 
   test('„Offene Fälle einen Schritt weiter“ schaltet den Status', async () => {
     const { caseId } = goldenCase();
-    useAppStore.getState().reportClaim(caseId, '1');
+    useAppStore.getState().reportClaim(caseId);
     await renderRouter(APP, { initialUrl: '/profil' });
     const version = screen.getByText(/^Version/);
     for (let i = 0; i < 7; i++) await fireEvent.press(version);
@@ -191,5 +194,137 @@ describe('Demo-Modus', () => {
     await act(async () => {});
     expect(useAppStore.getState().cases[caseId]?.status).toBe('freigegeben');
     expect(screen.getByText(de.demoControl.advanced(1))).toBeTruthy();
+  });
+});
+
+describe('Demo-Startstand', () => {
+  /** Alles, was gespeichert wird, ohne Aktionen */
+  const data = (): AppData => useAppStore.persist.getOptions().partialize!(useAppStore.getState());
+  const openDemoControl = async () => {
+    const r = await renderRouter(APP, { initialUrl: '/profil' });
+    const version = screen.getByText(/^Version/);
+    for (let i = 0; i < 7; i++) await fireEvent.press(version);
+    return r;
+  };
+
+  // Die Darstellung übersteht Zurücksetzen und Startstand. Der erste Test stellt sie auf dunkel.
+  afterEach(() => act(() => useAppStore.getState().setAppearance('system')));
+
+  test('jedes Laden ergibt denselben Stand, egal was vorher war', () => {
+    const { caseId } = goldenCase();
+    const s = useAppStore.getState();
+    s.reportClaim(caseId);
+    s.setDemo({ claimScenario: 'ablehnen', deductible: 5000, hints: false });
+    s.setAppearance('dunkel');
+    s.loadDemoStart();
+    const afterCase = data();
+
+    useAppStore.getState().reset();
+    useAppStore.getState().loadDemoStart();
+    expect(data()).toEqual(afterCase);
+    expect(afterCase).toEqual({ ...demoStartData(initialData), appearance: 'dunkel' });
+  });
+
+  test('Schutz verknüpft, das Gerät aus dem Vertrag, kein Fall', () => {
+    goldenCase();
+    useAppStore.getState().loadDemoStart();
+    const s = data();
+    const ids = DEMO_START_IDS;
+
+    expect(s.onboardingDone).toBe(true);
+    expect(s.appearance).toBe('system');
+    expect(s.demo).toEqual(defaultDemoSettings);
+    expect(s.notifications).toBe('offen');
+    expect(s.nextCaseNumber).toBe(demoConfig.caseNumber.start);
+
+    expect(s.persons).toEqual([
+      {
+        id: ids.person,
+        displayName: demoConfig.household.displayName,
+        role: 'versicherungsnehmer',
+      },
+    ]);
+    expect(s.household).toMatchObject({ id: ids.household, members: s.persons });
+    expect(s.contracts).toHaveLength(1);
+    expect(s.contracts[0]).toMatchObject({
+      id: ids.contract,
+      householdId: ids.household,
+      policyholderId: ids.person,
+      provider: { name: demoConfig.insurer.name },
+      contractNumber: demoConfig.contract.number,
+      deductible: demoConfig.contract.deductible,
+      linkedVia: 'vertragsnummer',
+      coveredDeviceIds: [ids.device],
+    });
+    expect(s.devices).toHaveLength(1);
+    expect(s.devices[0]).toMatchObject({
+      id: ids.device,
+      householdId: ids.household,
+      manufacturerId: demoConfig.manufacturer.id,
+      category: demoConfig.device.category,
+      model: demoConfig.device.model,
+      contractId: ids.contract,
+      identifiedBy: 'vertrag',
+    });
+
+    expect(s.cases).toEqual({});
+    expect(s.guideRuns).toEqual({});
+    for (const list of [
+      s.events,
+      s.photos,
+      s.diagnoses,
+      s.consents,
+      s.quotes,
+      s.bookings,
+      s.videoSessions,
+      s.chatMessages,
+    ]) {
+      expect(list).toEqual([]);
+    }
+    // Ein gültiger gespeicherter Stand: nach einem Neustart lädt er ohne Hinweis.
+    expect(() => parseStoredState(s)).not.toThrow();
+  });
+
+  test('gleicht dem Stand nach dem Onboarding im Golden Path', async () => {
+    useAppStore.getState().reset();
+    const r = await renderRouter(APP, { initialUrl: '/schutz' });
+    await fireEvent.changeText(
+      screen.getByPlaceholderText(de.common.example(demoConfig.contract.number)),
+      demoConfig.contract.number,
+    );
+    await fireEvent.press(screen.getByRole('button', { name: de.onboarding.link }));
+    await act(async () => {});
+    await fireEvent.press(screen.getByRole('button', { name: de.onboarding.confirmYes }));
+    expect(r.getPathname()).toBe('/');
+
+    // IDs und Zeiten sind im Startstand fest, sonst muss alles gleich sein.
+    const s = data();
+    const at = demoConfig.demo.startAt;
+    const replace: [string, string][] = [
+      [s.persons[0]!.id, DEMO_START_IDS.person],
+      [s.household!.id, DEMO_START_IDS.household],
+      [s.contracts[0]!.id, DEMO_START_IDS.contract],
+      [s.devices[0]!.id, DEMO_START_IDS.device],
+      [s.household!.createdAt, at],
+      [s.contracts[0]!.linkedAt, at],
+      [s.devices[0]!.createdAt, at],
+    ];
+    const json = replace.reduce((j, [from, to]) => j.split(from).join(to), JSON.stringify(s));
+    expect(JSON.parse(json)).toEqual(demoStartData(initialData));
+  });
+
+  test('„Demo-Startstand laden“ in der Demo-Steuerung führt zur Startseite', async () => {
+    const { caseId } = goldenCase();
+    const r = await openDemoControl();
+    await tap(de.demoControl.demoStart);
+    await act(async () => {});
+
+    expect(r.getPathname()).toBe('/');
+    expect(screen.getByRole('header', { name: de.home.myDevices })).toBeTruthy();
+    const device = { manufacturerId: demoConfig.manufacturer.id, model: demoConfig.device.model };
+    expect(screen.getByText(deviceTitle(device))).toBeTruthy();
+    expect(screen.queryByText(de.demoControl.title)).toBeNull();
+    expect(useAppStore.getState().cases[caseId]).toBeUndefined();
+    expect(data()).toEqual(demoStartData(initialData));
   });
 });

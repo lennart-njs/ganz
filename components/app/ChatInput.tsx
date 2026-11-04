@@ -1,15 +1,23 @@
 // Eingabefeld des Gesprächs: Text mit Senden-Pfeil im Feld (wie in Messengern), links optional die Kamera.
 // Der Platzhalter sagt, dass hier der Reparatur-Assistent antwortet. Das Feld wächst mit dem Text.
+// Darunter steht, wohin die eigenen Worte gehen (hint), darüber optional die Wahl des Empfängers.
 import { useState } from 'react';
 import { Pressable, StyleSheet, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { Icon, Text } from '@/components/ds';
+import { Icon, SegmentedControl, Text } from '@/components/ds';
 import { maxFontScale, useTheme } from '@/theme';
 
 import { IconButton } from './Conversation';
 
-interface ChatInputProps {
+/** Ein möglicher Empfänger. Gesperrt (etwa ein volles Gespräch mit dem Assistenten): nicht wählbar. */
+export interface ChatRecipientOption<R extends string> {
+  value: R;
+  label: string;
+  disabled?: boolean;
+}
+
+interface ChatInputProps<R extends string> {
   /** Beschriftung für den Screenreader */
   label: string;
   placeholder: string;
@@ -20,12 +28,27 @@ interface ChatInputProps {
   /** Senden möglich, auch ohne Text (z. B. mit Foto) */
   canSend: boolean;
   error?: string;
+  /**
+   * Hinweis unter dem Feld, solange kein Fehler dort steht, z. B. dass eigene Worte an den
+   * Reparatur-Assistenten gehen. Auch für den Screenreader am Feld.
+   */
+  hint?: string;
+  /**
+   * Wer die Nachricht bekommt. Eine gesperrte Option fällt aus der Wahl. Bleibt nur eine übrig,
+   * gibt es nichts zu wählen und die Zeile entfällt. Den Empfänger zum Senden bestimmt der Screen.
+   */
+  recipient?: {
+    accessibilityLabel: string;
+    value: R;
+    options: readonly ChatRecipientOption<R>[];
+    onChange: (value: R) => void;
+  };
   /** Zeile über dem Feld, z. B. „Foto angehängt“ */
   above?: React.ReactNode;
   camera?: { label: string; onPress: () => void; disabled?: boolean };
 }
 
-export function ChatInput({
+export function ChatInput<R extends string = string>({
   label,
   placeholder,
   value,
@@ -34,13 +57,16 @@ export function ChatInput({
   sendLabel,
   canSend,
   error,
+  hint,
+  recipient,
   above,
   camera,
-}: ChatInputProps) {
+}: ChatInputProps<R>) {
   const theme = useTheme();
   const insets = useSafeAreaInsets();
   const [focus, setFocus] = useState(false);
   const fontSize = theme.typeRoles.bodyLg.fontSize * (theme.previewFontScale ?? 1);
+  const choices = recipient?.options.filter((o) => !o.disabled) ?? [];
   return (
     <View
       style={[
@@ -53,6 +79,16 @@ export function ChatInput({
         },
       ]}
     >
+      {recipient && choices.length > 1 ? (
+        <View style={styles.recipient}>
+          <SegmentedControl
+            accessibilityLabel={recipient.accessibilityLabel}
+            options={choices}
+            value={recipient.value}
+            onChange={recipient.onChange}
+          />
+        </View>
+      ) : null}
       {above}
       <View style={styles.row}>
         {camera ? (
@@ -79,7 +115,7 @@ export function ChatInput({
         >
           <TextInput
             accessibilityLabel={label}
-            accessibilityHint={error}
+            accessibilityHint={error ?? hint}
             allowFontScaling={theme.previewFontScale === undefined}
             maxFontSizeMultiplier={maxFontScale}
             placeholder={placeholder}
@@ -130,6 +166,8 @@ export function ChatInput({
         >
           {error}
         </Text>
+      ) : hint ? (
+        <Text variant="caption">{hint}</Text>
       ) : null}
     </View>
   );
@@ -137,6 +175,7 @@ export function ChatInput({
 
 const styles = StyleSheet.create({
   bar: { gap: 6, paddingTop: 10, borderTopWidth: StyleSheet.hairlineWidth },
+  recipient: { alignSelf: 'flex-start' },
   row: { flexDirection: 'row', alignItems: 'flex-end', gap: 8 },
   field: {
     flex: 1,

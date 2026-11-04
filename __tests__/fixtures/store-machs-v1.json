@@ -1,0 +1,612 @@
+{
+  "state": {
+    "onboardingDone": true,
+    "appearance": "system",
+    "demo": {
+      "hints": false,
+      "scanScenario": "erkannt",
+      "diagnosisScenario": "standard",
+      "videoScenario": "verbunden",
+      "claimScenario": "freigeben",
+      "deductible": 0,
+      "dismissedHints": []
+    },
+    "notifications": "offen",
+    "household": {
+      "id": "haushalt-mw25mgqh-1-ils1",
+      "members": [
+        {
+          "id": "person-mw25mgqh-0-apfd",
+          "displayName": "Sam",
+          "role": "versicherungsnehmer"
+        }
+      ],
+      "address": {
+        "street": "Beispielstraße 12",
+        "zip": "32549",
+        "city": "Bad Oeynhausen"
+      },
+      "createdAt": "2026-11-04T13:30:23.417Z"
+    },
+    "persons": [
+      {
+        "id": "person-mw25mgqh-0-apfd",
+        "displayName": "Sam",
+        "role": "versicherungsnehmer"
+      }
+    ],
+    "contracts": [
+      {
+        "id": "vertrag-mw25mgqi-4-pw61",
+        "householdId": "haushalt-mw25mgqh-1-ils1",
+        "kind": "garantieverlaengerung",
+        "provider": {
+          "id": "kranich",
+          "kind": "versicherer",
+          "name": "Kranich Versicherung"
+        },
+        "productName": "Garantieverlängerung",
+        "contractNumber": "KV-2023-0471",
+        "policyholderId": "person-mw25mgqh-0-apfd",
+        "validFrom": "2023-03-15T00:00:00+01:00",
+        "validUntil": "2028-03-31T23:59:59+02:00",
+        "deductible": 0,
+        "coveredDeviceIds": ["geraet-mw25mgqi-3-7v84"],
+        "linkedVia": "vertragsnummer",
+        "linkedAt": "2026-11-04T13:30:23.418Z"
+      }
+    ],
+    "devices": [
+      {
+        "manufacturerId": "miele",
+        "category": "geschirrspueler",
+        "model": "G 5833 SC",
+        "identifiedBy": "katalog",
+        "id": "geraet-mw25mgqh-2-v959",
+        "householdId": "haushalt-mw25mgqh-1-ils1",
+        "createdAt": "2026-11-04T13:30:23.417Z",
+        "soldBy": {
+          "id": "fruend",
+          "kind": "haendler",
+          "name": "Fründ Elektrogeräte AG"
+        }
+      },
+      {
+        "manufacturerId": "miele",
+        "category": "waschmaschine",
+        "model": "WKB 130",
+        "identifiedBy": "katalog",
+        "id": "geraet-mw25mgqi-3-7v84",
+        "householdId": "haushalt-mw25mgqh-1-ils1",
+        "createdAt": "2026-11-04T13:30:23.418Z",
+        "soldBy": {
+          "id": "lindemann",
+          "kind": "haendler",
+          "name": "Elektro Lindemann"
+        },
+        "contractId": "vertrag-mw25mgqi-4-pw61"
+      }
+    ],
+    "cases": {
+      "GS-24817": {
+        "id": "GS-24817",
+        "householdId": "haushalt-mw25mgqh-1-ils1",
+        "deviceId": "geraet-mw25mgqh-2-v959",
+        "reportedBy": "person-mw25mgqh-0-apfd",
+        "status": "eskaliert",
+        "entry": "symptom",
+        "problemLabel": "Wasser bleibt stehen",
+        "diagnosisIds": [],
+        "guideRunIds": ["anleitung-mw25mgqi-6-23u8"],
+        "photoIds": ["foto-mw25mgqj-f-o4vx", "foto-mw25mgql-o-pylh"],
+        "createdAt": "2026-11-04T13:30:23.418Z",
+        "updatedAt": "2026-11-04T13:30:23.421Z"
+      }
+    },
+    "events": [
+      {
+        "id": "ev-mw25mgqi-5-2ll7",
+        "caseId": "GS-24817",
+        "type": "fall_angelegt",
+        "at": "2026-11-04T13:30:23.418Z",
+        "actor": {
+          "kind": "haushalt",
+          "id": "person-mw25mgqh-0-apfd"
+        },
+        "payload": {
+          "entry": "symptom",
+          "problemLabel": "Wasser bleibt stehen"
+        }
+      },
+      {
+        "id": "ev-mw25mgqi-7-vyri",
+        "caseId": "GS-24817",
+        "type": "anleitung_gestartet",
+        "at": "2026-11-04T13:30:23.418Z",
+        "actor": {
+          "kind": "haushalt",
+          "id": "person-mw25mgqh-0-apfd"
+        },
+        "payload": {
+          "guideId": "g5833_ablauf",
+          "guideRunId": "anleitung-mw25mgqi-6-23u8"
+        }
+      },
+      {
+        "id": "ev-mw25mgqi-8-6qgb",
+        "caseId": "GS-24817",
+        "type": "status_geaendert",
+        "at": "2026-11-04T13:30:23.418Z",
+        "actor": {
+          "kind": "haushalt",
+          "id": "person-mw25mgqh-0-apfd"
+        },
+        "payload": {
+          "from": "offen",
+          "to": "selbsthilfe",
+          "command": "anleitung_starten"
+        }
+      },
+      {
+        "id": "ev-mw25mgqj-9-j9zo",
+        "caseId": "GS-24817",
+        "type": "schritt_erledigt",
+        "at": "2026-11-04T13:30:23.419Z",
+        "actor": {
+          "kind": "haushalt",
+          "id": "person-mw25mgqh-0-apfd"
+        },
+        "payload": {
+          "guideRunId": "anleitung-mw25mgqi-6-23u8",
+          "guideId": "g5833_ablauf",
+          "step": 1
+        }
+      },
+      {
+        "id": "ev-mw25mgqj-a-kqmg",
+        "caseId": "GS-24817",
+        "type": "schritt_geht_nicht",
+        "at": "2026-11-04T13:30:23.419Z",
+        "actor": {
+          "kind": "haushalt",
+          "id": "person-mw25mgqh-0-apfd"
+        },
+        "payload": {
+          "guideRunId": "anleitung-mw25mgqi-6-23u8",
+          "guideId": "g5833_ablauf",
+          "step": 2,
+          "note": "Das Sieb ist sauber, das Wasser bleibt trotzdem stehen."
+        }
+      },
+      {
+        "id": "ev-mw25mgqj-b-7652",
+        "caseId": "GS-24817",
+        "type": "anleitung_beendet",
+        "at": "2026-11-04T13:30:23.419Z",
+        "actor": {
+          "kind": "haushalt",
+          "id": "person-mw25mgqh-0-apfd"
+        },
+        "payload": {
+          "guideRunId": "anleitung-mw25mgqi-6-23u8",
+          "guideId": "g5833_ablauf",
+          "step": 2,
+          "outcome": "geht_nicht"
+        }
+      },
+      {
+        "id": "ev-mw25mgqj-c-sple",
+        "caseId": "GS-24817",
+        "type": "status_geaendert",
+        "at": "2026-11-04T13:30:23.419Z",
+        "actor": {
+          "kind": "haushalt",
+          "id": "person-mw25mgqh-0-apfd"
+        },
+        "payload": {
+          "from": "selbsthilfe",
+          "to": "eskaliert",
+          "command": "hilfe_holen"
+        }
+      },
+      {
+        "id": "ev-mw25mgqj-e-abij",
+        "caseId": "GS-24817",
+        "type": "weitergabe_bestaetigt",
+        "at": "2026-11-04T13:30:23.419Z",
+        "actor": {
+          "kind": "haushalt",
+          "id": "person-mw25mgqh-0-apfd"
+        },
+        "payload": {
+          "purpose": "chat_assistent",
+          "recipient": "Anthropic",
+          "legalBasis": "einwilligung"
+        }
+      },
+      {
+        "id": "ev-mw25mgqj-g-vzq5",
+        "caseId": "GS-24817",
+        "type": "foto_aufgenommen",
+        "at": "2026-11-04T13:30:23.419Z",
+        "actor": {
+          "kind": "haushalt",
+          "id": "person-mw25mgqh-0-apfd"
+        },
+        "payload": {
+          "photoId": "foto-mw25mgqj-f-o4vx",
+          "purpose": "frage",
+          "source": "in_app_camera"
+        }
+      },
+      {
+        "caseId": "GS-24817",
+        "type": "assistent_gefragt",
+        "actor": {
+          "kind": "haushalt",
+          "id": "person-mw25mgqh-0-apfd"
+        },
+        "payload": {
+          "messageId": "chat-mw25mgqj-h-2aum"
+        },
+        "id": "ev-mw25mgqj-i-nvxa",
+        "at": "2026-11-04T13:30:23.419Z"
+      },
+      {
+        "id": "ev-mw25mgqj-l-xew0",
+        "caseId": "GS-24817",
+        "type": "weitergabe_bestaetigt",
+        "at": "2026-11-04T13:30:23.419Z",
+        "actor": {
+          "kind": "haushalt",
+          "id": "person-mw25mgqh-0-apfd"
+        },
+        "payload": {
+          "purpose": "weitergabe_haendler",
+          "recipient": "Fründ Elektrogeräte AG",
+          "legalBasis": "vertrag"
+        }
+      },
+      {
+        "id": "hev-fixture-0",
+        "caseId": "GS-24817",
+        "type": "haendler_angenommen",
+        "at": "2026-11-04T13:31:23.420Z",
+        "actor": {
+          "kind": "haendler",
+          "id": "fruend",
+          "name": "Fründ Elektrogeräte AG"
+        },
+        "payload": {
+          "by": "Sandra K."
+        }
+      },
+      {
+        "id": "hev-fixture-1",
+        "caseId": "GS-24817",
+        "type": "haendler_rueckfrage",
+        "at": "2026-11-04T13:32:23.420Z",
+        "actor": {
+          "kind": "haendler",
+          "id": "fruend",
+          "name": "Fründ Elektrogeräte AG"
+        },
+        "payload": {
+          "question": "Hast du den Kaufbeleg noch?",
+          "options": ["Ja, als Foto", "Nein"],
+          "by": "Sandra K."
+        }
+      },
+      {
+        "id": "hev-fixture-2",
+        "caseId": "GS-24817",
+        "type": "haendler_entscheidung",
+        "at": "2026-11-04T13:33:23.420Z",
+        "actor": {
+          "kind": "haendler",
+          "id": "fruend",
+          "name": "Fründ Elektrogeräte AG"
+        },
+        "payload": {
+          "decision": "gewaehrleistung",
+          "note": "Kauf im März 2025",
+          "by": "Sandra K."
+        }
+      },
+      {
+        "id": "hev-fixture-3",
+        "caseId": "GS-24817",
+        "type": "haendler_termin",
+        "at": "2026-11-04T13:34:23.420Z",
+        "actor": {
+          "kind": "haendler",
+          "id": "fruend",
+          "name": "Fründ Elektrogeräte AG"
+        },
+        "payload": {
+          "partnerName": "Fründ Kundendienst",
+          "slots": ["Mo, 8–12 Uhr", "Di, 12–16 Uhr"],
+          "by": "Sandra K."
+        }
+      },
+      {
+        "id": "hev-fixture-4",
+        "caseId": "GS-24817",
+        "type": "haendler_ersatzteil",
+        "at": "2026-11-04T13:35:23.420Z",
+        "actor": {
+          "kind": "haendler",
+          "id": "fruend",
+          "name": "Fründ Elektrogeräte AG"
+        },
+        "payload": {
+          "part": "Laugenpumpe",
+          "status": "bestellt",
+          "eta": "Do",
+          "by": "Sandra K."
+        }
+      },
+      {
+        "id": "hev-fixture-5",
+        "caseId": "GS-24817",
+        "type": "haendler_nachricht",
+        "at": "2026-11-04T13:36:23.420Z",
+        "actor": {
+          "kind": "haendler",
+          "id": "fruend",
+          "name": "Fründ Elektrogeräte AG"
+        },
+        "payload": {
+          "text": "Das Teil ist unterwegs.",
+          "by": "Sandra K."
+        }
+      },
+      {
+        "id": "hev-fixture-6",
+        "caseId": "GS-24817",
+        "type": "haendler_betrieb",
+        "at": "2026-11-04T13:37:23.420Z",
+        "actor": {
+          "kind": "haendler",
+          "id": "fruend",
+          "name": "Fründ Elektrogeräte AG"
+        },
+        "payload": {
+          "partnerName": "Fründ Kundendienst",
+          "slot": "Di, 12–16 Uhr",
+          "by": "Sandra K."
+        }
+      },
+      {
+        "id": "hev-fixture-7",
+        "caseId": "GS-24817",
+        "type": "haendler_status",
+        "at": "2026-11-04T13:38:23.420Z",
+        "actor": {
+          "kind": "haendler",
+          "id": "fruend",
+          "name": "Fründ Elektrogeräte AG"
+        },
+        "payload": {
+          "status": "ersatzteil_bestellt",
+          "by": "Sandra K."
+        }
+      },
+      {
+        "caseId": "GS-24817",
+        "type": "rueckfrage_beantwortet",
+        "actor": {
+          "kind": "haushalt",
+          "id": "person-mw25mgqh-0-apfd"
+        },
+        "payload": {
+          "question": "Hast du den Kaufbeleg noch?",
+          "answer": "Ja, als Foto",
+          "questionEventId": "hev-fixture-1"
+        },
+        "id": "ev-mw25mgqk-m-y5qo",
+        "at": "2026-11-04T13:30:23.420Z"
+      },
+      {
+        "caseId": "GS-24817",
+        "type": "rueckfrage_beantwortet",
+        "actor": {
+          "kind": "haushalt",
+          "id": "person-mw25mgqh-0-apfd"
+        },
+        "payload": {
+          "question": "Fründ Kundendienst kommt zu dir. Wann passt es?",
+          "answer": "Di, 12–16 Uhr",
+          "questionEventId": "hev-fixture-3"
+        },
+        "id": "ev-mw25mgqk-n-7lzv",
+        "at": "2026-11-04T13:30:23.420Z"
+      },
+      {
+        "id": "ev-mw25mgql-p-fble",
+        "caseId": "GS-24817",
+        "type": "foto_aufgenommen",
+        "at": "2026-11-04T13:30:23.421Z",
+        "actor": {
+          "kind": "haushalt",
+          "id": "person-mw25mgqh-0-apfd"
+        },
+        "payload": {
+          "photoId": "foto-mw25mgql-o-pylh",
+          "purpose": "frage",
+          "source": "in_app_camera"
+        }
+      },
+      {
+        "caseId": "GS-24817",
+        "type": "nachricht_an_haendler",
+        "actor": {
+          "kind": "haushalt",
+          "id": "person-mw25mgqh-0-apfd"
+        },
+        "payload": {
+          "text": "Hier der Kaufbeleg.",
+          "photoId": "foto-mw25mgql-o-pylh"
+        },
+        "id": "ev-mw25mgql-q-tzgn",
+        "at": "2026-11-04T13:30:23.421Z"
+      }
+    ],
+    "photos": [
+      {
+        "caseId": "GS-24817",
+        "deviceId": "geraet-mw25mgqh-2-v959",
+        "purpose": "frage",
+        "source": "in_app_camera",
+        "uri": "file:///data/frage-1.jpg",
+        "width": 1200,
+        "height": 900,
+        "id": "foto-mw25mgqj-f-o4vx",
+        "takenAt": "2026-11-04T13:30:23.419Z"
+      },
+      {
+        "caseId": "GS-24817",
+        "deviceId": "geraet-mw25mgqh-2-v959",
+        "purpose": "frage",
+        "source": "in_app_camera",
+        "uri": "file:///data/kaufbeleg.jpg",
+        "width": 900,
+        "height": 1200,
+        "id": "foto-mw25mgql-o-pylh",
+        "takenAt": "2026-11-04T13:30:23.421Z"
+      }
+    ],
+    "diagnoses": [],
+    "guideRuns": {
+      "anleitung-mw25mgqi-6-23u8": {
+        "id": "anleitung-mw25mgqi-6-23u8",
+        "caseId": "GS-24817",
+        "guideId": "g5833_ablauf",
+        "startedAt": "2026-11-04T13:30:23.418Z",
+        "currentStep": 1,
+        "completedSteps": [0],
+        "outcome": "geht_nicht",
+        "endedAt": "2026-11-04T13:30:23.419Z",
+        "abortedAtStep": 1,
+        "abortNote": "Das Sieb ist sauber, das Wasser bleibt trotzdem stehen."
+      }
+    },
+    "consents": [
+      {
+        "caseId": "GS-24817",
+        "purpose": "chat_assistent",
+        "legalBasis": "einwilligung",
+        "recipient": {
+          "id": "anthropic",
+          "kind": "dienstleister",
+          "name": "Anthropic"
+        },
+        "dataCategories": [
+          "Deine Nachrichten",
+          "Fotos, die du im Gespräch aufnimmst",
+          "Gerät und Modell",
+          "Problem",
+          "Aktueller und erledigte Schritte"
+        ],
+        "textVersion": "2026-11-1",
+        "id": "consent-mw25mgqj-d-w3rv",
+        "personId": "person-mw25mgqh-0-apfd",
+        "grantedAt": "2026-11-04T13:30:23.419Z"
+      },
+      {
+        "caseId": "GS-24817",
+        "purpose": "weitergabe_haendler",
+        "legalBasis": "vertrag",
+        "recipient": {
+          "id": "fruend",
+          "kind": "haendler",
+          "name": "Fründ Elektrogeräte AG"
+        },
+        "dataCategories": [
+          "Name und Adresse",
+          "Gerät, Typenschild und Kaufdatum",
+          "Problem und Fotos aus dem Fall",
+          "Ergebnis und Schritte der Anleitung",
+          "Befund, Kosten und Termin",
+          "Deine Nachrichten an den Händler"
+        ],
+        "textVersion": "2026-11-3",
+        "id": "consent-mw25mgqj-k-9tv1",
+        "personId": "person-mw25mgqh-0-apfd",
+        "grantedAt": "2026-11-04T13:30:23.419Z"
+      }
+    ],
+    "quotes": [],
+    "bookings": [],
+    "videoSessions": [],
+    "chatMessages": [
+      {
+        "caseId": "GS-24817",
+        "role": "haushalt",
+        "text": "Ist das das richtige Sieb?",
+        "photoId": "foto-mw25mgqj-f-o4vx",
+        "id": "chat-mw25mgqj-h-2aum",
+        "at": "2026-11-04T13:30:23.419Z"
+      },
+      {
+        "caseId": "GS-24817",
+        "role": "assistent",
+        "text": "Ja, das ist das Grobsieb. Dreh es gegen den Uhrzeigersinn heraus.",
+        "suggestion": "anleitung",
+        "guideId": "g5833_ablauf",
+        "assessment": "passt",
+        "id": "chat-mw25mgqj-j-zhxg",
+        "at": "2026-11-04T13:30:23.419Z"
+      }
+    ],
+    "guideCatalog": [
+      {
+        "id": "miele-twb140",
+        "manufacturerId": "miele",
+        "category": "trockner",
+        "models": ["TWB 140"],
+        "materialNumbers": ["12 345 678"],
+        "document": {
+          "title": "Gebrauchsanweisung TWB 140 (Beispiel)",
+          "license": "hersteller",
+          "pages": 64
+        },
+        "review": {
+          "status": "freigegeben",
+          "by": "Miele Kundendienst",
+          "at": "2026-11-04T13:41:23.420Z"
+        },
+        "origin": "import",
+        "guides": [
+          {
+            "id": "miele-twb140/flusensieb",
+            "kind": "pflege",
+            "title": "Flusensieb reinigen",
+            "code": "Flusen",
+            "sourceDocument": "Gebrauchsanweisung TWB 140 (Beispiel)",
+            "steps": [
+              {
+                "t": "Tür öffnen",
+                "d": "Öffne die Tür.",
+                "src": {
+                  "page": 31,
+                  "text": "Öffnen Sie die Tür."
+                }
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "shares": {
+      "GS-24817": {
+        "consentId": "consent-mw25mgqj-k-9tv1",
+        "token": "t",
+        "syncedEvents": 1,
+        "retailerSince": "2026-11-04T13:38:23.420Z"
+      }
+    },
+    "nextCaseNumber": 24818
+  },
+  "version": 1
+}

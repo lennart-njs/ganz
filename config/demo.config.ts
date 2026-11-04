@@ -38,6 +38,8 @@ export const demoConfig = {
     enabled: true,
     /** Schließbare Tipps im Demo-Modus. Aus für den Pitch (Entscheidung 21), an über die Demo-Steuerung. */
     hints: false,
+    /** Feste Zeit im Demo-Startstand (Schutz verknüpft, Gerät angelegt), siehe store/demoStart.ts */
+    startAt: '2026-11-02T08:00:00.000Z',
   },
 
   insurer: {
@@ -143,7 +145,19 @@ export const demoConfig = {
     /** Reparatur 189 € (Original-Laugenpumpe und Arbeit). Aufteilung ist eine Annahme. */
     repair: { parts: 11900 as Cents, labor: 7000 as Cents },
     replacement: 89900 as Cents,
+    /**
+     * Vor-Ort-Diagnose 79 € (Anfahrt und Prüfung). Den Preis nennt der Betrieb vor dem Termin,
+     * dann buchst du zahlungspflichtig oder nicht (Entscheidung Nr. 33). Beispielwert.
+     */
+    diagnosis: 7900 as Cents,
   },
+
+  /**
+   * Gesetzliche Gewährleistung für eine Reparatur (ganz Nr. 32). Annahme bis zur Antwort
+   * des Anwalts: 24 Monate ab Abschluss der Reparatur (§ 634a Abs. 1 Nr. 1 BGB, Rechtsfrage 52).
+   * Beispielwert, keine Rechtsauskunft. Nicht die Gewährleistung des Händlers auf den Kauf.
+   */
+  warranty: { months: 24, isAssumption: true },
 
   /** Zeitfenster für die Fründ-Demo (Annahme, ANNAHMEN „Werte für Fründ“) */
   slots: ['Mo, 8–12 Uhr', 'Di, 12–16 Uhr', 'Mi, 8–12 Uhr', 'Fr, 9–13 Uhr'],

@@ -4,6 +4,14 @@ Wiederkehrende Handgriffe. Befehle jeweils im Ordner des Repos.
 
 ## Starten
 
+Nach jedem `git pull` einmal die Pakete nachziehen:
+
+```bash
+npm install
+```
+
+Seit der Übertragung der ganz-Linie braucht die App `zod` und `fast-check`. Ohne sie startet Metro nicht.
+
 App und API (Backend der Demo):
 
 ```bash
@@ -52,6 +60,7 @@ Details: `website/README.md`.
 
 ```bash
 git pull origin claude/clever-bardeen-bpc32q
+npm install
 ```
 
 - Arbeiten zwei Sitzungen gleichzeitig (Cloud und Mac), immer über GitHub abgleichen.

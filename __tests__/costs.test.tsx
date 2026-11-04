@@ -1,10 +1,12 @@
-import { fireEvent, renderRouter, screen } from 'expo-router/testing-library';
+import { router } from 'expo-router';
+import { act, fireEvent, renderRouter, screen } from 'expo-router/testing-library';
 
 import { demoConfig } from '@/config/demo.config';
 import { de } from '@/i18n/de';
 import { useAppStore } from '@/store/appStore';
+import { APP } from '@/test/app';
+import { unwrap } from '@/test/result';
 
-const APP = './app';
 const tap = (name: string | RegExp) => fireEvent.press(screen.getByRole('button', { name }));
 
 /** Fall nach dem Videocall mit Befund „Reparatur“ und Kostenvoranschlag */
@@ -32,7 +34,7 @@ function caseAfterFinding({ contract = true } = {}) {
     source: 'in_app_camera',
     uri: '',
   });
-  const run = s.startGuide(c.id, 'ablauf');
+  const run = unwrap(s.startGuide(c.id, 'ablauf'));
   for (let i = 0; i < 4; i++) s.moveGuideStep(run.id, 'next');
   s.finishGuide(run.id, 'geht_nicht');
   s.setFinding(c.id, 'reparatur', 'fachkraft');
@@ -112,14 +114,51 @@ describe('Betrieb und Termin', () => {
     expect(useAppStore.getState().consents.map((c) => c.purpose)).toContain('weitergabe_betrieb');
   });
 
-  test('bei Selbstbeteiligung über 0 € heißt der Button „Zahlungspflichtig buchen“', async () => {
+  test('nach der Meldung: kein zweites Melden, die Kosten führen zum Termin', async () => {
+    const { id, r } = await bookAfterClaim();
+    await act(async () => router.back());
+    expect(r.getPathname()).toBe(`/fall/${id}/kosten`);
+    expect(screen.queryByRole('button', { name: de.costs.report })).toBeNull();
+    expect(screen.queryByRole('button', { name: de.costs.selfPay })).toBeNull();
+    await tap(de.costs.toAppointment);
+    expect(r.getPathname()).toBe(`/fall/${id}/termin`);
+    expect(screen.getByText(de.appointment.pending)).toBeTruthy();
+    // Auch der Store meldet nicht zweimal und legt keine zweite Bestätigung an
+    expect(useAppStore.getState().reportClaim(id)).toEqual({
+      ok: false,
+      refusal: { code: 'regel', action: 'schaden_melden' },
+    });
+    const consents = useAppStore
+      .getState()
+      .consents.filter((c) => c.purpose === 'weitergabe_versicherer');
+    expect(consents).toHaveLength(1);
+  });
+
+  // Entscheidung Nr. 31: Solange Kranich prüft, ist die Anfrage unverbindlich. „Zahlungspflichtig
+  // buchen“ gibt es erst, wenn die Selbstbeteiligung feststeht, also nach der Freigabe. Bis dahin
+  // hieß der Button schon während der Prüfung so (Nr. 4).
+  test('Selbstbeteiligung über 0 €: während der Prüfung „Termin anfragen“, nach der Freigabe „Zahlungspflichtig buchen“', async () => {
     const id = caseAfterFinding();
     useAppStore.getState().setDemo({ deductible: 5000 });
     await renderRouter(APP, { initialUrl: `/fall/${id}/kosten` });
     expect(screen.getByText(de.costs.barMeta('50 €'))).toBeTruthy();
     await tap(de.costs.report);
-    expect(screen.getByRole('button', { name: de.appointment.requestPaid })).toBeTruthy();
+    expect(screen.getByRole('button', { name: de.appointment.request })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: de.appointment.requestPaid })).toBeNull();
+    expect(screen.getByText(de.appointment.costsClaim('Kranich', '50 €'))).toBeTruthy();
+    // Kranich gibt frei, bevor du einen Termin anfragst: Jetzt steht der Betrag fest
+    await act(async () => {
+      useAppStore.getState().simulateNext(id);
+    });
+    expect(useAppStore.getState().cases[id]?.status).toBe('freigegeben');
+    expect(screen.getByText(de.appointment.costsApproved('Kranich', '50 €'))).toBeTruthy();
+    await fireEvent.press(screen.getByRole('radio', { name: demoConfig.slots[0] }));
     expect(screen.queryByRole('button', { name: de.appointment.request })).toBeNull();
+    await tap(de.appointment.requestPaid);
+    expect(useAppStore.getState().bookings.at(-1)).toMatchObject({
+      subjectToApproval: false,
+      binding: { amount: 5000 },
+    });
   });
 
   test('ohne Schutz zahlt die Nutzerin selbst und bucht zahlungspflichtig', async () => {
@@ -134,12 +173,74 @@ describe('Betrieb und Termin', () => {
     expect(useAppStore.getState().cases[id]?.status).toBe('in_reparatur');
   });
 
+  test('mit Schutz vor der Meldung: selbst zahlen nennt den Preis vor dem Buchen', async () => {
+    const id = caseAfterFinding();
+    const r = await renderRouter(APP, { initialUrl: `/fall/${id}/kosten` });
+    await tap(de.costs.selfPay);
+    expect(r.getPathname()).toBe(`/fall/${id}/termin`);
+    expect(screen.getByText(de.appointment.costsSelf('189 €'))).toBeTruthy();
+    await fireEvent.press(screen.getByRole('radio', { name: demoConfig.slots[0] }));
+    await tap(de.appointment.requestPaid);
+    expect(useAppStore.getState().cases[id]).toMatchObject({ status: 'in_reparatur' });
+    expect(useAppStore.getState().cases[id]?.claim).toBeUndefined();
+  });
+
+  test('nach der Ablehnung: selbst zahlen nennt den Preis vor dem Buchen', async () => {
+    const id = caseAfterFinding();
+    const s = useAppStore.getState();
+    s.setDemo({ claimScenario: 'ablehnen' });
+    s.reportClaim(id);
+    s.simulateNext(id);
+    expect(useAppStore.getState().cases[id]?.status).toBe('abgelehnt');
+    const r = await renderRouter(APP, { initialUrl: `/fall/${id}/kosten` });
+    await tap(de.costs.rejectedSelfPay('189 €'));
+    expect(r.getPathname()).toBe(`/fall/${id}/termin`);
+    expect(screen.getByText(de.appointment.costsSelf('189 €'))).toBeTruthy();
+    expect(screen.queryByText(de.appointment.pending)).toBeNull();
+    await fireEvent.press(screen.getByRole('radio', { name: demoConfig.slots[0] }));
+    await tap(de.appointment.requestPaid);
+    expect(useAppStore.getState().cases[id]?.status).toBe('in_reparatur');
+  });
+
+  test('Ablehnung während des Termins: die Entscheidung statt des Formulars (R-09)', async () => {
+    const { id } = await bookAfterClaim();
+    await act(async () => {
+      useAppStore.getState().setDemo({ claimScenario: 'ablehnen' });
+      useAppStore.getState().simulateNext(id);
+    });
+    expect(useAppStore.getState().cases[id]?.status).toBe('abgelehnt');
+    expect(screen.getByRole('header', { name: de.costs.rejectedTitle('Kranich') })).toBeTruthy();
+    expect(screen.queryByRole('radio', { name: demoConfig.slots[0] })).toBeNull();
+    expect(screen.queryByText(de.appointment.costsClaim('Kranich', '0 €'))).toBeNull();
+    // Selbst zahlen ist eine eigene Wahl, mit dem Preis vor dem Buchen
+    await tap(de.costs.rejectedSelfPay('189 €'));
+    expect(screen.getByText(de.appointment.costsSelf('189 €'))).toBeTruthy();
+    await fireEvent.press(screen.getByRole('radio', { name: demoConfig.slots[1] }));
+    await tap(de.appointment.requestPaid);
+    expect(useAppStore.getState().cases[id]?.status).toBe('in_reparatur');
+    expect(useAppStore.getState().bookings.filter((b) => b.status !== 'storniert')).toHaveLength(1);
+  });
+
+  test('mit laufendem Termin kein zweiter: Hinweis und zurück ins Gespräch', async () => {
+    const { id, r } = await bookAfterClaim();
+    await fireEvent.press(screen.getByRole('radio', { name: demoConfig.slots[0] }));
+    await tap(de.appointment.request);
+    expect(r.getPathname()).toBe(`/fall/${id}`);
+    await act(async () => router.push(`/fall/${id}/termin?art=reparatur`));
+    expect(screen.getByRole('header', { name: de.appointment.unavailableTitle })).toBeTruthy();
+    expect(screen.queryByRole('radio', { name: demoConfig.slots[0] })).toBeNull();
+    await tap(de.thread.toThread);
+    expect(r.getPathname()).toBe(`/fall/${id}`);
+    expect(useAppStore.getState().bookings).toHaveLength(1);
+  });
+
   test('die Pumpe geht nie an den Haushalt', async () => {
     const { id } = await bookAfterClaim();
     expect(
       screen.getByText(de.appointment.ecoDesign(de.appliance.waschmaschine.finding.partAcc, 15)),
     ).toBeTruthy();
-    expect(() =>
+    const events = useAppStore.getState().events.length;
+    expect(
       useAppStore.getState().requestBooking({
         caseId: id,
         kind: 'ersatzteil_versand',
@@ -148,7 +249,11 @@ describe('Betrieb und Termin', () => {
         selfPay: false,
         partName: de.appliance.waschmaschine.finding.component,
       }),
-    ).toThrow();
+    ).toEqual({
+      ok: false,
+      refusal: { code: 'nur_betrieb', part: de.appliance.waschmaschine.finding.component },
+    });
+    expect(useAppStore.getState().events).toHaveLength(events);
     expect(useAppStore.getState().bookings.some((b) => b.kind === 'ersatzteil_versand')).toBe(
       false,
     );
@@ -180,4 +285,108 @@ describe('Betrieb und Termin', () => {
     expect(useAppStore.getState().bookings[0]?.kind).toBe('vor_ort_diagnose');
     expect(useAppStore.getState().cases[c.id]?.status).toBe('eskaliert');
   });
+});
+
+describe('Zahler aus den Fakten: „Du zahlst“ nur, wenn der Haushalt zahlt', () => {
+  test('nach der Freigabe: Kranich zahlt, ohne „vorbehaltlich Freigabe“', async () => {
+    const id = caseAfterFinding();
+    const s = useAppStore.getState();
+    s.reportClaim(id);
+    s.simulateNext(id);
+    expect(useAppStore.getState().cases[id]?.status).toBe('freigegeben');
+    const r = await renderRouter(APP, { initialUrl: `/fall/${id}/kosten` });
+    expect(screen.getByText(de.costs.payerApproved('Kranich'))).toBeTruthy();
+    expect(screen.queryByText(de.costs.payerValue('Kranich'))).toBeNull();
+    await tap(de.costs.toAppointment);
+    expect(r.getPathname()).toBe(`/fall/${id}/termin`);
+    expect(screen.getByText(de.appointment.costsApproved('Kranich', '0 €'))).toBeTruthy();
+    expect(screen.queryByText(de.appointment.costsClaim('Kranich', '0 €'))).toBeNull();
+    expect(screen.queryByText(de.appointment.costsSelf('189 €'))).toBeNull();
+  });
+
+  test('mit Schutz selbst gezahlt: die Kosten nennen dich als Zahler, nicht Kranich', async () => {
+    const id = caseAfterFinding();
+    unwrap(
+      useAppStore.getState().requestBooking({
+        caseId: id,
+        kind: 'reparatur',
+        partnerId: demoConfig.partners[0]!.id,
+        slotLabel: demoConfig.slots[0]!,
+        selfPay: true,
+      }),
+    );
+    expect(useAppStore.getState().cases[id]?.status).toBe('in_reparatur');
+    await renderRouter(APP, { initialUrl: `/fall/${id}/kosten` });
+    expect(screen.getByText(de.costs.payerSelf)).toBeTruthy();
+    expect(screen.queryByText(de.costs.payerValue('Kranich'))).toBeNull();
+    expect(screen.queryByText(de.costs.deductible)).toBeNull();
+  });
+
+  test('im Gespräch: Selbst zahlen gewählt, dann gemeldet, kein „Du zahlst“ mehr (R-07)', async () => {
+    const id = caseAfterFinding();
+    await renderRouter(APP, { initialUrl: `/fall/${id}` });
+    await tap(new RegExp(`^${de.costs.selfPay}`));
+    expect(screen.getByText(de.talk.claim.selfPay('189 €'))).toBeTruthy();
+    // Gemeldet über die Details: Kranich prüft, die Wahl zählt nicht mehr
+    await act(async () => {
+      useAppStore.getState().reportClaim(id);
+    });
+    expect(useAppStore.getState().cases[id]?.status).toBe('freigabe_noetig');
+    expect(screen.queryByText(de.talk.claim.selfPay('189 €'))).toBeNull();
+    await tap(new RegExp(`^${demoConfig.partners[0]!.name}`));
+    await tap(demoConfig.slots[0]!);
+    expect(screen.getByText(de.appointment.costsClaim('Kranich', '0 €'))).toBeTruthy();
+    expect(screen.queryByText(de.appointment.costsSelf('189 €'))).toBeNull();
+    expect(screen.queryByRole('button', { name: de.appointment.requestPaid })).toBeNull();
+    await tap(de.appointment.request);
+    expect(useAppStore.getState().bookings.at(-1)).toMatchObject({ subjectToApproval: true });
+    expect(useAppStore.getState().cases[id]?.status).toBe('freigabe_noetig');
+  });
+});
+
+describe('Vor-Ort-Diagnose: wer den Besuch zahlt', () => {
+  /** Nach „Hilfe holen“, ohne Kostenvoranschlag, mit oder ohne Schutz */
+  function escalated(contract: boolean) {
+    const s = useAppStore.getState();
+    s.reset();
+    useAppStore.setState({ onboardingDone: true });
+    if (contract) s.linkContract('vertragsnummer');
+    const device = s.addDevice({
+      manufacturerId: 'miele',
+      category: 'waschmaschine',
+      model: 'WKB 130',
+      identifiedBy: contract ? 'vertrag' : 'manuell',
+      contractId: useAppStore.getState().contracts[0]?.id,
+    });
+    const c = s.createCase({
+      deviceId: device.id,
+      entry: 'symptom',
+      problemLabel: 'Tür geht nicht auf',
+    });
+    unwrap(s.escalate(c.id));
+    return c.id;
+  }
+
+  test.each([
+    ['ohne Schutz', false],
+    ['mit Schutz', true],
+  ])(
+    '%s: du zahlst den Besuch, der Betrieb nennt den Preis vorher, kein Betrag',
+    async (_name, contract) => {
+      const id = escalated(contract);
+      await renderRouter(APP, { initialUrl: `/fall/${id}/termin?art=diagnose` });
+      expect(screen.getByRole('header', { name: de.appointment.titleDiagnosis })).toBeTruthy();
+      expect(screen.getByText(de.appointment.costsDiagnosis)).toBeTruthy();
+      expect(screen.queryByText(/€/)).toBeNull();
+      expect(screen.queryByText(de.appointment.costsClaim('Kranich', '0 €'))).toBeNull();
+      // Ohne Preis noch keine Zahlungspflicht: Der Preis kommt vor dem Termin
+      expect(screen.queryByRole('button', { name: de.appointment.requestPaid })).toBeNull();
+      await fireEvent.press(screen.getByRole('radio', { name: demoConfig.slots[2] }));
+      await tap(de.appointment.request);
+      expect(useAppStore.getState().bookings.at(-1)).toMatchObject({
+        kind: 'vor_ort_diagnose',
+        subjectToApproval: false,
+      });
+    },
+  );
 });

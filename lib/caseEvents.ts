@@ -1,8 +1,8 @@
 // Ereignisse der Fallakte als lesbare Zeilen. Quelle ist immer CaseEvent (B-36).
 import { demoConfig } from '@/config/demo.config';
 import { getGuide } from '@/lib/guideCatalog';
-import type { GuideId } from '@/data/guides';
 import { de } from '@/i18n/de';
+import { formatDate, formatEuro } from '@/i18n/format';
 import type { CaseEvent, CaseStatus, PhotoPurpose } from '@/model/types';
 
 import { caseStatusLabel } from './caseView';
@@ -42,7 +42,7 @@ export function eventLabel(e: CaseEvent): string {
         .join(' · ');
       break;
     case 'anleitung_beendet':
-      detail = f.outcome[p.outcome as keyof typeof f.outcome];
+      detail = p.replaced ? f.replaced : f.outcome[p.outcome as keyof typeof f.outcome];
       break;
     case 'foto_aufgenommen':
       detail = f.photo(de.caseFile.photoPurpose[p.purpose as PhotoPurpose] ?? '');
@@ -67,6 +67,33 @@ export function eventLabel(e: CaseEvent): string {
       detail = p.art === 'rueckruf' ? f.callback(String(p.slot)) : String(p.expert ?? '');
       break;
     case 'termin_angefragt':
+      // Die Nachbesserung steht als Gewährleistung in der Fallakte (Nr. 32)
+      detail = p.rework
+        ? f.reworkBooking(String(p.partner), String(p.slot))
+        : f.booking(String(p.partner), String(p.slot));
+      break;
+    case 'nachbesserung_verlangt':
+      detail = f.rework(String(p.partner), formatDate(String(p.until)));
+      break;
+    case 'reparatur_abgeschlossen':
+      detail = p.rework ? f.reworkDone : undefined;
+      break;
+    case 'problem_besteht_weiter': {
+      const reason = p.warranty as string | undefined;
+      detail =
+        reason === 'abgelaufen' || reason === 'nachbesserung_gescheitert'
+          ? f.noRework[reason]
+          : undefined;
+      break;
+    }
+    case 'zahlungspflichtig_gebucht':
+      detail = f.binding(String(p.partner), String(p.slot), formatEuro(Number(p.amount)));
+      break;
+    case 'preis_genannt':
+      detail = f.price(String(p.partner), formatEuro(Number(p.price)));
+      break;
+    case 'nicht_gebucht':
+    case 'termin_abgesagt':
       detail = f.booking(String(p.partner), String(p.slot));
       break;
     case 'bewertet':

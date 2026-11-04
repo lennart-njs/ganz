@@ -85,9 +85,11 @@ describe('Gerätekatalog', () => {
   test('Reparatur-Assistent schlägt nur Anleitungen des Geräts vor', () => {
     const raw = (id: string) =>
       JSON.stringify({ reply: 'x', suggestion: 'anleitung', guideId: id });
-    const ctx = { category: 'geschirrspueler' as const, guideIds: ['g5833_ablauf'] };
+    const ctx = { guideIds: ['g5833_ablauf'], image: false };
     expect(parseReply(raw('g5833_ablauf'), ctx)?.suggestion).toBe('anleitung');
     expect(parseReply(raw('ablauf'), ctx)?.suggestion).toBe('keine');
-    expect(parseReply(raw('g5833_ablauf'), 'waschmaschine')?.suggestion).toBe('keine');
+    expect(parseReply(raw('g5833_ablauf'), { guideIds: [], image: false })?.suggestion).toBe(
+      'keine',
+    );
   });
 });

@@ -1,14 +1,13 @@
-import { useEffect, useState } from 'react';
+import { useStore } from 'zustand';
 
-import { useAppStore } from './appStore';
+import { useAppStore, type AppStore } from './appStore';
+import type { LoadStatus } from './persistence';
 
-/** Wahr, sobald der gespeicherte Zustand geladen ist. Vorher entscheidet die Navigation nichts. */
-export function useHydrated(): boolean {
-  const [hydrated, setHydrated] = useState(() => useAppStore.persist.hasHydrated());
-  useEffect(() => {
-    const unsub = useAppStore.persist.onFinishHydration(() => setHydrated(true));
-    setHydrated(useAppStore.persist.hasHydrated());
-    return unsub;
-  }, []);
-  return hydrated;
+/**
+ * Ladezustand des gespeicherten Stands. 'laedt', bis er geladen ist. Vorher entscheidet die
+ * Navigation nichts. 'fehler', wenn er sich nicht laden lässt. Dann zeigt die App den Hinweis
+ * zum Wiederherstellen, statt auf dem Splash-Screen zu hängen.
+ */
+export function useHydrated(store: AppStore = useAppStore): LoadStatus {
+  return useStore(store.loading, (s) => s.status);
 }

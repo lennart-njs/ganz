@@ -28,16 +28,34 @@ function load(): NotificationsModule | null {
   return mod;
 }
 
+/**
+ * Antwort auf die Frage nach Mitteilungen. asked sagt, ob der Systemdialog wirklich kam. Nur seine
+ * Antwort ist eine Einwilligung. Erlaubt das Telefon Mitteilungen schon (Android bis 12, oder
+ * seit einem früheren Lauf), kommt kein Dialog. Dann hat die Person in ganz nichts entschieden.
+ */
+export interface PermissionAnswer {
+  granted: boolean;
+  asked: boolean;
+}
+
 export const notifications = {
-  /** Zeigt den Systemdialog. Gibt zurück, ob Mitteilungen erlaubt sind. */
-  async requestPermission(): Promise<boolean> {
+  /** Kommt der Systemdialog, wenn ganz jetzt fragt? Nicht im Web, nicht in Expo Go auf Android. */
+  async canAsk(): Promise<boolean> {
     const n = load();
     if (!n) return false;
     const current = await n.getPermissionsAsync();
-    if (current.granted) return true;
-    if (!current.canAskAgain) return false;
+    return !current.granted && current.canAskAgain;
+  },
+
+  /** Zeigt den Systemdialog, wenn es ihn gibt. Gibt zurück, ob Mitteilungen erlaubt sind. */
+  async requestPermission(): Promise<PermissionAnswer> {
+    const n = load();
+    if (!n) return { granted: false, asked: false };
+    const current = await n.getPermissionsAsync();
+    if (current.granted) return { granted: true, asked: false };
+    if (!current.canAskAgain) return { granted: false, asked: false };
     const next = await n.requestPermissionsAsync();
-    return next.granted;
+    return { granted: next.granted, asked: true };
   },
 
   async notify(title: string, body: string): Promise<void> {

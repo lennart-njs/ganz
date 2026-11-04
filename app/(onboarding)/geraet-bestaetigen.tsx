@@ -7,6 +7,7 @@ import { de } from '@/i18n/de';
 import { formatMonthYear } from '@/i18n/format';
 import { deviceTitle } from '@/lib/devices';
 import { selectContract, useAppStore } from '@/store/appStore';
+import { contractDevice } from '@/store/demoStart';
 
 const t = de.onboarding;
 
@@ -18,15 +19,9 @@ export default function GeraetBestaetigen() {
   const title = deviceTitle({ manufacturerId: demoConfig.manufacturer.id, model: cfg.model });
 
   // Nach dem Abschluss schaltet Stack.Protected auf die Tabs um.
+  // Dasselbe Gerät steht im Demo-Startstand (store/demoStart.ts).
   const confirm = () => {
-    addDevice({
-      manufacturerId: demoConfig.manufacturer.id,
-      category: cfg.category,
-      model: cfg.model,
-      purchaseDate: cfg.purchaseDate,
-      contractId: contract?.id,
-      identifiedBy: 'vertrag',
-    });
+    addDevice(contractDevice(contract?.id));
     completeOnboarding();
   };
 

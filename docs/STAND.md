@@ -16,7 +16,8 @@ Zuletzt aktualisiert: 03.11.2026 · Branch `claude/clever-bardeen-bpc32q` · Am 
 
 ## Offen
 
-- Lennarts lokale Kopie (`~/Desktop/ganz`) steht auf 588e6af. Mit `git pull` nachziehen.
+- Lennarts lokale Kopie (`~/Desktop/ganz`) steht auf 588e6af. Mit `git pull` nachziehen, danach `npm install`. Die Übertragung der ganz-Linie bringt `zod` und `fast-check` neu dazu. Ohne sie startet Metro nicht.
+- Übertragung der ganz-Linie (Lennart: „Jetzt übertragen.“): erst der Merge, danach kleine Schritte. Annahmen in `docs/ANNAHMEN.md` → „Übertragung“.
 - Angeboten, noch nicht beauftragt: Moderationskarte und Startskript für Freitag.
 - Rechtlich offen: Darf die Auswertung anonyme Fälle zählen, die nicht weitergegeben wurden? Klären über den Auftragsverarbeitungsvertrag (`docs/ANNAHMEN.md`).
 - Später: echtes Backend und Anbieter (Entscheidung 30), Push statt Abruf, echter Videocall.

@@ -1,11 +1,18 @@
-import { BackHandler } from 'react-native';
-import { act, fireEvent, renderRouter, screen } from 'expo-router/testing-library';
+import fs from 'fs';
+import path from 'path';
 
+import * as RN from 'react-native';
+import { BackHandler, StyleSheet } from 'react-native';
+import { act, fireEvent, renderRouter, screen } from 'expo-router/testing-library';
+import { router } from 'expo-router';
+
+import FallLayout from '@/app/fall/_layout';
 import { demoConfig } from '@/config/demo.config';
 import { de } from '@/i18n/de';
+import { deviceTitle } from '@/lib/devices';
 import { useAppStore } from '@/store/appStore';
-
-const APP = './app';
+import { APP } from '@/test/app';
+import { colors } from '@/theme/colors';
 
 // '' ist das Gespräch des Falls, die anderen sind Vollbild-Schritte und Details
 const caseScreens = [
@@ -68,6 +75,24 @@ describe('Tabs', () => {
   });
 });
 
+describe('Startseite (B-01)', () => {
+  test('die Gerätekarte öffnet das Gerätedetail, die Suchpille „Problem melden“', async () => {
+    finishOnboarding();
+    const device = useAppStore.getState().devices[0]!;
+    const r = await renderRouter(APP, { initialUrl: '/' });
+    await fireEvent.press(
+      screen.getByRole('button', { name: new RegExp(`^${deviceTitle(device)}`) }),
+    );
+    expect(r.getPathname()).toBe(`/geraet/${device.id}`);
+    await act(async () => router.back());
+    expect(r.getPathname()).toBe('/');
+    await fireEvent.press(
+      screen.getByRole('button', { name: new RegExp(`^${de.home.searchTitle}`) }),
+    );
+    expect(r.getPathname()).toBe('/fall/neu');
+  });
+});
+
 describe('Jeder Screen hat einen Ausweg', () => {
   test.each(caseScreens)('Fall-Screen %s: Zurück und Schließen', async (name) => {
     finishOnboarding();
@@ -94,7 +119,7 @@ describe('Jeder Screen hat einen Ausweg', () => {
       .createCase({ deviceId: 'd', entry: 'foto', problemLabel: 'Wasserablauf' });
     const r = await renderRouter(APP, { initialUrl: '/' });
     await act(async () => {
-      require('expo-router').router.push(`/fall/${c.id}`);
+      router.push(`/fall/${c.id}`);
     });
     expect(r.getPathname()).toBe(`/fall/${c.id}`);
     await fireEvent.press(screen.getByRole('button', { name: de.a11y.close }));
@@ -117,6 +142,158 @@ describe('Jeder Screen hat einen Ausweg', () => {
     await fireEvent.press(screen.getByRole('button', { name: de.closeCase.confirmCancel }));
     expect(useAppStore.getState().cases[c.id]?.status).toBe('abgebrochen');
     expect(useAppStore.getState().cases[c.id]?.cancelReason).toBe(de.closeCase.reasons[0]);
+  });
+});
+
+describe('Schließen-Sheet nach den Regeln (R-01)', () => {
+  /** Ein selbst gelöster Fall und ein Fall in der Reparatur, beide ohne Schutz */
+  function closedAndRepair() {
+    finishOnboarding();
+    const s = useAppStore.getState();
+    const deviceId = s.devices[0]!.id;
+    const done = s.createCase({ deviceId, entry: 'symptom', problemLabel: 'Tür geht nicht auf' });
+    s.runCommand(done.id, 'anleitung_starten');
+    s.runCommand(done.id, 'selbst_geloest');
+    const repair = s.createCase({ deviceId, entry: 'foto', problemLabel: 'Wasserablauf' });
+    s.escalate(repair.id);
+    s.setFinding(repair.id, 'reparatur', 'fachkraft');
+    s.requestBooking({
+      caseId: repair.id,
+      kind: 'reparatur',
+      partnerId: demoConfig.partners[0]!.id,
+      slotLabel: demoConfig.slots[0],
+      selfPay: true,
+    });
+    return { done: done.id, repair: repair.id };
+  }
+
+  const openSheet = () => fireEvent.press(screen.getByRole('button', { name: de.a11y.close }));
+
+  test('abgeschlossen: weder pausieren noch abbrechen, nur zur Übersicht', async () => {
+    const { done } = closedAndRepair();
+    const r = await renderRouter(APP, { initialUrl: `/fall/${done}/fallakte` });
+    await openSheet();
+    expect(screen.getByText(de.closeCase.closedText)).toBeTruthy();
+    expect(screen.queryByRole('button', { name: de.closeCase.later })).toBeNull();
+    expect(screen.queryByRole('button', { name: de.closeCase.cancel })).toBeNull();
+    await fireEvent.press(screen.getByRole('button', { name: de.closeCase.leave }));
+    expect(r.getPathname()).toBe('/');
+    expect(useAppStore.getState().cases[done]).toMatchObject({ status: 'erledigt' });
+    expect(useAppStore.getState().cases[done]?.pausedAt).toBeUndefined();
+  });
+
+  // Seit Entscheidung Nr. 34 geht auch Abbrechen. Später weitermachen bleibt, wie es war.
+  test('in der Reparatur: später weitermachen ja, der Fall bleibt in der Reparatur', async () => {
+    const { repair } = closedAndRepair();
+    expect(useAppStore.getState().cases[repair]?.status).toBe('in_reparatur');
+    const r = await renderRouter(APP, { initialUrl: `/fall/${repair}` });
+    await openSheet();
+    expect(screen.getByRole('button', { name: de.closeCase.cancel })).toBeTruthy();
+    await fireEvent.press(screen.getByRole('button', { name: de.closeCase.later }));
+    expect(r.getPathname()).toBe('/');
+    expect(useAppStore.getState().cases[repair]).toMatchObject({ status: 'in_reparatur' });
+    expect(useAppStore.getState().cases[repair]?.pausedAt).toBeDefined();
+    expect(useAppStore.getState().bookings.find((b) => b.caseId === repair)?.status).toBe(
+      'angefragt',
+    );
+  });
+
+  test('in der Reparatur abbrechen (Nr. 34): erst die Absage an den Betrieb, dann mit Grund', async () => {
+    const { repair } = closedAndRepair();
+    const partner = demoConfig.partners[0]!.name;
+    const r = await renderRouter(APP, { initialUrl: `/fall/${repair}` });
+    await openSheet();
+    await fireEvent.press(screen.getByRole('button', { name: de.closeCase.cancel }));
+    expect(screen.getByText(de.closeCase.partnerNotice(partner))).toBeTruthy();
+    expect(screen.getByText(de.closeCase.costsOpen(partner))).toBeTruthy();
+    expect(screen.getByRole('button', { name: de.closeCase.confirmCancel })).toBeDisabled();
+    // „Weitermachen“ lässt alles, wie es war
+    await fireEvent.press(screen.getByRole('button', { name: de.closeCase.keep }));
+    expect(useAppStore.getState().cases[repair]?.status).toBe('in_reparatur');
+    await openSheet();
+    await fireEvent.press(screen.getByRole('button', { name: de.closeCase.cancel }));
+    await fireEvent.press(screen.getByRole('radio', { name: de.closeCase.reasons[0] }));
+    await fireEvent.press(screen.getByRole('button', { name: de.closeCase.confirmCancel }));
+    expect(r.getPathname()).toBe('/');
+    const s = useAppStore.getState();
+    expect(s.cases[repair]).toMatchObject({
+      status: 'abgebrochen',
+      cancelReason: de.closeCase.reasons[0],
+    });
+    expect(s.bookings.find((b) => b.caseId === repair)?.status).toBe('storniert');
+    // Im Gespräch steht danach die Absage, ohne Zusage, dass es nichts kostet
+    await act(async () => router.push(`/fall/${repair}`));
+    expect(screen.getByText(de.thread.cancelled)).toBeTruthy();
+    expect(screen.getByText(de.closeCase.partnerNotice(partner))).toBeTruthy();
+    expect(screen.getByText(de.closeCase.costsOpen(partner))).toBeTruthy();
+    expect(screen.queryByText(/kostenlos|kostenfrei/i)).toBeNull();
+  });
+
+  // Gegenprüfung Nr. 31 bis 34 (F4, R3): Ist der Betrieb fertig, gibt es nichts mehr abzusagen.
+  // Das Sheet bietet nur „Später weitermachen“ und sagt, dass die Antwort ins Gespräch gehört.
+  test('der Betrieb ist fertig: kein „Fall abbrechen“, die Antwort gehört ins Gespräch', async () => {
+    const { repair } = closedAndRepair();
+    await renderRouter(APP, { initialUrl: `/fall/${repair}` });
+    await openSheet();
+    // Solange der Betrieb noch nicht fertig ist: Abbrechen, ohne den Satz
+    expect(screen.getByRole('button', { name: de.closeCase.cancel })).toBeTruthy();
+    expect(screen.queryByText(de.closeCase.repairDone)).toBeNull();
+    await act(async () => {
+      while (useAppStore.getState().simulateNext(repair));
+    });
+    expect(useAppStore.getState().bookings.find((b) => b.caseId === repair)?.status).toBe(
+      'erledigt',
+    );
+    expect(screen.queryByRole('button', { name: de.closeCase.cancel })).toBeNull();
+    expect(screen.getByText(de.closeCase.repairDone)).toBeTruthy();
+    expect(screen.getByRole('button', { name: de.closeCase.later })).toBeTruthy();
+    expect(useAppStore.getState().cases[repair]?.status).toBe('in_reparatur');
+  });
+
+  test('ohne Termin: Abbrechen ohne Satz zum Betrieb', async () => {
+    finishOnboarding();
+    const s = useAppStore.getState();
+    const c = s.createCase({
+      deviceId: s.devices[0]!.id,
+      entry: 'foto',
+      problemLabel: 'Wasserablauf',
+    });
+    s.escalate(c.id);
+    await renderRouter(APP, { initialUrl: `/fall/${c.id}` });
+    await openSheet();
+    await fireEvent.press(screen.getByRole('button', { name: de.closeCase.cancel }));
+    expect(screen.queryByText(de.closeCase.partnerNotice(demoConfig.partners[0]!.name))).toBeNull();
+    expect(screen.queryByText(de.closeCase.costsOpen(demoConfig.partners[0]!.name))).toBeNull();
+  });
+
+  test('dunkel und mit 200 % Schrift, Farben aus dem Theme, 44 pt', async () => {
+    const scheme = jest.spyOn(RN, 'useColorScheme').mockReturnValue('dark');
+    const size = jest
+      .spyOn(RN, 'useWindowDimensions')
+      .mockReturnValue({ width: 390, height: 844, scale: 3, fontScale: 2 });
+    const { done, repair } = closedAndRepair();
+    await renderRouter(APP, { initialUrl: `/fall/${done}/fallakte` });
+    await openSheet();
+    expect(screen.getByText(de.closeCase.closedText)).toHaveStyle({
+      color: colors.dark.textBody,
+    });
+    const leave = screen.getByRole('button', { name: de.closeCase.leave });
+    expect(StyleSheet.flatten(leave.props.style).minHeight).toBeGreaterThanOrEqual(44);
+    await fireEvent.press(leave);
+
+    await act(async () => router.push(`/fall/${repair}`));
+    await openSheet();
+    await fireEvent.press(screen.getByRole('button', { name: de.closeCase.cancel }));
+    expect(screen.getByText(de.closeCase.costsOpen(demoConfig.partners[0]!.name))).toHaveStyle({
+      color: colors.dark.textBody,
+    });
+    const sheet = screen.container.queryAll((x) => x.props.accessibilityViewIsModal === true)[0]!;
+    for (const n of sheet.queryAll((x) => x.type === 'Text')) {
+      expect(n.props.allowFontScaling).not.toBe(false);
+      expect(n.props.maxFontSizeMultiplier ?? 2).toBeGreaterThanOrEqual(2);
+    }
+    scheme.mockRestore();
+    size.mockRestore();
   });
 });
 
@@ -180,14 +357,10 @@ describe('Zurück', () => {
 
   test('Wischgeste: Fall-Stack erlaubt die Zurück-Geste, das Modal lässt sich nicht wegwischen', () => {
     // Die Geste selbst ist nativ. Wir prüfen die Optionen, die sie steuern.
-    const fallLayout = require('../app/fall/_layout').default;
-    const rootSource = require('fs').readFileSync(require.resolve('../app/_layout.tsx'), 'utf8');
-    expect(fallLayout).toBeDefined();
+    const rootSource = fs.readFileSync(path.join(__dirname, '../app/_layout.tsx'), 'utf8');
+    expect(FallLayout).toBeDefined();
     expect(rootSource).toMatch(/presentation: 'fullScreenModal', gestureEnabled: false/);
-    const fallSource = require('fs').readFileSync(
-      require.resolve('../app/fall/_layout.tsx'),
-      'utf8',
-    );
+    const fallSource = fs.readFileSync(path.join(__dirname, '../app/fall/_layout.tsx'), 'utf8');
     expect(fallSource).toMatch(/gestureEnabled: true/);
   });
 });

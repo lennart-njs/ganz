@@ -8,11 +8,12 @@ import {
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { Appearance } from 'react-native';
 import { KeyboardProvider } from 'react-native-keyboard-controller';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
+import { RecoveryScreen } from '@/components/app/RecoveryScreen';
 import { useReduceMotion } from '@/components/ds';
 import { useAppStore } from '@/store/appStore';
 import { useCaseSimulation } from '@/store/useCaseSimulation';
@@ -26,6 +27,11 @@ SplashScreen.preventAutoHideAsync();
 // Ein Fall-Link öffnet das Modal über den Tabs, nicht als erste Karte.
 export const unstable_settings = { anchor: '(tabs)' };
 
+function AppStatusBar() {
+  const theme = useTheme();
+  return <StatusBar style={theme.scheme === 'dark' ? 'light' : 'dark'} />;
+}
+
 function RootStack() {
   const theme = useTheme();
   const onboardingDone = useAppStore((s) => s.onboardingDone);
@@ -34,33 +40,30 @@ function RootStack() {
   useGuideCatalogSync();
   useShareSync();
   return (
-    <>
-      <StatusBar style={theme.scheme === 'dark' ? 'light' : 'dark'} />
-      <Stack
-        screenOptions={{
-          headerShown: false,
-          contentStyle: { backgroundColor: theme.colors.bgPage },
-          // Systemübergänge. Bei „Bewegung reduzieren“ ohne Animation.
-          animation: reduceMotion ? 'none' : 'default',
-        }}
-      >
-        <Stack.Protected guard={!onboardingDone}>
-          <Stack.Screen name="(onboarding)" />
-        </Stack.Protected>
-        <Stack.Protected guard={onboardingDone}>
-          <Stack.Screen name="(tabs)" />
-          <Stack.Screen name="geraet/[id]" />
-          <Stack.Screen name="geraet/neu" />
-          <Stack.Screen name="schutz-verknuepfen" />
-          {/* Fall als modaler Stack (B-50). Kein Wegwischen nach unten: Schließen nur über X. */}
-          <Stack.Screen
-            name="fall"
-            options={{ presentation: 'fullScreenModal', gestureEnabled: false }}
-          />
-        </Stack.Protected>
-        <Stack.Screen name="galerie" />
-      </Stack>
-    </>
+    <Stack
+      screenOptions={{
+        headerShown: false,
+        contentStyle: { backgroundColor: theme.colors.bgPage },
+        // Systemübergänge. Bei „Bewegung reduzieren“ ohne Animation.
+        animation: reduceMotion ? 'none' : 'default',
+      }}
+    >
+      <Stack.Protected guard={!onboardingDone}>
+        <Stack.Screen name="(onboarding)" />
+      </Stack.Protected>
+      <Stack.Protected guard={onboardingDone}>
+        <Stack.Screen name="(tabs)" />
+        <Stack.Screen name="geraet/[id]" />
+        <Stack.Screen name="geraet/neu" />
+        <Stack.Screen name="schutz-verknuepfen" />
+        {/* Fall als modaler Stack (B-50). Kein Wegwischen nach unten: Schließen nur über X. */}
+        <Stack.Screen
+          name="fall"
+          options={{ presentation: 'fullScreenModal', gestureEnabled: false }}
+        />
+      </Stack.Protected>
+      <Stack.Screen name="galerie" />
+    </Stack>
   );
 }
 
@@ -72,7 +75,10 @@ export default function RootLayout() {
     SchibstedGrotesk_700Bold,
   });
 
-  const hydrated = useHydrated();
+  const status = useHydrated();
+  // Nach einem Fehler bleibt der Hinweis stehen, während er neu lädt. So blinkt nichts.
+  const [recovering, setRecovering] = useState(false);
+  const recovery = status === 'fehler' || (recovering && status === 'laedt');
   const appearance = useAppStore((s) => s.appearance);
   const scheme = appearance === 'hell' ? 'light' : appearance === 'dunkel' ? 'dark' : undefined;
 
@@ -80,7 +86,8 @@ export default function RootLayout() {
   useEffect(() => {
     Appearance.setColorScheme?.(scheme ?? 'unspecified');
   }, [scheme]);
-  const ready = (loaded || !!error) && hydrated;
+  // Lässt sich der Speicher nicht laden, zeigt die App den Hinweis statt des Splash-Screens.
+  const ready = (loaded || !!error) && (status !== 'laedt' || recovering);
 
   useEffect(() => {
     if (ready) SplashScreen.hideAsync();
@@ -93,7 +100,8 @@ export default function RootLayout() {
     <SafeAreaProvider>
       <KeyboardProvider>
         <ThemeProvider scheme={scheme}>
-          <RootStack />
+          <AppStatusBar />
+          {recovery ? <RecoveryScreen onBusyChange={setRecovering} /> : <RootStack />}
         </ThemeProvider>
       </KeyboardProvider>
     </SafeAreaProvider>

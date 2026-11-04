@@ -21,6 +21,7 @@ Quelle für Inhalte der Demo: `reference/demo-v1.0/Main.dc.html`. Nur als Spezif
 - Keine Hex-Werte außerhalb von `theme/`. Dark Mode, Dynamic Type bis 200 %, Screenreader-Labels, Trefferflächen ab 44 pt.
 - Keine Links zu Portalen in der App. Chats gibt es zwei: den Reparatur-Assistenten und, nach der Weitergabe, den Händler (Entscheidungen 6, 32). Der API-Schlüssel nie in die App.
 - Keine Datenweitergabe ohne Bestätigung. Kein Schadenfall ohne aktiven Tap. Keine Kostenzusage vor der Freigabe.
+- Keine Status-Vergleiche in Screens (`app/`, `components/`). Sie fragen die Regeln in `model/policies/` (`selectCaseFacts`, `can`, `availableActions`). Lint prüft das mit `ganz/kein-status-vergleich`.
 - Website: strenge Sicherheitsregeln in `website/site/.htaccess`. Kein Inline-CSS, kein Inline-JS. Nach Änderungen an `site.css` oder `site.js` die Versionsnummer `?v=` in allen HTML-Dateien erhöhen.
 
 ## Arbeitsweise

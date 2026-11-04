@@ -1,7 +1,8 @@
-import { useLocalSearchParams } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
+import { BindingSummary } from '@/components/app/BindingSummary';
 import { CaseScreen, useCaseId } from '@/components/app/CaseScreen';
 import { backToThread } from '@/components/nav/leaveCase';
 import {
@@ -17,27 +18,54 @@ import {
   Toast,
 } from '@/components/ds';
 import { demoConfig } from '@/config/demo.config';
+import { useCommand } from '@/hooks/useCommand';
+import { useNotificationDialog } from '@/hooks/useNotificationDialog';
 import { de } from '@/i18n/de';
-import { formatDecimal } from '@/i18n/format';
+import { formatDecimal, formatEuro } from '@/i18n/format';
 import { getManufacturer } from '@/lib/devices';
-import { partnerKind, serviceFor } from '@/lib/service';
+import { insurerShortName, partnerKind, serviceFor } from '@/lib/service';
 import { caseAppliance } from '@/lib/appliance';
-import { amountToPay, costsLine, requestAppointment } from '@/lib/booking';
+import {
+  amountToPay,
+  asksNotifications,
+  bindsLater,
+  costsLine,
+  requestAppointment,
+} from '@/lib/booking';
+import { scopeList } from '@/lib/consent';
+import { can, type ActionKey } from '@/model/policies/actions';
+import { selectCaseFacts } from '@/model/policies/caseFacts';
+import type { Cents } from '@/model/types';
 import { useAppStore } from '@/store/appStore';
 
 const t = de.appointment;
 
 /**
  * Betrieb und Termin: Betrieb, Zeitfenster, Adresse und Zusammenfassung vor dem Tap (B-29, B-32).
- * Muss die Nutzerin etwas zahlen, heißt der Button „Zahlungspflichtig buchen“ (§ 312j BGB).
+ * Steht ein Betrag fest, den die Nutzerin mit der Buchung zahlt, heißt der Button
+ * „Zahlungspflichtig buchen“ (§ 312j BGB): der Preis beim Selbstzahlen, nach der Freigabe die
+ * Selbstbeteiligung über 0 €. Während der Prüfung ist die Anfrage unverbindlich, der Button heißt
+ * „Termin anfragen“, und nach der Freigabe zeigt dieser Screen den eigenen Schritt mit
+ * „Zahlungspflichtig buchen“ (Entscheidung Nr. 31). Die Vor-Ort-Diagnose zahlt der Haushalt,
+ * einen Preis gibt es aber noch nicht. Sie bleibt „Termin anfragen“, den Preis nennt der Betrieb
+ * vorher (docs/recht/RECHTSFRAGEN.md Nr. 34 und 46).
+ * Ob es den Termin gibt, sagen die Regeln: nach der Ablehnung keiner auf Kosten des Versicherers
+ * (R-09), und höchstens einer je Art.
  */
 export default function Termin() {
   const caseId = useCaseId();
   const params = useLocalSearchParams<{ art?: string; zahlung?: string }>();
   const diagnosis = params.art === 'diagnose';
-  const selfPay = params.zahlung === 'selbst';
   const state = useAppStore();
   const c = state.cases[caseId];
+  const facts = selectCaseFacts(state, caseId);
+  // Während der Prüfung oder nach der Freigabe zählt ein alter Link mit zahlung=selbst nicht (R-07)
+  const selfPay = params.zahlung === 'selbst' && can(facts, 'termin_selbst');
+  const action: ActionKey = diagnosis
+    ? 'termin_diagnose'
+    : selfPay
+      ? 'termin_selbst'
+      : 'termin_versicherer';
   const quote = state.quotes.find((q) => q.id === c?.quoteId);
   const device = state.devices.find((d) => d.id === c?.deviceId);
   const address = state.household?.address;
@@ -47,18 +75,111 @@ export default function Termin() {
   const [toast, setToast] = useState<string>();
   const manufacturer = device ? getManufacturer(device.manufacturerId).name : '';
   const partner = partners.find((p) => p.id === partnerId);
-  const claimPending = c?.status === 'freigabe_noetig';
+  const claimPending = facts?.claim === 'in_pruefung';
 
   const paid = amountToPay(state, caseId, selfPay, diagnosis) > 0;
+  const later = bindsLater(state, caseId, selfPay, diagnosis);
+  // Einmal anfragen: Ein zweiter Tap bucht nicht doppelt, eine Ablehnung bekommt einen ruhigen Satz
+  const book = useCommand(requestAppointment, () => backToThread(caseId));
+  // Der eigene Schritt nach der Freigabe oder dem Preis (Nr. 31, Nr. 33), mit dem Betrag der Karte
+  const bind = useCommand(
+    (shown: Cents) => useAppStore.getState().bookBinding(caseId, shown),
+    () => backToThread(caseId),
+  );
+  // „Nicht buchen“: Die unverbindliche Anfrage endet ohne Kosten (Nr. 33)
+  const decline = useCommand(
+    () => useAppStore.getState().declineBinding(caseId),
+    () => backToThread(caseId),
+  );
+  // Der Satz zu Mitteilungen steht nur da, wenn danach wirklich der Systemdialog kommt
+  const dialog = useNotificationDialog(state.notifications === 'offen');
+  const notify = asksNotifications(state, dialog);
+
+  // Ohne Fall kein Formular, nur ein Hinweis (R-18). Zurück und X führen weiter heraus.
+  if (!c || !facts) {
+    return (
+      <CaseScreen title={de.screens.termin}>
+        <Text variant="body">{de.result.missing}</Text>
+      </CaseScreen>
+    );
+  }
+
+  // Ein angefragter Termin wartet auf „Zahlungspflichtig buchen“ (Nr. 31, Nr. 33): dieselbe Karte
+  // wie im Gespräch. Erst der Tap macht ihn verbindlich, „Nicht buchen“ beendet die Anfrage.
+  if (can(facts, 'zahlungspflichtig_buchen') && facts.bindingDue) {
+    const due = facts.bindingDue;
+    const stepToast = bind.toast ?? decline.toast;
+    return (
+      <CaseScreen
+        title={de.screens.termin}
+        footer={
+          <>
+            {stepToast ? <Toast message={stepToast} style={styles.toast} /> : null}
+            <ActionBar meta={due.booking.slotLabel} sub={due.booking.provider.name}>
+              <Button label={t.requestPaid} onPress={() => bind.run(due.amount)} />
+              {can(facts, 'nicht_buchen') ? (
+                <Button
+                  label={t.decline}
+                  accessibilityHint={t.declineSub}
+                  variant="secondary"
+                  onPress={() => decline.run()}
+                />
+              ) : null}
+            </ActionBar>
+          </>
+        }
+      >
+        <Text variant="h1" accessibilityRole="header">
+          {t.bindingTitle}
+        </Text>
+        <Text variant="bodyLg">{t.bindingAsk}</Text>
+        <BindingSummary due={due} partName={quote?.repair.partName} />
+      </CaseScreen>
+    );
+  }
+
+  // Diesen Termin gibt es nicht: Nach der Ablehnung entscheidest du neu, sonst geht es im Gespräch
+  // weiter. Den Preis fürs Selbstzahlen siehst du vor der Wahl.
+  if (!can(facts, action)) {
+    const rejected = can(facts, 'selbst_zahlen_nach_ablehnung');
+    return (
+      <CaseScreen
+        title={de.screens.termin}
+        footer={
+          <ActionBar>
+            {rejected && facts.quote ? (
+              <Button
+                label={de.costs.rejectedSelfPay(formatEuro(facts.quote.repair.total))}
+                size="lg"
+                fullWidth
+                onPress={() => router.setParams({ zahlung: 'selbst' })}
+              />
+            ) : null}
+            <Button
+              label={de.thread.toThread}
+              variant={rejected ? 'secondary' : 'primary'}
+              size={rejected ? 'md' : 'lg'}
+              fullWidth
+              onPress={() => backToThread(caseId)}
+            />
+          </ActionBar>
+        }
+      >
+        <Text variant="h1" accessibilityRole="header">
+          {rejected ? de.costs.rejectedTitle(insurerShortName(state, caseId)) : t.unavailableTitle}
+        </Text>
+      </CaseScreen>
+    );
+  }
 
   const request = () => {
     if (!slot || !partnerId) {
       setToast(t.pickSlot);
       return;
     }
-    requestAppointment({ caseId, partnerId, slot, selfPay, diagnosis });
-    backToThread(caseId);
+    book.run({ caseId, partnerId, slot, selfPay, diagnosis, noticeShown: notify });
   };
+  const notice = book.toast ?? toast;
 
   const summary: [string, string][] = [
     [t.facts.partner, partner?.name ?? ''],
@@ -73,7 +194,7 @@ export default function Termin() {
       title={de.screens.termin}
       footer={
         <>
-          {toast ? <Toast message={toast} style={styles.toast} /> : null}
+          {notice ? <Toast message={notice} style={styles.toast} /> : null}
           <ActionBar meta={slot ?? ''} sub={partner?.name}>
             <Button
               label={paid ? t.requestPaid : t.request}
@@ -136,6 +257,9 @@ export default function Termin() {
         <FactList items={summary} ruled />
       </Card>
       {claimPending ? <InfoBox>{t.pending}</InfoBox> : null}
+      {later ? (
+        <Text variant="body">{t.pendingBinding(insurerShortName(state, caseId))}</Text>
+      ) : null}
       {!diagnosis && quote?.repair.partName ? (
         <Text variant="body">
           {t.ecoDesign(
@@ -144,7 +268,12 @@ export default function Termin() {
           )}
         </Text>
       ) : null}
-      <Text variant="meta">{t.shares}</Text>
+      {/* Dieselben Kategorien speichert die Bestätigung mit der Anfrage (R-14) */}
+      <Text variant="meta">{t.shares(scopeList('weitergabe_betrieb'))}</Text>
+      {/* Danach fragt das System nach Mitteilungen. Die Einwilligung speichert diesen Satz. */}
+      {notify ? <Text variant="meta">{t.notificationsNotice}</Text> : null}
+      {/* Mit dem Tap gestempelt (lib/legalTexts.ts, verbindliche_buchung) */}
+      {paid && partner ? <Text variant="body">{t.bindingNotice(partner.name)}</Text> : null}
     </CaseScreen>
   );
 }

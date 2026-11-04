@@ -21,7 +21,7 @@ function Row({ label, children }: { label: string; children: ReactNode }) {
   );
 }
 
-/** Demo-Steuerung: Szenarien, Selbstbeteiligung, Hinweise, Status weiter, Galerie, Zurücksetzen */
+/** Demo-Steuerung: Szenarien, Selbstbeteiligung, Hinweise, Status weiter, Galerie, Startstand, Zurücksetzen */
 export function DemoControlSheet({ visible, onClose }: { visible: boolean; onClose: () => void }) {
   const demo = useAppStore((s) => s.demo);
   const setDemo = useAppStore((s) => s.setDemo);
@@ -87,6 +87,8 @@ export function DemoControlSheet({ visible, onClose }: { visible: boolean; onClo
       <Row label={t.deductible}>
         <SegmentedControl
           accessibilityLabel={t.deductible}
+          // Für e2e/selbstbeteiligung.yaml: demo-selbstbeteiligung-5000
+          testID="demo-selbstbeteiligung"
           options={(['0', '5000'] as const).map((v) => ({
             value: v,
             label: formatEuro(Number(v)),
@@ -95,6 +97,13 @@ export function DemoControlSheet({ visible, onClose }: { visible: boolean; onClo
           onChange={(v) => setDemo({ deductible: Number(v) })}
         />
       </Row>
+      {/* Beide Wege nach „Problem besteht weiter“: Nachbesserung oder neue Runde (Nr. 32) */}
+      <Checkbox
+        label={t.repairLongAgo}
+        sub={t.repairLongAgoSub}
+        checked={demo.repairLongAgo}
+        onChange={(v) => setDemo({ repairLongAgo: v })}
+      />
       <Checkbox
         label={t.hints}
         sub={t.hintsSub}
@@ -114,6 +123,17 @@ export function DemoControlSheet({ visible, onClose }: { visible: boolean; onClo
         onPress={() => {
           onClose();
           router.push('/galerie');
+        }}
+      />
+      <Button
+        label={t.demoStart}
+        variant="secondary"
+        fullWidth
+        accessibilityHint={t.demoStartHint}
+        onPress={() => {
+          onClose();
+          useAppStore.getState().loadDemoStart();
+          router.navigate('/');
         }}
       />
       <Button

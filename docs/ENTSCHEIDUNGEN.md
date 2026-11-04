@@ -39,6 +39,44 @@ Lennart: „Die Formular/Chat logik macht noch nicht richtig sinn. Das muss ein 
 4. **Selbstbeteiligung im Pitch:** Standard 0 €. In der Konfiguration auf einen Betrag umschaltbar, dann mit Button „Zahlungspflichtig buchen“.
 5. **Termin:** Anfrage „vorbehaltlich Freigabe“.
 
+## Zukunftsplan (03.11.2026)
+
+Nummern der ganz-Linie, hier „ganz Nr. …“. Neue Nummern 38–59 folgen (Schritt 7 der Übertragung, `docs/ANNAHMEN.md`).
+
+Lennart im Chat: „setze den plan um“. Damit ist `docs/ZUKUNFTSPLAN.md` freigegeben. Die Schritte stehen in `docs/BUILD_PLAN.md` Abschnitt 8.
+
+Offen, mit Empfehlung im Zukunftsplan Abschnitt 6. Bis zur Antwort gilt die dort genannte Empfehlung oder die strengere Variante. Die Nummern setzen die bestehenden fort.
+
+- [x] 15. Branch und PR je Schritt (Ende Woche 1). Ja, siehe Nr. 35.
+- [ ] 16. Wirkung eines Widerrufs bei lit. b (vor Phase 3a). Bis dahin: Die Simulation hält bei Widerruf an. Teil entschieden: Abbrechen in der Reparatur geht (Nr. 34). Offen bleibt „Anfrage zurückziehen“ gegen „Weitergabe beenden“.
+- [ ] 17. Eigener Build für den Pitch, Apple Developer Program als Organisation (Antrag Woche 1)
+- [ ] 18. Host für den Assistenten, später EU-Inferenz und Kerndaten
+- [ ] 19. Pflichthinweis nach Art. 50 KI-VO (vor dem Gate in Phase 4)
+- [ ] 20. Crash-Reporting als Opt-in (vor Phase 4)
+- [ ] 21. Co-Branding statt vollem Whitelabel (vor Phase 3b)
+- [ ] 22. Rolle von ganz nach DSGVO: Hypothese vor Phase 3a, Bestätigung vor Phase 5
+- [ ] 23. Concierge-Pilot nach Gate echte Daten, mit Pilotvertrag
+- [ ] 24. Anmeldung und Personen je Haushalt (vor Phase 5)
+- [ ] 25. Löschfristen (Entwurf Ende Phase 4)
+- [ ] 26. Lizenz und Haftung der Anleitungen (vor dem Gate in Phase 4)
+- [ ] 27. Selbstzahler im Pilot und Pflichten als Vermittler (vor Phase 6)
+- [ ] 28. Assistent für externe Testerinnen (vor dem Gate in Phase 4)
+- [ ] 29. Einzelfall mit Einwilligung für Hersteller (vor Phase 6)
+- [ ] 30. Fehlererkennung und Videoanbieter im Pilot (vor Phase 5)
+
+## Nach Phase 1 (04.11.2026)
+
+Nummern der ganz-Linie, hier „ganz Nr. …“. Neue Nummern 38–59 folgen (Schritt 7 der Übertragung, `docs/ANNAHMEN.md`).
+
+Antworten von Lennart im Chat auf die offenen Punkte im Bericht zu Phase 1. Der Anwalt prüft die Rechtsfragen trotzdem. Bis dahin gilt, was hier steht.
+
+31. **Selbstbeteiligung bei einem Termin vorbehaltlich Freigabe (Rechtsfrage 46):** Ein verbindlicher Schritt nach der Freigabe. Solange Kranich prüft, ist die Terminanfrage unverbindlich. Der Button heißt „Termin anfragen“, und es gibt keinen Betrag als Schuld. Nach „Kranich hat freigegeben“ zeigt das Gespräch eine Zusammenfassung mit Betrieb, Zeitfenster und Selbstbeteiligung, dazu den Button „Zahlungspflichtig buchen“. Erst nach diesem Tap bestätigt der Betrieb den Termin. Bei 0 € Selbstbeteiligung gibt es keinen zweiten Schritt. Ergänzt Nr. 4 und Nr. 5.
+32. **Misslungene Reparatur (Rechtsfrage 47):** Es kommt auf den Zeitraum an. Läuft die gesetzliche Gewährleistung für die Reparatur noch, bessert der Betrieb nach. Dann gibt es keine neue Schadenmeldung und keine neuen Kosten für den Haushalt. Nach Ablauf beginnt eine neue Runde wie bisher. Annahme bis zur Antwort des Anwalts: 2 Jahre ab Abschluss der Reparatur (§ 634a Abs. 1 Nr. 1 BGB). Der Wert steht in `config/demo.config.ts`.
+33. **Vor-Ort-Diagnose ohne festen Preis (Rechtsfrage 34):** Lennart: „Ja“. Ausgelegt als: Die App fragt mit „Termin anfragen“ an, unverbindlich. Der Betrieb nennt den Preis vor dem Termin. Dann folgt derselbe verbindliche Schritt wie in Nr. 31, mit Preis und „Zahlungspflichtig buchen“. Ohne diesen Tap gibt es keinen Termin.
+34. **Abbrechen während der Reparatur (zu Nr. 16):** Ja. Ein Fall lässt sich auch in der Reparatur abbrechen, der Betrieb bekommt die Absage. Die App sagt nicht zu, dass dabei keine Kosten entstehen (§ 648 BGB, Frage an den Anwalt).
+35. **Branch und PR (Nr. 15):** Ja. Die Arbeit läuft über einen PR, die CI muss grün sein. Mergen tut Lennart.
+36. **CLAUDE.md und `.claude/settings.json`:** Lennart erlaubt der Sitzung, die Zeile „Keine Status-Vergleiche in Screens“ in CLAUDE.md einzutragen und das Lesen von `.env` zu sperren.
+
 ## Werte für `config/demo.config.ts`
 
 Alles fiktiv und als Beispielwert gekennzeichnet.

@@ -1,12 +1,18 @@
 import { Linking } from 'react-native';
-import { act, fireEvent, renderRouter, screen } from 'expo-router/testing-library';
+import { act, fireEvent, renderRouter, screen, within } from 'expo-router/testing-library';
+import { router } from 'expo-router';
 
+import { CASE_FILE_CARD } from '@/components/app/CaseFileCard';
 import { guides } from '@/data/guides';
 import { de } from '@/i18n/de';
+import { latestDiagnosis } from '@/lib/caseView';
+import { chatContext } from '@/lib/chat/context';
 import { services } from '@/services';
 import { useAppStore } from '@/store/appStore';
+import { APP } from '@/test/app';
+import * as regressions from '@/test/regressions';
+import { unwrap } from '@/test/result';
 
-const APP = './app';
 const cameraMock = jest.requireMock('expo-camera').__permission;
 let taps = 0;
 const tap = async (name: string | RegExp) => {
@@ -144,6 +150,38 @@ describe('Foto → Ergebnis', () => {
     expect(r.getPathname()).toBe('/fall/neu');
   });
 
+  test('Details: Anleitung, „Passt nicht“ und Hilfe nur, solange die Regeln sie erlauben', async () => {
+    await photoFlow('display');
+    await act(async () => router.push('/fall/GS-24817/ergebnis'));
+    expect(screen.getByRole('button', { name: de.result.startGuide })).toBeTruthy();
+    expect(screen.getByRole('button', { name: de.result.doesNotFit })).toBeTruthy();
+    expect(screen.getByRole('button', { name: de.result.helpInstead })).toBeTruthy();
+    // Nach „Hilfe holen“ bleibt das Ergebnis lesbar, ohne die Wege der Selbsthilfe
+    await act(async () => useAppStore.getState().escalate('GS-24817'));
+    expect(screen.getByText(de.result.headline.wasserablauf)).toBeTruthy();
+    for (const name of [de.result.startGuide, de.result.doesNotFit, de.result.helpInstead]) {
+      expect(screen.queryByRole('button', { name })).toBeNull();
+    }
+  });
+
+  test('Details → „Anleitung starten“ geht in der laufenden Anleitung im Gespräch weiter (B-05, Entscheidung 25)', async () => {
+    const r = await photoFlow('display');
+    const s = useAppStore.getState();
+    const run = unwrap(s.startGuide('GS-24817', 'ablauf'));
+    s.moveGuideStep(run.id, 'next');
+    s.moveGuideStep(run.id, 'next');
+    await act(async () => router.push('/fall/GS-24817/ergebnis'));
+    // Die Leiste sagt, wo es weitergeht
+    expect(screen.getByText(de.a11y.stepOf(3, guides.ablauf.steps.length))).toBeTruthy();
+    await tap(de.result.startGuide);
+    // Die Anleitung läuft im Gespräch: dort steht der dritte Schritt als aktueller Schritt
+    expect(r.getPathname()).toBe('/fall/GS-24817');
+    expect(screen.getByRole('header', { name: guides.ablauf.steps[2]!.t })).toBeTruthy();
+    const after = useAppStore.getState();
+    expect(after.cases['GS-24817']?.guideRunIds).toEqual([run.id]);
+    expect(after.guideRuns[run.id]).toMatchObject({ currentStep: 2, completedSteps: [0, 1] });
+  });
+
   test('Kamera abgelehnt: Hinweis und Link zu den Einstellungen', async () => {
     cameraMock.current = { granted: false, canAskAgain: false, status: 'denied' };
     const spy = jest.spyOn(Linking, 'openSettings').mockResolvedValue();
@@ -177,5 +215,80 @@ describe('Kein Text sagt Kosten zu', () => {
   test('das Ergebnis nennt Prüfung und Selbstbeteiligung', async () => {
     await photoFlow('display');
     expect(screen.getByText(de.result.costNote('Kranich', '0 €'))).toBeTruthy();
+  });
+});
+
+describe('„Passt nicht“ verwirft das Ergebnis', () => {
+  /** Startseite → Foto → Ergebnis → „Passt nicht“ → anderes Symptom, wie R-04 */
+  async function rejectedResult() {
+    regressions.start();
+    regressions.addWasher();
+    const r = await renderRouter(APP, { initialUrl: '/' });
+    await regressions.tap(new RegExp(`^${de.home.searchTitle}`));
+    await regressions.tap(new RegExp(`^${de.problem.photo}`));
+    await regressions.tap(de.camera.shutter);
+    await regressions.flush(10);
+    const id = 'GS-24817';
+    expect(r.getPathname()).toBe(`/fall/${id}`);
+    await regressions.tap(de.result.doesNotFit);
+    await regressions.tap(new RegExp(`^${de.problems[2]!.label}`));
+    await regressions.flush();
+    return { id, r };
+  }
+
+  test('Assistent, Fachkraft und Versicherer bekommen das abgelehnte Ergebnis nicht mehr', async () => {
+    const { id } = await rejectedResult();
+    const s = useAppStore.getState();
+    const c = s.cases[id]!;
+    expect(c.problemLabel).toBe(de.problems[2]!.label);
+    // Das Ergebnis bleibt im Verlauf, gilt aber nicht mehr
+    const old = s.diagnoses.find((d) => d.caseId === id && d.source === 'fehlererkennung');
+    expect(old?.discardedAt).toBeDefined();
+    expect(latestDiagnosis(s, c, 'fehlererkennung')).toBeUndefined();
+    expect(chatContext(s, id)).toMatchObject({
+      problem: de.problems[2]!.label,
+      errorPattern: undefined,
+      displayMessage: undefined,
+    });
+    // Vorschau für die Fachkraft im Gespräch, unter „Details“ (Entscheidung 20): ohne Zeile „Ergebnis“
+    await act(async () => {
+      unwrap(useAppStore.getState().escalate(id));
+      router.replace(`/fall/${id}`);
+    });
+    await fireEvent.press(screen.getAllByRole('button', { name: de.help.details }).at(-1)!);
+    const card = within(screen.getByTestId(CASE_FILE_CARD));
+    expect(card.getByText(de.help.facts.problem)).toBeTruthy();
+    expect(card.queryByText(de.help.facts.result)).toBeNull();
+  });
+
+  test('im Gespräch bleibt das verworfene Ergebnis stehen, aber ohne „Details“', async () => {
+    const { id, r } = await rejectedResult();
+    await act(async () => router.replace(`/fall/${id}`));
+    await regressions.flush();
+    expect(r.getPathname()).toBe(`/fall/${id}`);
+    // Die Überschrift des Ergebnisses steht noch im Verlauf
+    expect(screen.getAllByText(de.result.headline.wasserablauf).length).toBeGreaterThan(0);
+    // „Details“ öffnete sonst „Noch kein Ergebnis.“
+    expect(screen.queryByTestId('details-ergebnis')).toBeNull();
+  });
+
+  test('ein neues Foto im selben Fall ist wieder das Ergebnis', async () => {
+    const { id } = await rejectedResult();
+    await act(async () => {
+      unwrap(
+        useAppStore.getState().addDiagnosis({
+          caseId: id,
+          photoIds: [],
+          mode: 'display',
+          errorPattern: 'wasserablauf',
+          confidence: 'hoch',
+          confidenceScore: 1,
+          source: 'fehlererkennung',
+        }),
+      );
+    });
+    const s = useAppStore.getState();
+    expect(latestDiagnosis(s, s.cases[id]!, 'fehlererkennung')?.discardedAt).toBeUndefined();
+    expect(chatContext(s, id)?.errorPattern).toBe('wasserablauf');
   });
 });

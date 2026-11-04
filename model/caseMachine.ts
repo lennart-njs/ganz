@@ -15,6 +15,7 @@ import type {
   ISODateTime,
   Quote,
 } from './types';
+import { ok, refuse, type Refusal, type Result } from './result';
 
 export type CaseCommand =
   | 'anleitung_starten'
@@ -28,6 +29,7 @@ export type CaseCommand =
   | 'selbst_zahlen'
   | 'repariert'
   | 'problem_besteht_weiter'
+  | 'nachbesserung_verlangen'
   | 'abbrechen';
 
 export const TRANSITIONS: Record<CaseStatus, Partial<Record<CaseCommand, CaseStatus>>> = {
@@ -46,8 +48,23 @@ export const TRANSITIONS: Record<CaseStatus, Partial<Record<CaseCommand, CaseSta
   },
   freigegeben: { termin_bestaetigt: 'in_reparatur', abbrechen: 'abgebrochen' },
   abgelehnt: { selbst_zahlen: 'in_reparatur', abbrechen: 'abgebrochen' },
-  in_reparatur: { repariert: 'erledigt', problem_besteht_weiter: 'eskaliert' },
-  erledigt: { problem_besteht_weiter: 'eskaliert' },
+  // Abbrechen auch in der Reparatur (Entscheidung Nr. 34): Der Betrieb bekommt die Absage.
+  // „Problem besteht weiter“ in der Gewährleistung: Der Betrieb bessert nach (Nr. 32), sonst
+  // beginnt eine neue Runde mit Hilfe holen.
+  in_reparatur: {
+    repariert: 'erledigt',
+    problem_besteht_weiter: 'eskaliert',
+    nachbesserung_verlangen: 'nachbesserung',
+    abbrechen: 'abgebrochen',
+  },
+  // Hilft auch die Nachbesserung nicht, beginnt eine neue Runde. Eine zweite Nachbesserung derselben
+  // Reparatur gibt es nicht, die weiteren Rechte klärt der Anwalt (Rechtsfrage 53).
+  nachbesserung: {
+    repariert: 'erledigt',
+    problem_besteht_weiter: 'eskaliert',
+    abbrechen: 'abgebrochen',
+  },
+  erledigt: { problem_besteht_weiter: 'eskaliert', nachbesserung_verlangen: 'nachbesserung' },
   abgebrochen: {},
 };
 
@@ -64,6 +81,7 @@ export const ALL_COMMANDS: CaseCommand[] = [
   'selbst_zahlen',
   'repariert',
   'problem_besteht_weiter',
+  'nachbesserung_verlangen',
   'abbrechen',
 ];
 
@@ -102,19 +120,24 @@ export function isClosed(status: CaseStatus): boolean {
   return status === 'erledigt' || status === 'abgebrochen';
 }
 
-/** Gültige Bestätigung: von dieser Person, für diesen Zweck und Fall, nicht widerrufen. */
+/**
+ * Gültige Bestätigung: von dieser Person, für diesen Zweck und Fall, nicht widerrufen.
+ * Mit recipientId nur für genau diesen Empfänger, z. B. den gebuchten Betrieb.
+ */
 export function findActiveConsent(
   consents: readonly Consent[],
   personId: Id,
   purpose: ConsentPurpose,
   caseId?: Id,
+  recipientId?: Id,
 ): Consent | undefined {
   return consents.find(
     (c) =>
       c.personId === personId &&
       c.purpose === purpose &&
       !c.revokedAt &&
-      (c.caseId === undefined || c.caseId === caseId),
+      (c.caseId === undefined || c.caseId === caseId) &&
+      (recipientId === undefined || c.recipient.id === recipientId),
   );
 }
 
@@ -159,6 +182,7 @@ const commandEvents: Partial<Record<CaseCommand, CaseEventType>> = {
   freigabe_abgelehnt: 'freigabe_entschieden',
   termin_bestaetigt: 'termin_bestaetigt',
   problem_besteht_weiter: 'problem_besteht_weiter',
+  nachbesserung_verlangen: 'nachbesserung_verlangt',
   abbrechen: 'abgebrochen',
 };
 
@@ -173,38 +197,89 @@ function event(
 }
 
 /**
+ * Prüft einen Befehl, ohne etwas zu ändern: Übergang, eigene Bestätigung und Vertrag bei der
+ * Schadenmeldung, Schadenmeldung bei der Freigabe. Ohne Einwand: undefined.
+ */
+export function checkCommand(
+  c: Case,
+  command: CaseCommand,
+  ctx: Pick<CommandContext, 'actor' | 'consents' | 'contractId'>,
+): Refusal | undefined {
+  if (!canTransition(c.status, command)) return { code: 'uebergang', from: c.status, command };
+  if (command === 'schaden_melden') {
+    // Die Schadenmeldung ist eine Erklärung der Versicherungsnehmerin (VVG § 30).
+    // Sie entsteht nur durch ihre eigene, aktive Bestätigung.
+    const own = ctx.actor.kind === 'haushalt' && ctx.actor.id === c.reportedBy;
+    const consent =
+      own && findActiveConsent(ctx.consents ?? [], c.reportedBy, 'weitergabe_versicherer', c.id);
+    if (!consent) return { code: 'bestaetigung', purpose: 'weitergabe_versicherer' };
+    if (!ctx.contractId) return { code: 'vertrag' };
+  }
+  if ((command === 'freigabe_erteilt' || command === 'freigabe_abgelehnt') && !c.claim) {
+    return { code: 'schadenfall' };
+  }
+  return undefined;
+}
+
+/** Fehler, den applyCommand bei einer Ablehnung wirft. So bleibt sein Vertrag, wie er war. */
+function refusalError(r: Refusal): Error {
+  switch (r.code) {
+    case 'uebergang':
+      return new TransitionError(r.from, r.command);
+    case 'bestaetigung':
+      return new ConsentRequiredError(r.purpose);
+    case 'vertrag':
+      return new Error('Schadenmeldung ohne Vertrag');
+    case 'schadenfall':
+      return new Error('Freigabe ohne Schadenmeldung');
+    default:
+      return new Error(`Befehl abgelehnt: ${r.code}`);
+  }
+}
+
+/** Wie applyCommand, aber mit Result statt Exception: erst prüfen, dann rechnen. */
+export function tryApplyCommand(
+  c: Case,
+  command: CaseCommand,
+  ctx: CommandContext,
+): Result<CommandResult> {
+  const refusal = checkCommand(c, command, ctx);
+  return refusal ? refuse(refusal) : ok(applyChecked(c, command, ctx));
+}
+
+/**
  * Führt einen Befehl aus. Wirft bei verbotenen Übergängen und fehlender Bestätigung.
- * Jeder Statuswechsel erzeugt ein Ereignis 'status_geaendert'.
+ * Jeder Statuswechsel erzeugt ein Ereignis 'status_geaendert'. Ohne Exception: tryApplyCommand.
  */
 export function applyCommand(c: Case, command: CaseCommand, ctx: CommandContext): CommandResult {
+  const refusal = checkCommand(c, command, ctx);
+  if (refusal) throw refusalError(refusal);
+  return applyChecked(c, command, ctx);
+}
+
+/** Rechnet einen geprüften Befehl aus (checkCommand ohne Einwand) */
+function applyChecked(c: Case, command: CaseCommand, ctx: CommandContext): CommandResult {
   const to = nextStatus(c.status, command);
   const events: CaseEvent[] = [];
   const next: Case = { ...c, status: to, updatedAt: ctx.now };
 
   if (command === 'schaden_melden') {
-    // Die Schadenmeldung ist eine Erklärung der Versicherungsnehmerin (VVG § 30).
-    // Sie entsteht nur durch ihre eigene, aktive Bestätigung.
-    if (ctx.actor.kind !== 'haushalt' || ctx.actor.id !== c.reportedBy) {
-      throw new ConsentRequiredError('weitergabe_versicherer');
-    }
+    // Geprüft in checkCommand: eigene, gültige Bestätigung und Vertrag
     const consent = findActiveConsent(
       ctx.consents ?? [],
       c.reportedBy,
       'weitergabe_versicherer',
       c.id,
-    );
-    if (!consent) throw new ConsentRequiredError('weitergabe_versicherer');
-    if (!ctx.contractId) throw new Error('Schadenmeldung ohne Vertrag');
+    )!;
     const claim: Claim = {
-      contractId: ctx.contractId,
+      contractId: ctx.contractId!,
       reportedAt: ctx.now,
       reportedBy: c.reportedBy,
       confirmationId: consent.id,
     };
     next.claim = claim;
     events.push(event(c, ctx, 'schaden_gemeldet', { contractId: ctx.contractId }));
-  } else if (command === 'freigabe_erteilt' || command === 'freigabe_abgelehnt') {
-    if (!c.claim) throw new Error('Freigabe ohne Schadenmeldung');
+  } else if ((command === 'freigabe_erteilt' || command === 'freigabe_abgelehnt') && c.claim) {
     const result = command === 'freigabe_erteilt' ? 'freigegeben' : 'abgelehnt';
     next.claim = {
       ...c.claim,
@@ -229,7 +304,7 @@ export function applyCommand(c: Case, command: CaseCommand, ctx: CommandContext)
   if (resolution) next.resolution = resolution;
   if (to === 'erledigt' || to === 'abgebrochen') next.closedAt = ctx.now;
   if (to === 'abgebrochen') next.cancelReason = ctx.cancelReason;
-  if (command === 'problem_besteht_weiter') {
+  if (command === 'problem_besteht_weiter' || command === 'nachbesserung_verlangen') {
     next.closedAt = undefined;
     next.resolution = undefined;
   }

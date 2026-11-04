@@ -4,8 +4,8 @@ import { StyleSheet } from 'react-native';
 import type { TestInstance } from 'test-renderer';
 
 import { useAppStore } from '@/store/appStore';
-
-const APP = './app';
+import { APP } from '@/test/app';
+import { unwrap } from '@/test/result';
 
 /** Fall auf dem Golden Path bis zum Abschluss, dazu ein zweiter offener Fall */
 function world() {
@@ -44,7 +44,7 @@ function world() {
     source: 'fehlererkennung',
     guideId: 'ablauf',
   });
-  const run = s.startGuide(c.id, 'ablauf');
+  const run = unwrap(s.startGuide(c.id, 'ablauf'));
   s.moveGuideStep(run.id, 'next');
   s.grantConsent({
     caseId: c.id,
@@ -59,13 +59,13 @@ function world() {
     entry: 'meldung',
     problemLabel: 'Wasserzulauf gestört',
   });
-  const g2 = s.startGuide(open.id, 'zulauf');
+  const g2 = unwrap(s.startGuide(open.id, 'zulauf'));
   s.moveGuideStep(g2.id, 'next');
   s.finishGuide(run.id, 'geht_nicht');
-  const v = s.requestVideoCall(c.id);
+  const v = unwrap(s.requestVideoCall(c.id));
   s.updateVideoCall(v.id, 'verbunden');
   s.setFinding(c.id, 'reparatur', 'fachkraft');
-  s.reportClaim(c.id, '1');
+  s.reportClaim(c.id);
   s.requestBooking({
     caseId: c.id,
     kind: 'reparatur',
@@ -161,6 +161,8 @@ const routes = (w: ReturnType<typeof world>) => [
   `/fall/${w.done}/videocall?video=${w.video}`,
   `/fall/${w.done}/kosten`,
   `/fall/${w.done}/termin?art=reparatur`,
+  // Das Formular: Der Fall mit Kostenvoranschlag, selbst bezahlt
+  `/fall/${w.claim}/termin?art=reparatur&zahlung=selbst`,
   `/fall/${w.done}/status`,
   `/fall/${w.done}/fallakte`,
   // Das Gespräch des Falls in drei Lagen: Anleitung mit Assistent, Kosten, abgeschlossen
