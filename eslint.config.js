@@ -37,6 +37,10 @@ const TEXT_PROPS = new Set([
   'accessibilityHint',
 ]);
 const isTextProp = (name) => TEXT_PROPS.has(name);
+// In JSX auch die Props der Gesprächsblasen, <UserSaid text={…} /> und <BotSays lines={…} />.
+// Als Schlüssel in Objekten sind sie oft Token wie { text: 'onPrimary' }, darum nur hier.
+const JSX_TEXT_ATTRIBUTES = new Set(['text', 'lines']);
+const isTextAttribute = (name) => isTextProp(name) || JSX_TEXT_ATTRIBUTES.has(name);
 // Methoden, deren Ergebnis die Texte der Liste enthält.
 const TEXT_METHODS = new Set(['join', 'filter']);
 const isStyleProp = (name) => name === 'style' || /Style$/.test(name);
@@ -173,7 +177,15 @@ const textAusI18n = {
       },
       JSXAttribute(node) {
         const name = attributeName(node);
-        if (!name || !isTextProp(name) || !node.value) return;
+        if (!name || !node.value || isStyleProp(name)) return;
+        // Auch in einer Prop, die nicht als Text-Prop bekannt ist: was nach Text aussieht, etwa
+        // <UserSaid text="Läuft wieder" /> oder name="Hausgeräte Brandt"
+        if (!isTextAttribute(name)) {
+          if (isString(node.value) && looksLikeText(node.value.value)) {
+            context.report({ node: node.value, messageId: 'text' });
+          }
+          return;
+        }
         if (node.value.type === 'Literal') {
           context.report({ node: node.value, messageId: 'text' });
         } else if (
@@ -285,12 +297,17 @@ const textInAusdruecken = {
     function check(root, { inChildren, attribute }) {
       // Ein einzelnes Literal und ein Template-Literal in einer Text-Prop meldet schon text-aus-i18n.
       if (root.type === 'Literal') return;
-      if (root.type === 'TemplateLiteral' && attribute && isTextProp(attribute)) return;
+      if (root.type === 'TemplateLiteral' && attribute && isTextAttribute(attribute)) return;
       const found = [];
       collectTexts(root, attribute, found);
+      const textAttribute = !!attribute && isTextAttribute(attribute);
       for (const { node, text, propName } of found) {
         if (!LETTER.test(text)) continue;
-        const isText = inChildren || (propName && isTextProp(propName)) || looksLikeText(text);
+        const isText =
+          inChildren ||
+          (propName && isTextProp(propName)) ||
+          (textAttribute && propName === attribute) ||
+          looksLikeText(text);
         if (isText) {
           reported.add(node);
           context.report({ node, messageId: 'text' });
@@ -361,20 +378,48 @@ function resolve(context, id) {
 }
 
 /**
- * Ein Name, der einen Status trägt: heißt status, kommt aus { status } oder { status: x } oder
- * wurde mit x.status belegt. So fällt auch const { status } = c; status === 'offen' auf.
+ * Ein Ausdruck, der einen Status liefert: x.status, auch durch ??, || und ?: hindurch
+ * (c?.status ?? 'offen'), und ein Selektor, der einen Status zurückgibt
+ * (useAppStore((s) => s.cases[id]?.status)).
+ */
+function isStatusExpr(node) {
+  if (!node) return false;
+  if (isStatusMember(node)) return true;
+  if (node.type === 'LogicalExpression') return isStatusExpr(node.left) || isStatusExpr(node.right);
+  if (node.type === 'ConditionalExpression') {
+    return isStatusExpr(node.consequent) || isStatusExpr(node.alternate);
+  }
+  if (node.type === 'CallExpression') {
+    return node.arguments.some(
+      (a) =>
+        (a.type === 'ArrowFunctionExpression' || a.type === 'FunctionExpression') &&
+        a.body.type !== 'BlockStatement' &&
+        isStatusExpr(a.body),
+    );
+  }
+  return false;
+}
+
+/**
+ * Ein Name, der einen Status trägt: heißt status, kommt aus { status } oder { status: x }, wurde
+ * mit einem Status belegt oder später damit überschrieben. So fällt auch const { status } = c;
+ * status === 'offen' auf, ebenso let x; x = c.status; x === 'offen'.
  */
 function isStatusName(context, node) {
   if (node.type !== 'Identifier') return false;
   if (node.name === 'status') return true;
   const variable = resolve(context, node);
-  return !!variable?.defs.some((def) => {
+  if (!variable) return false;
+  const declared = variable.defs.some((def) => {
     const prop = def.name.parent;
     if (prop?.type === 'Property' && prop.parent?.type === 'ObjectPattern') {
       return propertyName(prop) === 'status';
     }
-    return def.node.type === 'VariableDeclarator' && def.node.init && isStatusMember(def.node.init);
+    return def.node.type === 'VariableDeclarator' && def.node.init && isStatusExpr(def.node.init);
   });
+  return (
+    declared || variable.references.some((ref) => ref.isWrite() && isStatusExpr(ref.writeExpr))
+  );
 }
 
 const squash = (s) => s.replace(/\s+/g, ' ').trim();
@@ -425,7 +470,10 @@ const keinStatusVergleich = {
       if (entry) used.add(entry);
       else context.report({ node, messageId: 'vergleich' });
     };
-    const isStatus = (node) => isStatusMember(node) || isStatusName(context, node);
+    const isStatus = (node) =>
+      isStatusExpr(node) ||
+      isStatusName(context, node) ||
+      (node.type === 'ArrayExpression' && node.elements.some((e) => e && isStatus(e)));
     return {
       BinaryExpression(node) {
         if (!COMPARISON.has(node.operator)) return;
@@ -434,14 +482,18 @@ const keinStatusVergleich = {
       SwitchStatement(node) {
         if (isStatus(node.discriminant)) check(node.discriminant);
       },
-      // ['offen', 'selbsthilfe'].includes(c.status) ist auch ein Vergleich
+      // ['offen'].includes(c.status), OPEN.has(c.status), [c.status].includes('offen') und
+      // Object.is(c.status, 'erledigt') sind auch Vergleiche
       CallExpression(node) {
         const callee = node.callee;
-        if (
-          callee.type === 'MemberExpression' &&
-          !callee.computed &&
-          callee.property.name === 'includes' &&
-          node.arguments.some(isStatus)
+        if (callee.type !== 'MemberExpression' || callee.computed) return;
+        const method = callee.property.name;
+        const objectIs =
+          method === 'is' && callee.object.type === 'Identifier' && callee.object.name === 'Object';
+        if (objectIs && node.arguments.some(isStatus)) check(node);
+        else if (
+          (method === 'includes' || method === 'has') &&
+          (node.arguments.some(isStatus) || isStatus(callee.object))
         ) {
           check(node);
         }
@@ -513,8 +565,12 @@ module.exports = defineConfig([
     // Alle Texte in i18n/de.ts (CLAUDE.md). Gilt für Screens, Komponenten und Hooks. Die Chat-Route
     // (app/api/*+api.ts) läuft auf dem Server und zeigt nichts: Sie antwortet mit Schlüsseln wie
     // { error: 'voll' } und nennt Header wie 'Retry-After'.
-    files: ['app/**/*.{ts,tsx}', 'components/**/*.{ts,tsx}', 'hooks/**/*.{ts,tsx}'],
-    ignores: ['app/**/*+api.ts'],
+    files: [
+      'app/**/*.{js,jsx,ts,tsx}',
+      'components/**/*.{js,jsx,ts,tsx}',
+      'hooks/**/*.{js,jsx,ts,tsx}',
+    ],
+    ignores: ['app/**/*+api.{js,ts}'],
     rules: {
       'ganz/text-aus-i18n': 'error',
       'ganz/text-in-ausdruecken': 'error',
@@ -522,13 +578,17 @@ module.exports = defineConfig([
   },
   {
     // Keine Status-Vergleiche in Screens (Schritt 22). Ausnahmen nur mit Grund.
-    files: ['app/**/*.{ts,tsx}', 'components/**/*.{ts,tsx}', 'hooks/**/*.{ts,tsx}'],
+    files: [
+      'app/**/*.{js,jsx,ts,tsx}',
+      'components/**/*.{js,jsx,ts,tsx}',
+      'hooks/**/*.{js,jsx,ts,tsx}',
+    ],
     rules: {
       'ganz/kein-status-vergleich': ['error', { allow: STATUS_ALLOWLIST }],
     },
   },
   {
-    files: ['app/**/*.{ts,tsx}', 'components/**/*.{ts,tsx}'],
+    files: ['app/**/*.{js,jsx,ts,tsx}', 'components/**/*.{js,jsx,ts,tsx}'],
     ignores: ['components/ds/**'],
     rules: {
       'no-restricted-imports': [

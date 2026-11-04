@@ -305,6 +305,91 @@ describe('kein Status-Vergleich in Screens', () => {
   });
 });
 
+// Gegenprüfung zu Schritt 28: Diese Fälle fielen den Regeln nicht auf
+const gapsFixture = `import { BotSays, UserSaid } from '@/components/app/Conversation';
+import { Text } from '@/components/ds';
+import { useAppStore } from '@/store/appStore';
+
+const OPEN = new Set(['offen']);
+
+export function Gaps({ id }: { id: string }) {
+  const c = useAppStore((s) => s.cases[id]);
+  const st = useAppStore((s) => s.cases[id]?.status);
+  const viaHas = OPEN.has(c!.status);
+  const s2 = c?.status ?? 'offen';
+  const viaFallback = s2 === 'offen';
+  let x;
+  x = c?.status;
+  const viaAssignment = x === 'offen';
+  const viaArray = [c?.status].includes('offen');
+  const viaObjectIs = Object.is(c?.status, 'erledigt');
+  const viaSelector = st === 'erledigt';
+  const direct = (c?.status ?? 'offen') === 'offen';
+  return (
+    <>
+      <UserSaid text="Läuft wieder" />
+      <UserSaid text="ok" />
+      <BotSays lines={['ok']} hint="Ruf uns an" />
+      <Text name="Hausgeräte Brandt" testID="details-ergebnis">{String(viaHas && viaFallback && viaAssignment && viaArray && viaObjectIs && viaSelector && direct)}</Text>
+    </>
+  );
+}
+`;
+const gapsLines = gapsFixture.split('\n');
+const gapsLine = (snippet: string) => {
+  const i = gapsLines.findIndex((l) => l.includes(snippet));
+  if (i < 0) throw new Error(`Nicht in der Vorlage: ${snippet}`);
+  return i + 1;
+};
+
+describe('Lücken aus der Gegenprüfung', () => {
+  test('Text in den Props der Gesprächsblasen und Text in einer beliebigen Prop', async () => {
+    const found = await lint('app/__gaps-fixture__.tsx', gapsFixture);
+    const text = found.filter(([rule]) => rule.startsWith('ganz/text'));
+    expect(text).toEqual(
+      [
+        'text="Läuft wieder"',
+        'text="ok"',
+        "lines={['ok']} hint",
+        "lines={['ok']} hint",
+        'name="Hausgeräte Brandt"',
+      ].map((snippet): [string, number] => [
+        expect.stringMatching(/^ganz\/text-/) as unknown as string,
+        gapsLine(snippet),
+      ]),
+    );
+  });
+
+  test('Status über has, Object.is, ein Array, ??, eine spätere Zuweisung und einen Selektor', async () => {
+    const found = await lint('app/__gaps-fixture__.tsx', gapsFixture);
+    expect(found.filter(([rule]) => rule === STATUS)).toEqual(
+      [
+        'OPEN.has(c!.status)',
+        "viaFallback = s2 === 'offen'",
+        "viaAssignment = x === 'offen'",
+        '[c?.status].includes',
+        'Object.is(c?.status',
+        "viaSelector = st === 'erledigt'",
+        "direct = (c?.status ?? 'offen') === 'offen'",
+      ].map((snippet): [string, number] => [STATUS, gapsLine(snippet)]),
+    );
+  });
+
+  test('in .js und .jsx gelten dieselben Regeln wie in .tsx', async () => {
+    const source = `import { Text } from '@/components/ds';\n\nexport function X({ c }) {\n  const zu = c.status === 'erledigt';\n  return <Text style={{ color: '${hex}' }}>Hallo Welt, bitte warten {String(zu)}</Text>;\n}\n`;
+    const rules = (found: [string, number][]) => found.map(([rule]) => rule).sort();
+    const tsx = rules(await lint('app/__js-fixture__.tsx', source));
+    expect(tsx).toEqual(['ganz/farben-aus-theme', STATUS, 'ganz/text-aus-i18n'].sort());
+    for (const ext of ['js', 'jsx']) {
+      expect([ext, rules(await lint(`app/__js-fixture__.${ext}`, source))]).toEqual([ext, tsx]);
+      expect([ext, rules(await lint(`components/__js-fixture__.${ext}`, source))]).toEqual([
+        ext,
+        tsx,
+      ]);
+    }
+  });
+});
+
 describe('Abschluss Phase 1: keine Warnung (Schritt 28)', () => {
   test('npm run lint und der Lint auf geänderten Dateien dulden keine Warnung', () => {
     const pkg = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8')) as {

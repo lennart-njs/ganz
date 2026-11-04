@@ -1286,6 +1286,8 @@ export const de = {
       disabledHint: 'Wähle zuerst ein Zeitfenster.',
       fieldLabel: 'Vertragsnummer',
       fieldPlaceholder: 'z. B. AB-1234-5678',
+      /** Beispielwert im Feld mit Fehler */
+      fieldValue: 'KV-0000',
       fieldHint: 'Steht auf deinem Vertrag.',
       fieldError: 'Diese Nummer kennen wir nicht. Prüf sie bitte noch einmal.',
       noteLabel: 'Notiz für die Fachkraft (optional)',
