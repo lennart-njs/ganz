@@ -14,6 +14,7 @@ import { getManufacturer } from '@/lib/devices';
 import { findCatalogEntry } from '@/lib/guideCatalog';
 import { selectCaseFacts } from '@/model/policies/caseFacts';
 import { DATA_CATEGORIES, type DataCategory } from '@/model/policies/consentScopes';
+import { isFinding } from '@/model/policies/rounds';
 import { SHARE_FORMAT_VERSION, type SharedCaseFile, type SharedPhoto } from '@/model/sharing';
 import type { CaseEvent, CaseEventType, Consent, Diagnosis, Id, Photo } from '@/model/types';
 import type { AppData } from '@/store/appStore';
@@ -228,10 +229,11 @@ export function buildSharedCaseFile(
       closedAt: c.closedAt,
       resolution: c.resolution,
     },
-    // Ein verworfenes Ergebnis („Passt nicht“) geht nicht mit, wie an Assistent und Fachkraft
+    // Ein verworfenes Ergebnis („Passt nicht“) geht nicht mit, wie an Assistent und Fachkraft. Der
+    // Befund von Fachkraft oder Betrieb steht auch hier, darum nur mit seiner Kategorie.
     results: (has('ergebnis') ? c.diagnosisIds : [])
       .map((id) => s.diagnoses.find((d) => d.id === id))
-      .filter((d): d is Diagnosis => !!d && !d.discardedAt)
+      .filter((d): d is Diagnosis => !!d && !d.discardedAt && (!isFinding(d) || has('befund')))
       .map((d) => ({
         component: d.component,
         displayMessage: d.displayMessage,

@@ -776,6 +776,12 @@ const FIELDS: Record<
   protection: { category: 'versicherung', get: (f) => f.protection },
   'case.problemLabel': { category: 'problem', get: (f) => f.case.problemLabel },
   results: { category: 'ergebnis', get: (f) => f.results },
+  // Der Befund von Fachkraft oder Betrieb steht auch unter den Ergebnissen
+  'results (Befund)': {
+    category: 'befund',
+    within: 'ergebnis',
+    get: (f) => f.results.filter((r) => r.source === 'fachkraft' || r.source === 'betrieb'),
+  },
   guide: { category: 'schritte', get: (f) => f.guide },
   'guide.note': { category: 'notiz', within: 'schritte', get: (f) => f.guide?.note },
   finding: { category: 'befund', get: (f) => f.finding },
