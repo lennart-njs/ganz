@@ -206,6 +206,62 @@ describe('selectCaseFacts', () => {
     expect(factsOf(rejected, { bookings: [confirmed] }).bookings.reparatur?.id).toBe('t-2');
   });
 
+  test('Selbstbeteiligung aus dem Vertrag des Geräts, ohne Schutz 0', () => {
+    const contract = { id: 'vertrag-1', deductible: 5000 } as CaseFactsSource['contracts'][number];
+    expect(factsOf(makeCase(), { contracts: [contract] }).deductible).toBe(5000);
+    expect(factsOf(makeCase(), { contracts: [] }).deductible).toBe(0);
+  });
+
+  describe('Termin wartet auf „Zahlungspflichtig buchen“ (Entscheidung Nr. 31)', () => {
+    const contract = (deductible: number) => [
+      { id: 'vertrag-1', deductible } as CaseFactsSource['contracts'][number],
+    ];
+    const pending = booking('t-1', { subjectToApproval: true });
+    const approved = makeCase({ status: 'freigegeben', claim: claim('freigegeben') });
+
+    test('nach der Freigabe mit Selbstbeteiligung über 0 €: ja, mit diesem Betrag', () => {
+      expect(
+        factsOf(approved, { contracts: contract(5000), bookings: [pending] }).bindingDue,
+      ).toEqual({ booking: pending, amount: 5000, reason: 'selbstbeteiligung' });
+    });
+
+    test('mit 0 €, während der Prüfung, nach der Ablehnung und ohne Termin: nein', () => {
+      expect(factsOf(approved, { contracts: contract(0), bookings: [pending] }).bindingDue).toBe(
+        undefined,
+      );
+      const reviewing = makeCase({ status: 'freigabe_noetig', claim: claim() });
+      expect(
+        factsOf(reviewing, { contracts: contract(5000), bookings: [pending] }).bindingDue,
+      ).toBeUndefined();
+      const rejected = makeCase({ status: 'abgelehnt', claim: claim('abgelehnt') });
+      expect(
+        factsOf(rejected, { contracts: contract(5000), bookings: [pending] }).bindingDue,
+      ).toBeUndefined();
+      expect(factsOf(approved, { contracts: contract(5000) }).bindingDue).toBeUndefined();
+    });
+
+    test('schon verbindlich gebucht, bestätigt oder storniert: nein', () => {
+      for (const b of [
+        booking('t-1', { subjectToApproval: true, binding: { at: NOW, amount: 5000 } }),
+        booking('t-1', { subjectToApproval: true, status: 'bestaetigt' }),
+        booking('t-1', { subjectToApproval: true, status: 'storniert' }),
+      ]) {
+        expect(factsOf(approved, { contracts: contract(5000), bookings: [b] }).bindingDue).toBe(
+          undefined,
+        );
+      }
+    });
+
+    test('ein geschlossener Fall wartet auf nichts', () => {
+      for (const status of ['erledigt', 'abgebrochen'] as const) {
+        const closed = makeCase({ status, claim: claim('freigegeben') });
+        expect(
+          factsOf(closed, { contracts: contract(5000), bookings: [pending] }).bindingDue,
+        ).toBeUndefined();
+      }
+    });
+  });
+
   test('gültige Bestätigungen: für diesen Fall oder ohne Fall, nicht widerrufen', () => {
     const f = factsOf(makeCase(), {
       consents: [

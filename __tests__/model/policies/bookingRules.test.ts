@@ -30,6 +30,7 @@ function facts(status: CaseStatus, extra: Partial<CaseFacts> = {}): CaseFacts {
     closed: false,
     paused: false,
     hasContract: true,
+    deductible: 0,
     claim: 'keiner',
     bookings: {},
     bookingOpen: false,

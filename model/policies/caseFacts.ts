@@ -7,6 +7,7 @@ import type {
   Booking,
   Case,
   CaseStatus,
+  Cents,
   Consent,
   ConsentPurpose,
   Contract,
@@ -25,6 +26,20 @@ export type ClaimState = 'keiner' | 'in_pruefung' | 'freigegeben' | 'abgelehnt';
 
 /** Wer die Reparatur zahlt, sobald es feststeht */
 export type PayerKind = 'versicherer' | 'haushalt';
+
+/** Was du mit „Zahlungspflichtig buchen“ zahlst: die Selbstbeteiligung oder den Preis des Betriebs */
+export type BindingReason = 'selbstbeteiligung' | 'preis';
+
+/**
+ * Ein Termin, der auf deinen Tap „Zahlungspflichtig buchen“ wartet (Entscheidungen Nr. 31 und
+ * Nr. 33). Die Anfrage war unverbindlich. Jetzt steht fest, was du zahlst: nach der Freigabe die
+ * Selbstbeteiligung über 0 €, bei der Vor-Ort-Diagnose der Preis, den der Betrieb genannt hat.
+ */
+export interface BindingDue {
+  booking: Booking;
+  amount: Cents;
+  reason: BindingReason;
+}
 
 /** Weitergaben, ohne die Versicherer und Betrieb nicht weitermachen (R-12) */
 export type HoldPurpose = Extract<ConsentPurpose, 'weitergabe_versicherer' | 'weitergabe_betrieb'>;
@@ -56,6 +71,8 @@ export interface CaseFacts {
   paused: boolean;
   /** Das Gerät hat einen verknüpften Schutz */
   hasContract: boolean;
+  /** Selbstbeteiligung aus dem Vertrag des Geräts. Ohne Schutz 0. */
+  deductible: Cents;
   /** Kostenvoranschlag der laufenden Runde (model/policies/rounds.ts) */
   quote?: Quote;
   claim: ClaimState;
@@ -71,6 +88,11 @@ export interface CaseFacts {
   booking?: Booking;
   /** Dieser Termin ist noch nicht erledigt */
   bookingOpen: boolean;
+  /**
+   * Der Termin wartet auf „Zahlungspflichtig buchen“ (Nr. 31, Nr. 33). Bis zu diesem Tap bestätigt
+   * der Betrieb ihn nicht, auch nicht in der Simulation.
+   */
+  bindingDue?: BindingDue;
   /** Neuester Videocall oder Anfrage dazu */
   lastVideoSession?: VideoSession;
   /** Zwecke mit gültiger Bestätigung oder Einwilligung, für diesen Fall oder ohne Fall */
@@ -124,6 +146,28 @@ function payerOf(
 }
 
 /**
+ * Wartet ein Termin auf „Zahlungspflichtig buchen“? Nur ein angefragter, noch unverbindlicher
+ * Termin, für den du jetzt einen festen Betrag zahlst, und nur dort, wo der Betrieb ihn als Nächstes
+ * bestätigen würde: die Reparatur nach der Freigabe (freigegeben) mit Selbstbeteiligung über 0 €
+ * (Nr. 31). Während der Prüfung bleibt die Anfrage unverbindlich, nach einer Ablehnung verfällt sie.
+ * Selbstzahler binden sich schon mit der Buchung, der Preis steht davor.
+ */
+function bindingDueOf(
+  c: Case,
+  claim: ClaimState,
+  deductible: Cents,
+  bookings: Partial<Record<BookingKind, Booking>>,
+): BindingDue | undefined {
+  const open = (b: Booking | undefined): b is Booking =>
+    !!b && b.status === 'angefragt' && !b.binding;
+  const repair = bookings.reparatur;
+  if (c.status === 'freigegeben' && claim === 'freigegeben' && open(repair) && deductible > 0) {
+    return { booking: repair, amount: deductible, reason: 'selbstbeteiligung' };
+  }
+  return undefined;
+}
+
+/**
  * Übergangsregel für den Widerruf bei lit. b, bis Entscheidung Nr. 16 steht: Die Entscheidung des
  * Versicherers braucht weitergabe_versicherer, jeder Schritt des Betriebs weitergabe_betrieb an
  * genau den gebuchten Betrieb. Gibt den Zweck zurück, dessen Bestätigung fehlt.
@@ -154,7 +198,11 @@ export function selectCaseFacts(s: CaseFactsSource, caseId: Id): CaseFacts | und
   const c = s.cases[caseId];
   if (!c) return undefined;
   const device = s.devices.find((d) => d.id === c.deviceId);
-  const hasContract = !!device?.contractId && s.contracts.some((k) => k.id === device.contractId);
+  const contract = device?.contractId
+    ? s.contracts.find((k) => k.id === device.contractId)
+    : undefined;
+  const hasContract = !!contract;
+  const deductible = contract?.deductible ?? 0;
   const quote = c.quoteId ? s.quotes.find((q) => q.id === c.quoteId) : undefined;
   const claim = claimState(c);
 
@@ -194,12 +242,14 @@ export function selectCaseFacts(s: CaseFactsSource, caseId: Id): CaseFacts | und
     closedAs: c.status === 'erledigt' || c.status === 'abgebrochen' ? c.status : undefined,
     paused: !!c.pausedAt,
     hasContract,
+    deductible,
     quote,
     claim,
     payer: payerOf(c, claim, hasContract, quote, bookings.reparatur),
     bookings,
     booking,
     bookingOpen: !!booking && booking.status !== 'erledigt',
+    bindingDue: bindingDueOf(c, claim, deductible, bookings),
     lastVideoSession: s.videoSessions.filter((v) => v.caseId === caseId).at(-1),
     activeConsents,
     hold: holdOf(c, s.consents, booking),

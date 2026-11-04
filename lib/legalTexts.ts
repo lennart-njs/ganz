@@ -117,6 +117,15 @@ export const LEGAL_TEXTS = {
     scope: 'weitergabe_betrieb',
     parts: () => [de.appointment.shares(scopeList('weitergabe_betrieb'))],
   },
+  /**
+   * „Zahlungspflichtig buchen“ (§ 312j BGB, Entscheidung Nr. 31): der Satz dazu und der Button.
+   * Betrieb ist der gebuchte, nicht der Betrieb der Fachkraft. Zeitfenster, Auftrag und Betrag
+   * hält das Ereignis zahlungspflichtig_gebucht daneben fest.
+   */
+  verbindliche_buchung: {
+    version: '2026-11-1',
+    parts: (n) => [de.appointment.bindingNotice(n.fachbetrieb), de.appointment.requestPaid],
+  },
   /** Profil: Einzelfälle an den Hersteller (lit. a) */
   hersteller_einzelfall: {
     version: '2026-11-1',

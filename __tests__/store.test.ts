@@ -2,9 +2,15 @@ import type { StateStorage } from 'zustand/middleware';
 
 import { demoConfig } from '@/config/demo.config';
 import { de } from '@/i18n/de';
+import { demoNames, textStamp } from '@/lib/legalTexts';
 import { availableActions, can } from '@/model/policies/actions';
 import { selectCaseFacts } from '@/model/policies/caseFacts';
-import { createAppStore, selectCaseEvents, selectOpenCases } from '@/store/appStore';
+import {
+  createAppStore,
+  nextSimulationDue,
+  selectCaseEvents,
+  selectOpenCases,
+} from '@/store/appStore';
 import type { StoreEnv } from '@/store/env';
 import { unwrap } from '@/test/result';
 
@@ -372,7 +378,9 @@ describe('Schadenfall und Termin: erst prüfen, dann in einem Schritt schreiben'
     expect(without.writes()).toBe(0);
   });
 
-  test('selbst zahlen: Status, Bestätigung, Termin und Ereignisse auf einmal', () => {
+  // Selbstzahler buchen mit bekanntem Preis gleich verbindlich. Seit Entscheidung Nr. 31 hält
+  // dasselbe set den Tap „Zahlungspflichtig buchen“ mit Betrag und Text in der Fallakte fest.
+  test('selbst zahlen: Status, Bestätigung, Termin, verbindliche Buchung und Ereignisse auf einmal', () => {
     const { s, id, writes } = setup(false);
     const booking = unwrap(
       s().requestBooking({
@@ -385,12 +393,28 @@ describe('Schadenfall und Termin: erst prüfen, dann in einem Schritt schreiben'
     );
     expect(writes()).toBe(1);
     expect(s().cases[id]).toMatchObject({ status: 'in_reparatur', bookingId: booking.id });
-    expect(booking).toMatchObject({ provider: { id: partner.id }, subjectToApproval: false });
-    expect(
-      selectCaseEvents(s(), id)
-        .slice(-3)
-        .map((e) => e.type),
-    ).toEqual(['status_geaendert', 'weitergabe_bestaetigt', 'termin_angefragt']);
+    expect(booking).toMatchObject({
+      provider: { id: partner.id },
+      subjectToApproval: false,
+      binding: { amount: 18900 },
+    });
+    const events = selectCaseEvents(s(), id).slice(-4);
+    expect(events.map((e) => e.type)).toEqual([
+      'status_geaendert',
+      'weitergabe_bestaetigt',
+      'termin_angefragt',
+      'zahlungspflichtig_gebucht',
+    ]);
+    expect(events[3]!.payload).toEqual({
+      bookingId: booking.id,
+      kind: 'reparatur',
+      partner: partner.name,
+      slot: demoConfig.slots[0],
+      amount: 18900,
+      reason: 'preis',
+      separateStep: false,
+      ...textStamp('verbindliche_buchung', { ...demoNames(), fachbetrieb: partner.name }),
+    });
   });
 
   test('unbekannter Betrieb, unbekannter Fall und die Pumpe werden abgelehnt', () => {
@@ -511,6 +535,187 @@ describe('Termin-Regeln im Store (model/policies/bookingRules.ts)', () => {
     expect(s().bookings.filter((b) => b.status !== 'storniert')).toEqual([rebooked]);
     expect(rebooked).toMatchObject({ subjectToApproval: false, slotLabel: demoConfig.slots[1] });
     expect(s().cases[id]).toMatchObject({ status: 'in_reparatur', bookingId: rebooked.id });
+  });
+});
+
+describe('Zahlungspflichtig buchen erst nach der Freigabe (Entscheidung Nr. 31)', () => {
+  const partner = demoConfig.partners[1]!;
+  /** Gemeldet, Termin vorbehaltlich Freigabe angefragt, mit Selbstbeteiligung */
+  const setup = (
+    deductible: number,
+    claimScenario: 'freigeben' | 'ablehnen' = 'freigeben',
+    request = true,
+  ) => {
+    const store = createAppStore(memoryStorage(), testEnv());
+    const s = () => store.getState();
+    s().ensureHousehold();
+    s().setDemo({ claimScenario, deductible });
+    s().linkContract('vertragsnummer');
+    const device = s().addDevice({
+      category: 'waschmaschine',
+      manufacturerId: demoConfig.manufacturer.id,
+      model: demoConfig.device.model,
+      contractId: s().contracts[0]?.id,
+      identifiedBy: 'vertrag',
+    });
+    const id = s().createCase({ deviceId: device.id, entry: 'foto', problemLabel: 'x' }).id;
+    unwrap(s().escalate(id));
+    unwrap(s().setFinding(id, 'reparatur', 'fachkraft'));
+    unwrap(s().reportClaim(id));
+    const input = {
+      caseId: id,
+      kind: 'reparatur' as const,
+      partnerId: partner.id,
+      slotLabel: demoConfig.slots[2]!,
+      selfPay: false,
+    };
+    const booking = request ? unwrap(s().requestBooking(input)) : undefined;
+    return { store, s, id, input, booking };
+  };
+  const taps = (s: () => ReturnType<ReturnType<typeof createAppStore>['getState']>, id: string) =>
+    selectCaseEvents(s(), id).filter((e) => e.type === 'zahlungspflichtig_gebucht');
+
+  test.each([0, 5000])(
+    'während der Prüfung mit %i Cent: unverbindliche Anfrage, kein Betrag, kein Tap',
+    (deductible) => {
+      const { store, s, id, booking } = setup(deductible);
+      expect(booking).toMatchObject({ status: 'angefragt', subjectToApproval: true });
+      expect(booking!.binding).toBeUndefined();
+      expect(taps(s, id)).toEqual([]);
+      const f = selectCaseFacts(s(), id)!;
+      expect(f.bindingDue).toBeUndefined();
+      expect(can(f, 'zahlungspflichtig_buchen')).toBe(false);
+      const before = store.getState();
+      expect(s().bookBinding(id, deductible)).toEqual({
+        ok: false,
+        refusal: { code: 'regel', action: 'zahlungspflichtig_buchen' },
+      });
+      expect(store.getState()).toBe(before);
+    },
+  );
+
+  test('nach der Freigabe wartet der Termin auf den Tap, die Simulation überspringt ihn nie', () => {
+    const { s, id, booking } = setup(5000);
+    expect(s().simulateNext(id)).toBe(true);
+    expect(s().cases[id]?.status).toBe('freigegeben');
+    const f = selectCaseFacts(s(), id)!;
+    expect(f.bindingDue).toEqual({
+      booking: expect.objectContaining({ id: booking!.id }),
+      amount: 5000,
+      reason: 'selbstbeteiligung',
+    });
+    expect(availableActions(f)).toContain('zahlungspflichtig_buchen');
+    expect(nextSimulationDue(s(), id)).toBeUndefined();
+    for (let i = 0; i < 5; i++) expect(s().simulateNext(id)).toBe(false);
+    expect(s().cases[id]?.status).toBe('freigegeben');
+    expect(s().bookings.find((b) => b.id === booking!.id)?.status).toBe('angefragt');
+    expect(selectCaseEvents(s(), id).some((e) => e.type === 'termin_bestaetigt')).toBe(false);
+  });
+
+  test('der Tap bucht verbindlich, mit Betrag und Text in der Fallakte, dann bestätigt der Betrieb', () => {
+    const { store, s, id, booking } = setup(5000);
+    s().simulateNext(id);
+    let writes = 0;
+    const off = store.subscribe(() => {
+      writes += 1;
+    });
+    const bound = unwrap(s().bookBinding(id, 5000));
+    off();
+    expect(writes).toBe(1);
+    expect(bound).toMatchObject({
+      id: booking!.id,
+      status: 'angefragt',
+      binding: { amount: 5000 },
+    });
+    const [tap] = taps(s, id);
+    expect(tap).toMatchObject({ actor: { kind: 'haushalt' } });
+    expect(tap!.payload).toEqual({
+      bookingId: booking!.id,
+      kind: 'reparatur',
+      partner: partner.name,
+      slot: demoConfig.slots[2],
+      amount: 5000,
+      reason: 'selbstbeteiligung',
+      separateStep: true,
+      ...textStamp('verbindliche_buchung', { ...demoNames(), fachbetrieb: partner.name }),
+    });
+    expect(selectCaseFacts(s(), id)!.bindingDue).toBeUndefined();
+    expect(nextSimulationDue(s(), id)).toBeDefined();
+    // Ein zweiter Tap bucht nicht noch einmal
+    expect(s().bookBinding(id, 5000)).toEqual({
+      ok: false,
+      refusal: { code: 'regel', action: 'zahlungspflichtig_buchen' },
+    });
+    expect(s().simulateNext(id)).toBe(true);
+    expect(s().cases[id]?.status).toBe('in_reparatur');
+    expect(s().bookings.find((b) => b.id === booking!.id)?.status).toBe('bestaetigt');
+  });
+
+  test('ein anderer Betrag als der gezeigte wird nicht gebucht', () => {
+    const { store, s, id } = setup(5000);
+    s().simulateNext(id);
+    const before = store.getState();
+    expect(s().bookBinding(id, 0)).toEqual({
+      ok: false,
+      refusal: { code: 'betrag', shown: 0, due: 5000 },
+    });
+    expect(store.getState()).toBe(before);
+  });
+
+  test('ohne gültige Weitergabe an den Betrieb kein Tap, nach dem erneuten Bestätigen schon', () => {
+    const { store, s, id } = setup(5000);
+    s().simulateNext(id);
+    const share = s().consents.find((c) => c.purpose === 'weitergabe_betrieb' && !c.revokedAt)!;
+    s().revokeConsent(share.id);
+    expect(can(selectCaseFacts(s(), id), 'zahlungspflichtig_buchen')).toBe(false);
+    const before = store.getState();
+    expect(s().bookBinding(id, 5000)).toEqual({
+      ok: false,
+      refusal: { code: 'bestaetigung', purpose: 'weitergabe_betrieb' },
+    });
+    expect(store.getState()).toBe(before);
+    unwrap(s().renewTransfer(id));
+    expect(unwrap(s().bookBinding(id, 5000)).binding?.amount).toBe(5000);
+  });
+
+  test('mit 0 € gibt es keinen zweiten Schritt: Der Betrieb bestätigt nach der Freigabe', () => {
+    const { s, id, booking } = setup(0);
+    s().simulateNext(id);
+    expect(s().cases[id]?.status).toBe('freigegeben');
+    expect(selectCaseFacts(s(), id)!.bindingDue).toBeUndefined();
+    expect(s().simulateNext(id)).toBe(true);
+    expect(s().cases[id]?.status).toBe('in_reparatur');
+    expect(s().bookings.find((b) => b.id === booking!.id)?.binding).toBeUndefined();
+    expect(taps(s, id)).toEqual([]);
+  });
+
+  test('erst nach der Freigabe gebucht: verbindlich mit dem Tap beim Termin, kein zweiter Schritt', () => {
+    const { s, id, input } = setup(5000, 'freigeben', false);
+    s().simulateNext(id);
+    const booking = unwrap(s().requestBooking(input));
+    expect(booking).toMatchObject({ subjectToApproval: false, binding: { amount: 5000 } });
+    expect(taps(s, id).map((e) => e.payload)).toEqual([
+      expect.objectContaining({ amount: 5000, reason: 'selbstbeteiligung', separateStep: false }),
+    ]);
+    expect(selectCaseFacts(s(), id)!.bindingDue).toBeUndefined();
+    expect(s().simulateNext(id)).toBe(true);
+    expect(s().cases[id]?.status).toBe('in_reparatur');
+  });
+
+  test('lehnt Kranich ab, wird die Anfrage nie zur Buchung, selbst zahlen bindet mit dem Preis', () => {
+    const { s, id, booking, input } = setup(5000, 'ablehnen');
+    expect(s().simulateNext(id)).toBe(true);
+    expect(s().cases[id]?.status).toBe('abgelehnt');
+    expect(selectCaseFacts(s(), id)!.bindingDue).toBeUndefined();
+    expect(s().bookBinding(id, 5000).ok).toBe(false);
+    expect(s().simulateNext(id)).toBe(false);
+    const lapsed = s().bookings.find((b) => b.id === booking!.id)!;
+    expect(lapsed.binding).toBeUndefined();
+    expect(lapsed.status).toBe('angefragt');
+    const own = unwrap(s().requestBooking({ ...input, selfPay: true }));
+    expect(own.binding?.amount).toBe(18900);
+    expect(taps(s, id).map((e) => e.payload.bookingId)).toEqual([own.id]);
+    expect(s().bookings.find((b) => b.id === booking!.id)?.status).toBe('storniert');
   });
 });
 

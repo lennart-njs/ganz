@@ -115,6 +115,7 @@ export const de = {
     schaden_gemeldet: 'Schadenfall gemeldet',
     freigabe_entschieden: 'Freigabe entschieden',
     termin_angefragt: 'Termin angefragt',
+    zahlungspflichtig_gebucht: 'Zahlungspflichtig gebucht',
     termin_bestaetigt: 'Termin bestätigt',
     betrieb_unterwegs: 'Betrieb ist unterwegs',
     reparatur_abgeschlossen: 'Reparatur abgeschlossen',
@@ -351,6 +352,8 @@ export const de = {
       bestaetigung: 'Dafür fehlt noch deine Bestätigung.',
       vertrag: 'Dafür brauchst du einen verknüpften Schutz.',
       nurBetrieb: 'Dieses Teil baut immer der Betrieb ein.',
+      /** Der Betrag vor „Zahlungspflichtig buchen“ gilt nicht mehr (Nr. 31) */
+      betrag: 'Der Betrag hat sich geändert. Sieh ihn dir noch einmal an.',
       other: 'Das geht gerade nicht mehr. Im Gespräch siehst du, wie es weitergeht.',
     },
     failed: 'Das hat nicht geklappt. Versuch es gleich noch einmal.',
@@ -816,6 +819,8 @@ export const de = {
       address: 'Adresse',
       job: 'Auftrag',
       costs: 'Kosten',
+      /** Im verbindlichen Schritt: was du mit dem Tap zahlst (Nr. 31) */
+      due: 'Du zahlst',
     },
     jobRepair: (part: string) => `${part} tauschen, Original-Teil`,
     jobDiagnosis: 'Vor-Ort-Diagnose mit Kostenvoranschlag',
@@ -836,6 +841,24 @@ export const de = {
     costsDiagnosis:
       'Den Besuch zahlst du selbst. Den Preis nennt dir der Betrieb vor dem Termin. Den Kostenvoranschlag für die Reparatur siehst du danach.',
     pending: 'Der Termin ist vorbehaltlich Freigabe. Gibt es keine Freigabe, entscheidest du neu.',
+    /**
+     * Während der Prüfung mit Selbstbeteiligung über 0 €: Die Anfrage bindet dich noch nicht. Der
+     * verbindliche Schritt kommt nach der Freigabe (Entscheidung Nr. 31).
+     */
+    pendingBinding: (insurer: string) =>
+      `Die Anfrage ist unverbindlich. Gibt ${insurer} frei, buchst du danach verbindlich.`,
+    /** Nach der Freigabe: Zusammenfassung vor „Zahlungspflichtig buchen“ (Nr. 31) */
+    bindingTitle: 'Jetzt buchst du verbindlich.',
+    bindingAsk: 'Prüf die Zusammenfassung. Erst dein Tap macht die Buchung verbindlich.',
+    dueDeductible: (amount: string) => `Selbstbeteiligung ${amount}`,
+    /**
+     * Steht bei jedem „Zahlungspflichtig buchen“, direkt beim Termin und im Schritt nach der
+     * Freigabe. Gestempelt mit dem Tap (lib/legalTexts.ts, verbindliche_buchung).
+     */
+    bindingNotice: (partner: string) =>
+      `Mit „Zahlungspflichtig buchen“ buchst du verbindlich. Erst dann bestätigt ${partner} den Termin.`,
+    /** Nach dem Tap im eigenen Schritt */
+    booked: 'Verbindlich gebucht.',
     ecoDesign: (part: string, days: number) =>
       `Der Betrieb bekommt ${part} innerhalb von ${days} Arbeitstagen. So verlangt es das EU-Ökodesign-Recht.`,
     /** data: die Kategorien aus consentScopes (weitergabe_betrieb), mit de.common.list */
@@ -885,6 +908,9 @@ export const de = {
       bestaetigt: (partner: string, part: string) => `${partner} bringt ${part} mit.`,
       diagnoseFertig: 'Sieh dir die Kosten an und entscheide, wie es weitergeht.',
       rueckruf: 'Die Fachkraft ruft dich an. Deine Fallakte hat sie schon.',
+      /** Der Termin wartet auf „Zahlungspflichtig buchen“ (Nr. 31) */
+      buchen: (partner: string) =>
+        `Buch den Termin im Gespräch verbindlich. Erst dann bestätigt ${partner} ihn.`,
       /** Die Weitergabe für den nächsten Schritt ist widerrufen (R-12) */
       paused: 'Du hast die Weitergabe widerrufen. Darum geht es hier gerade nicht weiter.',
     },
@@ -895,6 +921,8 @@ export const de = {
       freigegeben: (insurer: string) => `${insurer} hat freigegeben`,
       abgelehnt: (insurer: string) => `${insurer} hat abgelehnt`,
       angefragt: 'Termin angefragt',
+      buchen: 'Verbindlich buchen',
+      gebucht: 'Verbindlich gebucht',
       bestaetigt: 'Termin bestätigt',
       unterwegs: 'Betrieb unterwegs',
       repariert: 'Repariert',
@@ -973,6 +1001,9 @@ export const de = {
       by: { mensch: 'von einem Menschen', regel: 'automatisch' },
       callback: (slot: string) => `Rückruf: ${slot}`,
       booking: (partner: string, slot: string) => `${partner} · ${slot}`,
+      /** Zahlungspflichtig gebucht: Betrieb, Zeitfenster und Betrag (Nr. 31) */
+      binding: (partner: string, slot: string, amount: string) =>
+        `${partner} · ${slot} · ${amount}`,
       stars: (n: number) => `${n} von 5 Sternen`,
       answer: (q: string, a: string) => `${q} ${a}`,
       note: (note: string) => `Notiz: ${note}`,

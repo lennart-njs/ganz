@@ -7,7 +7,7 @@ import { demoConfig } from '@/config/demo.config';
 import { guides } from '@/data/guides';
 import { de } from '@/i18n/de';
 import { caseAppliance, caseCategory, findingPattern } from '@/lib/appliance';
-import { textStamp, type LegalTextKey } from '@/lib/legalTexts';
+import { demoNames, textStamp, type LegalTextKey } from '@/lib/legalTexts';
 import { deleteInstallationId } from '@/services/installation';
 import { notifications } from '@/services/notifications';
 import {
@@ -25,7 +25,7 @@ import {
 } from '@/model/caseMachine';
 import { can } from '@/model/policies/actions';
 import { planBooking } from '@/model/policies/bookingRules';
-import { selectCaseFacts, type HoldPurpose } from '@/model/policies/caseFacts';
+import { selectCaseFacts, type BindingReason, type HoldPurpose } from '@/model/policies/caseFacts';
 import { scopedConsent } from '@/model/policies/consentScopes';
 import {
   isEmptyCase,
@@ -33,6 +33,7 @@ import {
   type OpenCaseArt,
   type OpenCaseOptions,
 } from '@/model/policies/openCase';
+import { amountDue, bookingCosts } from '@/model/policies/payer';
 import { closeRound, currentBookings } from '@/model/policies/rounds';
 import { ok, refuse, type Refused, type Result } from '@/model/result';
 import type {
@@ -250,6 +251,13 @@ export interface AppActions {
     partName?: string;
   }) => Result<Booking>;
   /**
+   * „Zahlungspflichtig buchen“ im eigenen Schritt nach der unverbindlichen Anfrage (Entscheidung
+   * Nr. 31): nur wo die Regel zahlungspflichtig_buchen gilt, mit gültiger Weitergabe an genau den
+   * gebuchten Betrieb und mit dem Betrag, den du gesehen hast (shown). Das Ereignis
+   * zahlungspflichtig_gebucht hält Text und Betrag fest. Erst danach bestätigt der Betrieb.
+   */
+  bookBinding: (caseId: Id, shown: Cents) => Result<Booking>;
+  /**
    * Antwort auf den Systemdialog oder den Schalter im Profil. „erlaubt“ speichert die Einwilligung
    * 'mitteilungen' (lit. a), alles andere widerruft sie (R-13).
    */
@@ -464,6 +472,44 @@ export function createAppStore(storage: StateStorage = AsyncStorage, env: StoreE
             diagnosis: d,
             case: { ...c, diagnosisIds: [...c.diagnosisIds, d.id], updatedAt: d.createdAt },
             events: isResult ? [ev] : [],
+          };
+        };
+
+        /**
+         * Der Tap auf „Zahlungspflichtig buchen“, ohne zu schreiben: der Termin mit binding und das
+         * Ereignis mit Betrag, Betrieb, Zeitfenster und dem Stempel des gezeigten Texts. Gleich für
+         * die Buchung mit bekanntem Preis und den Schritt nach der Freigabe (separateStep).
+         */
+        const draftBinding = (
+          b: Booking,
+          amount: Cents,
+          reason: BindingReason,
+          separateStep: boolean,
+        ): { booking: Booking; event: CaseEvent } => {
+          const at = env.now();
+          const stamp = textStamp('verbindliche_buchung', {
+            ...demoNames(),
+            fachbetrieb: b.provider.name,
+          });
+          return {
+            booking: { ...b, binding: { at, amount } },
+            event: {
+              id: env.newId('ev'),
+              caseId: b.caseId,
+              type: 'zahlungspflichtig_gebucht',
+              at,
+              actor: householdActor(),
+              payload: {
+                bookingId: b.id,
+                kind: b.kind,
+                partner: b.provider.name,
+                slot: b.slotLabel,
+                amount,
+                reason,
+                separateStep,
+                ...stamp,
+              },
+            },
           };
         };
 
@@ -1154,7 +1200,7 @@ export function createAppStore(storage: StateStorage = AsyncStorage, env: StoreE
                 text: textStamp(TRANSFER_TEXT.weitergabe_betrieb),
               }),
             );
-            const booking: Booking = {
+            const requestedBooking: Booking = {
               id: env.newId('termin'),
               caseId,
               kind,
@@ -1165,6 +1211,21 @@ export function createAppStore(storage: StateStorage = AsyncStorage, env: StoreE
               address: get().household?.address,
               createdAt: env.now(),
             };
+            // Steht fest, was du zahlst (Selbstzahler, oder nach der Freigabe die Selbstbeteiligung
+            // über 0 €), heißt der Button „Zahlungspflichtig buchen“, und die Buchung ist mit diesem
+            // Tap verbindlich. Während der Prüfung und ohne Preis bleibt sie eine Anfrage (Nr. 31).
+            const costs = bookingCosts(facts, kind, selfPay, facts.deductible);
+            const amount = amountDue(costs);
+            const bound =
+              amount > 0
+                ? draftBinding(
+                    requestedBooking,
+                    amount,
+                    costs?.payer === 'versicherer' ? 'selbstbeteiligung' : 'preis',
+                    false,
+                  )
+                : undefined;
+            const booking = bound?.booking ?? requestedBooking;
             const requested: CaseEvent = {
               id: env.newId('ev'),
               caseId,
@@ -1190,9 +1251,47 @@ export function createAppStore(storage: StateStorage = AsyncStorage, env: StoreE
                 booking,
               ],
               cases: { ...s.cases, [caseId]: { ...c, bookingId: booking.id } },
-              events: [...s.events, ...(paid?.value.events ?? []), ...confirmed.events, requested],
+              events: [
+                ...s.events,
+                ...(paid?.value.events ?? []),
+                ...confirmed.events,
+                requested,
+                ...(bound ? [bound.event] : []),
+              ],
             }));
             return ok(booking);
+          },
+
+          bookBinding: (caseId, shown) => {
+            const c = get().cases[caseId];
+            if (!c) return missingCase(caseId);
+            const facts = selectCaseFacts(get(), caseId)!;
+            const due = facts.bindingDue;
+            if (!due) return refuse({ code: 'regel', action: 'zahlungspflichtig_buchen' });
+            // Der Betrieb bekommt den Auftrag nur mit gültiger Weitergabe an genau ihn (lit. b)
+            const provider = due.booking.provider;
+            if (
+              !findActiveConsent(
+                get().consents,
+                c.reportedBy,
+                'weitergabe_betrieb',
+                caseId,
+                provider.id,
+              )
+            ) {
+              return refuse({ code: 'bestaetigung', purpose: 'weitergabe_betrieb' });
+            }
+            if (!can(facts, 'zahlungspflichtig_buchen')) {
+              return refuse({ code: 'regel', action: 'zahlungspflichtig_buchen' });
+            }
+            // Gebucht wird nur der Betrag, den du gesehen hast
+            if (shown !== due.amount) return refuse({ code: 'betrag', shown, due: due.amount });
+            const bound = draftBinding(due.booking, due.amount, due.reason, true);
+            set((s) => ({
+              bookings: s.bookings.map((b) => (b.id === bound.booking.id ? bound.booking : b)),
+              events: [...s.events, bound.event],
+            }));
+            return ok(bound.booking);
           },
 
           setNotifications: (value, shown = 'mitteilungen') => {
@@ -1250,6 +1349,9 @@ export function createAppStore(storage: StateStorage = AsyncStorage, env: StoreE
               return true;
             }
             if (!booking) return false;
+            // Ein Termin, für den du zahlst, gilt erst mit „Zahlungspflichtig buchen“ (Nr. 31).
+            // Bis dahin bestätigt der Betrieb nicht, weder per Timer noch per „Nächster Schritt“.
+            if (selectCaseFacts(get(), caseId)?.bindingDue) return false;
             const confirmable =
               c.status === 'freigegeben' ||
               c.status === 'in_reparatur' ||
@@ -1552,6 +1654,7 @@ export function activeBooking(s: AppData, caseId: Id): Booking | undefined {
 
 const bookingEvents: CaseEvent['type'][] = [
   'termin_angefragt',
+  'zahlungspflichtig_gebucht',
   'termin_bestaetigt',
   'betrieb_unterwegs',
   'freigabe_entschieden',
@@ -1571,6 +1674,8 @@ export function nextSimulationDue(s: AppData, caseId: Id): number | undefined {
   const c = s.cases[caseId];
   if (!c) return undefined;
   if (simulationHold(s, caseId)) return undefined;
+  // Wartet auf „Zahlungspflichtig buchen“: Hier passiert nichts ohne deinen Tap (Nr. 31)
+  if (selectCaseFacts(s, caseId)?.bindingDue) return undefined;
   const { claimMs, bookingStepMs } = demoConfig.timers;
   if (c.status === 'freigabe_noetig' && c.claim) return Date.parse(c.claim.reportedAt) + claimMs;
   const booking = activeBooking(s, caseId);

@@ -1,5 +1,5 @@
 import type { CaseFacts } from '@/model/policies/caseFacts';
-import { amountDue, bookingCosts } from '@/model/policies/payer';
+import { amountDue, bindsAfterApproval, bookingCosts } from '@/model/policies/payer';
 import type { Booking, BookingStatus, CaseStatus, Quote } from '@/model/types';
 
 const NOW = '2026-11-03T10:00:00+01:00';
@@ -39,6 +39,7 @@ function facts(status: CaseStatus, extra: Partial<CaseFacts> = {}): CaseFacts {
     closed: status === 'erledigt' || status === 'abgebrochen',
     paused: false,
     hasContract: false,
+    deductible: 0,
     claim: 'keiner',
     bookings: {},
     bookingOpen: false,
@@ -133,10 +134,28 @@ describe('Wer den Termin zahlt (model/policies/payer.ts)', () => {
     expect(bookingCosts(undefined, 'reparatur', true, DEDUCTIBLE)).toBeUndefined();
   });
 
-  test('was der Haushalt zahlt: Preis, Selbstbeteiligung oder nichts', () => {
+  // Entscheidung Nr. 31: Während der Prüfung ist die Anfrage unverbindlich. Die Selbstbeteiligung
+  // ist erst nach der Freigabe ein Betrag, den du mit der Buchung zahlst. Vorher galt sie schon.
+  test('was der Haushalt zahlt: Preis, Selbstbeteiligung nach der Freigabe oder nichts', () => {
     expect(amountDue({ payer: 'haushalt', amount: 18900 })).toBe(18900);
     expect(amountDue({ payer: 'haushalt' })).toBe(0);
-    expect(amountDue({ payer: 'versicherer', approved: false, deductible: 5000 })).toBe(5000);
+    expect(amountDue({ payer: 'versicherer', approved: true, deductible: 5000 })).toBe(5000);
+    expect(amountDue({ payer: 'versicherer', approved: false, deductible: 5000 })).toBe(0);
+    expect(amountDue({ payer: 'versicherer', approved: false, deductible: 0 })).toBe(0);
     expect(amountDue(undefined)).toBe(0);
+  });
+
+  test('verbindlich erst nach der Freigabe: nur während der Prüfung und nur über 0 € (Nr. 31)', () => {
+    expect(bindsAfterApproval({ payer: 'versicherer', approved: false, deductible: 5000 })).toBe(
+      true,
+    );
+    expect(bindsAfterApproval({ payer: 'versicherer', approved: false, deductible: 0 })).toBe(
+      false,
+    );
+    expect(bindsAfterApproval({ payer: 'versicherer', approved: true, deductible: 5000 })).toBe(
+      false,
+    );
+    expect(bindsAfterApproval({ payer: 'haushalt', amount: 18900 })).toBe(false);
+    expect(bindsAfterApproval(undefined)).toBe(false);
   });
 });

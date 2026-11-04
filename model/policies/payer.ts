@@ -42,8 +42,23 @@ export function bookingCosts(
   return undefined;
 }
 
-/** Was der Haushalt für den Termin zahlt. Ohne bekannten Preis: 0, der Betrieb nennt ihn vorher. */
+/**
+ * Was der Haushalt mit der Buchung verbindlich zahlt. Nur dann heißt der Button „Zahlungspflichtig
+ * buchen“. Ohne bekannten Preis: 0, der Betrieb nennt ihn vorher. Während der Versicherer prüft
+ * auch 0: Die Anfrage ist unverbindlich, die Selbstbeteiligung gilt erst nach der Freigabe, und
+ * dann kommt ein eigener Schritt (Entscheidung Nr. 31).
+ */
 export function amountDue(costs: BookingCosts | undefined): Cents {
   if (!costs) return 0;
-  return costs.payer === 'haushalt' ? (costs.amount ?? 0) : costs.deductible;
+  if (costs.payer === 'haushalt') return costs.amount ?? 0;
+  return costs.approved ? costs.deductible : 0;
+}
+
+/**
+ * Bindest du dich erst nach der Freigabe? Ja, wenn der Versicherer noch prüft und eine
+ * Selbstbeteiligung über 0 € fällig werden kann. Dann sagt die Zusammenfassung, dass die Anfrage
+ * unverbindlich ist und der verbindliche Schritt nach der Freigabe kommt (Nr. 31).
+ */
+export function bindsAfterApproval(costs: BookingCosts | undefined): boolean {
+  return !!costs && costs.payer === 'versicherer' && !costs.approved && costs.deductible > 0;
 }

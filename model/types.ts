@@ -179,6 +179,7 @@ export type CaseEventType =
   | 'schaden_gemeldet'
   | 'freigabe_entschieden'
   | 'termin_angefragt'
+  | 'zahlungspflichtig_gebucht'
   | 'termin_bestaetigt'
   | 'betrieb_unterwegs'
   | 'reparatur_abgeschlossen'
@@ -353,6 +354,13 @@ export interface Booking {
   slotStart?: ISODateTime;
   status: BookingStatus;
   subjectToApproval: boolean; // „vorbehaltlich Freigabe“
+  /**
+   * Der Tap auf „Zahlungspflichtig buchen“ (§ 312j BGB, Entscheidungen Nr. 31 und Nr. 33): wann
+   * und mit welchem Betrag. Fehlt bei einer unverbindlichen Anfrage und wo du nichts zahlst. Ein
+   * Termin, für den du etwas zahlst, gilt erst damit, vorher bestätigt der Betrieb ihn nicht.
+   * Das Ereignis zahlungspflichtig_gebucht hält Text und Betrag fest.
+   */
+  binding?: { at: ISODateTime; amount: Cents };
   address?: Address;
   completionPhotoId?: Id;
   rating?: { stars: 1 | 2 | 3 | 4 | 5; at: ISODateTime };

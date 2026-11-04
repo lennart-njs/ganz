@@ -20,12 +20,9 @@ export function costsOf(
   selfPay: boolean,
   diagnosis = false,
 ): BookingCosts | undefined {
-  return bookingCosts(
-    selectCaseFacts(s, caseId),
-    diagnosis ? 'vor_ort_diagnose' : 'reparatur',
-    selfPay,
-    s.demo.deductible,
-  );
+  const f = selectCaseFacts(s, caseId);
+  // Die Selbstbeteiligung aus dem Vertrag, wie im Store (setDemo hält sie gleich)
+  return bookingCosts(f, diagnosis ? 'vor_ort_diagnose' : 'reparatur', selfPay, f?.deductible ?? 0);
 }
 
 /** Was die Nutzerin selbst zahlt: nichts, die Selbstbeteiligung oder die ganze Reparatur */

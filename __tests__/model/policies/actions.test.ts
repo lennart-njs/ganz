@@ -46,6 +46,7 @@ function facts(status: CaseStatus, extra: Partial<CaseFacts> = {}): CaseFacts {
     closed: status === 'erledigt' || status === 'abgebrochen',
     paused: false,
     hasContract: false,
+    deductible: 0,
     claim: 'keiner',
     bookings: {},
     bookingOpen: false,
@@ -140,6 +141,7 @@ describe('Status-Maschine', () => {
       ...withContract,
       ...repair('erledigt'),
       activeConsents: ['weitergabe_fachkraft'],
+      bindingDue: { booking: booking('angefragt'), amount: 5000, reason: 'selbstbeteiligung' },
     });
 
   test.each(ALL_STATUSES)('%s: jede Aktion mit Befehl ist ein erlaubter Übergang', (status) => {
@@ -256,6 +258,57 @@ describe('Termine', () => {
     expect(
       can(facts('eskaliert', { bookings: { vor_ort_diagnose: diagnosis } }), 'termin_diagnose'),
     ).toBe(false);
+  });
+});
+
+describe('Verbindlich buchen nach der Freigabe (Entscheidung Nr. 31)', () => {
+  const waiting = booking('angefragt', { subjectToApproval: true });
+  const due = { booking: waiting, amount: 5000, reason: 'selbstbeteiligung' as const };
+  const approved = (extra: Partial<CaseFacts> = {}) =>
+    facts('freigegeben', {
+      ...withContract,
+      claim: 'freigegeben',
+      payer: 'versicherer',
+      deductible: 5000,
+      bookings: { reparatur: waiting },
+      booking: waiting,
+      bookingOpen: true,
+      ...extra,
+    });
+
+  test('der Termin wartet auf den Tap: „Zahlungspflichtig buchen“, sonst kein Termin', () => {
+    expect(availableActions(approved({ bindingDue: due }))).toEqual([
+      'zahlungspflichtig_buchen',
+      'pausieren',
+      'abbrechen',
+    ]);
+  });
+
+  test('ohne gültige Weitergabe an den Betrieb erst erneut bestätigen (R-12)', () => {
+    const held = approved({ bindingDue: due, hold: 'weitergabe_betrieb' });
+    expect(can(held, 'zahlungspflichtig_buchen')).toBe(false);
+    expect(can(held, 'weitergabe_erneuern')).toBe(true);
+  });
+
+  test('ohne wartenden Termin gibt es den Tap in keinem Status, auch nicht während der Prüfung', () => {
+    expect(can(approved(), 'zahlungspflichtig_buchen')).toBe(false);
+    for (const status of ALL_STATUSES) {
+      for (const claim of ['keiner', 'in_pruefung', 'freigegeben', 'abgelehnt'] as const) {
+        const f = facts(status, {
+          ...withContract,
+          claim,
+          deductible: 5000,
+          ...repair('angefragt'),
+        });
+        expect([status, claim, can(f, 'zahlungspflichtig_buchen')]).toEqual([status, claim, false]);
+      }
+    }
+  });
+
+  test('ein geschlossener Fall bucht nichts mehr, auch wenn ein Termin wartet', () => {
+    for (const status of ['erledigt', 'abgebrochen'] as const) {
+      expect(can(facts(status, { bindingDue: due }), 'zahlungspflichtig_buchen')).toBe(false);
+    }
   });
 });
 

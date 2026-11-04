@@ -23,6 +23,8 @@ export function refusalText(refusal: Refusal): string {
       return t.vertrag;
     case 'nur_betrieb':
       return t.nurBetrieb;
+    case 'betrag':
+      return t.betrag;
     default:
       return t.other;
   }

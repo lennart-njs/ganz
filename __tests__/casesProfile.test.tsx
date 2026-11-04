@@ -11,11 +11,15 @@ import { unwrap } from '@/test/result';
 
 const tap = (name: string | RegExp) => fireEvent.press(screen.getByRole('button', { name }));
 
-/** Ein Fall auf dem ganzen Golden Path und ein offener Pflege-Fall */
-function fullHistory() {
+/**
+ * Ein Fall auf dem ganzen Golden Path und ein offener Pflege-Fall. Mit Selbstbeteiligung bucht der
+ * Haushalt nach der Freigabe zahlungspflichtig (Entscheidung Nr. 31).
+ */
+function fullHistory(deductible = 0) {
   const s = useAppStore.getState();
   s.reset();
   useAppStore.setState({ onboardingDone: true });
+  s.setDemo({ deductible });
   s.linkContract('vertragsnummer');
   const device = s.addDevice({
     manufacturerId: 'miele',
@@ -59,7 +63,9 @@ function fullHistory() {
     slotLabel: 'Mo vormittags',
     selfPay: false,
   });
-  for (let i = 0; i < 4; i++) s.simulateNext(c.id);
+  s.simulateNext(c.id);
+  if (deductible) unwrap(s.bookBinding(c.id, deductible));
+  for (let i = 0; i < 3; i++) s.simulateNext(c.id);
   s.confirmRepair(c.id, true);
   s.rateBooking(useAppStore.getState().bookings[0]!.id, 5);
   const p = s.createCase({
@@ -132,6 +138,17 @@ describe('Fallakte', () => {
         ),
       ),
     ).toBeTruthy();
+  });
+
+  test('„Zahlungspflichtig gebucht“ steht mit Betrieb, Zeitfenster und Betrag in der Fallakte (Nr. 31)', async () => {
+    const { done } = fullHistory(5000);
+    expect(useAppStore.getState().cases[done]?.status).toBe('erledigt');
+    await renderRouter(APP, { initialUrl: `/fall/${done}/fallakte` });
+    const line = de.file.event.detail(
+      de.caseEvent.zahlungspflichtig_gebucht,
+      de.file.event.binding('Hausgeräte Brandt', 'Mo vormittags', '50 €'),
+    );
+    expect(screen.getByText(line)).toBeTruthy();
   });
 
   test('eine Freigabe zeigt Ergebnis und Akteur', () => {

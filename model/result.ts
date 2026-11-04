@@ -4,7 +4,7 @@
 import type { CaseCommand } from './caseMachine';
 import type { ActionKey } from './policies/actions';
 import type { BookingKind } from './policies/caseFacts';
-import type { CaseStatus, ConsentPurpose, Id } from './types';
+import type { CaseStatus, Cents, ConsentPurpose, Id } from './types';
 
 /** Was es unter der Nummer nicht gibt */
 export type MissingThing = 'fall' | 'anleitung' | 'videocall' | 'termin' | 'betrieb';
@@ -25,7 +25,12 @@ export type Refusal =
   /** Eine Freigabe braucht eine Schadenmeldung */
   | { readonly code: 'schadenfall' }
   /** Pumpe und Sensor bestellt und baut immer der Betrieb ein (Ökodesign) */
-  | { readonly code: 'nur_betrieb'; readonly part: string };
+  | { readonly code: 'nur_betrieb'; readonly part: string }
+  /**
+   * Der Betrag, den du vor „Zahlungspflichtig buchen“ gesehen hast, ist nicht der, der jetzt gilt.
+   * Gebucht wird nur, was du gesehen hast (§ 312j BGB, Nr. 31).
+   */
+  | { readonly code: 'betrag'; readonly shown: Cents; readonly due: Cents };
 
 export type RefusalCode = Refusal['code'];
 

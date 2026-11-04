@@ -3,6 +3,8 @@
 // „Problem melden“ je Gerät und die Welt draußen (Simulation, Call, Befund, Widerruf).
 // Kein Schritt darf werfen. Je Gerät gibt es höchstens einen offenen Fall, je Fall höchstens
 // eine offene Anleitung und je Art höchstens einen Termin, der zählt. Eine Ablehnung ändert nichts.
+// Ein Termin, für den der Haushalt zahlt, läuft nur mit dem Tap „Zahlungspflichtig buchen“, und
+// diesen Tap gibt es nie, solange der Versicherer prüft (Entscheidung Nr. 31).
 import { array, assert, boolean, constantFrom, integer, nat, property } from 'fast-check';
 import type { StateStorage } from 'zustand/middleware';
 
@@ -10,7 +12,7 @@ import { demoConfig } from '@/config/demo.config';
 import { ALL_ACTIONS, availableActions, type ActionKey } from '@/model/policies/actions';
 import { selectCaseFacts, type CaseFacts } from '@/model/policies/caseFacts';
 import type { OpenCaseOptions } from '@/model/policies/openCase';
-import type { Case, CaseEntry } from '@/model/types';
+import type { Booking, Case, CaseEntry, Claim } from '@/model/types';
 import {
   createAppStore,
   selectOpenCases,
@@ -123,6 +125,14 @@ function household(key: ActionKey, c: Case, f: CaseFacts, s: AppState): Step[] {
       return booking('reparatur', true);
     case 'termin_versicherer':
       return booking('reparatur', false);
+    case 'zahlungspflichtig_buchen': {
+      const due = f.bindingDue!;
+      return [
+        step(key, (x) => x.bookBinding(id, due.amount)),
+        // Ein anderer Betrag als der gezeigte wird nie gebucht
+        step(`${key} anderer Betrag`, (x) => x.bookBinding(id, due.amount + 100)),
+      ];
+    }
     case 'reparatur_bestaetigen':
       return [step(key, (x) => x.confirmRepair(id, true))];
     case 'problem_besteht_weiter':
@@ -189,19 +199,20 @@ const pick = (groups: Step[][], choice: number): Step => {
 };
 
 /** Womit eine Folge beginnt. Jeder Stand entsteht über dieselben Befehle wie in der App. */
-type Start = 'leer' | 'befund' | 'gemeldet' | 'diagnose' | 'reparatur';
-const STARTS: Start[] = ['leer', 'befund', 'gemeldet', 'diagnose', 'reparatur'];
+type Start = 'leer' | 'befund' | 'gemeldet' | 'vorbehaltlich' | 'diagnose' | 'reparatur';
+const STARTS: Start[] = ['leer', 'befund', 'gemeldet', 'vorbehaltlich', 'diagnose', 'reparatur'];
 
 function setup(
   start: Start,
   contract: boolean,
   devices: number,
   claimScenario: 'freigeben' | 'ablehnen',
+  deductible: number,
 ) {
   const store = createAppStore(nowhere, testEnv());
   const s = () => store.getState();
   s().ensureHousehold();
-  s().setDemo({ claimScenario });
+  s().setDemo({ claimScenario, deductible });
   if (contract) s().linkContract('vertragsnummer');
   for (let i = 0; i < devices; i++) {
     s().addDevice({
@@ -234,7 +245,10 @@ function setup(
   unwrap(s().updateVideoCall(call.id, 'verbunden'));
   unwrap(s().updateVideoCall(call.id, 'beendet'));
   unwrap(s().setFinding(id, 'reparatur', 'fachkraft'));
-  if (start === 'gemeldet' && contract) unwrap(s().reportClaim(id));
+  if ((start === 'gemeldet' || start === 'vorbehaltlich') && contract) unwrap(s().reportClaim(id));
+  // Termin vorbehaltlich Freigabe: Nach der Freigabe wartet er mit Selbstbeteiligung auf den Tap
+  // „Zahlungspflichtig buchen“ (Nr. 31)
+  if (start === 'vorbehaltlich' && contract) booking('reparatur', false);
   if (start === 'reparatur') {
     // Selbst gezahlt, der Betrieb ist fertig
     booking('reparatur', true);
@@ -286,6 +300,76 @@ function violation(s: AppState): string | undefined {
   return undefined;
 }
 
+const REACHED: Booking['status'][] = ['bestaetigt', 'unterwegs', 'erledigt'];
+
+/** Die Taps auf „Zahlungspflichtig buchen“ für einen Termin, so wie die Fallakte sie hält */
+const bindings = (s: AppState, bookingId: string) =>
+  s.events.filter(
+    (e) => e.type === 'zahlungspflichtig_gebucht' && e.payload.bookingId === bookingId,
+  );
+
+/**
+ * Zahlt der Haushalt für diesen Termin, nachgerechnet ohne die Regeln der App: Selbstzahler den
+ * Preis, nach der Freigabe die Selbstbeteiligung über 0 €. Vorbehaltlich Freigabe nur, wenn sie
+ * kam. Claim ist der Schadenfall der Runde, zu der der Termin gehört.
+ */
+function owes(b: Booking, claim: Claim | undefined, deductible: number): boolean {
+  if (b.kind !== 'reparatur') return false;
+  const approved = claim?.decision?.result === 'freigegeben';
+  if (b.subjectToApproval || approved) return approved && deductible > 0;
+  return true;
+}
+
+/**
+ * Nr. 31: Kein Termin bestätigt, unterwegs oder erledigt und kein Fall in der Reparatur mit
+ * einem Betrag, den der Haushalt zahlt, ohne den Tap „Zahlungspflichtig buchen“ in der Fallakte,
+ * mit genau dem Betrag am Termin. Kein verbindlicher Termin, solange der Versicherer prüft, und
+ * eine Anfrage vorbehaltlich Freigabe wird nach einer Ablehnung nie zur Buchung.
+ */
+function bindingViolation(s: AppState): string | undefined {
+  const deductible = s.contracts[0]?.deductible ?? 0;
+  for (const c of Object.values(s.cases)) {
+    const rounds = c.rounds ?? [];
+    /** Die Runde des Termins: eine frühere oder die laufende (model/policies/rounds.ts) */
+    const roundOf = (b: Booking) => rounds.find((r) => r.bookingIds.includes(b.id));
+    for (const b of s.bookings.filter((x) => x.caseId === c.id)) {
+      const round = roundOf(b);
+      const claim = round ? round.claim : c.claim;
+      const running =
+        REACHED.includes(b.status) ||
+        (c.status === 'in_reparatur' &&
+          !round &&
+          b.kind === 'reparatur' &&
+          b.status !== 'storniert');
+      const taps = bindings(s, b.id);
+      if (running && owes(b, claim, deductible)) {
+        if (!b.binding || taps.length !== 1) return `${b.id} läuft ohne Zahlungspflichtig buchen`;
+        if (taps[0]!.payload.amount !== b.binding.amount || b.binding.amount <= 0)
+          return `${b.id} mit anderem Betrag gebucht`;
+      }
+      if (b.kind === 'reparatur' && b.binding && claim && !claim.decision)
+        return `${b.id} verbindlich, während der Versicherer prüft`;
+      const lapsed = b.subjectToApproval && claim?.decision?.result === 'abgelehnt';
+      if (lapsed && (b.binding || taps.length || REACHED.includes(b.status)))
+        return `${b.id} nach der Ablehnung gebucht`;
+    }
+  }
+  return undefined;
+}
+
+/** Ein neuer Tap „Zahlungspflichtig buchen“ in diesem Schritt, während der Versicherer prüfte? */
+function bindingDuringReview(before: AppState, after: AppState): string | undefined {
+  for (const e of after.events.slice(before.events.length)) {
+    if (e.type !== 'zahlungspflichtig_gebucht') continue;
+    for (const s of [before, after]) {
+      const c = s.cases[e.caseId];
+      if (c?.status === 'freigabe_noetig' || (c?.claim && !c.claim.decision))
+        return `Zahlungspflichtig gebucht in ${e.caseId}, während der Versicherer prüft`;
+    }
+  }
+  return undefined;
+}
+
 const isRefused = (r: unknown): boolean =>
   typeof r === 'object' && r !== null && 'ok' in r && (r as { ok: unknown }).ok === false;
 
@@ -298,9 +382,11 @@ test('1.000 zufällige Folgen aus availableActions: keine Exception, je Gerät h
       boolean(),
       integer({ min: 1, max: 2 }),
       constantFrom('freigeben' as const, 'ablehnen' as const),
+      // Selbstbeteiligung wie in der Demo-Steuerung: 0 € oder 50 € (Entscheidung Nr. 4)
+      constantFrom(0, 5000),
       array(nat(), { minLength: 5, maxLength: 25, size: 'max' }),
-      (start, contract, devices, claimScenario, choices) => {
-        const store = setup(start, contract, devices, claimScenario);
+      (start, contract, devices, claimScenario, deductible, choices) => {
+        const store = setup(start, contract, devices, claimScenario, deductible);
         const trail: string[] = [start];
         for (const choice of choices) {
           const step = pick(menu(store), choice);
@@ -310,10 +396,11 @@ test('1.000 zufällige Folgen aus availableActions: keine Exception, je Gerät h
           steps += 1;
           if (step.action) seen.add(step.action);
           // Eine Ablehnung schreibt nichts
+          const after = store.getState();
           const problem =
-            isRefused(result) && store.getState() !== before
+            isRefused(result) && after !== before
               ? `Ablehnung hat geschrieben: ${step.name}`
-              : violation(store.getState());
+              : (violation(after) ?? bindingViolation(after) ?? bindingDuringReview(before, after));
           if (problem) throw new Error(`${problem} nach ${trail.join(' → ')}`);
         }
       },

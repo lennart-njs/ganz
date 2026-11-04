@@ -200,18 +200,37 @@ describe('R-07 „Du zahlst 189 €“ während der Prüfung', () => {
   // Mit einer Selbstbeteiligung über 0 € nannte die Zusammenfassung den Betrag ohne Bedingung, als
   // schulde der Haushalt ihn schon, während Kranich prüft (Review vom 03.11.2026, niedrig).
   // Behoben: Die Kostenzeile sagt, dass sie nur anfällt, falls Kranich freigibt (Schritt 28).
-  // Der Button bleibt „Zahlungspflichtig buchen“ (Entscheidung Nr. 4, docs/ANNAHMEN.md Schritt 28).
-  test('R-07 mit Selbstbeteiligung: der Betrag nur unter der Bedingung der Freigabe', async () => {
-    const insurer = demoConfig.insurer.shortName;
-    const { id } = await backToCostsAfterClaim();
-    await act(async () => useAppStore.getState().setDemo({ deductible: 5000 }));
-    await act(async () => router.push(selfPayUrl(id)));
-    expect(screen.queryByText(de.appointment.costsSelf('189 €'))).toBeNull();
-    expect(screen.queryByText(de.appointment.costsSelf('50 €'))).toBeNull();
-    const line = de.appointment.costsClaim(insurer, '50 €');
-    expect(line).toMatch(new RegExp(`falls ${escapeRegExp(insurer)} freigibt$`));
-    expect(screen.getByText(line)).toBeTruthy();
-  });
+  // Seit Entscheidung Nr. 31 ist die Anfrage während der Prüfung unverbindlich: kein
+  // „Zahlungspflichtig buchen“, auch mit 50 €. Der verbindliche Schritt kommt nach der Freigabe.
+  // Bis dahin blieb der Button nach Nr. 4 „Zahlungspflichtig buchen“.
+  test.each([
+    ['0 €', 0],
+    ['50 €', 5000],
+  ])(
+    'R-07 mit Selbstbeteiligung %s: kein Betrag als Schuld, kein „Zahlungspflichtig buchen“',
+    async (amount, deductible) => {
+      const insurer = demoConfig.insurer.shortName;
+      const { id } = await backToCostsAfterClaim();
+      await act(async () => useAppStore.getState().setDemo({ deductible }));
+      await act(async () => router.push(selfPayUrl(id)));
+      expect(screen.queryByText(de.appointment.costsSelf('189 €'))).toBeNull();
+      expect(screen.queryByText(de.appointment.costsSelf(amount))).toBeNull();
+      const line = de.appointment.costsClaim(insurer, amount);
+      expect(line).toMatch(new RegExp(`falls ${escapeRegExp(insurer)} freigibt$`));
+      expect(screen.getByText(line)).toBeTruthy();
+      expect(screen.queryByRole('button', { name: de.appointment.requestPaid })).toBeNull();
+      expect(screen.getByRole('button', { name: de.appointment.request })).toBeTruthy();
+      // Auch der Store bucht während der Prüfung nichts verbindlich
+      await fireEvent.press(screen.getByRole('radio', { name: demoConfig.slots[0] }));
+      await tap(de.appointment.request);
+      const booking = useAppStore.getState().bookings.at(-1)!;
+      expect(booking).toMatchObject({ subjectToApproval: true, status: 'angefragt' });
+      expect(booking.binding).toBeUndefined();
+      expect(
+        useAppStore.getState().events.some((e) => e.type === 'zahlungspflichtig_gebucht'),
+      ).toBe(false);
+    },
+  );
 });
 
 // ---------- R-08 ----------

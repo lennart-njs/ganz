@@ -134,14 +134,31 @@ describe('Betrieb und Termin', () => {
     expect(consents).toHaveLength(1);
   });
 
-  test('bei Selbstbeteiligung über 0 € heißt der Button „Zahlungspflichtig buchen“', async () => {
+  // Entscheidung Nr. 31: Solange Kranich prüft, ist die Anfrage unverbindlich. „Zahlungspflichtig
+  // buchen“ gibt es erst, wenn die Selbstbeteiligung feststeht, also nach der Freigabe. Bis dahin
+  // hieß der Button schon während der Prüfung so (Nr. 4).
+  test('Selbstbeteiligung über 0 €: während der Prüfung „Termin anfragen“, nach der Freigabe „Zahlungspflichtig buchen“', async () => {
     const id = caseAfterFinding();
     useAppStore.getState().setDemo({ deductible: 5000 });
     await renderRouter(APP, { initialUrl: `/fall/${id}/kosten` });
     expect(screen.getByText(de.costs.barMeta('50 €'))).toBeTruthy();
     await tap(de.costs.report);
-    expect(screen.getByRole('button', { name: de.appointment.requestPaid })).toBeTruthy();
+    expect(screen.getByRole('button', { name: de.appointment.request })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: de.appointment.requestPaid })).toBeNull();
+    expect(screen.getByText(de.appointment.costsClaim('Kranich', '50 €'))).toBeTruthy();
+    // Kranich gibt frei, bevor du einen Termin anfragst: Jetzt steht der Betrag fest
+    await act(async () => {
+      useAppStore.getState().simulateNext(id);
+    });
+    expect(useAppStore.getState().cases[id]?.status).toBe('freigegeben');
+    expect(screen.getByText(de.appointment.costsApproved('Kranich', '50 €'))).toBeTruthy();
+    await fireEvent.press(screen.getByRole('radio', { name: demoConfig.slots[0] }));
     expect(screen.queryByRole('button', { name: de.appointment.request })).toBeNull();
+    await tap(de.appointment.requestPaid);
+    expect(useAppStore.getState().bookings.at(-1)).toMatchObject({
+      subjectToApproval: false,
+      binding: { amount: 5000 },
+    });
   });
 
   test('ohne Schutz zahlt die Nutzerin selbst und bucht zahlungspflichtig', async () => {

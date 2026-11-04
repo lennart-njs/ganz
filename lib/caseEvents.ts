@@ -2,6 +2,7 @@
 import { demoConfig } from '@/config/demo.config';
 import { guides, type GuideId } from '@/data/guides';
 import { de } from '@/i18n/de';
+import { formatEuro } from '@/i18n/format';
 import type { CaseEvent, CaseStatus, PhotoPurpose } from '@/model/types';
 
 import { caseStatusLabel } from './caseView';
@@ -60,6 +61,9 @@ export function eventLabel(e: CaseEvent): string {
       break;
     case 'termin_angefragt':
       detail = f.booking(String(p.partner), String(p.slot));
+      break;
+    case 'zahlungspflichtig_gebucht':
+      detail = f.binding(String(p.partner), String(p.slot), formatEuro(Number(p.amount)));
       break;
     case 'bewertet':
       detail = f.stars(Number(p.stars));
