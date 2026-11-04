@@ -50,8 +50,10 @@ function chunked(count: number, headers: Record<string, string> = {}, size = 64 
     },
     { highWaterMark: 0 },
   );
-  const init = { method: 'POST', headers, body, duplex: 'half' } as unknown as RequestInit;
-  return { request: (url = 'http://localhost/api') => new Request(url, init), seen, size };
+  const init = { headers, body, duplex: 'half' } as unknown as RequestInit;
+  const request = (url = 'http://localhost/api', method = 'POST') =>
+    new Request(url, { ...init, method });
+  return { request, seen, size };
 }
 
 /** So viele Stücke liest die Route höchstens, bevor sie bei `limit` abbricht */
@@ -197,14 +199,43 @@ describe('Portal: Grenze für jede Route mit Body', () => {
     expect(big.seen.cancelled).toBe(true);
   });
 
-  test('ohne Anmeldung liest keine Route den Body', async () => {
-    const big = chunked(40);
-    const res = await act(big.request('http://localhost/api/v1/portal/faelle/GS-1/aktionen'), {
-      id: 'GS-1',
-    });
-    expect(res.status).toBe(401);
-    expect(big.seen.pulled).toBe(0);
-  });
+  // Jede Portal-Route mit Body, ohne und mit ungültiger Sitzung
+  const routes = [
+    {
+      route: 'Einstellungen',
+      method: 'PUT',
+      url: '/api/v1/portal/einstellungen',
+      call: putSettings,
+    },
+    {
+      route: 'Aktion',
+      method: 'POST',
+      url: '/api/v1/portal/faelle/GS-1/aktionen',
+      call: (r: Request) => act(r, { id: 'GS-1' }),
+    },
+    {
+      route: 'Bearbeitung',
+      method: 'POST',
+      url: '/api/v1/portal/faelle/GS-1/bearbeitung',
+      call: (r: Request) => work(r, { id: 'GS-1' }),
+    },
+    { route: 'Sammelaktion', method: 'POST', url: '/api/v1/portal/sammelaktion', call: bulk },
+  ];
+  const sessions: { session: string; headers: Record<string, string> }[] = [
+    { session: 'ohne Anmeldung', headers: {} },
+    { session: 'mit falschem Token', headers: { Authorization: 'Bearer abc.def' } },
+  ];
+  const cases = routes.flatMap((r) => sessions.map((s) => ({ ...r, ...s })));
+
+  test.each(cases)(
+    '$route $session: 401, der Body bleibt ungelesen',
+    async ({ method, url, call, headers }) => {
+      const big = chunked(40, headers);
+      const res = await call(big.request(`http://localhost${url}`, method));
+      expect(res.status).toBe(401);
+      expect(big.seen.pulled).toBe(0);
+    },
+  );
 });
 
 describe('Katalog: GET /api/guides', () => {
