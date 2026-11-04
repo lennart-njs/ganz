@@ -27,7 +27,10 @@ export function loadApprovedCatalog(dir = CATALOG_DIR, force = false): GuideCata
       }
       if (registerCatalogEntry(entry)) added.push(entry);
     } catch (error) {
-      console.warn(`Katalog ${file} nicht lesbar: ${String(error)}`);
+      // Nur die Fehlerart: Die Meldung von JSON.parse zitiert den Inhalt der Datei
+      console.warn(
+        `Katalog ${file} nicht lesbar: ${error instanceof Error ? error.name : typeof error}`,
+      );
     }
   }
   return added;

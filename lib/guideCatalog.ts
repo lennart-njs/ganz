@@ -77,6 +77,12 @@ export function catalogEntries(): GuideCatalogEntry[] {
 
 const norm = (x: string) => x.replace(/[\s.-]/g, '').toLowerCase();
 
+/**
+ * Form einer Materialnummer vom Typenschild („11 450 120“). Nur so geht sie an den Server
+ * (Katalog und Assistent). Eine andere Eingabe bleibt beim Gerät, gesucht wird dann über das Modell.
+ */
+export const MATERIAL_NUMBER = /^[A-Za-z0-9 ./-]{1,40}$/;
+
 export type DeviceKey = Pick<Device, 'manufacturerId' | 'category' | 'model' | 'materialNumber'>;
 
 /** Eintrag für ein Gerät: zuerst über die Materialnummer, sonst über Hersteller, Gerätetyp und Modell */

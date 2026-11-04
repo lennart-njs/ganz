@@ -1,13 +1,15 @@
 /**
  * @jest-environment node
  */
+import { ReadableStream } from 'node:stream/web';
+
 import { assert, constantFrom, property, record, string } from 'fast-check';
 
 import { POST } from '@/app/api/chat+api';
 import { demoConfig } from '@/config/demo.config';
 import { guides } from '@/data/guides';
 import { chatRateLimit, clientKeys, createRateLimiter, rateConfig } from '@/lib/chat/guard';
-import { chatLimits } from '@/lib/chat/limits';
+import { chatLimits, chatMaxBodyBytes } from '@/lib/chat/limits';
 import { CHAT_HEADERS } from '@/lib/chat/protocol';
 import {
   STABLE_SYSTEM,
@@ -717,7 +719,35 @@ describe('Foto an den Assistenten (Entscheidung 26)', () => {
 
   test('eine zu große Anfrage wird nicht gelesen', async () => {
     const res = await post(ask, { 'Content-Length': String(100_000_000) });
-    expect(res.status).toBe(400);
+    expect(res.status).toBe(413);
+    expect(await res.json()).toEqual({ error: 'zu_gross' });
+    expect(mockCreate).not.toHaveBeenCalled();
+  });
+
+  test('ohne Content-Length liest die Route nur bis zur Grenze, dann 413', async () => {
+    const chunk = new TextEncoder().encode(' '.repeat(64 * 1024));
+    // Gut 2,5 MB über der Grenze. Wer erst alles liest und dann prüft, holt alle Stücke.
+    const count = Math.ceil(chatMaxBodyBytes / chunk.byteLength) + 40;
+    const seen = { pulled: 0, cancelled: false };
+    const body = new ReadableStream<Uint8Array>(
+      {
+        pull(controller) {
+          if (seen.pulled >= count) return controller.close();
+          seen.pulled += 1;
+          controller.enqueue(chunk);
+        },
+        cancel() {
+          seen.cancelled = true;
+        },
+      },
+      { highWaterMark: 0 },
+    );
+    // Wie am Server: ein Stream aus node:stream/web, ohne Content-Length
+    const init = { method: 'POST', body, duplex: 'half' } as unknown as RequestInit;
+    const res = await POST(new Request('http://localhost/api/chat', init));
+    expect(res.status).toBe(413);
+    expect(seen.pulled).toBe(Math.floor(chatMaxBodyBytes / chunk.byteLength) + 1);
+    expect(seen.cancelled).toBe(true);
     expect(mockCreate).not.toHaveBeenCalled();
   });
 

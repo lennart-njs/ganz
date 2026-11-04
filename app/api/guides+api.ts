@@ -1,6 +1,6 @@
 // Katalog der Anleitungen (Entscheidung 24): GET /api/guides?hersteller=miele&kategorie=waschmaschine&modell=WKB%20130&material=11%20450%20120
 // Gibt nur freigegebene Anleitungen für genau dieses Gerät zurück. Ohne Treffer: 404, die App holt dann Hilfe.
-import { findCatalogEntry } from '@/lib/guideCatalog';
+import { MATERIAL_NUMBER, findCatalogEntry } from '@/lib/guideCatalog';
 import type { DeviceCategory } from '@/model/types';
 import { loadApprovedCatalog } from '@/server/guides/catalogStore';
 
@@ -20,7 +20,14 @@ export function GET(request: Request): Response {
   const category = q.get('kategorie') as DeviceCategory | null;
   const model = q.get('modell') ?? '';
   const materialNumber = q.get('material') ?? undefined;
-  if (!manufacturerId || !category || !categories.includes(category) || model.length > 80) {
+  if (
+    !manufacturerId ||
+    manufacturerId.length > 40 ||
+    !category ||
+    !categories.includes(category) ||
+    model.length > 80 ||
+    (materialNumber !== undefined && !MATERIAL_NUMBER.test(materialNumber))
+  ) {
     return json({ error: 'ungueltig' }, 400);
   }
   loadApprovedCatalog();

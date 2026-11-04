@@ -1,5 +1,5 @@
 // Katalog der Anleitungen vom eigenen Server (app/api/guides+api.ts, Entscheidung 24).
-import { validateCatalogEntry, type DeviceKey } from '@/lib/guideCatalog';
+import { MATERIAL_NUMBER, validateCatalogEntry, type DeviceKey } from '@/lib/guideCatalog';
 import type { GuideCatalogEntry } from '@/model/types';
 
 export interface GuideService {
@@ -13,7 +13,10 @@ export const httpGuideService: GuideService = {
       hersteller: device.manufacturerId,
       kategorie: device.category,
       modell: device.model,
-      ...(device.materialNumber ? { material: device.materialNumber } : {}),
+      // Eine Materialnummer in anderer Form lehnt der Server ab, dann zählt nur das Modell
+      ...(device.materialNumber && MATERIAL_NUMBER.test(device.materialNumber)
+        ? { material: device.materialNumber }
+        : {}),
     });
     try {
       const res = await fetch(`/api/guides?${q.toString()}`);

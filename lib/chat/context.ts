@@ -2,7 +2,7 @@
 // Fotos aus dem Fall. Ein Foto im Gespräch geht nur mit der Nachricht (lib/chat/useAssistant.ts).
 import { demoConfig } from '@/config/demo.config';
 import { latestDiagnosis, latestGuideRun } from '@/lib/caseView';
-import { getGuide } from '@/lib/guideCatalog';
+import { MATERIAL_NUMBER, getGuide } from '@/lib/guideCatalog';
 import type { Id, ISODateTime } from '@/model/types';
 import type { AppData } from '@/store/appStore';
 
@@ -28,7 +28,7 @@ export function chatContext(s: AppData, caseId: Id): ChatContext | undefined {
     category: device.category,
     manufacturerId: device.manufacturerId in CHAT_MANUFACTURERS ? device.manufacturerId : undefined,
     model: clip(device.model),
-    ...(device.materialNumber && /^[A-Za-z0-9 ./-]{1,40}$/.test(device.materialNumber)
+    ...(device.materialNumber && MATERIAL_NUMBER.test(device.materialNumber)
       ? { materialNumber: device.materialNumber }
       : {}),
     problem: clip(c.problemLabel),

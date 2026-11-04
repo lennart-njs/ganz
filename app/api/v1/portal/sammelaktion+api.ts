@@ -3,6 +3,7 @@ import { workflowStatuses, type WorkflowStatus } from '@/model/portal';
 import { getCaseStore } from '@/server/backend';
 import { tenantFrom } from '@/server/backend/auth';
 import type { BulkAction } from '@/server/backend/types';
+import { bodyLimits, readJson } from '@/server/http/readJson';
 
 function parse(body: unknown): { ids: string[]; action: BulkAction } | null {
   if (!body || typeof body !== 'object') return null;
@@ -24,13 +25,9 @@ function parse(body: unknown): { ids: string[]; action: BulkAction } | null {
 export async function POST(request: Request): Promise<Response> {
   const tenant = tenantFrom(request);
   if (!tenant) return Response.json({ error: 'anmeldung' }, { status: 401 });
-  let body: unknown;
-  try {
-    body = await request.json();
-  } catch {
-    return Response.json({ error: 'ungueltig' }, { status: 400 });
-  }
-  const parsed = parse(body);
+  const read = await readJson(request, bodyLimits.portal);
+  if (!read.ok) return Response.json({ error: read.error }, { status: read.status });
+  const parsed = parse(read.body);
   if (!parsed) return Response.json({ error: 'ungueltig' }, { status: 400 });
   const count = await getCaseStore().bulk(tenant, parsed.ids, parsed.action);
   return Response.json({ count });

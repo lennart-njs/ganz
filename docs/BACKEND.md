@@ -54,6 +54,7 @@ Einstellbar je Händler im Portal (`DealerSettings` in `model/portal.ts`):
 - **Händler-Aktionen** werden `CaseEvent` mit `actor.kind = 'haendler'` und den Typen `haendler_angenommen`, `haendler_rueckfrage`, `haendler_entscheidung`, `haendler_betrieb`, `haendler_status`, `haendler_nachricht`, `haendler_termin`, `haendler_ersatzteil`. Die App übernimmt nur solche Ereignisse und nur für den richtigen Fall.
 - **Freier Chat** mit dem Händler (Entscheidung 32, ersetzt 29): Nachrichten des Haushalts stehen in der Akte (`messages`, mit Foto), Nachrichten des Händlers sind `haendler_nachricht`. Rückfragen haben weiter bis zu vier Antworten als Buttons, Terminvorschläge bis zu vier Zeitfenster.
 - **Interne Notizen und Zuweisung** kommen nie in der App an.
+- **Größe je Anfrage.** Eine Fallakte hat höchstens 8 MB, eine Anfrage aus dem Portal 256 KB (`server/http/readJson.ts`). Darüber antwortet das Backend mit 413 und liest nicht weiter, auch ohne `Content-Length`.
 - **Auswertung** bekommt nur anonyme Zahlen (Zeitpunkt, Gerätetyp, Modell, Ausgang, Fehlerbild), keine Namen, keine Adressen, keine Fallnummern.
 
 ## Was die Akte enthält
@@ -69,4 +70,4 @@ Wer das echte Backend baut, implementiert `CaseStore` aus `server/backend/types.
 - Mitteilungen per Push statt Abruf alle 5 Sekunden
 - Mandanten für Versicherer und Hersteller (gleiche Schnittstelle, eigener `purpose`)
 - Löschfristen durchsetzen (heute nur eingestellt), Auftragsverarbeitungsvertrag mit dem Händler
-- Serverstandort EU, Rate-Limits, Größenbeschränkung je Anfrage
+- Serverstandort EU, Rate-Limits

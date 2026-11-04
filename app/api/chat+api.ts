@@ -18,6 +18,7 @@ import {
   type ChatTurn,
 } from '@/lib/chat/prompt';
 import { loadApprovedCatalog } from '@/server/guides/catalogStore';
+import { readJson } from '@/server/http/readJson';
 
 const MODEL = 'claude-opus-5-5';
 
@@ -74,17 +75,10 @@ export async function POST(request: Request): Promise<Response> {
 
   if (!process.env.ANTHROPIC_API_KEY) return json({ error: 'kein_schluessel' }, 503);
 
-  // Zu große Anfragen gar nicht erst lesen
-  const length = Number(request.headers.get('content-length') ?? 0);
-  if (length > chatMaxBodyBytes) return json({ error: 'ungueltig' }, 400);
-  let body: unknown;
-  try {
-    const raw = await request.text();
-    if (raw.length > chatMaxBodyBytes) return json({ error: 'ungueltig' }, 400);
-    body = JSON.parse(raw);
-  } catch {
-    return json({ error: 'ungueltig' }, 400);
-  }
+  // Zu große Anfragen gar nicht erst lesen, ohne Content-Length nur bis zur Grenze (413)
+  const read = await readJson(request, chatMaxBodyBytes);
+  if (!read.ok) return json({ error: read.error }, read.status);
+  const body = read.body;
   // Ein Gespräch hat höchstens chatLimits.messages Nachrichten, die Antwort mitgezählt. Danach
   // hilft die Fachkraft weiter (R-11). Die App schickt dann nichts mehr, die Route prüft es trotzdem.
   const messages = (body as { messages?: unknown } | null)?.messages;
