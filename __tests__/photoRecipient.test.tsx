@@ -122,6 +122,8 @@ const toDealer = () =>
 const photoMessages = (photoId: Id) =>
   useAppStore.getState().chatMessages.filter((m) => m.photoId === photoId);
 const switcher = () => screen.queryByRole('radio', { name: de.sharing.toAssistant });
+/** Die Zeile über dem Feld nennt bei einem Foto für Fründ den Empfänger (Prüfung 1.1) */
+const attachedForDealer = de.common.dot(de.chat.photoAttached, de.sharing.sentTo(dealerName));
 
 describe('Foto bleibt beim gewählten Empfänger (Übertragung 1.1)', () => {
   // Probe aus der Übertragung (konflikte-chat §5): Auf 67d2fd8 ging das Foto an Fründ
@@ -196,7 +198,7 @@ describe('Foto bleibt beim gewählten Empfänger (Übertragung 1.1)', () => {
     // Nie im Speicher für den Assistenten
     expect(prepare).not.toHaveBeenCalled();
     expect(chatPhoto.chatImage(photo.id)).toBeUndefined();
-    expect(screen.getByText(de.chat.photoAttached)).toBeTruthy();
+    expect(screen.getByText(attachedForDealer)).toBeTruthy();
 
     // Die Antwort auf die frühere Frage kommt, während das Foto am Feld hängt
     await assistantAnswers(caseId);
@@ -224,11 +226,36 @@ describe('Foto bleibt beim gewählten Empfänger (Übertragung 1.1)', () => {
       uri: '',
     });
     await renderRouter(APP, { initialUrl: `/fall/${caseId}?foto=${photo.id}&an=haendler` });
-    expect(screen.getByText(de.chat.photoAttached)).toBeTruthy();
+    expect(screen.getByText(attachedForDealer)).toBeTruthy();
     expect(switcher()).toBeNull();
+    // Prüfung 1.1: Mit Text im Feld ist der Platzhalter weg. Die Zeile über dem Feld nennt Fründ.
+    await fireEvent.changeText(
+      screen.getByLabelText(de.sharing.placeholderDealer(dealerName)),
+      'Hier das Typenschild',
+    );
+    expect(screen.getByText(attachedForDealer)).toBeTruthy();
+    expect(screen.queryByText(de.chat.inputNotice)).toBeNull();
     await tap(de.chat.photoRemove);
+    expect(screen.queryByText(attachedForDealer)).toBeNull();
     expect(screen.queryByText(de.chat.photoAttached)).toBeNull();
     expect(switcher()).toBeTruthy();
+  });
+
+  test('mit Foto für den Assistenten nennt der Hinweis ihn, die Zeile über dem Feld nennt Fründ nicht', async () => {
+    const { caseId, deviceId } = sharedCase();
+    const photo = useAppStore.getState().addPhoto({
+      caseId,
+      deviceId,
+      purpose: 'frage',
+      source: 'demo',
+      uri: '',
+    });
+    await renderRouter(APP, { initialUrl: `/fall/${caseId}?foto=${photo.id}&an=assistent` });
+    await fireEvent.changeText(screen.getByLabelText(de.thread.inputLabel), 'Sitzt das so?');
+    expect(switcher()).toBeNull();
+    expect(screen.getByText(de.chat.photoAttached)).toBeTruthy();
+    expect(screen.queryByText(attachedForDealer)).toBeNull();
+    expect(screen.getByText(de.chat.inputNotice)).toBeTruthy();
   });
 
   test('Weitergabe an Fründ beendet, während sein Foto hängt: das Foto geht an niemanden', async () => {
@@ -243,10 +270,11 @@ describe('Foto bleibt beim gewählten Empfänger (Übertragung 1.1)', () => {
     // Selbst wenn ein Bild im Speicher läge, ginge es nicht mit
     chatPhoto.setChatImageForTest(photo.id, image);
     await renderRouter(APP, { initialUrl: `/fall/${caseId}?foto=${photo.id}&an=haendler` });
-    expect(screen.getByText(de.chat.photoAttached)).toBeTruthy();
+    expect(screen.getByText(attachedForDealer)).toBeTruthy();
     await act(async () => {
       useAppStore.getState().updateShare(caseId, { revoked: true });
     });
+    expect(screen.queryByText(attachedForDealer)).toBeNull();
     expect(screen.queryByText(de.chat.photoAttached)).toBeNull();
     expect(screen.getByRole('button', { name: de.chat.send })).toBeDisabled();
 

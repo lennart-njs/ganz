@@ -1793,7 +1793,12 @@ export default function FallGespraech() {
         above={
           attachedPhoto ? (
             <View style={styles.attached}>
-              <Text variant="meta">{de.chat.photoAttached}</Text>
+              {/* Mit Foto gibt es keinen Umschalter. Für den Händler nennt die Zeile ihn (Prüfung 1.1). */}
+              <Text variant="meta" style={styles.attachedText}>
+                {toDealer
+                  ? de.common.dot(de.chat.photoAttached, de.sharing.sentTo(dealerName))
+                  : de.chat.photoAttached}
+              </Text>
               <Button
                 label={de.chat.photoRemove}
                 variant="link"
@@ -1864,6 +1869,7 @@ const styles = StyleSheet.create({
   items: { marginTop: 8, gap: 2 },
   gapTop: { marginTop: 8 },
   links: { flexDirection: 'row', flexWrap: 'wrap', columnGap: 16 },
-  attached: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  attached: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
+  attachedText: { flexShrink: 1 },
   toast: { marginHorizontal: 16, marginBottom: 8 },
 });
