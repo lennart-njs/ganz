@@ -515,9 +515,6 @@ const keinStatusVergleich = {
  * meldet die Regel selbst.
  */
 const LOAD_STATUS = 'Ladezustand des gespeicherten Stands (Schritt 19), kein Status eines Falls.';
-const TRANSFER =
-  'Übergang aus der mach’s-Linie (Übertragung Schritt 1, docs/ANNAHMEN.md); Schritt 3 ersetzt das durch can(facts, …).';
-const FALL = 'app/fall/[id]/index.tsx';
 const STATUS_ALLOWLIST = [
   {
     file: 'components/app/RecoveryScreen.tsx',
@@ -528,21 +525,6 @@ const STATUS_ALLOWLIST = [
   { file: 'app/_layout.tsx', code: "status === 'fehler'", reason: LOAD_STATUS },
   { file: 'app/_layout.tsx', code: "status === 'laedt'", reason: LOAD_STATUS },
   { file: 'app/_layout.tsx', code: "status !== 'laedt'", reason: LOAD_STATUS },
-  // Übergangsliste der Übertragung: genau diese sieben, bis Schritt 3 der Übertragung sie entfernt.
-  // Stand eines Ersatzteils, das der Händler meldet (Ereignis haendler_ersatzteil)
-  { file: FALL, code: "p.status === 'geliefert'", reason: TRANSFER },
-  // Angebot „Fall an … senden“ (Entscheidung 28), später can(facts, 'an_haendler_senden')
-  { file: FALL, code: "c.status === 'eskaliert'", reason: TRANSFER },
-  { file: FALL, code: "c.status === 'freigabe_noetig'", reason: TRANSFER },
-  { file: FALL, code: "c.status === 'abgelehnt'", reason: TRANSFER },
-  { file: FALL, code: "c.status !== 'erledigt'", reason: TRANSFER },
-  { file: FALL, code: "c.status !== 'abgebrochen'", reason: TRANSFER },
-  // Sammelaktion im Portal: Stand im Arbeitsablauf des Händlers, kein Status eines Falls
-  {
-    file: 'app/api/v1/portal/sammelaktion+api.ts',
-    code: 'workflowStatuses.includes(action.status as WorkflowStatus)',
-    reason: TRANSFER,
-  },
 ];
 
 const ganz = {

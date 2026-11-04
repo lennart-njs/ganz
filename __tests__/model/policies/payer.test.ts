@@ -44,6 +44,7 @@ function facts(status: CaseStatus, extra: Partial<CaseFacts> = {}): CaseFacts {
     bookings: {},
     bookingOpen: false,
     activeConsents: [],
+    dealerShared: false,
     replacement: false,
     ...extra,
   };

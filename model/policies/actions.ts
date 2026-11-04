@@ -15,6 +15,9 @@ export type ActionKey =
   | 'videocall_anfragen'
   | 'rueckruf_anfragen'
   | 'termin_diagnose'
+  // Gekauft beim Händler: den Fall an ihn senden, dann mit ihm schreiben (Entscheidungen 28, 32)
+  | 'an_haendler_senden'
+  | 'haendler_schreiben'
   // Kosten
   | 'schaden_melden'
   | 'selbst_zahlen'
@@ -45,6 +48,8 @@ export const ALL_ACTIONS: readonly ActionKey[] = [
   'videocall_anfragen',
   'rueckruf_anfragen',
   'termin_diagnose',
+  'an_haendler_senden',
+  'haendler_schreiben',
   'schaden_melden',
   'selbst_zahlen',
   'selbst_zahlen_nach_ablehnung',
@@ -70,6 +75,19 @@ const helpPhase = (f: CaseFacts) =>
   f.status === 'eskaliert' ||
   (f.status === 'selbsthilfe' &&
     (f.guideOutcome === 'geht_nicht' || f.guideOutcome === 'laeuft_nicht'));
+/**
+ * Hilfe ist nötig, so wie mach’s es für das Angebot „Fall an … senden“ zählt (Entscheidung 28):
+ * nach „Hilfe holen“, während der Versicherer prüft, nach seiner Ablehnung, mit Kostenvoranschlag
+ * oder wenn die neueste Anleitung nicht ging. Der Ausgang der Anleitung zählt auch nach „Hilfe
+ * holen“ und in einer späteren Runde, wie vor der Übertragung.
+ */
+const dealerHelpNeeded = (f: CaseFacts) =>
+  f.status === 'eskaliert' ||
+  f.status === 'freigabe_noetig' ||
+  f.status === 'abgelehnt' ||
+  !!f.quote ||
+  f.guideOutcome === 'geht_nicht' ||
+  f.guideOutcome === 'laeuft_nicht';
 
 const RULES: Record<ActionKey, Rule> = {
   // Antwort oder Problem ändern, solange der Fall am Anfang steht (wie updateCase im Store)
@@ -91,6 +109,13 @@ const RULES: Record<ActionKey, Rule> = {
     !f.quote &&
     !booked(f, 'vor_ort_diagnose') &&
     !booked(f, 'reparatur'),
+
+  // Gekauft beim Händler: Den Fall kannst du ihm senden, sobald Hilfe nötig ist, einmal je
+  // Bestätigung. Nach einem Widerruf geht es wieder (Entscheidung 28).
+  an_haendler_senden: (f) => !!f.soldBy && !f.dealerShared && !f.closed && dealerHelpNeeded(f),
+  // Antworten und Nachrichten an den Händler, auch die Buttons zu seiner Rückfrage und seinem
+  // Terminvorschlag: nur, solange der Fall bei ihm ist und offen (Entscheidung 32)
+  haendler_schreiben: (f) => f.dealerShared && !f.closed,
 
   // Freigabe: einmal melden, nur mit Schutz und Kostenvoranschlag (R-02)
   schaden_melden: (f) =>

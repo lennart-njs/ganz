@@ -487,6 +487,29 @@ describe('selectCaseFacts', () => {
     expect(order({ status: 'in_reparatur' }, { status: 'erledigt' })).toBeUndefined();
   });
 
+  test('Händler (Entscheidungen 28, 32): vom Gerät, beim Händler mit gültiger Weitergabe', () => {
+    const soldBy = { id: 'fruend', kind: 'haendler' as const, name: 'Händler' };
+    const device = { ...source(makeCase()).devices[0]!, soldBy };
+    const dealer = (extra: Partial<Consent> = {}) =>
+      consent('weitergabe_haendler', { recipient: soldBy, ...extra });
+    const of = (extra: Partial<CaseFactsSource>) =>
+      factsOf(makeCase(), { devices: [device], ...extra });
+    expect(factsOf(makeCase())).toMatchObject({ soldBy: undefined, dealerShared: false });
+    expect(of({})).toMatchObject({ soldBy, dealerShared: false });
+    expect(of({ consents: [dealer()] }).dealerShared).toBe(true);
+    // Widerrufen, für einen anderen Fall oder eine andere Person: nicht beim Händler
+    expect(of({ consents: [dealer({ revokedAt: NOW })] }).dealerShared).toBe(false);
+    expect(of({ consents: [dealer({ caseId: 'GS-2' })] }).dealerShared).toBe(false);
+    expect(of({ consents: [dealer({ personId: 'person-2' })] }).dealerShared).toBe(false);
+    // Die Weitergabe ist beendet und das Backend weiß es: nicht mehr beim Händler
+    const shares = { 'GS-1': { revoked: true } };
+    expect(of({ consents: [dealer()], shares }).dealerShared).toBe(false);
+    expect(of({ consents: [dealer()], shares: { 'GS-1': {} } }).dealerShared).toBe(true);
+    expect(of({ consents: [dealer()], shares: { 'GS-2': { revoked: true } } }).dealerShared).toBe(
+      true,
+    );
+  });
+
   test('letzter Videocall', () => {
     const v = (id: string, caseId = 'GS-1'): VideoSession => ({
       id,

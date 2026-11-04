@@ -60,6 +60,7 @@ function facts(status: CaseStatus, extra: Partial<CaseFacts> = {}): CaseFacts {
     bookings: {},
     bookingOpen: false,
     activeConsents: [],
+    dealerShared: false,
     replacement: false,
     ...extra,
   };
@@ -507,5 +508,114 @@ describe('Nachbesserung in der Gewährleistung (Nr. 32)', () => {
       'pausieren',
     ]);
     expect(can(done, 'abbrechen')).toBe(false);
+  });
+});
+
+describe('Händler (Entscheidungen 28, 32)', () => {
+  const soldBy = { id: 'fruend', kind: 'haendler' as const, name: 'Händler' };
+  const OUTCOMES = [undefined, 'laeuft_wieder', 'laeuft_nicht', 'geht_nicht', 'fertig'] as const;
+  const CLAIMS = ['keiner', 'in_pruefung', 'freigegeben', 'abgelehnt'] as const;
+
+  /**
+   * Das Angebot „Fall an … senden“, wie mach’s es vor der Übertragung im Screen rechnete
+   * (app/fall/[id]/index.tsx auf 67d2fd8): needsHelp, ein Händler am Gerät, noch nicht gesendet,
+   * der Fall offen. Die Regel an_haendler_senden muss genau das ergeben.
+   */
+  function machsOffer(
+    status: CaseStatus,
+    hasQuote: boolean,
+    outcome: (typeof OUTCOMES)[number],
+    dealer: boolean,
+    shared: boolean,
+  ): boolean {
+    const needsHelp =
+      status === 'eskaliert' ||
+      status === 'freigabe_noetig' ||
+      status === 'abgelehnt' ||
+      hasQuote ||
+      outcome === 'geht_nicht' ||
+      outcome === 'laeuft_nicht';
+    return dealer && !shared && needsHelp && status !== 'erledigt' && status !== 'abgebrochen';
+  }
+
+  test('an_haendler_senden ist genau mach’s needsHelp, über alle Status und Fakten', () => {
+    let rows = 0;
+    for (const status of ALL_STATUSES) {
+      for (const hasQuote of [false, true]) {
+        for (const outcome of OUTCOMES) {
+          for (const claim of CLAIMS) {
+            for (const dealer of [false, true]) {
+              for (const shared of [false, true]) {
+                const f = facts(status, {
+                  claim,
+                  guideOutcome: outcome,
+                  ...(hasQuote ? { quote } : {}),
+                  ...(dealer ? { soldBy } : {}),
+                  dealerShared: shared,
+                });
+                const row = [status, hasQuote, outcome, claim, dealer, shared];
+                expect([...row, can(f, 'an_haendler_senden')]).toEqual([
+                  ...row,
+                  machsOffer(status, hasQuote, outcome, dealer, shared),
+                ]);
+                rows += 1;
+              }
+            }
+          }
+        }
+      }
+    }
+    expect(rows).toBe(ALL_STATUSES.length * 2 * OUTCOMES.length * CLAIMS.length * 2 * 2);
+  });
+
+  test.each([
+    ['offen', {}, false],
+    ['selbsthilfe', {}, false],
+    ['selbsthilfe', { guideOutcome: 'geht_nicht' }, true],
+    ['selbsthilfe', { guideOutcome: 'laeuft_nicht' }, true],
+    ['eskaliert', {}, true],
+    ['freigabe_noetig', { claim: 'in_pruefung' }, true],
+    ['abgelehnt', { claim: 'abgelehnt' }, true],
+    ['freigegeben', { claim: 'freigegeben' }, false],
+    ['freigegeben', { claim: 'freigegeben', quote }, true],
+    ['in_reparatur', { quote }, true],
+    ['nachbesserung', { rework }, false],
+    // Eine Anleitung, die nicht ging, zählt auch in einer späteren Runde, wie vor der Übertragung
+    ['nachbesserung', { rework, guideOutcome: 'geht_nicht' }, true],
+    ['erledigt', { quote }, false],
+    ['abgebrochen', { quote }, false],
+  ] as [CaseStatus, Partial<CaseFacts>, boolean][])(
+    'Fall an den Händler: %s %o → %s',
+    (status, extra, expected) => {
+      expect(can(facts(status, { ...extra, soldBy }), 'an_haendler_senden')).toBe(expected);
+      // Ohne Händler am Gerät nie, schon gesendet nie
+      expect(can(facts(status, extra), 'an_haendler_senden')).toBe(false);
+      expect(
+        can(facts(status, { ...extra, soldBy, dealerShared: true }), 'an_haendler_senden'),
+      ).toBe(false);
+    },
+  );
+
+  test('dem Händler schreiben nur, solange der Fall bei ihm ist und offen', () => {
+    for (const status of ALL_STATUSES) {
+      const closed = status === 'erledigt' || status === 'abgebrochen';
+      expect([
+        status,
+        can(facts(status, { soldBy, dealerShared: true }), 'haendler_schreiben'),
+      ]).toEqual([status, !closed]);
+      expect([status, can(facts(status, { soldBy }), 'haendler_schreiben')]).toEqual([
+        status,
+        false,
+      ]);
+    }
+  });
+
+  test('nach dem Senden: schreiben statt noch einmal senden', () => {
+    const before = facts('eskaliert', { soldBy });
+    const after = facts('eskaliert', { soldBy, dealerShared: true });
+    expect(availableActions(before)).toContain('an_haendler_senden');
+    expect(availableActions(before)).not.toContain('haendler_schreiben');
+    expect(availableActions(after)).toContain('haendler_schreiben');
+    expect(availableActions(after)).not.toContain('an_haendler_senden');
   });
 });

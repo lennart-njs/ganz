@@ -16,6 +16,7 @@ import type {
   Diagnosis,
   GuideRun,
   Id,
+  PartnerRef,
   Quote,
   Rework,
   VideoSession,
@@ -49,6 +50,12 @@ export interface BindingDue {
 /** Weitergaben, ohne die Versicherer und Betrieb nicht weitermachen (R-12) */
 export type HoldPurpose = Extract<ConsentPurpose, 'weitergabe_versicherer' | 'weitergabe_betrieb'>;
 
+/** Ein Fall beim Händler, wie der Store ihn zum Senden hält (store/useShareSync.ts) */
+export interface DealerShareSource {
+  /** Die Weitergabe ist beendet, das Backend weiß es (Widerruf) */
+  revoked?: boolean;
+}
+
 /** Was selectCaseFacts liest. AppData aus dem Store passt dazu, ohne dass model/ den Store kennt. */
 export interface CaseFactsSource {
   cases: Readonly<Record<Id, Case>>;
@@ -60,6 +67,8 @@ export interface CaseFactsSource {
   consents: readonly Consent[];
   guideRuns: Readonly<Record<Id, GuideRun>>;
   diagnoses: readonly Diagnosis[];
+  /** Fälle, die an den Händler gingen (Entscheidung 28). Ohne Angabe zählt nur die Bestätigung. */
+  shares?: Readonly<Record<Id, DealerShareSource>>;
 }
 
 export interface CaseFacts {
@@ -132,6 +141,14 @@ export interface CaseFacts {
    * je Gerät gibt es höchstens einen offenen Fall (Entscheidung Nr. 13).
    */
   otherOpenCase?: Id;
+  /** Händler, bei dem das Gerät gekauft wurde (Device.soldBy, Entscheidungen 16 und 31) */
+  soldBy?: PartnerRef;
+  /**
+   * Der Fall ist beim Händler: Die Bestätigung weitergabe_haendler gilt, nicht widerrufen, und die
+   * Weitergabe ist nicht beendet (Entscheidung 28). Dann schreibst du ihm im Gespräch
+   * (Entscheidung 32).
+   */
+  dealerShared: boolean;
 }
 
 function claimState(c: Case): ClaimState {
@@ -285,5 +302,7 @@ export function selectCaseFacts(s: CaseFactsSource, caseId: Id): CaseFacts | und
     otherOpenCase: Object.values(s.cases).find(
       (o) => o.id !== caseId && o.deviceId === c.deviceId && !isClosed(o.status),
     )?.id,
+    soldBy: device?.soldBy,
+    dealerShared: activeConsents.includes('weitergabe_haendler') && !s.shares?.[caseId]?.revoked,
   };
 }

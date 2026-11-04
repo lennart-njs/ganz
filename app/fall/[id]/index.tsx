@@ -34,7 +34,7 @@ import {
 } from '@/components/ds';
 import { demoConfig } from '@/config/demo.config';
 import type { GuideId } from '@/data/guides';
-import { useCommand } from '@/hooks/useCommand';
+import { refusalText, useCommand } from '@/hooks/useCommand';
 import { useNotificationDialog } from '@/hooks/useNotificationDialog';
 import { useNotice } from '@/hooks/useNotice';
 import { de } from '@/i18n/de';
@@ -73,6 +73,7 @@ import { CONSENT_SCOPES, scopedConsent } from '@/model/policies/consentScopes';
 import { hasProgress } from '@/model/policies/openCase';
 import { earlierRounds, isFinding } from '@/model/policies/rounds';
 import type { DealerSettings } from '@/model/portal';
+import { partStatusOf } from '@/model/sharing';
 import type { Result } from '@/model/result';
 import type { CaseEvent, Cents, Diagnosis } from '@/model/types';
 import { services, type FindingOption, type PhotoMode, type QuestionAnswer } from '@/services';
@@ -262,8 +263,15 @@ export default function FallGespraech() {
   const finding = useCommand((option: FindingOption) =>
     useAppStore.getState().setFinding(caseId, option, 'fachkraft'),
   );
+  // „Ja, senden“: Ein Doppeltap sendet den Fall nicht zweimal an den Händler (Entscheidung 28)
+  const dealerSend = useCommand(
+    () => useAppStore.getState().shareWithDealer(caseId, SHARE_TEXT_VERSION),
+    () => setDealerConfirm(false),
+  );
   // Lässt sich Telefon- oder Mail-App nicht öffnen, stehen Nummer oder Adresse im Hinweis
   const phoneNotice = useNotice();
+  // Lehnt der Store eine Nachricht an den Händler ab, bleibt sie im Feld, mit einem ruhigen Satz
+  const dealerNotice = useNotice();
   const commandToast =
     call.toast ??
     claim.toast ??
@@ -275,6 +283,8 @@ export default function FallGespraech() {
     guide.toast ??
     answer.toast ??
     finding.toast ??
+    dealerSend.toast ??
+    dealerNotice.notice ??
     phoneNotice.notice;
 
   // Ein Fall ohne Inhalt bleibt nicht liegen, wenn man das Gespräch verlässt
@@ -372,19 +382,20 @@ export default function FallGespraech() {
   const progress = hasProgress(state, c);
   const of = (type: CaseEvent['type']) => events.filter((e) => e.type === type);
 
-  // Gespräch mit dem Händler (Entscheidung 32): Wer zuletzt sprach, bekommt die Antwort
-  const dealer = device?.soldBy;
+  // Gespräch mit dem Händler (Entscheidung 32): nur, solange der Fall bei ihm ist und offen
+  // (haendler_schreiben). Wer zuletzt sprach, bekommt die Antwort.
+  const dealer = facts.soldBy;
   const dealerName = dealer
     ? (demoConfig.dealers.find((d) => d.id === dealer.id)?.shortName ?? dealer.name)
     : '';
-  const dealerShared = !!state.shares[caseId] && !state.shares[caseId]?.revoked;
+  const dealerWritable = can(facts, 'haendler_schreiben');
   const lastDealerAt =
     events.filter((e) => e.actor.kind === 'haendler' || e.type === 'nachricht_an_haendler').at(-1)
       ?.at ?? '';
   // Ist das Gespräch mit dem Assistenten voll, geht die Nachricht an den Händler (R-11). Ein
   // angehängtes Foto hält seinen Empfänger, auch wenn inzwischen der andere geschrieben hat.
   const recipient = chatRecipient({
-    dealerShared,
+    dealerShared: dealerWritable,
     assistantFull: assistant.full,
     pick: recipientPick,
     dealerSpokeLast: lastDealerAt > (msgs.at(-1)?.at ?? ''),
@@ -467,10 +478,7 @@ export default function FallGespraech() {
     });
   };
 
-  const shareWithDealer = () => {
-    useAppStore.getState().shareWithDealer(caseId, SHARE_TEXT_VERSION);
-    setDealerConfirm(false);
-  };
+  const shareWithDealer = dealerSend.run;
 
   const answerDealer = (question: CaseEvent, answer: string) => {
     const s = useAppStore.getState();
@@ -505,9 +513,14 @@ export default function FallGespraech() {
       setInputError(de.chat.tooLong(chatLimits.chars));
       return;
     }
+    if (toDealer) {
+      const sent = useAppStore.getState().messageDealer(caseId, text, photoToSend?.id);
+      if (!sent.ok) {
+        dealerNotice.show(refusalText(sent.refusal));
+        return;
+      }
+    } else assistant.send(text, photoToSend?.id);
     setInput('');
-    if (toDealer) useAppStore.getState().messageDealer(caseId, text, photoToSend?.id);
-    else assistant.send(text, photoToSend?.id);
     setAttached(undefined);
   };
   const photoOf = (id: string | undefined) =>
@@ -614,11 +627,7 @@ export default function FallGespraech() {
     if (e.type === 'haendler_termin') lines = [de.sharing.slotOffer(String(p.partnerName ?? ''))];
     if (e.type === 'haendler_ersatzteil') {
       lines = [
-        de.sharing.part(
-          String(p.part ?? ''),
-          p.status === 'geliefert' ? 'geliefert' : 'bestellt',
-          p.eta ? String(p.eta) : undefined,
-        ),
+        de.sharing.part(String(p.part ?? ''), partStatusOf(p), p.eta ? String(p.eta) : undefined),
       ];
     }
     if (e.type === 'haendler_entscheidung') {
@@ -1199,17 +1208,22 @@ export default function FallGespraech() {
     }
   }
 
-  // Offene Rückfrage oder Terminvorschlag des Händlers: Antworten als Buttons
-  const dealerQuestion = events
-    .filter((q) => q.type === 'haendler_rueckfrage' || q.type === 'haendler_termin')
-    .filter((q) => !of('rueckfrage_beantwortet').some((a) => a.payload.questionEventId === q.id))
-    // Ein Termin, den der Händler danach selbst festgelegt hat, braucht keine Wahl mehr
-    .filter(
-      (q) =>
-        q.type !== 'haendler_termin' ||
-        !of('haendler_betrieb').some((b) => b.at > q.at && b.payload.slot),
-    )
-    .at(-1);
+  // Offene Rückfrage oder Terminvorschlag des Händlers: Antworten als Buttons. Nur, solange du ihm
+  // schreiben kannst (haendler_schreiben), nach einem Widerruf oder im geschlossenen Fall nicht.
+  const dealerQuestion = !dealerWritable
+    ? undefined
+    : events
+        .filter((q) => q.type === 'haendler_rueckfrage' || q.type === 'haendler_termin')
+        .filter(
+          (q) => !of('rueckfrage_beantwortet').some((a) => a.payload.questionEventId === q.id),
+        )
+        // Ein Termin, den der Händler danach selbst festgelegt hat, braucht keine Wahl mehr
+        .filter(
+          (q) =>
+            q.type !== 'haendler_termin' ||
+            !of('haendler_betrieb').some((b) => b.at > q.at && b.payload.slot),
+        )
+        .at(-1);
 
   if (dealerQuestion && !assistant.waiting) {
     const raw = dealerQuestion.payload.options ?? dealerQuestion.payload.slots;
@@ -1680,24 +1694,8 @@ export default function FallGespraech() {
   }
 
   // Gekauft beim Händler: Den Fall kannst du ihm senden, sobald Hilfe nötig ist (Entscheidung 28).
-  // Die Status-Vergleiche hier stehen auf der Übergangsliste in eslint.config.js (TRANSFER).
-  // PLAN Schritt 3 ersetzt sie durch can(facts, 'an_haendler_senden').
-  const needsHelp =
-    c.status === 'eskaliert' ||
-    c.status === 'freigabe_noetig' ||
-    c.status === 'abgelehnt' ||
-    !!quote ||
-    run?.outcome === 'geht_nicht' ||
-    run?.outcome === 'laeuft_nicht';
-  if (
-    dealer &&
-    !dealerShared &&
-    !dealerConfirm &&
-    !dealerQuestion &&
-    needsHelp &&
-    c.status !== 'erledigt' &&
-    c.status !== 'abgebrochen'
-  ) {
+  // Wann, sagt die Regel an_haendler_senden in model/policies/actions.ts.
+  if (dealer && can(facts, 'an_haendler_senden') && !dealerConfirm && !dealerQuestion) {
     reply(
       'haendler',
       de.sharing.offer(dealer.name),
@@ -1741,7 +1739,8 @@ export default function FallGespraech() {
   const choice = { assistantFull: assistant.full, photoFor: attached?.an };
   // Ohne Händler und mit vollem Gespräch gibt es kein Eingabefeld mehr (R-11)
   const inputBar =
-    closed || !chatInputOpen({ dealerShared, assistantFull: assistant.full }) ? undefined : (
+    closed ||
+    !chatInputOpen({ dealerShared: dealerWritable, assistantFull: assistant.full }) ? undefined : (
       <ChatInput
         label={toDealer ? de.sharing.placeholderDealer(dealerName) : t.inputLabel}
         placeholder={
@@ -1770,7 +1769,7 @@ export default function FallGespraech() {
         // An den Assistenten oder an den Händler (Entscheidung 32). Ist das Gespräch mit dem
         // Assistenten voll, bleibt nur der Händler. Mit Foto bleibt nur sein Empfänger.
         recipient={
-          dealerShared
+          dealerWritable
             ? {
                 accessibilityLabel: de.sharing.recipient,
                 value: recipient,

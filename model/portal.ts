@@ -14,6 +14,11 @@ export const workflowStatuses: WorkflowStatus[] = [
   'erledigt',
 ];
 
+/** Ist der Wert ein Stand der Arbeitsliste? Für Eingaben von außen, etwa die Sammelaktion. */
+export function isWorkflowStatus(x: unknown): x is WorkflowStatus {
+  return (workflowStatuses as readonly unknown[]).includes(x);
+}
+
 export interface Workflow {
   status: WorkflowStatus;
   /** Teammitglied, das den Fall bearbeitet */

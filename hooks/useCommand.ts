@@ -1,6 +1,7 @@
 // Führt einen Befehl des Stores aus, für Buttons, die nur einmal zählen: Termin anfragen,
 // Schadenfall melden, Anleitung starten und fortsetzen, Call starten, im Gespräch auch die Antwort
-// auf die Rückfrage und „Passt, weiter“ zum Befund. ZUKUNFTSPLAN Phase 1, „Befehle ohne Absturz“.
+// auf die Rückfrage, „Passt, weiter“ zum Befund und „Ja, senden“ an den Händler. ZUKUNFTSPLAN
+// Phase 1, „Befehle ohne Absturz“.
 import { useEffect, useRef, useState } from 'react';
 
 import { de } from '@/i18n/de';

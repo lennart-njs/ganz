@@ -1,5 +1,5 @@
 // Händlerportal: dieselbe Aktion für mehrere Fälle (annehmen, zuweisen, Stand)
-import { workflowStatuses, type WorkflowStatus } from '@/model/portal';
+import { isWorkflowStatus } from '@/model/portal';
 import { getCaseStore } from '@/server/backend';
 import { tenantFrom } from '@/server/backend/auth';
 import type { BulkAction } from '@/server/backend/types';
@@ -17,8 +17,8 @@ function parse(body: unknown): { ids: string[]; action: BulkAction } | null {
     if (a !== null && (typeof a !== 'string' || a.length > 80)) return null;
     return { ids, action: { type: 'zuweisen', assigneeId: a as string | null } };
   }
-  if (action.type === 'stand' && workflowStatuses.includes(action.status as WorkflowStatus))
-    return { ids, action: { type: 'stand', status: action.status as WorkflowStatus } };
+  if (action.type === 'stand' && isWorkflowStatus(action.status))
+    return { ids, action: { type: 'stand', status: action.status } };
   return null;
 }
 

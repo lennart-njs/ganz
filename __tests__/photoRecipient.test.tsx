@@ -15,6 +15,7 @@ import { services } from '@/services';
 import { useAppStore } from '@/store/appStore';
 import { syncShare } from '@/store/useShareSync';
 import { APP } from '@/test/app';
+import { unwrap } from '@/test/result';
 
 const dealer = {
   id: demoConfig.dealers[0]!.id,
@@ -66,7 +67,7 @@ function sharedCase(): { caseId: Id; deviceId: Id } {
   });
   const c = s.createCase({ deviceId: device.id, entry: 'symptom', problemLabel: 'Wasserablauf' });
   s.escalate(c.id);
-  useAppStore.getState().shareWithDealer(c.id, 'test');
+  unwrap(useAppStore.getState().shareWithDealer(c.id, 'test'));
   useAppStore.getState().grantConsent(
     scopedConsent('chat_assistent', {
       recipient: {
@@ -296,7 +297,7 @@ describe('Foto bleibt beim gewählten Empfänger (Übertragung 1.1)', () => {
         .addPhoto({ caseId, deviceId, purpose: 'frage', source: 'in_app_camera', uri });
     const forAssistant = take('');
     const forDealer = take('');
-    s.messageDealer(caseId, 'Hier das Typenschild.', forDealer.id);
+    unwrap(s.messageDealer(caseId, 'Hier das Typenschild.', forDealer.id));
     backend.share.mockClear();
     await act(async () => {
       await syncShare(caseId, false);

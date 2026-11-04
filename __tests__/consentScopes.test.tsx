@@ -238,7 +238,7 @@ const flows: Record<ConsentPurpose, Record<string, () => Promise<void> | void>> 
       expect([...sent].sort()).toEqual([...scope].sort());
       // Die Akte, die heute gebaut wird, hat keine Felder außerhalb der Liste oben
       const id = dealerCase();
-      useAppStore.getState().shareWithDealer(id, 'test');
+      unwrap(useAppStore.getState().shareWithDealer(id, 'test'));
       const file = buildSharedCaseFile(useAppStore.getState(), id, [], '2026-11-04T12:00:00Z')!;
       for (const key of Object.keys(file)) expect(Object.keys(sharedFileCategory)).toContain(key);
     },

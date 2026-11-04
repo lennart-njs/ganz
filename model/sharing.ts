@@ -17,7 +17,7 @@ import type {
   Quote,
 } from './types';
 import {
-  workflowStatuses,
+  isWorkflowStatus,
   type AccessEntry,
   type InternalNote,
   type Workflow,
@@ -104,6 +104,11 @@ export type RetailerDecision = 'gewaehrleistung' | 'kulanz' | 'an_versicherer' |
 export type RetailerStatus = 'in_pruefung' | 'ersatzteil_bestellt' | 'abgeschlossen';
 
 export type PartStatus = 'bestellt' | 'geliefert';
+
+/** Stand eines Ersatzteils aus dem Ereignis haendler_ersatzteil. Ohne „geliefert“: bestellt. */
+export function partStatusOf(payload: Readonly<Record<string, unknown>>): PartStatus {
+  return payload.status === 'geliefert' ? 'geliefert' : 'bestellt';
+}
 
 /** Aktionen, die beim Haushalt im Gespräch ankommen */
 export type RetailerAction =
@@ -240,8 +245,8 @@ export function parseWorkflowAction(body: unknown): WorkflowAction | null {
         return null;
       return { type: 'zuweisen', assigneeId: o.assigneeId as string | null };
     case 'stand':
-      if (!workflowStatuses.includes(o.status as WorkflowStatus)) return null;
-      return { type: 'stand', status: o.status as WorkflowStatus };
+      if (!isWorkflowStatus(o.status)) return null;
+      return { type: 'stand', status: o.status };
     default:
       return null;
   }

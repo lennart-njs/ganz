@@ -7,6 +7,8 @@ import { guides } from '@/data/guides';
 import { hasChatConsent, hasPhotoConsent } from '@/lib/chat/context';
 import { getGuide, resetCatalog } from '@/lib/guideCatalog';
 import { buildSharedCaseFile, dealerConsent } from '@/lib/sharing';
+import { can } from '@/model/policies/actions';
+import { selectCaseFacts } from '@/model/policies/caseFacts';
 import type { GuideCatalogEntry } from '@/model/types';
 import { createAppStore, initialData, useAppStore, type AppStore } from '@/store/appStore';
 import type { StoreEnv } from '@/store/env';
@@ -179,7 +181,7 @@ function playThrough(store: AppStore) {
   });
   const d = s().createCase({ deviceId: bought.id, entry: 'freitext', problemLabel: 'Flusen' });
   unwrap(s().escalate(d.id));
-  s().shareWithDealer(d.id, '2026-11-3');
+  unwrap(s().shareWithDealer(d.id, '2026-11-3'));
   s().updateShare(d.id, { token: 'token', syncedEvents: 1 });
   s().importRetailerEvents(d.id, [
     {
@@ -198,7 +200,7 @@ function playThrough(store: AppStore) {
     source: 'in_app_camera',
     uri: 'file:///frage.jpg',
   });
-  s().messageDealer(d.id, 'Hier ist das Foto.', question.id);
+  unwrap(s().messageDealer(d.id, 'Hier ist das Foto.', question.id));
   s().addChatMessage({ caseId: d.id, role: 'haushalt', text: 'Das Sieb?', photoId: question.id });
   s().addChatMessage({ caseId: d.id, role: 'assistent', text: 'Ja.', assessment: 'passt' });
 }
@@ -400,6 +402,11 @@ describe('Speicher laden', () => {
     expect(dealer?.id).toBe(s.shares[caseId]?.consentId);
     expect(dealer?.textHash).toBeUndefined();
     expect(buildSharedCaseFile(s, caseId, [], NOW)?.consentId).toBe(dealer?.id);
+    // Nach den Regeln (Übertragung Schritt 3): Der Fall ist bei Fründ, du schreibst ihm weiter
+    const facts = selectCaseFacts(s, caseId);
+    expect(facts).toMatchObject({ dealerShared: true, soldBy: { id: 'fruend' } });
+    expect(can(facts, 'an_haendler_senden')).toBe(false);
+    expect(can(facts, 'haendler_schreiben')).toBe(true);
     // Die alte Einwilligung in den Assistenten gilt für Text, nicht für Fotos: Vor dem ersten
     // Foto fragt das Gespräch noch einmal (Kategorie gespraechsfotos)
     expect(hasChatConsent(s)).toBe(true);

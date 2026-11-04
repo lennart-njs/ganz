@@ -290,6 +290,29 @@ describe('Demo-Backend: Fall an den Händler (Entscheidung 28)', () => {
     expect(r.retailerEvents.at(-1)?.type).toBe('haendler_angenommen');
   });
 
+  test('Sammelaktion „Stand“: nur ein Stand der Arbeitsliste', async () => {
+    const auth = await authed();
+    const all = (await (await list(req('/api/v1/portal/faelle', { headers: auth }))).json()) as {
+      cases: SharedCaseRecord[];
+    };
+    const ids = all.cases.slice(0, 2).map((c) => c.file.caseId);
+    const stand = (status: unknown) =>
+      bulk(
+        req('/api/v1/portal/sammelaktion', {
+          method: 'POST',
+          headers: auth,
+          json: { ids, action: { type: 'stand', status } },
+        }),
+      );
+    for (const status of ['eskaliert', 'offen', '', 3, null]) {
+      expect([status, (await stand(status)).status]).toEqual([status, 400]);
+    }
+    const res = await stand('wartet_kunde');
+    expect(res.status).toBe(200);
+    expect(((await res.json()) as { count: number }).count).toBe(ids.length);
+    expect((await record(ids[0]!)).workflow?.status).toBe('wartet_kunde');
+  });
+
   test('Einstellungen: lesen, abschnittsweise speichern, Regeln greifen beim nächsten Fall', async () => {
     const auth = await authed();
     const got = (await (

@@ -303,6 +303,22 @@ describe('kein Status-Vergleich in Screens', () => {
       expect(e.reason.length).toBeGreaterThanOrEqual(10);
     }
   });
+
+  // Übertragung Schritt 3: Die Übergangsliste aus mach’s ist weg. Das Angebot „Fall an … senden“,
+  // die Antworten an den Händler, das Ersatzteil und die Sammelaktion fragen model/.
+  test('die Allowlist im Repo nennt nur den Ladezustand des gespeicherten Stands', () => {
+    const entries = config.flatMap((block) => {
+      const setting = block.rules?.[STATUS];
+      return Array.isArray(setting) ? ((setting[1] as { allow?: unknown[] })?.allow ?? []) : [];
+    }) as { file: string; code: string; reason: string }[];
+    expect(entries.map((e) => e.file).sort()).toEqual([
+      'app/_layout.tsx',
+      'app/_layout.tsx',
+      'app/_layout.tsx',
+      'components/app/RecoveryScreen.tsx',
+    ]);
+    for (const e of entries) expect(e.reason).toMatch(/^Ladezustand des gespeicherten Stands/);
+  });
 });
 
 // Gegenprüfung zu Schritt 28: Diese Fälle fielen den Regeln nicht auf

@@ -8,16 +8,19 @@
 // läuft erst mit Preis und Tap, und „Nicht buchen“ beendet die Anfrage ohne Kosten (Nr. 33).
 // Abbrechen geht auch in der Reparatur. Danach läuft kein Termin mehr, jeder bekommt seine Absage,
 // und die Simulation macht keinen Schritt mehr (Nr. 34). Hilft eine Reparatur nicht, bessert der
-// Betrieb in der Gewährleistung nach, ohne Schadenfall und ohne Betrag (Nr. 32).
+// Betrieb in der Gewährleistung nach, ohne Schadenfall und ohne Betrag (Nr. 32). Ein Gerät, das
+// beim Händler gekauft ist, geht an ihn, sobald Hilfe nötig ist, mit höchstens einer gültigen
+// Weitergabe je Fall, und Nachrichten an ihn gibt es nur mit ihr (Entscheidungen 28, 32).
 import { array, assert, boolean, constantFrom, integer, nat, property } from 'fast-check';
 import type { StateStorage } from 'zustand/middleware';
 
 import { demoConfig } from '@/config/demo.config';
+import { caseService } from '@/lib/service';
 import { isClosed } from '@/model/caseMachine';
 import { ALL_ACTIONS, availableActions, type ActionKey } from '@/model/policies/actions';
 import { selectCaseFacts, type CaseFacts } from '@/model/policies/caseFacts';
 import type { OpenCaseOptions } from '@/model/policies/openCase';
-import type { Booking, Case, CaseEntry, Claim } from '@/model/types';
+import type { Booking, Case, CaseEntry, Claim, PartnerRef } from '@/model/types';
 import {
   createAppStore,
   nextSimulationDue,
@@ -65,11 +68,23 @@ const OPENINGS: [CaseEntry, string, OpenCaseOptions][] = [
   ['pflege', 'Hygiene-Programm', { guideId: 'hygiene' }],
 ];
 
-const partners = demoConfig.partners.map((p) => p.id);
+/** Händler, bei dem die Geräte gekauft sind, wenn die Folge mit Händler beginnt (Entscheidung 31) */
+const DEALER: PartnerRef = {
+  id: demoConfig.dealers[0]!.id,
+  kind: 'haendler',
+  name: demoConfig.dealers[0]!.name,
+};
 
-/** Die Bestätigung an die Fachkraft, die der Tap auf „Videocall starten“ erteilt */
-function share(caseId: string): NewConsent {
-  const partner = demoConfig.partners.find((p) => p.id === demoConfig.expert.partnerId)!;
+/** Betriebe, die der Fall anbietet: beim Händler-Gerät ohne Schutz sein Kundendienst (lib/service.ts) */
+const partnersOf = (s: AppState, caseId: string) =>
+  caseService(s, caseId).partners.map((p) => p.id);
+
+/**
+ * Die Bestätigung an die Fachkraft, die der Tap auf „Videocall starten“ erteilt. Sie nennt den
+ * Betrieb der Fachkraft, die den Fall übernimmt, wie der Satz im Gespräch (namesExpert im Store).
+ */
+function share(s: AppState, caseId: string): NewConsent {
+  const partner = caseService(s, caseId).expert.partner;
   return {
     caseId,
     purpose: 'weitergabe_fachkraft',
@@ -85,7 +100,7 @@ function household(key: ActionKey, c: Case, f: CaseFacts, s: AppState): Step[] {
   const step = (name: string, run: (s: AppState) => unknown): Step => ({ action: key, name, run });
   const id = c.id;
   const booking = (kind: 'reparatur' | 'vor_ort_diagnose', selfPay: boolean) =>
-    partners.map((partnerId) =>
+    partnersOf(s, id).map((partnerId) =>
       step(`${key} ${partnerId}`, (x) =>
         x.requestBooking({
           caseId: id,
@@ -120,11 +135,19 @@ function household(key: ActionKey, c: Case, f: CaseFacts, s: AppState): Step[] {
     case 'hilfe_holen':
       return [step(key, (x) => x.escalate(id))];
     case 'videocall_anfragen':
-      return [step(key, (x) => x.requestVideoCall(id, { share: share(id) }))];
+      return [step(key, (x) => x.requestVideoCall(id, { share: share(x, id) }))];
     case 'rueckruf_anfragen':
       return [step(key, (x) => x.requestCallback(id, demoConfig.slots[1]!))];
     case 'termin_diagnose':
       return booking('vor_ort_diagnose', false);
+    case 'an_haendler_senden':
+      return [step(key, (x) => x.shareWithDealer(id, 'fuzz'))];
+    case 'haendler_schreiben':
+      return [
+        step(key, (x) => x.messageDealer(id, 'Ist das Ersatzteil schon da?')),
+        // Leer geht nichts an den Händler
+        step(`${key} leer`, (x) => x.messageDealer(id, '   ')),
+      ];
     case 'schaden_melden':
       return [step(key, (x) => x.reportClaim(id))];
     case 'selbst_zahlen':
@@ -234,6 +257,7 @@ const STARTS: Start[] = [
 function setup(
   start: Start,
   contract: boolean,
+  dealer: boolean,
   devices: number,
   claimScenario: 'freigeben' | 'ablehnen',
   deductible: number,
@@ -251,6 +275,7 @@ function setup(
       model: demoConfig.device.model,
       identifiedBy: 'vertrag',
       contractId: s().contracts[0]?.id,
+      ...(dealer ? { soldBy: DEALER } : {}),
     });
   }
   if (start === 'leer') return store;
@@ -261,7 +286,7 @@ function setup(
       s().requestBooking({
         caseId: id,
         kind,
-        partnerId: partners[0]!,
+        partnerId: partnersOf(s(), id)[0]!,
         slotLabel: demoConfig.slots[0]!,
         selfPay,
       }),
@@ -271,7 +296,7 @@ function setup(
     return store;
   }
   // Videocall mit Befund „Reparatur“ und Kostenvoranschlag
-  const call = unwrap(s().requestVideoCall(id, { share: share(id) }));
+  const call = unwrap(s().requestVideoCall(id, { share: share(s(), id) }));
   unwrap(s().updateVideoCall(call.id, 'verbunden'));
   unwrap(s().updateVideoCall(call.id, 'beendet'));
   unwrap(s().setFinding(id, 'reparatur', 'fachkraft'));
@@ -528,6 +553,64 @@ function reworkStep(before: AppState, after: AppState): string | undefined {
   return undefined;
 }
 
+/** Gültige Weitergaben eines Falls an den Händler */
+const dealerShares = (s: AppState, caseId: string) =>
+  s.consents.filter(
+    (k) => k.caseId === caseId && k.purpose === 'weitergabe_haendler' && !k.revokedAt,
+  );
+
+/**
+ * Hilfe ist nötig, nachgerechnet ohne die Regeln der App, so wie mach’s das Angebot „Fall an …
+ * senden“ vor der Übertragung zeigte: nach „Hilfe holen“, während der Prüfung, nach der Ablehnung,
+ * mit Kostenvoranschlag oder wenn die neueste Anleitung nicht ging.
+ */
+function needsHelp(s: AppState, c: Case): boolean {
+  const last = c.guideRunIds
+    .map((r) => s.guideRuns[r])
+    .filter((r) => !!r)
+    .at(-1);
+  return (
+    ['eskaliert', 'freigabe_noetig', 'abgelehnt'].includes(c.status) ||
+    s.quotes.some((q) => q.id === c.quoteId) ||
+    last?.outcome === 'geht_nicht' ||
+    last?.outcome === 'laeuft_nicht'
+  );
+}
+
+/**
+ * Entscheidungen 28 und 32: Je Fall höchstens eine gültige Weitergabe an den Händler. Eine neue
+ * entsteht nur für ein Gerät, das bei ihm gekauft ist, an genau ihn, in einem offenen Fall, der
+ * Hilfe braucht, und ohne gültige davor. Eine Nachricht an den Händler gibt es nur mit gültiger
+ * Weitergabe in einem offenen Fall.
+ */
+function dealerViolation(before: AppState, after: AppState): string | undefined {
+  for (const c of Object.values(after.cases)) {
+    if (dealerShares(after, c.id).length > 1) return `${c.id} zweimal an den Händler`;
+  }
+  const fresh = after.consents.filter(
+    (k) => k.purpose === 'weitergabe_haendler' && !before.consents.some((b) => b.id === k.id),
+  );
+  for (const k of fresh) {
+    const c = before.cases[k.caseId!];
+    if (!c) return `${k.id} an den Händler ohne Fall`;
+    const soldBy = before.devices.find((d) => d.id === c.deviceId)?.soldBy;
+    if (!soldBy || soldBy.id !== k.recipient.id) return `${c.id} an einen fremden Händler`;
+    if (isClosed(c.status)) return `${c.id} geschlossen an den Händler`;
+    if (!needsHelp(before, c)) return `${c.id} an den Händler, ohne dass Hilfe nötig war`;
+    if (dealerShares(before, c.id).length) return `${c.id} an den Händler, obwohl er ihn hat`;
+    if (after.shares[c.id]?.consentId !== k.id) return `${c.id} Weitergabe ohne Eintrag zum Senden`;
+  }
+  for (const e of after.events.slice(before.events.length)) {
+    if (e.type !== 'nachricht_an_haendler') continue;
+    const c = before.cases[e.caseId];
+    if (!c || isClosed(c.status))
+      return `${e.caseId} Nachricht an den Händler im geschlossenen Fall`;
+    if (!dealerShares(before, c.id).length)
+      return `${c.id} Nachricht an den Händler ohne gültige Weitergabe`;
+  }
+  return undefined;
+}
+
 const isRefused = (r: unknown): boolean =>
   typeof r === 'object' && r !== null && 'ok' in r && (r as { ok: unknown }).ok === false;
 
@@ -540,6 +623,8 @@ test('1.000 zufällige Folgen aus availableActions: keine Exception, je Gerät h
     property(
       constantFrom(...STARTS),
       boolean(),
+      // Gekauft beim Händler (Entscheidung 31), mit oder ohne Schutz
+      boolean(),
       integer({ min: 1, max: 2 }),
       constantFrom('freigeben' as const, 'ablehnen' as const),
       // Selbstbeteiligung wie in der Demo-Steuerung: 0 € oder 50 € (Entscheidung Nr. 4)
@@ -547,8 +632,8 @@ test('1.000 zufällige Folgen aus availableActions: keine Exception, je Gerät h
       // „Reparatur liegt länger zurück“ aus der Demo-Steuerung (Nr. 32)
       boolean(),
       array(nat(), { minLength: 5, maxLength: 25, size: 'max' }),
-      (start, contract, devices, claimScenario, deductible, longAgo, choices) => {
-        const store = setup(start, contract, devices, claimScenario, deductible, longAgo);
+      (start, contract, dealer, devices, claimScenario, deductible, longAgo, choices) => {
+        const store = setup(start, contract, dealer, devices, claimScenario, deductible, longAgo);
         const trail: string[] = [start];
         for (const choice of choices) {
           const step = pick(menu(store), choice);
@@ -567,7 +652,8 @@ test('1.000 zufällige Folgen aus availableActions: keine Exception, je Gerät h
                 bindingDuringReview(before, after) ??
                 cancelViolation(before, after, step) ??
                 reworkViolation(after, longAgo) ??
-                reworkStep(before, after));
+                reworkStep(before, after) ??
+                dealerViolation(before, after));
           if (problem) throw new Error(`${problem} nach ${trail.join(' → ')}`);
           for (const c of Object.values(after.cases)) {
             if (before.cases[c.id]?.status === 'in_reparatur' && c.status === 'abgebrochen')
@@ -583,6 +669,13 @@ test('1.000 zufällige Folgen aus availableActions: keine Exception, je Gerät h
               const b = after.bookings.find((x) => x.id === e.payload.bookingId);
               if (b?.reworkOf) reached.add('nachbesserung_abgesagt');
             }
+            if (e.type === 'nachricht_an_haendler') reached.add('haendler_nachricht');
+            if (e.type === 'weitergabe_bestaetigt' && e.payload.purpose === 'weitergabe_haendler') {
+              const revoked = before.consents.some(
+                (k) => k.caseId === e.caseId && k.purpose === 'weitergabe_haendler' && k.revokedAt,
+              );
+              reached.add(revoked ? 'haendler_nach_widerruf' : 'haendler_gesendet');
+            }
           }
         }
       },
@@ -594,6 +687,9 @@ test('1.000 zufällige Folgen aus availableActions: keine Exception, je Gerät h
   expect(ALL_ACTIONS.filter((a) => !seen.has(a))).toEqual([]);
   expect([...reached].sort()).toEqual([
     'abbruch_in_reparatur',
+    'haendler_gesendet',
+    'haendler_nach_widerruf',
+    'haendler_nachricht',
     'nachbesserung',
     'nachbesserung_abgesagt',
     'nachbesserung_termin',
