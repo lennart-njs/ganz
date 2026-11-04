@@ -39,7 +39,8 @@ const actorName = (e: CaseEvent) =>
 /**
  * Bezeichnungen, die Bestätigungen „Fall an den Händler“ bis Version 2026-11-3 statt Schlüsseln
  * speicherten, und die Kategorien, die sie meinten (docs/ANNAHMEN.md, Übertragung U5). Die
- * Seriennummer steht auf dem Typenschild. Gespeicherte Werte, kein Text der App: nie ändern.
+ * Seriennummer steht auf dem Typenschild. 2026-11-1 speicherte die ersten fünf, 2026-11-3 alle
+ * sechs. Gespeicherte Werte, kein Text der App: nie ändern.
  */
 export const LEGACY_DEALER_LABELS: Readonly<Record<string, readonly DataCategory[]>> = {
   'Name und Adresse': ['name', 'adresse'],
@@ -53,14 +54,29 @@ export const LEGACY_DEALER_LABELS: Readonly<Record<string, readonly DataCategory
 const isCategory = (x: string): x is DataCategory =>
   (DATA_CATEGORIES as readonly string[]).includes(x);
 
+const legacyLabels = new Map(Object.entries(LEGACY_DEALER_LABELS));
+
 /**
  * Die Kategorien, die eine Bestätigung erlaubt. Ältere Stände speichern Bezeichnungen, sie zählen
  * mit den Kategorien aus LEGACY_DEALER_LABELS. Was keins von beiden ist, erlaubt nichts.
+ *
+ * Eine Bestätigung aus Bezeichnungen erlaubt immer auch Nachrichten und Antworten an den Händler
+ * (U5). Version 2026-11-1 nannte sie nicht, aber „meldet sich hier im Gespräch“: Jede Nachricht und
+ * jede Antwort ist ein eigener Tap an den Händler, und die Akte schickte sie bis Schritt 3.1 mit.
  */
 export function consentCategories(consent: Pick<Consent, 'dataCategories'>): Set<DataCategory> {
-  return new Set(
-    consent.dataCategories.flatMap((x) => (isCategory(x) ? [x] : (LEGACY_DEALER_LABELS[x] ?? []))),
-  );
+  const out = new Set<DataCategory>();
+  for (const x of consent.dataCategories) {
+    if (isCategory(x)) {
+      out.add(x);
+      continue;
+    }
+    const legacy = legacyLabels.get(x);
+    if (!legacy) continue;
+    for (const k of legacy) out.add(k);
+    out.add('nachrichten_haendler');
+  }
+  return out;
 }
 
 /**

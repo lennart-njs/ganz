@@ -4,6 +4,7 @@ import { demoConfig } from '@/config/demo.config';
 import { de } from '@/i18n/de';
 import { scopeList } from '@/lib/consent';
 import { buildSharedCaseFile, TIMELINE_EVENTS } from '@/lib/sharing';
+import { can } from '@/model/policies/actions';
 import { selectCaseFacts } from '@/model/policies/caseFacts';
 import { CONSENT_SCOPES, type DataCategory } from '@/model/policies/consentScopes';
 import type { SharedCaseFile, SharedPhoto } from '@/model/sharing';
@@ -743,6 +744,16 @@ function fileFor(id: Id, categories?: readonly string[]): SharedCaseFile {
   return buildSharedCaseFile(useAppStore.getState(), id, [examplePhoto], NOW)!;
 }
 
+/** Wie Bestätigungen bis 2026-11-3 ihren Umfang speicherten: Bezeichnungen, keine Schlüssel */
+const LEGACY_LABELS = [
+  'Name und Adresse',
+  'Gerät, Typenschild und Kaufdatum',
+  'Problem und Fotos aus dem Fall',
+  'Ergebnis und Schritte der Anleitung',
+  'Befund, Kosten und Termin',
+  'Deine Nachrichten an den Händler',
+];
+
 const isEmpty = (x: unknown) => x === undefined || x === '' || (Array.isArray(x) && x.length === 0);
 
 /**
@@ -893,6 +904,27 @@ describe('Nur Erlaubtes in der Akte (Übertragung 3.1)', () => {
     }
     // Die Akte bleibt eine, die das Backend annimmt
     expect(file.case.status).toBe(useAppStore.getState().cases[file.caseId]!.status);
+  });
+
+  // U5: Bestätigungen von vor 2026-11-4 speichern Bezeichnungen. 2026-11-1 (mach’s, 02.11.2026)
+  // nannte fünf, ohne „Deine Nachrichten an den Händler“, 2026-11-3 sechs. Das Gespräch mit dem
+  // Händler geht mit beiden weiter, also kommen Nachricht und Antwort auch an.
+  test.each([
+    ['2026-11-1', LEGACY_LABELS.slice(0, 5)],
+    ['2026-11-3', LEGACY_LABELS],
+  ])('Bestätigung %s aus Bezeichnungen: Nachrichten und Antworten gehen mit', (_v, labels) => {
+    const id = richCase();
+    const file = fileFor(id, labels);
+    expect(can(selectCaseFacts(useAppStore.getState(), id), 'haendler_schreiben')).toBe(true);
+    expect(file.messages?.map((m) => [m.text, m.photoId])).toEqual([
+      ['Hier der Kaufbeleg.', examplePhoto.id],
+    ]);
+    expect(file.answers.map((a) => [a.questionEventId, a.answer])).toEqual([['hev-frage', 'Ja']]);
+    // Was die Bezeichnungen nicht nannten, bleibt leer, alles andere ist da
+    const gone = ['protection', 'guide.note', 'timeline', 'rating'];
+    for (const [name, field] of Object.entries(FIELDS)) {
+      expect([name, isEmpty(field.get(file))]).toEqual([name, gone.includes(name)]);
+    }
   });
 
   test('ohne bekannte Kategorie geht nur die Weitergabe selbst', () => {
