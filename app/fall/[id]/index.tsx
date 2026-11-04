@@ -126,8 +126,10 @@ export default function FallGespraech() {
   const notify = asksNotifications(state, dialog);
   // Nach einem Widerruf: die Weitergabe noch einmal bestätigen (R-12)
   const renew = useCommand(() => useAppStore.getState().renewTransfer(caseId));
-  // „Zahlungspflichtig buchen“ im eigenen Schritt (Nr. 31), mit dem Betrag, den die Karte zeigt
+  // „Zahlungspflichtig buchen“ im eigenen Schritt (Nr. 31, Nr. 33), mit dem Betrag der Karte
   const bind = useCommand((shown: Cents) => useAppStore.getState().bookBinding(caseId, shown));
+  // „Nicht buchen“: Die unverbindliche Anfrage endet ohne Kosten (Nr. 33)
+  const decline = useCommand(() => useAppStore.getState().declineBinding(caseId));
   // Anleitung starten: Ein zweiter Tap öffnet sie nicht noch einmal
   const guide = useCommand(
     (guideId: string) => {
@@ -168,6 +170,7 @@ export default function FallGespraech() {
     book.toast ??
     renew.toast ??
     bind.toast ??
+    decline.toast ??
     guide.toast ??
     answer.toast ??
     finding.toast ??
@@ -597,17 +600,37 @@ export default function FallGespraech() {
       <BotSays
         lines={[de.status.headline.angefragt]}
         hint={
-          notificationsOn(state)
-            ? de.status.text.angefragt(b.provider.name)
-            : de.status.text.angefragtImFall(b.provider.name)
+          // Zur Vor-Ort-Diagnose nennt der Betrieb erst den Preis (Nr. 33)
+          b.kind === 'vor_ort_diagnose'
+            ? de.status.text.angefragtDiagnose(b.provider.name)
+            : notificationsOn(state)
+              ? de.status.text.angefragt(b.provider.name)
+              : de.status.text.angefragtImFall(b.provider.name)
         }
       >
         {details('status')}
       </BotSays>,
     );
   }
-  // Der eigene Schritt „Zahlungspflichtig buchen“ (Nr. 31). Beim Buchen mit bekanntem Preis
-  // steht der Tap schon in der Terminanfrage.
+  // Der Betrieb nennt den Preis für die Vor-Ort-Diagnose (Nr. 33)
+  for (const e of of('preis_genannt')) {
+    const partner = String(e.payload.partner);
+    add(
+      e.at,
+      e.id,
+      <BotSays
+        name={partner}
+        lines={[de.appointment.priceNamed(partner, formatEuro(Number(e.payload.price)))]}
+      />,
+    );
+  }
+  // „Nicht buchen“: Die Anfrage endet, der Fall bietet wieder, was er vorher bot
+  for (const e of of('nicht_gebucht')) {
+    add(e.at, e.id, <UserSaid text={de.appointment.decline} />);
+    add(e.at, `${e.id}-a`, <BotSays lines={[de.appointment.declined]} />);
+  }
+  // Der eigene Schritt „Zahlungspflichtig buchen“ (Nr. 31, Nr. 33). Beim Buchen mit bekanntem
+  // Preis steht der Tap schon in der Terminanfrage.
   for (const e of of('zahlungspflichtig_gebucht')) {
     if (!e.payload.separateStep) continue;
     const partner = String(e.payload.partner);
@@ -964,8 +987,9 @@ export default function FallGespraech() {
     reply('weitergabe-erneuern', t.renewShare, () => renew.run(), recipient);
     reply('status', de.status.caseFile, () => router.push(`/fall/${caseId}/fallakte`));
   } else if (can(facts, 'zahlungspflichtig_buchen') && facts.bindingDue) {
-    // Nach der Freigabe: Erst dieser Tap macht die Anfrage verbindlich, vorher bestätigt der
-    // Betrieb nicht (Nr. 31). Die Karte zeigt, was der Store mit dem Tap stempelt.
+    // Nach der Freigabe oder nach dem Preis für die Vor-Ort-Diagnose: Erst dieser Tap macht die
+    // Anfrage verbindlich, vorher bestätigt der Betrieb nicht (Nr. 31, Nr. 33). Die Karte zeigt,
+    // was der Store mit dem Tap stempelt. „Nicht buchen“ beendet die Anfrage ohne Kosten.
     const due = facts.bindingDue;
     tail.push(
       <BotSays
@@ -978,6 +1002,9 @@ export default function FallGespraech() {
       </BotSays>,
     );
     reply('zahlungspflichtig', de.appointment.requestPaid, () => bind.run(due.amount));
+    if (can(facts, 'nicht_buchen')) {
+      reply('nicht-buchen', de.appointment.decline, () => decline.run(), de.appointment.declineSub);
+    }
   } else if (needsAppointment) {
     if (selfPay && quote) {
       tail.push(

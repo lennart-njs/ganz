@@ -1,7 +1,8 @@
-// Zusammenfassung vor „Zahlungspflichtig buchen“ im eigenen Schritt (Entscheidung Nr. 31): Betrieb,
-// Zeitfenster, Adresse, Auftrag und der Betrag, den du mit dem Tap zahlst. Darunter der Satz, den
-// der Store mit dem Tap stempelt (lib/legalTexts.ts, verbindliche_buchung). Gespräch und Termin
-// zeigen dieselbe Karte, die Daten kommen aus den Fakten des Falls (CaseFacts.bindingDue).
+// Zusammenfassung vor „Zahlungspflichtig buchen“ im eigenen Schritt (Entscheidungen Nr. 31 und
+// Nr. 33): Betrieb, Zeitfenster, Adresse, Auftrag und der Betrag, den du mit dem Tap zahlst, also
+// die Selbstbeteiligung nach der Freigabe oder den Preis für die Vor-Ort-Diagnose. Darunter der
+// Satz, den der Store mit dem Tap stempelt (lib/legalTexts.ts, verbindliche_buchung). Gespräch und
+// Termin zeigen dieselbe Karte, die Daten kommen aus den Fakten des Falls (CaseFacts.bindingDue).
 import { StyleSheet, View } from 'react-native';
 
 import { Card, FactList, Text } from '@/components/ds';
@@ -21,7 +22,10 @@ export function BindingSummary({ due, partName }: { due: BindingDue; partName?: 
     items.push([t.facts.address, t.addressLine(b.address.street, b.address.zip, b.address.city)]);
   }
   items.push([t.facts.job, b.kind === 'reparatur' ? t.jobRepair(partName ?? '') : t.jobDiagnosis]);
-  items.push([t.facts.due, due.reason === 'selbstbeteiligung' ? t.dueDeductible(amount) : amount]);
+  items.push([
+    t.facts.due,
+    due.reason === 'selbstbeteiligung' ? t.dueDeductible(amount) : t.duePrice(amount),
+  ]);
   return (
     <View style={styles.stack}>
       <Card>

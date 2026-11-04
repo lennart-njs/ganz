@@ -80,9 +80,14 @@ export default function Termin() {
   const later = bindsLater(state, caseId, selfPay, diagnosis);
   // Einmal anfragen: Ein zweiter Tap bucht nicht doppelt, eine Ablehnung bekommt einen ruhigen Satz
   const book = useCommand(requestAppointment, () => backToThread(caseId));
-  // Der eigene Schritt nach der Freigabe (Nr. 31), mit dem Betrag, den die Karte zeigt
+  // Der eigene Schritt nach der Freigabe oder dem Preis (Nr. 31, Nr. 33), mit dem Betrag der Karte
   const bind = useCommand(
     (shown: Cents) => useAppStore.getState().bookBinding(caseId, shown),
+    () => backToThread(caseId),
+  );
+  // „Nicht buchen“: Die unverbindliche Anfrage endet ohne Kosten (Nr. 33)
+  const decline = useCommand(
+    () => useAppStore.getState().declineBinding(caseId),
     () => backToThread(caseId),
   );
   // Der Satz zu Mitteilungen steht nur da, wenn danach wirklich der Systemdialog kommt
@@ -98,18 +103,27 @@ export default function Termin() {
     );
   }
 
-  // Ein angefragter Termin wartet auf „Zahlungspflichtig buchen“ (Nr. 31): dieselbe Karte wie im
-  // Gespräch. Erst der Tap macht ihn verbindlich.
+  // Ein angefragter Termin wartet auf „Zahlungspflichtig buchen“ (Nr. 31, Nr. 33): dieselbe Karte
+  // wie im Gespräch. Erst der Tap macht ihn verbindlich, „Nicht buchen“ beendet die Anfrage.
   if (can(facts, 'zahlungspflichtig_buchen') && facts.bindingDue) {
     const due = facts.bindingDue;
+    const stepToast = bind.toast ?? decline.toast;
     return (
       <CaseScreen
         title={de.screens.termin}
         footer={
           <>
-            {bind.toast ? <Toast message={bind.toast} style={styles.toast} /> : null}
+            {stepToast ? <Toast message={stepToast} style={styles.toast} /> : null}
             <ActionBar meta={due.booking.slotLabel} sub={due.booking.provider.name}>
               <Button label={t.requestPaid} onPress={() => bind.run(due.amount)} />
+              {can(facts, 'nicht_buchen') ? (
+                <Button
+                  label={t.decline}
+                  accessibilityHint={t.declineSub}
+                  variant="secondary"
+                  onPress={() => decline.run()}
+                />
+              ) : null}
             </ActionBar>
           </>
         }

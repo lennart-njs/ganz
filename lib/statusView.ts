@@ -3,7 +3,7 @@
 import type { TimelineItem } from '@/components/ds';
 import { demoConfig } from '@/config/demo.config';
 import { de } from '@/i18n/de';
-import { formatDateTime } from '@/i18n/format';
+import { formatDateTime, formatEuro } from '@/i18n/format';
 import { caseAppliance } from '@/lib/appliance';
 import { can } from '@/model/policies/actions';
 import { selectCaseFacts } from '@/model/policies/caseFacts';
@@ -67,6 +67,11 @@ export function statusView(s: AppData, c: Case): StatusView {
   if (booking) {
     const reached = (st: string[]) => st.includes(booking.status);
     byEvent('termin_angefragt', t.timeline.angefragt, true);
+    // Zur Vor-Ort-Diagnose nennt der Betrieb erst den Preis (Nr. 33)
+    const named = events.find(
+      (e) => e.type === 'preis_genannt' && e.payload.bookingId === booking.id,
+    );
+    if (named) done(t.timeline.preis, named.at);
     // Zahlungspflichtig gebucht, oder der Tap steht noch aus (Nr. 31)
     if (booking.binding) done(t.timeline.gebucht, booking.binding.at);
     else if (f?.bindingDue?.booking.id === booking.id) pending(t.timeline.buchen);
@@ -107,9 +112,13 @@ export function statusView(s: AppData, c: Case): StatusView {
     headline = t.headline.pruefung(insurer);
     text = notify ? t.text.pruefung : t.text.pruefungImFall;
   } else if (f?.bindingDue) {
-    // Der Termin wartet auf „Zahlungspflichtig buchen“ im Gespräch (Nr. 31)
-    headline = t.headline.freigegeben(insurer);
-    text = t.text.buchen(f.bindingDue.booking.provider.name);
+    // Der Termin wartet auf „Zahlungspflichtig buchen“ im Gespräch (Nr. 31, Nr. 33)
+    const due = f.bindingDue;
+    headline =
+      due.reason === 'preis'
+        ? t.headline.preis(due.booking.provider.name, formatEuro(due.amount))
+        : t.headline.freigegeben(insurer);
+    text = t.text.buchen(due.booking.provider.name);
   } else if (replacement && f?.claim === 'freigegeben') {
     headline = t.headline.ersatzgeraet(insurer);
   } else if (booking?.status === 'erledigt' && booking.kind === 'vor_ort_diagnose') {
@@ -128,7 +137,12 @@ export function statusView(s: AppData, c: Case): StatusView {
     text = booking.kind === 'reparatur' ? t.text.bestaetigt(partner, a.finding.partAcc) : undefined;
   } else if (booking?.status === 'angefragt') {
     headline = f?.claim === 'freigegeben' ? t.headline.freigegeben(insurer) : t.headline.angefragt;
-    text = notify ? t.text.angefragt(partner) : t.text.angefragtImFall(partner);
+    text =
+      booking.kind === 'vor_ort_diagnose'
+        ? t.text.angefragtDiagnose(partner)
+        : notify
+          ? t.text.angefragt(partner)
+          : t.text.angefragtImFall(partner);
   } else if (callback) {
     headline = t.headline.rueckruf(String(callback.payload.slot ?? ''));
     text = t.text.rueckruf;
