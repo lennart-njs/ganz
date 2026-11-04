@@ -48,6 +48,7 @@ import { selectCaseFacts } from '@/model/policies/caseFacts';
 import { CONSENT_SCOPES, scopedConsent } from '@/model/policies/consentScopes';
 import { hasProgress } from '@/model/policies/openCase';
 import { earlierRounds, isFinding } from '@/model/policies/rounds';
+import type { Result } from '@/model/result';
 import type { CaseEvent, Diagnosis } from '@/model/types';
 import { services, type FindingOption, type PhotoMode, type QuestionAnswer } from '@/services';
 import {
@@ -118,9 +119,49 @@ export default function FallGespraech() {
   const notify = asksNotifications(state, dialog);
   // Nach einem Widerruf: die Weitergabe noch einmal bestätigen (R-12)
   const renew = useCommand(() => useAppStore.getState().renewTransfer(caseId));
+  // Anleitung starten: Ein zweiter Tap öffnet sie nicht noch einmal
+  const guide = useCommand(
+    (guideId: string) => {
+      const s = useAppStore.getState();
+      const current = s.cases[caseId];
+      if (current && !current.guideRunIds.length && current.entry === 'freitext') {
+        s.updateCase(caseId, { problemLabel: guides[guideId as GuideId].title });
+      }
+      return s.startGuide(caseId, guideId);
+    },
+    () => router.push(`/fall/${caseId}/anleitung`),
+  );
+  // Antwort auf die Rückfrage und Befund der Fachkraft: je Tap genau einmal
+  const answer = useCommand((choice: QuestionAnswer, question: CaseEvent): Result<unknown> => {
+    const s = useAppStore.getState();
+    s.addEvent({
+      caseId,
+      type: 'rueckfrage_beantwortet',
+      actor: { kind: 'haushalt', id: s.persons[0]?.id },
+      payload: { question: de.question.wasser, answer: de.question.answers[choice] },
+    });
+    const result = services.diagnosis.answer(choice);
+    if (!result) return s.escalate(caseId);
+    s.updateCase(caseId, { problemLabel: guides[result.guideId as GuideId].title });
+    const photoId = question.payload.photoId as string | undefined;
+    return s.addDiagnosis(
+      toDiagnosis(caseId, photoId ? [photoId] : [], question.payload.mode as PhotoMode, result),
+    );
+  });
+  const finding = useCommand((option: FindingOption) =>
+    useAppStore.getState().setFinding(caseId, option, 'fachkraft'),
+  );
   // Lässt sich die Telefon-App nicht öffnen, steht die Nummer im Hinweis
   const phoneNotice = useNotice();
-  const commandToast = call.toast ?? claim.toast ?? book.toast ?? renew.toast ?? phoneNotice.notice;
+  const commandToast =
+    call.toast ??
+    claim.toast ??
+    book.toast ??
+    renew.toast ??
+    guide.toast ??
+    answer.toast ??
+    finding.toast ??
+    phoneNotice.notice;
 
   // Ein Fall ohne Inhalt bleibt nicht liegen, wenn man das Gespräch verlässt
   useEffect(() => () => useAppStore.getState().discardIfEmpty(caseId), [caseId]);
@@ -241,37 +282,9 @@ export default function FallGespraech() {
   };
 
   // Läuft dieselbe Anleitung schon, geht startGuide dort weiter (R-06)
-  const openGuide = (guideId: string) => {
-    const s = useAppStore.getState();
-    if (!c.guideRunIds.length && c.entry === 'freitext') {
-      s.updateCase(caseId, { problemLabel: guides[guideId as GuideId].title });
-    }
-    s.startGuide(caseId, guideId);
-    router.push(`/fall/${caseId}/anleitung`);
-  };
-
-  const answerQuestion = (answer: QuestionAnswer, question: CaseEvent) => {
-    const s = useAppStore.getState();
-    s.addEvent({
-      caseId,
-      type: 'rueckfrage_beantwortet',
-      actor: { kind: 'haushalt', id: s.persons[0]?.id },
-      payload: { question: de.question.wasser, answer: de.question.answers[answer] },
-    });
-    const finding = services.diagnosis.answer(answer);
-    if (!finding) {
-      escalate();
-      return;
-    }
-    s.updateCase(caseId, { problemLabel: guides[finding.guideId as GuideId].title });
-    const photoId = question.payload.photoId as string | undefined;
-    s.addDiagnosis(
-      toDiagnosis(caseId, photoId ? [photoId] : [], question.payload.mode as PhotoMode, finding),
-    );
-  };
-
-  const confirmFinding = (option: FindingOption) =>
-    useAppStore.getState().setFinding(caseId, option, 'fachkraft');
+  const openGuide = guide.run;
+  const answerQuestion = answer.run;
+  const confirmFinding = finding.run;
 
   const declineFinding = () => {
     const s = useAppStore.getState();
@@ -410,7 +423,8 @@ export default function FallGespraech() {
               : de.result.costNoteNoContract}
           </InfoBox>
         ) : null}
-        {details('ergebnis')}
+        {/* Ein verworfenes Ergebnis („Passt nicht“) bleibt im Verlauf, ohne Details: Es gilt nicht mehr */}
+        {d.discardedAt ? null : details('ergebnis')}
       </BotSays>,
     );
   }
@@ -1085,7 +1099,9 @@ export default function FallGespraech() {
       tail.push(
         <BotSays key="laeuft" lines={[t.guideRunning(run.currentStep + 1, g.steps.length)]} />,
       );
-    reply('anleitung', t.continueGuide, () => router.push(`/fall/${caseId}/anleitung`));
+    // Über denselben Befehl wie „Anleitung starten“: startGuide geht in der offenen weiter (R-06).
+    // So zählt ein Doppeltap, dessen zweiter Tap schon diesen Button trifft, auch nur einmal.
+    reply('anleitung', t.continueGuide, () => openGuide(run.guideId));
     reply('hilfe', de.result.helpInstead, escalate);
   } else if (canGuide) {
     // Ein verworfenes Ergebnis („Passt nicht“) bietet seine Anleitung nicht mehr an

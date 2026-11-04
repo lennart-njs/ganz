@@ -256,6 +256,17 @@ describe('„Passt nicht“ verwirft das Ergebnis', () => {
     expect(card.queryByText(de.help.facts.result)).toBeNull();
   });
 
+  test('im Gespräch bleibt das verworfene Ergebnis stehen, aber ohne „Details“', async () => {
+    const { id, r } = await rejectedResult();
+    await act(async () => router.replace(`/fall/${id}`));
+    await regressions.flush();
+    expect(r.getPathname()).toBe(`/fall/${id}`);
+    // Die Überschrift des Ergebnisses steht noch im Verlauf
+    expect(screen.getAllByText(de.result.headline.wasserablauf).length).toBeGreaterThan(0);
+    // „Details“ öffnete sonst „Noch kein Ergebnis.“
+    expect(screen.queryByTestId('details-ergebnis')).toBeNull();
+  });
+
   test('ein neues Foto im selben Fall ist wieder das Ergebnis', async () => {
     const { id } = await rejectedResult();
     await act(async () => {

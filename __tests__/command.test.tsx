@@ -5,10 +5,13 @@ import { act, fireEvent, renderRouter, screen } from 'expo-router/testing-librar
 import { demoConfig } from '@/config/demo.config';
 import { refusalText, TAP_LOCK_MS, TOAST_MS, useCommand } from '@/hooks/useCommand';
 import { de } from '@/i18n/de';
+import { textStamp } from '@/lib/legalTexts';
+import { scopedConsent } from '@/model/policies/consentScopes';
 import { ok, refuse, type Refusal, type Result } from '@/model/result';
 import { useAppStore, type AppActions } from '@/store/appStore';
 import { APP } from '@/test/app';
 import { addWasher, caseAfterFinding, flush, photoCase, start } from '@/test/regressions';
+import { unwrap } from '@/test/result';
 
 const other: Refusal = { code: 'uebergang', from: 'in_reparatur', command: 'abbrechen' };
 
@@ -116,6 +119,54 @@ describe('Buttons, die nur einmal zählen', () => {
     expect(Object.values(useAppStore.getState().guideRuns)).toHaveLength(1);
     await act(async () => router.back());
     expect(r.getPathname()).toBe(`/fall/${id}/ergebnis`);
+  });
+
+  test('Gespräch: „Anleitung starten“ zweimal öffnet die Anleitung einmal', async () => {
+    start();
+    const id = photoCase(addWasher().id);
+    const r = await renderRouter(APP, { initialUrl: `/fall/${id}` });
+    const button = screen.getByTestId('antwort-anleitung');
+    await fireEvent.press(button);
+    expect(r.getPathname()).toBe(`/fall/${id}/anleitung`);
+    await fireEvent.press(button);
+    expect(Object.values(useAppStore.getState().guideRuns)).toHaveLength(1);
+    // Ein Zurück führt ins Gespräch, nicht in eine zweite Anleitung
+    await act(async () => router.back());
+    expect(r.getPathname()).toBe(`/fall/${id}`);
+  });
+
+  test('Gespräch: „Passt, weiter“ zweimal im selben Moment gibt einen Befund und einen Kostenvoranschlag', async () => {
+    start();
+    const id = photoCase(addWasher().id);
+    const s = useAppStore.getState();
+    unwrap(s.escalate(id));
+    const recipient = { id: 'betrieb', kind: 'betrieb' as const, name: 'Betrieb' };
+    const video = unwrap(
+      s.requestVideoCall(id, {
+        share: scopedConsent('weitergabe_fachkraft', {
+          caseId: id,
+          recipient,
+          text: textStamp('fachkraft_videocall'),
+        }),
+      }),
+    );
+    unwrap(s.updateVideoCall(video.id, 'verbunden'));
+    unwrap(s.updateVideoCall(video.id, 'beendet'));
+    await renderRouter(APP, { initialUrl: `/fall/${id}` });
+    const ok = screen.getByTestId('antwort-befund-ok');
+    await act(async () => {
+      fireEvent.press(ok);
+      fireEvent.press(ok);
+    });
+    await flush();
+    const after = useAppStore.getState();
+    expect(after.diagnoses.filter((d) => d.caseId === id && d.source === 'fachkraft')).toHaveLength(
+      1,
+    );
+    expect(after.quotes.filter((q) => q.caseId === id)).toHaveLength(1);
+    expect(
+      after.events.filter((e) => e.caseId === id && e.type === 'befund_erstellt'),
+    ).toHaveLength(1);
   });
 
   test('nach der Sperre zählt ein Tap wieder', async () => {
