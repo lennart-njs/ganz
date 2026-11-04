@@ -169,9 +169,12 @@ export const demoConfig = {
    * Zwei gesetzliche Gewährleistungen, getrennt benannt (U11). Beide Annahmen bis zur Antwort des
    * Anwalts, Beispielwerte, keine Rechtsauskunft.
    * - repairMonths: auf eine Reparatur, ab ihrem Abschluss (ganz Nr. 32, § 634a Abs. 1 Nr. 1 BGB,
-   *   Rechtsfrage 52). Liest model/policies/warranty.ts.
-   * - purchaseMonths: des Händlers auf den Kauf, ab Kaufdatum (§ 438 Abs. 1 Nr. 3 BGB). Liest
-   *   model/policies/regulator.ts. Die Prüfung im Portal nimmt die Regeln des Händlers.
+   *   Rechtsfrage 52). Liest der Store und gibt ihn an checkWarranty (model/policies/warranty.ts).
+   *   Das Gespräch nennt ihn beim Hinweis zur Nachbesserung.
+   * - purchaseMonths: des Händlers auf den Kauf, ab Kaufdatum (§ 438 Abs. 1 Nr. 3 BGB). Noch liest
+   *   ihn nur ein Test. Ab Schritt 4.1 gibt der Aufrufer ihn als rules.purchaseWarrantyMonths an
+   *   regulatorOptions (model/policies/regulator.ts). Die Prüfung im Portal nimmt die Regeln des
+   *   Händlers.
    */
   warranty: { repairMonths: 24, purchaseMonths: 24, isAssumption: true },
 

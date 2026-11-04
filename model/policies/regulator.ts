@@ -22,7 +22,7 @@ export interface RegulatorRules {
   /**
    * Gewährleistung des Händlers auf den Kauf, in Monaten (§ 438 Abs. 1 Nr. 3 BGB). Annahme: ab
    * Kaufdatum. Das Gesetz nennt die Ablieferung (§ 438 Abs. 2 BGB), die kennt die App nicht.
-   * In der App: warranty.purchaseMonths.
+   * In der App kommt der Wert ab Schritt 4.1 aus warranty.purchaseMonths (config/demo.config.ts).
    */
   readonly purchaseWarrantyMonths: number;
   /**
@@ -198,7 +198,8 @@ function asRegulator(ref: PartnerRef, kind: RegulatorKind): RegulatorRef | undef
 }
 
 /**
- * Wer die Kosten übernehmen kann, geordnet (regulierer §1.2). Selbstzahlen steht immer am Ende.
+ * Wer die Kosten übernehmen kann, geordnet wie U10 in docs/ANNAHMEN.md. Die Regeln stehen dort
+ * unter „Regulierer (Schritt 4)“. Selbstzahlen steht immer am Ende.
  * 1. Händler, Gewährleistung: sicher, wenn der Stichtag in der Frist liegt. Ohne lesbares
  *    Kaufdatum pruefen, dann prüft der Händler.
  * 2. Hersteller, Herstellergarantie: ein Vertrag des Herstellers, gültig am Stichtag.

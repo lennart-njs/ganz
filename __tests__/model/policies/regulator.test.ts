@@ -63,7 +63,8 @@ const berlinDate = (iso: string) =>
     year: 'numeric',
   }).format(new Date(iso));
 
-describe('regulatorOptions: Tabelle aus regulierer §1.3', () => {
+// Die Fälle der Übertragung, Regeln in docs/ANNAHMEN.md „Regulierer (Schritt 4)“ und U10
+describe('regulatorOptions: Fälle mit Händler, Versicherer und Hersteller', () => {
   test.each<[string, RegulatorInput, Shape[]]>([
     [
       'Fründ, gekauft 03/2025, ohne Versicherung: Gewährleistung sicher',
