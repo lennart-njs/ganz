@@ -36,7 +36,7 @@ npm run check
 cd portal && npx tsc --noEmit
 ```
 
-Alles wie in CI, mit Portal, gitleaks und osv-scanner: `scripts/ci-checks.sh`.
+Die Prüfungen aus CI, mit dem Typecheck des Portals: `scripts/ci-checks.sh`. `next build` läuft nur in CI, lokal mit `cd portal && npm run build`. gitleaks und osv-scanner laufen lokal nur, wenn sie installiert sind. Sonst steht ein Hinweis da.
 
 ## Demo
 

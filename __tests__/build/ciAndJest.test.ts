@@ -188,6 +188,20 @@ describe('Händlerportal im Prüfskript und in CI', () => {
     expect(pkg.scripts.check).not.toMatch(/portal/);
   });
 
+  test('README und ABLAEUFE sagen, was das Prüfskript lokal auslässt', () => {
+    // Lokal läuft kein next build, und gitleaks und osv-scanner nur, wenn sie installiert sind.
+    // Wer sich vor der Demo auf das Prüfskript verlässt, soll das in beiden Dokumenten lesen.
+    for (const doc of ['README.md', path.join('docs', 'ABLAEUFE.md')]) {
+      const text = fs.readFileSync(path.join(root, doc), 'utf8');
+      expect([doc, text]).toEqual([doc, expect.stringContaining('scripts/ci-checks.sh')]);
+      expect([doc, text]).toEqual([doc, expect.stringMatching(/`next build` läuft nur in CI/)]);
+      expect([doc, text]).toEqual([
+        doc,
+        expect.stringMatching(/gitleaks und osv-scanner laufen lokal nur, wenn sie installiert/),
+      ]);
+    }
+  });
+
   test('der Cache in CI hängt an beiden Lockfiles', () => {
     expect(workflow).toMatch(
       /cache: npm\n\s+(#.*\n\s+)?cache-dependency-path: \|\n\s+package-lock\.json\n\s+portal\/package-lock\.json\n/,
