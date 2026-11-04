@@ -18,6 +18,7 @@ import {
 } from '@/components/ds';
 import { demoConfig } from '@/config/demo.config';
 import { useCommand } from '@/hooks/useCommand';
+import { useNotificationDialog } from '@/hooks/useNotificationDialog';
 import { de } from '@/i18n/de';
 import { formatDecimal, formatEuro } from '@/i18n/format';
 import { getManufacturer } from '@/lib/devices';
@@ -68,6 +69,9 @@ export default function Termin() {
   const paid = amountToPay(state, caseId, selfPay, diagnosis) > 0;
   // Einmal anfragen: Ein zweiter Tap bucht nicht doppelt, eine Ablehnung bekommt einen ruhigen Satz
   const book = useCommand(requestAppointment, () => backToThread(caseId));
+  // Der Satz zu Mitteilungen steht nur da, wenn danach wirklich der Systemdialog kommt
+  const dialog = useNotificationDialog(state.notifications === 'offen');
+  const notify = asksNotifications(state, dialog);
 
   // Ohne Fall kein Formular, nur ein Hinweis (R-18). Zurück und X führen weiter heraus.
   if (!c || !facts) {
@@ -118,7 +122,7 @@ export default function Termin() {
       setToast(t.pickSlot);
       return;
     }
-    book.run({ caseId, partnerId, slot, selfPay, diagnosis });
+    book.run({ caseId, partnerId, slot, selfPay, diagnosis, noticeShown: notify });
   };
   const notice = book.toast ?? toast;
 
@@ -209,7 +213,7 @@ export default function Termin() {
       {/* Dieselben Kategorien speichert die Bestätigung mit der Anfrage (R-14) */}
       <Text variant="meta">{t.shares(scopeList('weitergabe_betrieb'))}</Text>
       {/* Danach fragt das System nach Mitteilungen. Die Einwilligung speichert diesen Satz. */}
-      {asksNotifications(state) ? <Text variant="meta">{t.notificationsNotice}</Text> : null}
+      {notify ? <Text variant="meta">{t.notificationsNotice}</Text> : null}
     </CaseScreen>
   );
 }

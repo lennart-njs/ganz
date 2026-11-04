@@ -8,9 +8,10 @@ import { router } from 'expo-router';
 
 import { demoConfig } from '@/config/demo.config';
 import { de } from '@/i18n/de';
-import { requestAppointment } from '@/lib/booking';
+import { asksNotifications, requestAppointment } from '@/lib/booking';
 import type { DataCategory } from '@/model/policies/consentScopes';
 import type { Id } from '@/model/types';
+import { notifications } from '@/services/notifications';
 import { useAppStore } from '@/store/appStore';
 import { APP } from '@/test/app';
 import { unwrap } from '@/test/result';
@@ -66,11 +67,15 @@ async function notificationsAllowedOnBooking() {
   start();
   const id = caseAfterFinding(addWasher().id);
   useAppStore.getState().reportClaim(id);
+  // Wie im Termin: Der Satz vor dem Systemdialog steht da, weil der Dialog kommt
+  const noticeShown = asksNotifications(useAppStore.getState(), await notifications.canAsk());
+  expect(noticeShown).toBe(true);
   requestAppointment({
     caseId: id,
     partnerId: demoConfig.partners[0]!.id,
     slot: demoConfig.slots[0],
     selfPay: false,
+    noticeShown,
   });
   await flush();
   await renderRouter(APP, { initialUrl: '/profil' });

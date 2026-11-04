@@ -99,8 +99,9 @@ export default function Profil() {
       s.setNotifications('abgelehnt');
       return;
     }
-    const ok = await notifications.requestPermission();
-    if (ok) {
+    // Die Einwilligung ist der Tap auf das Kästchen mit seinem Text, mit oder ohne Systemdialog
+    const { granted } = await notifications.requestPermission();
+    if (granted) {
       s.setNotifications('erlaubt');
       return;
     }
@@ -189,7 +190,7 @@ export default function Profil() {
         />
         <Checkbox
           label={t.notifications}
-          sub={state.notifications === 'abgelehnt' ? t.notificationsDenied : t.notificationsSub}
+          sub={t.notificationsSub}
           checked={notificationsOn(state)}
           onChange={toggleNotifications}
         />

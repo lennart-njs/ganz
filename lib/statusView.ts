@@ -8,7 +8,7 @@ import { caseAppliance } from '@/lib/appliance';
 import { can } from '@/model/policies/actions';
 import { selectCaseFacts } from '@/model/policies/caseFacts';
 import type { Case } from '@/model/types';
-import { selectCaseEvents, type AppData } from '@/store/appStore';
+import { notificationsOn, selectCaseEvents, type AppData } from '@/store/appStore';
 
 export type NextAction = 'abschluss' | 'kosten' | 'fallakte';
 
@@ -88,6 +88,8 @@ export function statusView(s: AppData, c: Case): StatusView {
   ];
 
   const partner = booking?.provider.name ?? '';
+  // Eine Mitteilung versprechen nur, wenn sie kommt: mit Einwilligung und Erlaubnis (R-13)
+  const notify = notificationsOn(s);
   let headline: string = t.headline.hilfe;
   let text: string | undefined;
   let next: NextAction = 'fallakte';
@@ -100,7 +102,7 @@ export function statusView(s: AppData, c: Case): StatusView {
     next = 'kosten';
   } else if (f?.claim === 'in_pruefung') {
     headline = t.headline.pruefung(insurer);
-    text = t.text.pruefung;
+    text = notify ? t.text.pruefung : t.text.pruefungImFall;
   } else if (replacement && f?.claim === 'freigegeben') {
     headline = t.headline.ersatzgeraet(insurer);
   } else if (booking?.status === 'erledigt' && booking.kind === 'vor_ort_diagnose') {
@@ -119,7 +121,7 @@ export function statusView(s: AppData, c: Case): StatusView {
     text = booking.kind === 'reparatur' ? t.text.bestaetigt(partner, a.finding.partAcc) : undefined;
   } else if (booking?.status === 'angefragt') {
     headline = f?.claim === 'freigegeben' ? t.headline.freigegeben(insurer) : t.headline.angefragt;
-    text = t.text.angefragt(partner);
+    text = notify ? t.text.angefragt(partner) : t.text.angefragtImFall(partner);
   } else if (callback) {
     headline = t.headline.rueckruf(String(callback.payload.slot ?? ''));
     text = t.text.rueckruf;

@@ -29,6 +29,7 @@ import {
 import { demoConfig } from '@/config/demo.config';
 import { guides, type GuideId } from '@/data/guides';
 import { useCommand } from '@/hooks/useCommand';
+import { useNotificationDialog } from '@/hooks/useNotificationDialog';
 import { useNotice } from '@/hooks/useNotice';
 import { de } from '@/i18n/de';
 import { formatDecimal, formatEuro } from '@/i18n/format';
@@ -51,6 +52,7 @@ import type { CaseEvent, Diagnosis } from '@/model/types';
 import { services, type FindingOption, type PhotoMode, type QuestionAnswer } from '@/services';
 import {
   nextSimulationDue,
+  notificationsOn,
   selectCaseEvents,
   useAppStore,
   type NewConsent,
@@ -111,6 +113,9 @@ export default function FallGespraech() {
     setPayment(undefined);
     setOnSite(false);
   });
+  // Der Satz zu Mitteilungen steht nur vor „Termin anfragen“, wenn danach der Systemdialog kommt
+  const dialog = useNotificationDialog(state.notifications === 'offen');
+  const notify = asksNotifications(state, dialog);
   // Nach einem Widerruf: die Weitergabe noch einmal bestätigen (R-12)
   const renew = useCommand(() => useAppStore.getState().renewTransfer(caseId));
   // Lässt sich die Telefon-App nicht öffnen, steht die Nummer im Hinweis
@@ -282,7 +287,7 @@ export default function FallGespraech() {
 
   const request = () => {
     if (!partnerId || !slot) return;
-    book.run({ caseId, partnerId, slot, selfPay, diagnosis: onSite });
+    book.run({ caseId, partnerId, slot, selfPay, diagnosis: onSite, noticeShown: notify });
   };
 
   const sendInput = () => {
@@ -567,7 +572,11 @@ export default function FallGespraech() {
       `${e.id}-a`,
       <BotSays
         lines={[de.status.headline.angefragt]}
-        hint={de.status.text.angefragt(b.provider.name)}
+        hint={
+          notificationsOn(state)
+            ? de.status.text.angefragt(b.provider.name)
+            : de.status.text.angefragtImFall(b.provider.name)
+        }
       >
         {details('status')}
       </BotSays>,
@@ -995,9 +1004,7 @@ export default function FallGespraech() {
               </Text>
             ) : null}
             <Text variant="meta">{de.appointment.shares(scopeList('weitergabe_betrieb'))}</Text>
-            {asksNotifications(state) ? (
-              <Text variant="meta">{de.appointment.notificationsNotice}</Text>
-            ) : null}
+            {notify ? <Text variant="meta">{de.appointment.notificationsNotice}</Text> : null}
           </BotSays>,
         );
         const paid = amountToPay(state, caseId, selfPay, onSite) > 0;
@@ -1014,7 +1021,7 @@ export default function FallGespraech() {
         <BotSays
           key="pruefung"
           lines={[de.status.headline.pruefung(insurer)]}
-          hint={de.status.text.pruefung}
+          hint={notificationsOn(state) ? de.status.text.pruefung : de.status.text.pruefungImFall}
         />,
       );
     if (demoTap) reply('demo', t.demoNext, () => useAppStore.getState().simulateNext(caseId));

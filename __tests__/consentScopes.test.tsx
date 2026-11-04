@@ -1,5 +1,6 @@
 // Test je Zweck: Die Vorschau zeigt genau die Kategorien, die die Bestätigung speichert. Beide
 // kommen aus model/policies/consentScopes.ts (ZUKUNFTSPLAN Phase 1, Abnahme; R-14).
+import * as Notifications from 'expo-notifications';
 import { act, fireEvent, renderRouter, screen, within } from 'expo-router/testing-library';
 
 import { CASE_FILE_CARD } from '@/components/app/CaseFileCard';
@@ -10,6 +11,7 @@ import { chatContext } from '@/lib/chat/context';
 import type { ChatContext } from '@/lib/chat/prompt';
 import { categoryLabels, scopeLabels } from '@/lib/consent';
 import { legalParts, textStamp, type LegalTextKey } from '@/lib/legalTexts';
+import { statusView } from '@/lib/statusView';
 import { CONSENT_SCOPES, DATA_CATEGORIES, type DataCategory } from '@/model/policies/consentScopes';
 import type { ConsentPurpose, Id } from '@/model/types';
 import { useAppStore } from '@/store/appStore';
@@ -257,7 +259,7 @@ const flows: Record<ConsentPurpose, Record<string, () => Promise<void> | void>> 
         expect(expectStored('mitteilungen', 'mitteilungen_termin').caseId).toBeUndefined();
         expect(useAppStore.getState().notifications).toBe('erlaubt');
         // Ist entschieden, fragt das System nicht mehr, und der Satz steht nicht mehr davor
-        expect(asksNotifications(useAppStore.getState())).toBe(false);
+        expect(asksNotifications(useAppStore.getState(), true)).toBe(false);
       },
     'Gespräch: der Satz steht vor „Termin anfragen“': async () => {
       start();
@@ -299,4 +301,113 @@ const flows: Record<ConsentPurpose, Record<string, () => Promise<void> | void>> 
 
 describe.each(Object.entries(flows))('Vorschau und Bestätigung: %s', (_, cases) => {
   test.each(Object.entries(cases))('%s', (__, run) => run());
+});
+
+// Gegenprüfung zu Schritt 28: Nur die Antwort im Systemdialog ist eine Einwilligung. Erlaubt das
+// Telefon Mitteilungen schon (Android bis 12, oder seit einem früheren Lauf vor dem
+// Demo-Startstand) oder fragt es nicht mehr, kommt kein Dialog. Dann gibt es weder den Satz
+// „Danach fragt dein Telefon …“ noch eine gespeicherte Einwilligung.
+describe('Mitteilungen ohne Systemdialog', () => {
+  type Permission = Awaited<ReturnType<typeof Notifications.getPermissionsAsync>>;
+  const os = (granted: boolean, canAskAgain: boolean) =>
+    jest.mocked(Notifications.getPermissionsAsync).mockResolvedValue({
+      granted,
+      canAskAgain,
+    } as Permission);
+  beforeEach(() => jest.mocked(Notifications.requestPermissionsAsync).mockClear());
+  afterEach(() => {
+    jest.mocked(Notifications.getPermissionsAsync).mockReset();
+    jest
+      .mocked(Notifications.getPermissionsAsync)
+      .mockImplementation(async () => ({ granted: false, canAskAgain: true }) as Permission);
+    jest.mocked(Notifications.requestPermissionsAsync).mockClear();
+  });
+
+  /** Gespräch bis zur Zusammenfassung vor „Termin anfragen“ */
+  async function toSummary() {
+    start();
+    const id = caseAfterFinding(addWasher().id);
+    useAppStore.getState().reportClaim(id);
+    await renderRouter(APP, { initialUrl: `/fall/${id}` });
+    await tap(new RegExp(`^${escapeRegExp(demoConfig.partners[0]!.name)}`));
+    await tap(demoConfig.slots[0]!);
+    await flush();
+    return id;
+  }
+
+  test.each([
+    ['das Telefon erlaubt Mitteilungen schon', true, true],
+    ['das Telefon fragt nicht mehr', false, false],
+  ])('%s: kein Satz, kein Dialog, keine Einwilligung', async (_, granted, canAskAgain) => {
+    os(granted, canAskAgain);
+    await toSummary();
+    expect(screen.getByRole('button', { name: de.appointment.request })).toBeTruthy();
+    expect(screen.queryByText(de.appointment.notificationsNotice)).toBeNull();
+    await tap(de.appointment.request);
+    await flush();
+    expect(Notifications.requestPermissionsAsync).not.toHaveBeenCalled();
+    expect(consentsFor('mitteilungen')).toEqual([]);
+    expect(useAppStore.getState().notifications).toBe('offen');
+  });
+
+  test('Termin-Formular: ohne Dialog kein Satz', async () => {
+    os(true, true);
+    start();
+    const id = caseAfterFinding(addWasher().id);
+    await renderRouter(APP, { initialUrl: `/fall/${id}/kosten` });
+    await tap(de.costs.report);
+    await flush();
+    expect(screen.queryByText(de.appointment.notificationsNotice)).toBeNull();
+    await fireEvent.press(screen.getByRole('radio', { name: demoConfig.slots[0] }));
+    await tap(de.appointment.request);
+    await flush();
+    expect(consentsFor('mitteilungen')).toEqual([]);
+  });
+
+  test('kommt der Dialog, steht der Satz davor, und die Antwort ist die Einwilligung', async () => {
+    os(false, true);
+    await toSummary();
+    expectShown('mitteilungen_termin');
+    await tap(de.appointment.request);
+    await flush();
+    expect(Notifications.requestPermissionsAsync).toHaveBeenCalledTimes(1);
+    expectStored('mitteilungen', 'mitteilungen_termin');
+  });
+
+  test('ohne Mitteilungen verspricht der Fall keine', async () => {
+    jest.mocked(Notifications.requestPermissionsAsync).mockResolvedValueOnce({
+      granted: false,
+      canAskAgain: false,
+    } as Permission);
+    const id = await toSummary();
+    await tap(de.appointment.request);
+    await flush();
+    expect(useAppStore.getState().notifications).toBe('abgelehnt');
+    const partner = demoConfig.partners[0]!.name;
+    expect(screen.queryByText(de.status.text.pruefung)).toBeNull();
+    expect(screen.getByText(de.status.text.pruefungImFall)).toBeTruthy();
+    expect(screen.queryByText(de.status.text.angefragt(partner))).toBeNull();
+    expect(screen.getByText(de.status.text.angefragtImFall(partner))).toBeTruthy();
+    expect(statusView(useAppStore.getState(), useAppStore.getState().cases[id]!).text).toBe(
+      de.status.text.pruefungImFall,
+    );
+  });
+
+  test('Profil: aus und wieder an, der Text am Kästchen bleibt der gestempelte', async () => {
+    os(true, true);
+    start();
+    await renderRouter(APP, { initialUrl: '/profil' });
+    const box = () => screen.getByRole('checkbox', { name: de.profile.notifications });
+    await fireEvent.press(box());
+    await flush();
+    expect(box()).toBeChecked();
+    await fireEvent.press(box());
+    expect(useAppStore.getState().notifications).toBe('abgelehnt');
+    // Nur ganz ist aus, nicht das Telefon. Der Satz am Kästchen bleibt derselbe.
+    expectShown('mitteilungen');
+    await fireEvent.press(box());
+    await flush();
+    expect(box()).toBeChecked();
+    expectStored('mitteilungen', 'mitteilungen');
+  });
 });

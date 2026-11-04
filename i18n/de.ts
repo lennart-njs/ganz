@@ -876,8 +876,12 @@ export const de = {
     },
     text: {
       pruefung: 'Du bekommst eine Mitteilung, sobald die Entscheidung da ist.',
+      /** Ohne Einwilligung in Mitteilungen kommt keine (R-13) */
+      pruefungImFall: 'Die Entscheidung siehst du hier im Fall.',
       angefragt: (partner: string) =>
         `${partner} bestätigt den Termin. Danach bekommst du eine Mitteilung.`,
+      angefragtImFall: (partner: string) =>
+        `${partner} bestätigt den Termin. Das siehst du dann hier im Fall.`,
       bestaetigt: (partner: string, part: string) => `${partner} bringt ${part} mit.`,
       diagnoseFertig: 'Sieh dir die Kosten an und entscheide, wie es weitergeht.',
       rueckruf: 'Die Fachkraft ruft dich an. Deine Fallakte hat sie schon.',
@@ -1180,7 +1184,6 @@ export const de = {
       `Mit ${data}, damit der Hersteller Fehler besser versteht. Ohne dein Ja gehen nur Zahlen ohne Personenbezug an den Hersteller.`,
     notifications: 'Mitteilungen zum Fall-Status',
     notificationsSub: 'Wenn sich bei Freigabe oder Termin etwas ändert.',
-    notificationsDenied: 'In den Einstellungen deines Telefons ausgeschaltet.',
     /** Die Einstellungen lassen sich nicht öffnen */
     notificationsSettings: 'Mitteilungen erlaubst du in den Einstellungen deines Telefons.',
     notificationsWeb: 'Mitteilungen gibt es nur in der App auf deinem Telefon.',
