@@ -1,0 +1,134 @@
+# Dunkel und Schrift 200 %: dieselben Screens wie in docs/PITCH_CHECK.md, Prüfungen 2 und 3.
+# Start, Problem melden, Gespräch, Ergebnis, Anleitung, Hilfe, Kosten, Termin, Status,
+# Fallakte und Profil. Jeder Screen bekommt ein Bildschirmfoto zum Ansehen.
+#
+# Vorher setzt ein Shell-Schritt das System auf dunkel und auf AX2 (etwa 200 %):
+#   xcrun simctl ui booted appearance dark
+#   xcrun simctl ui booted content_size accessibility-large
+# Danach zurück: appearance light, content_size large. Die App folgt dem System, solange im
+# Profil „Wie System“ gilt. Das tut sie nach clearState.
+#
+# Nicht gelaufen: In der Sandbox von Schritt 29 gibt es weder Simulator noch Maestro. Den ersten
+# Lauf macht Schritt 30 mit dem Pitch-Build. __tests__/build/e2eFlows.test.ts prüft bis dahin,
+# dass jeder Text in i18n/de.ts steht und jede ID im Code vorkommt.
+#
+# Lauf: maestro test e2e/dark-200.yaml (nur iOS-Simulator, wegen simctl)
+appId: de.ganz.app.pitch
+name: Dunkel und 200 %
+tags:
+  - pitch
+  - a11y
+---
+- runFlow: common/demo-startstand.yaml
+- takeScreenshot: dark200-01-start
+
+- tapOn: "Was ist kaputt\\?.*"
+- takeScreenshot: dark200-02-problem
+- scrollUntilVisible:
+    element:
+      id: 'antwort-foto'
+- tapOn:
+    id: 'antwort-foto'
+- scrollUntilVisible:
+    element:
+      text: 'Beispielfoto nehmen'
+- tapOn: 'Beispielfoto nehmen'
+- extendedWaitUntil:
+    visible:
+      id: 'antwort-anleitung'
+    timeout: 20000
+- takeScreenshot: dark200-03-gespraech
+
+# Ergebnis als Formular, dann zurück ins Gespräch
+- scrollUntilVisible:
+    element:
+      id: 'details-ergebnis'
+    direction: UP
+- tapOn:
+    id: 'details-ergebnis'
+- takeScreenshot: dark200-04-ergebnis
+- tapOn: 'Zurück'
+
+# Anleitung: erster Schritt, dann „Geht nicht“ und Hilfe holen
+- tapOn:
+    id: 'antwort-anleitung'
+- takeScreenshot: dark200-05-anleitung
+- scrollUntilVisible:
+    element:
+      text: 'Geht nicht'
+- tapOn: 'Geht nicht'
+- scrollUntilVisible:
+    element:
+      text: 'Hilfe holen'
+- tapOn: 'Hilfe holen'
+- extendedWaitUntil:
+    visible:
+      id: 'antwort-call'
+    timeout: 10000
+- takeScreenshot: dark200-06-hilfe
+
+# Videocall bis zum Befund
+- tapOn:
+    id: 'antwort-call'
+- tapOn:
+    text: "Wartezeit überspringen \\(Demo\\)"
+    optional: true
+- extendedWaitUntil:
+    visible: 'Auflegen'
+    timeout: 20000
+- takeScreenshot: dark200-07-videocall
+- tapOn: 'Auflegen'
+- extendedWaitUntil:
+    visible:
+      id: 'antwort-befund-ok'
+    timeout: 10000
+- tapOn:
+    id: 'antwort-befund-ok'
+
+# Kosten im Gespräch und als Formular
+- takeScreenshot: dark200-08-kosten
+- scrollUntilVisible:
+    element:
+      id: 'details-kosten'
+    direction: UP
+- tapOn:
+    id: 'details-kosten'
+- takeScreenshot: dark200-09-kosten-formular
+- tapOn: 'Zurück'
+
+# Termin: Zusammenfassung vor dem Tap
+- tapOn:
+    id: 'antwort-melden'
+- tapOn:
+    id: 'antwort-betrieb-.*'
+    index: 0
+- tapOn:
+    id: 'antwort-zeit-.*'
+    index: 0
+- takeScreenshot: dark200-10-termin
+- tapOn:
+    id: 'antwort-anfragen'
+
+# Status und Fallakte
+- scrollUntilVisible:
+    element:
+      id: 'details-status'
+    direction: UP
+- tapOn:
+    id: 'details-status'
+- takeScreenshot: dark200-11-status
+- tapOn: 'Zurück'
+- tapOn:
+    id: 'antwort-status'
+- takeScreenshot: dark200-12-fallakte
+- tapOn: 'Zurück'
+
+# Profil
+- tapOn: 'Schließen'
+- tapOn: 'Später weitermachen'
+- tapOn: 'Profil.*'
+- takeScreenshot: dark200-13-profil
+- scrollUntilVisible:
+    element:
+      text: 'Darstellung'
+- takeScreenshot: dark200-14-profil-unten

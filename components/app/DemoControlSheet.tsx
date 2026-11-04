@@ -21,7 +21,7 @@ function Row({ label, children }: { label: string; children: ReactNode }) {
   );
 }
 
-/** Demo-Steuerung: Szenarien, Selbstbeteiligung, Hinweise, Status weiter, Galerie, Zurücksetzen */
+/** Demo-Steuerung: Szenarien, Selbstbeteiligung, Hinweise, Status weiter, Galerie, Startstand, Zurücksetzen */
 export function DemoControlSheet({ visible, onClose }: { visible: boolean; onClose: () => void }) {
   const demo = useAppStore((s) => s.demo);
   const setDemo = useAppStore((s) => s.setDemo);
@@ -114,6 +114,17 @@ export function DemoControlSheet({ visible, onClose }: { visible: boolean; onClo
         onPress={() => {
           onClose();
           router.push('/galerie');
+        }}
+      />
+      <Button
+        label={t.demoStart}
+        variant="secondary"
+        fullWidth
+        accessibilityHint={t.demoStartHint}
+        onPress={() => {
+          onClose();
+          useAppStore.getState().loadDemoStart();
+          router.navigate('/');
         }}
       />
       <Button

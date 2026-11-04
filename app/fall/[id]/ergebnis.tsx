@@ -4,25 +4,44 @@ import { Image, StyleSheet, View } from 'react-native';
 import { DemoHint } from '@/components/app/DemoHint';
 import { CaseScreen, useCaseId } from '@/components/app/CaseScreen';
 import { backToThread } from '@/components/nav/leaveCase';
-import { ActionBar, Button, Card, ConfidenceLabel, FactList, InfoBox, Text } from '@/components/ds';
+import {
+  ActionBar,
+  Button,
+  Card,
+  ConfidenceLabel,
+  FactList,
+  InfoBox,
+  Text,
+  Toast,
+} from '@/components/ds';
 import { demoConfig } from '@/config/demo.config';
 import { guides, type GuideId } from '@/data/guides';
+import { useCommand } from '@/hooks/useCommand';
 import { de } from '@/i18n/de';
 import { formatEuro } from '@/i18n/format';
 import { latestDiagnosis } from '@/lib/caseView';
 import { deviceTitle, getManufacturer } from '@/lib/devices';
+import { can } from '@/model/policies/actions';
+import { selectCaseFacts } from '@/model/policies/caseFacts';
 import type { ErrorPattern } from '@/services';
 import { useAppStore } from '@/store/appStore';
 import { useTheme } from '@/theme';
 
 const t = de.result;
 
-/** Ergebnis der Intelligenten Fehlererkennung. Kostenhinweis ohne Zusage (B-13). */
+/**
+ * Ergebnis der Intelligenten Fehlererkennung. Kostenhinweis ohne Zusage (B-13). Die Wege daraus
+ * (Anleitung, „Passt nicht“, Hilfe) gibt es nur, solange die Regeln sie erlauben. Später bleibt
+ * das Ergebnis als Detail lesbar.
+ */
 export default function Ergebnis() {
   const theme = useTheme();
   const caseId = useCaseId();
   const state = useAppStore();
   const c = state.cases[caseId];
+  const caseFacts = selectCaseFacts(state, caseId);
+  const canChange = can(caseFacts, 'problem_aendern');
+  const canHelp = can(caseFacts, 'hilfe_holen');
   // Das letzte Ergebnis der Fehlererkennung, nicht ein späterer Befund der Fachkraft
   const diagnosis = c
     ? (latestDiagnosis(state, c, 'fehlererkennung') ?? latestDiagnosis(state, c, 'nutzerangabe'))
@@ -30,6 +49,12 @@ export default function Ergebnis() {
   const device = state.devices.find((d) => d.id === c?.deviceId);
   const photo = state.photos.find((p) => p.id === diagnosis?.photoIds[0]);
   const contract = state.contracts.find((k) => k.id === device?.contractId);
+  // Läuft diese Anleitung schon, geht startGuide dort weiter (B-05, R-06). Ein zweiter Tap
+  // startet nichts doppelt.
+  const start = useCommand(
+    (guideId: string) => useAppStore.getState().startGuide(caseId, guideId),
+    () => router.push(`/fall/${caseId}/anleitung`),
+  );
 
   if (!c || !diagnosis || !device) {
     return (
@@ -46,16 +71,18 @@ export default function Ergebnis() {
       <CaseScreen
         title={de.screens.ergebnis}
         footer={
-          <ActionBar>
-            <Button
-              label={t.photoDisplay}
-              size="lg"
-              fullWidth
-              icon="camera"
-              onPress={() => router.dismissTo(`/fall/${caseId}/kamera`)}
-            />
-            <Button label={t.describe} variant="secondary" fullWidth onPress={backToProblem} />
-          </ActionBar>
+          canChange ? (
+            <ActionBar>
+              <Button
+                label={t.photoDisplay}
+                size="lg"
+                fullWidth
+                icon="camera"
+                onPress={() => router.dismissTo(`/fall/${caseId}/kamera`)}
+              />
+              <Button label={t.describe} variant="secondary" fullWidth onPress={backToProblem} />
+            </ActionBar>
+          ) : undefined
         }
       >
         <Text variant="meta">{t.from.typenschild}</Text>
@@ -85,10 +112,14 @@ export default function Ergebnis() {
       <CaseScreen
         title={de.screens.ergebnis}
         footer={
-          <ActionBar>
-            <Button label={t.getHelp} size="lg" fullWidth onPress={help} />
-            <Button label={t.describe} variant="secondary" fullWidth onPress={backToProblem} />
-          </ActionBar>
+          canHelp || canChange ? (
+            <ActionBar>
+              {canHelp ? <Button label={t.getHelp} size="lg" fullWidth onPress={help} /> : null}
+              {canChange ? (
+                <Button label={t.describe} variant="secondary" fullWidth onPress={backToProblem} />
+              ) : null}
+            </ActionBar>
+          ) : undefined
         }
       >
         <Text variant="meta">
@@ -137,18 +168,28 @@ export default function Ergebnis() {
     [t.facts.damage, diagnosis.visibleDamage ?? t.noDamage],
   ];
 
-  const startGuide = () => {
-    useAppStore.getState().startGuide(caseId, guide.id);
-    router.push(`/fall/${caseId}/anleitung`);
-  };
+  // Die Leiste sagt, wo eine laufende Anleitung steht
+  const running = caseFacts?.guideRun?.guideId === guide.id ? caseFacts.guideRun : undefined;
 
   return (
     <CaseScreen
       title={de.screens.ergebnis}
       footer={
-        <ActionBar meta={t.stepsCount(guide.steps.length)} sub={t.source(manufacturer)}>
-          <Button label={t.startGuide} onPress={startGuide} />
-        </ActionBar>
+        <>
+          {start.toast ? <Toast message={start.toast} style={styles.toast} /> : null}
+          <ActionBar
+            meta={
+              running
+                ? de.a11y.stepOf(running.currentStep + 1, guide.steps.length)
+                : t.stepsCount(guide.steps.length)
+            }
+            sub={t.source(manufacturer)}
+          >
+            {can(caseFacts, 'anleitung_starten') ? (
+              <Button label={t.startGuide} onPress={() => start.run(guide.id)} />
+            ) : null}
+          </ActionBar>
+        </>
       }
     >
       <DemoHint id="ergebnis" />
@@ -189,8 +230,8 @@ export default function Ergebnis() {
           : t.costNoteNoContract}
       </InfoBox>
 
-      <Button label={t.doesNotFit} variant="link" onPress={backToProblem} />
-      <Button label={t.helpInstead} variant="link" onPress={help} />
+      {canChange ? <Button label={t.doesNotFit} variant="link" onPress={backToProblem} /> : null}
+      {canHelp ? <Button label={t.helpInstead} variant="link" onPress={help} /> : null}
     </CaseScreen>
   );
 }
@@ -200,4 +241,5 @@ const styles = StyleSheet.create({
   thumb: { width: 64, height: 64, overflow: 'hidden' },
   fromText: { flex: 1 },
   confidence: { marginTop: 14 },
+  toast: { marginHorizontal: 16, marginBottom: 8 },
 });

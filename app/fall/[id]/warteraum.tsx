@@ -37,8 +37,10 @@ export default function Warteraum() {
     Promise.race([services.video.connect(scenario), skipped]).then((outcome) => {
       if (cancelled) return;
       resolved.current = true;
-      useAppStore.getState().updateVideoCall(session.id, outcome);
-      if (outcome === 'verbunden') router.replace(`/fall/${caseId}/videocall?video=${session.id}`);
+      const result = useAppStore.getState().updateVideoCall(session.id, outcome);
+      if (result.ok && outcome === 'verbunden') {
+        router.replace(`/fall/${caseId}/videocall?video=${session.id}`);
+      }
       // Keine Fachkraft frei: Das Gespräch bietet Rückruf oder Vor-Ort-Diagnose an (B-23)
       else router.back();
     });

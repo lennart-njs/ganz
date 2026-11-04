@@ -5,8 +5,9 @@ import { act, fireEvent, renderRouter, screen } from 'expo-router/testing-librar
 import { guides } from '@/data/guides';
 import { de } from '@/i18n/de';
 import { createAppStore, useAppStore } from '@/store/appStore';
+import { APP } from '@/test/app';
+import { unwrap } from '@/test/result';
 
-const APP = './app';
 const tap = (name: string | RegExp) => fireEvent.press(screen.getByRole('button', { name }));
 const ablauf = guides.ablauf;
 
@@ -59,7 +60,7 @@ describe('Anleitung', () => {
       entry: 'meldung',
       problemLabel: ablauf.title,
     });
-    const g = s.startGuide(c.id, 'ablauf');
+    const g = unwrap(s.startGuide(c.id, 'ablauf'));
     for (let i = 0; i < 3; i++) s.moveGuideStep(g.id, 'next');
     s.pauseCase(c.id);
     const r = await renderRouter(APP, { initialUrl: '/' });

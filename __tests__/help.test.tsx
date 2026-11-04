@@ -1,12 +1,17 @@
 import { act, fireEvent, renderRouter, screen } from 'expo-router/testing-library';
+import * as RN from 'react-native';
+import { StyleSheet } from 'react-native';
 
 import { demoConfig } from '@/config/demo.config';
 import { de } from '@/i18n/de';
-import { ConsentRequiredError } from '@/model/caseMachine';
+import { scopeLabels } from '@/lib/consent';
+import { CONSENT_SCOPES } from '@/model/policies/consentScopes';
 import { services } from '@/services';
 import { useAppStore } from '@/store/appStore';
+import { APP } from '@/test/app';
+import { unwrap } from '@/test/result';
+import { colors } from '@/theme/colors';
 
-const APP = './app';
 const tap = (name: string | RegExp) => fireEvent.press(screen.getByRole('button', { name }));
 const flush = async () => {
   for (let i = 0; i < 6; i++) await act(async () => {});
@@ -36,7 +41,7 @@ function setup() {
 function caseWithAbort() {
   const id = setup();
   const s = useAppStore.getState();
-  const run = s.startGuide(id, 'ablauf');
+  const run = unwrap(s.startGuide(id, 'ablauf'));
   for (let i = 0; i < 4; i++) s.moveGuideStep(run.id, 'next');
   s.finishGuide(run.id, 'geht_nicht', 'Pumpenflügel klemmt');
   return id;
@@ -46,7 +51,11 @@ describe('Ohne bestätigte Weitergabe startet kein Call', () => {
   test('der Store verweigert den Videocall', () => {
     const id = setup();
     useAppStore.getState().escalate(id);
-    expect(() => useAppStore.getState().requestVideoCall(id)).toThrow(ConsentRequiredError);
+    expect(useAppStore.getState().requestVideoCall(id)).toEqual({
+      ok: false,
+      refusal: { code: 'bestaetigung', purpose: 'weitergabe_fachkraft' },
+    });
+    expect(useAppStore.getState().videoSessions).toHaveLength(0);
   });
 
   test('Warteraum und Videocall leiten ohne Bestätigung zu „Hilfe holen“ um', async () => {
@@ -69,9 +78,13 @@ describe('Ohne bestätigte Weitergabe startet kein Call', () => {
       dataCategories: [],
       textVersion: '1',
     });
-    const session = s.requestVideoCall(id);
+    const session = unwrap(s.requestVideoCall(id));
     s.revokeConsent(consent.id);
-    expect(() => s.updateVideoCall(session.id, 'verbunden')).toThrow(ConsentRequiredError);
+    expect(s.updateVideoCall(session.id, 'verbunden')).toEqual({
+      ok: false,
+      refusal: { code: 'bestaetigung', purpose: 'weitergabe_fachkraft' },
+    });
+    expect(useAppStore.getState().videoSessions[0]?.startedAt).toBeUndefined();
   });
 });
 
@@ -149,23 +162,114 @@ describe('Hilfe holen', () => {
 });
 
 describe('Keine Fachkraft frei', () => {
-  test('Demo-Szenario zeigt den Rückruf, der Rückruf landet im Fall', async () => {
+  const slot = de.waiting.callbackSlots[1]!;
+  const expertConsents = (id: string) =>
+    useAppStore
+      .getState()
+      .consents.filter((c) => c.purpose === 'weitergabe_fachkraft' && c.caseId === id);
+  const callbacks = (id: string) =>
+    useAppStore
+      .getState()
+      .events.filter(
+        (e) => e.caseId === id && e.type === 'videocall_angefragt' && e.payload.art === 'rueckruf',
+      );
+
+  async function noExpert() {
     const id = caseWithAbort();
     useAppStore.getState().setDemo({ videoScenario: 'keine_fachkraft' });
     const r = await renderRouter(APP, { initialUrl: `/fall/${id}` });
     await tap(new RegExp(`^${de.thread.callStart}`));
     await flush();
+    return { id, r };
+  }
+
+  test('Demo-Szenario zeigt den Rückruf, der Rückruf landet im Fall', async () => {
+    const { id, r } = await noExpert();
     // Zurück im Gespräch: Rückruf oder Vor-Ort-Diagnose
     expect(r.getPathname()).toBe(`/fall/${id}`);
     expect(screen.getByText(de.waiting.noExpertTitle)).toBeTruthy();
-    await tap(de.waiting.callbackSlots[1]!);
-    expect(screen.getByText(de.thread.callbackDone(de.waiting.callbackSlots[1]!))).toBeTruthy();
+    await tap(slot);
+    // Erst die Bestätigung: wer welche Daten sieht (R-16)
+    await tap(de.waiting.requestCallback);
+    expect(screen.getByText(de.thread.callbackDone(slot))).toBeTruthy();
     const s = useAppStore.getState();
     expect(s.videoSessions[0]?.outcome).toBe('keine_fachkraft');
     expect(s.events.at(-1)).toMatchObject({
       type: 'videocall_angefragt',
-      payload: { art: 'rueckruf', slot: de.waiting.callbackSlots[1] },
+      payload: { art: 'rueckruf', slot },
     });
+  });
+
+  test('vor dem Rückruf nennt ein Sheet Empfänger und Daten, erst der Tap bestätigt (R-16)', async () => {
+    const { id } = await noExpert();
+    const before = expertConsents(id).length;
+    await tap(slot);
+    expect(screen.getByRole('header', { name: de.waiting.confirmTitle(slot) })).toBeTruthy();
+    const partner = demoConfig.partners.find((p) => p.id === demoConfig.expert.partnerId)!;
+    expect(screen.getByText(de.help.shareTitle(demoConfig.expert.name, partner.name))).toBeTruthy();
+    for (const item of scopeLabels('weitergabe_fachkraft')) {
+      expect(screen.getAllByText(de.help.item(item)).length).toBeGreaterThan(0);
+    }
+    expect(callbacks(id)).toHaveLength(0);
+    expect(expertConsents(id)).toHaveLength(before);
+
+    await tap(de.waiting.requestCallback);
+    expect(callbacks(id)).toHaveLength(1);
+    const consent = expertConsents(id).at(-1)!;
+    expect(expertConsents(id)).toHaveLength(before + 1);
+    expect(consent).toMatchObject({
+      legalBasis: 'vertrag',
+      recipient: { id: partner.id, kind: 'betrieb' },
+      dataCategories: [...CONSENT_SCOPES.weitergabe_fachkraft.dataCategories],
+    });
+  });
+
+  test('Abbrechen im Sheet: kein Rückruf, keine Bestätigung', async () => {
+    const { id } = await noExpert();
+    const before = expertConsents(id).length;
+    await tap(slot);
+    await tap(de.common.cancel);
+    expect(screen.queryByRole('button', { name: de.waiting.requestCallback })).toBeNull();
+    expect(callbacks(id)).toHaveLength(0);
+    expect(expertConsents(id)).toHaveLength(before);
+    // Die Zeitfenster stehen weiter zur Wahl
+    expect(screen.getByRole('button', { name: slot })).toBeTruthy();
+  });
+
+  test('das Sheet: dunkel und mit 200 % Schrift, Farben aus dem Theme, 44 pt', async () => {
+    const scheme = jest.spyOn(RN, 'useColorScheme').mockReturnValue('dark');
+    const size = jest
+      .spyOn(RN, 'useWindowDimensions')
+      .mockReturnValue({ width: 390, height: 844, scale: 3, fontScale: 2 });
+    await noExpert();
+    await tap(slot);
+    expect(screen.getByText(de.waiting.confirmTitle(slot))).toHaveStyle({
+      color: colors.dark.textStrong,
+    });
+    expect(screen.getByText(de.waiting.confirmText)).toHaveStyle({ color: colors.dark.textBody });
+    // Nur das Sheet, die Kopfzeile des Stacks prüft der Test in a11y.test.tsx
+    const sheet = screen.container.queryAll((x) => x.props.accessibilityViewIsModal === true)[0]!;
+    const texts = sheet.queryAll((x) => x.type === 'Text');
+    expect(texts.length).toBeGreaterThan(4);
+    for (const n of texts) {
+      expect(n.props.allowFontScaling).not.toBe(false);
+      expect(n.props.maxFontSizeMultiplier ?? 2).toBeGreaterThanOrEqual(2);
+    }
+    for (const name of [de.waiting.requestCallback, de.common.cancel]) {
+      const button = screen.getByRole('button', { name });
+      expect(StyleSheet.flatten(button.props.style).minHeight).toBeGreaterThanOrEqual(44);
+    }
+    scheme.mockRestore();
+    size.mockRestore();
+  });
+
+  test('der Store verweigert den Rückruf ohne gültige Bestätigung', () => {
+    const id = caseWithAbort();
+    expect(useAppStore.getState().requestCallback(id, slot)).toEqual({
+      ok: false,
+      refusal: { code: 'bestaetigung', purpose: 'weitergabe_fachkraft' },
+    });
+    expect(callbacks(id)).toHaveLength(0);
   });
 });
 

@@ -1,0 +1,52 @@
+# Abbruch: einen Fall erst pausieren, dann fortsetzen und mit Grund abbrechen.
+# Prüft die Wege aus dem Schließen-Sheet (Review B-04, Befund R-01) auf dem Gerät.
+#
+# Nicht gelaufen: In der Sandbox von Schritt 29 gibt es weder Simulator noch Maestro. Den ersten
+# Lauf macht Schritt 30 mit dem Pitch-Build. __tests__/build/e2eFlows.test.ts prüft bis dahin,
+# dass jeder Text in i18n/de.ts steht und jede ID im Code vorkommt.
+#
+# Lauf: maestro test e2e/abbruch.yaml
+appId: de.ganz.app.pitch
+name: Abbruch
+tags:
+  - pitch
+---
+- runFlow: common/demo-startstand.yaml
+
+# Ein Fall mit Fortschritt: Foto und Ergebnis
+- tapOn: "Was ist kaputt\\?.*"
+- tapOn:
+    id: 'antwort-foto'
+- tapOn: 'Beispielfoto nehmen'
+- extendedWaitUntil:
+    visible:
+      id: 'antwort-anleitung'
+    timeout: 20000
+
+# Später weitermachen: Der Fall wartet auf der Startseite
+- tapOn: 'Schließen'
+- assertVisible: 'Fall schließen'
+- tapOn: 'Später weitermachen'
+- assertVisible: "Was ist kaputt\\?.*"
+- assertVisible: 'Offener Fall.*'
+- tapOn: 'Weitermachen'
+- extendedWaitUntil:
+    visible:
+      id: 'antwort-anleitung'
+    timeout: 10000
+
+# Abbrechen braucht einen Grund, erst dann geht der Fall zu
+- tapOn: 'Schließen'
+- tapOn: 'Fall abbrechen'
+- assertVisible: "Warum brichst du ab\\?"
+- tapOn: 'Hat sich erledigt'
+- takeScreenshot: abbruch-1-grund
+- tapOn: 'Fall abbrechen'
+
+# Kein offener Fall mehr, der abgebrochene steht unter „Fälle“
+- assertVisible: "Was ist kaputt\\?.*"
+- assertNotVisible: 'Offener Fall.*'
+- tapOn: 'Fälle.*'
+- assertVisible: 'Abgeschlossen'
+- assertVisible: '.*Abgebrochen.*'
+- takeScreenshot: abbruch-2-faelle

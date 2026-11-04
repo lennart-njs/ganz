@@ -2,7 +2,7 @@ import Constants from 'expo-constants';
 import { router } from 'expo-router';
 import type { ReactNode } from 'react';
 import { useRef, useState } from 'react';
-import { Linking, Pressable, StyleSheet, View } from 'react-native';
+import { Platform, Pressable, StyleSheet, View } from 'react-native';
 
 import { DemoControlSheet } from '@/components/app/DemoControlSheet';
 import { DemoHint } from '@/components/app/DemoHint';
@@ -16,12 +16,18 @@ import {
   Screen,
   SegmentedControl,
   Text,
+  Toast,
 } from '@/components/ds';
 import { demoConfig } from '@/config/demo.config';
+import { useNotice } from '@/hooks/useNotice';
 import { de } from '@/i18n/de';
 import { formatDateTime, formatEuro, formatMonthYear } from '@/i18n/format';
+import { categoryLabels, scopeList } from '@/lib/consent';
+import { textStamp } from '@/lib/legalTexts';
+import { openSystemSettings } from '@/lib/linking';
+import { scopedConsent } from '@/model/policies/consentScopes';
 import { notifications } from '@/services/notifications';
-import { selectContract, useAppStore, type Appearance } from '@/store/appStore';
+import { notificationsOn, selectContract, useAppStore, type Appearance } from '@/store/appStore';
 
 const t = de.profile;
 
@@ -46,10 +52,14 @@ export default function Profil() {
   const manufacturerConsent = consents.find(
     (c) => c.purpose === 'hersteller_einzelfall' && !c.revokedAt,
   );
-  const caseConsents = consents.filter((c) => c.purpose !== 'hersteller_einzelfall');
+  // Hersteller und Mitteilungen haben eigene Schalter unter „Freiwillig“
+  const caseConsents = consents.filter(
+    (c) => c.purpose !== 'hersteller_einzelfall' && c.purpose !== 'mitteilungen',
+  );
   const version = Constants.expoConfig?.version ?? '';
   const [demoOpen, setDemoOpen] = useState(false);
   const taps = useRef<number[]>([]);
+  const settingsNotice = useNotice();
 
   const tapVersion = () => {
     if (!demoConfig.demo.enabled) return;
@@ -65,31 +75,38 @@ export default function Profil() {
   const toggleManufacturer = (on: boolean) => {
     const s = useAppStore.getState();
     if (on) {
-      s.grantConsent({
-        purpose: 'hersteller_einzelfall',
-        legalBasis: 'einwilligung',
-        recipient: {
-          id: demoConfig.manufacturer.id,
-          kind: 'hersteller',
-          name: demoConfig.manufacturer.name,
-        },
-        dataCategories: [t.manufacturerCase(demoConfig.manufacturer.name)],
-        textVersion: '2026-10-1',
-      });
+      s.grantConsent(
+        scopedConsent('hersteller_einzelfall', {
+          recipient: {
+            id: demoConfig.manufacturer.id,
+            kind: 'hersteller',
+            name: demoConfig.manufacturer.name,
+          },
+          text: textStamp('hersteller_einzelfall'),
+        }),
+      );
     } else if (manufacturerConsent) {
       s.revokeConsent(manufacturerConsent.id);
     }
   };
 
+  // Einschalten speichert die Einwilligung, Ausschalten widerruft sie (im Store, R-13). Hat das
+  // Telefon Mitteilungen ausgeschaltet, geht es in die Einstellungen. Im Web gibt es sie nicht,
+  // dann bleibt ein ruhiger Hinweis.
   const toggleNotifications = async (on: boolean) => {
     const s = useAppStore.getState();
     if (!on) {
       s.setNotifications('abgelehnt');
       return;
     }
-    const ok = await notifications.requestPermission();
-    if (ok) s.setNotifications('erlaubt');
-    else Linking.openSettings();
+    // Die Einwilligung ist der Tap auf das Kästchen mit seinem Text, mit oder ohne Systemdialog
+    const { granted } = await notifications.requestPermission();
+    if (granted) {
+      s.setNotifications('erlaubt');
+      return;
+    }
+    if (Platform.OS === 'web') settingsNotice.show(t.notificationsWeb);
+    else if (!(await openSystemSettings())) settingsNotice.show(t.notificationsSettings);
   };
 
   return (
@@ -144,6 +161,10 @@ export default function Profil() {
             <Text variant="meta">
               {t.consentLine(c.recipient.name, t.basis[c.legalBasis], formatDateTime(c.grantedAt))}
             </Text>
+            {/* Welche Daten, so wie die Bestätigung sie gespeichert hat */}
+            {c.dataCategories.length ? (
+              <Text variant="meta">{de.common.list(categoryLabels(c.dataCategories))}</Text>
+            ) : null}
             {c.revokedAt ? (
               <Text variant="meta" tone="strong" style={styles.gap}>
                 {t.revokedOn(formatDateTime(c.revokedAt))}
@@ -163,16 +184,17 @@ export default function Profil() {
       <Section title={t.optional}>
         <Checkbox
           label={t.manufacturerCase(demoConfig.manufacturer.name)}
-          sub={t.manufacturerCaseSub}
+          sub={t.manufacturerCaseSub(scopeList('hersteller_einzelfall'))}
           checked={!!manufacturerConsent}
           onChange={toggleManufacturer}
         />
         <Checkbox
           label={t.notifications}
-          sub={state.notifications === 'abgelehnt' ? t.notificationsDenied : t.notificationsSub}
-          checked={state.notifications === 'erlaubt'}
+          sub={t.notificationsSub}
+          checked={notificationsOn(state)}
           onChange={toggleNotifications}
         />
+        {settingsNotice.notice ? <Toast message={settingsNotice.notice} /> : null}
       </Section>
 
       <Section title={t.appearance}>

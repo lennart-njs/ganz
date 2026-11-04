@@ -5,10 +5,12 @@ import {
   canStartVideoCall,
   ConsentRequiredError,
   createQuote,
+  findActiveConsent,
   pauseCase,
   resumeCase,
   TRANSITIONS,
   TransitionError,
+  tryApplyCommand,
   type CaseCommand,
   type CommandContext,
 } from '@/model/caseMachine';
@@ -153,6 +155,58 @@ describe('Schadenmeldung', () => {
   });
 });
 
+describe('Befehle ohne Exception (tryApplyCommand)', () => {
+  test.each(allowed)('erlaubt: %s → %s liefert dasselbe wie applyCommand', (status, command) => {
+    n = 0;
+    const expected = applyCommand(caseFor(status), command as CaseCommand, ctx());
+    n = 0;
+    expect(tryApplyCommand(caseFor(status), command as CaseCommand, ctx())).toEqual({
+      ok: true,
+      value: expected,
+    });
+  });
+
+  test.each(forbidden)('verboten: %s → %s wird abgelehnt', (status, command) => {
+    expect(tryApplyCommand(caseFor(status), command as CaseCommand, ctx())).toEqual({
+      ok: false,
+      refusal: { code: 'uebergang', from: status, command },
+    });
+  });
+
+  test('Schadenmeldung: ohne eigene Bestätigung, vom System und ohne Vertrag abgelehnt', () => {
+    const missing = { code: 'bestaetigung', purpose: 'weitergabe_versicherer' };
+    const revoked = consent('weitergabe_versicherer', { revokedAt: NOW });
+    const other = consent('weitergabe_versicherer', { personId: 'p-2' });
+    const attempt = (extra: Partial<CommandContext>) =>
+      tryApplyCommand(makeCase('eskaliert'), 'schaden_melden', ctx(extra));
+    expect(attempt({ consents: [] })).toEqual({ ok: false, refusal: missing });
+    expect(attempt({ consents: [revoked] })).toEqual({ ok: false, refusal: missing });
+    expect(attempt({ consents: [other] })).toEqual({ ok: false, refusal: missing });
+    expect(attempt({ actor: { kind: 'system' } })).toEqual({ ok: false, refusal: missing });
+    expect(attempt({ contractId: undefined })).toEqual({ ok: false, refusal: { code: 'vertrag' } });
+    expect(() =>
+      applyCommand(makeCase('eskaliert'), 'schaden_melden', ctx({ contractId: undefined })),
+    ).toThrow('Schadenmeldung ohne Vertrag');
+  });
+
+  test('Freigabe ohne Schadenmeldung wird abgelehnt', () => {
+    expect(tryApplyCommand(makeCase('freigabe_noetig'), 'freigabe_erteilt', ctx())).toEqual({
+      ok: false,
+      refusal: { code: 'schadenfall' },
+    });
+    expect(() => applyCommand(makeCase('freigabe_noetig'), 'freigabe_erteilt', ctx())).toThrow(
+      'Freigabe ohne Schadenmeldung',
+    );
+  });
+
+  test('eine Ablehnung ändert den Fall nicht', () => {
+    const c = makeCase('in_reparatur');
+    const before = structuredClone(c);
+    tryApplyCommand(c, 'abbrechen', ctx());
+    expect(c).toEqual(before);
+  });
+});
+
 describe('Videocall', () => {
   test('startet nur mit bestätigter Weitergabe an die Fachkraft', () => {
     expect(canStartVideoCall([], PERSON, 'GS-24817')).toBe(false);
@@ -162,6 +216,24 @@ describe('Videocall', () => {
       canStartVideoCall([consent('weitergabe_fachkraft', { revokedAt: NOW })], PERSON, 'GS-24817'),
     ).toBe(false);
     expect(canStartVideoCall([consent('weitergabe_fachkraft')], PERSON, 'GS-99999')).toBe(false);
+  });
+});
+
+describe('Gültige Bestätigung', () => {
+  const betrieb = (id: string, extra: Partial<Consent> = {}) =>
+    consent('weitergabe_betrieb', {
+      id: `c-${id}`,
+      recipient: { id, kind: 'betrieb', name: id },
+      ...extra,
+    });
+
+  test('mit Empfänger zählt nur eine Bestätigung für genau diesen Empfänger', () => {
+    const consents = [betrieb('brandt', { revokedAt: NOW }), betrieb('neukoelln')];
+    const find = (recipientId?: string) =>
+      findActiveConsent(consents, PERSON, 'weitergabe_betrieb', 'GS-24817', recipientId)?.id;
+    expect(find()).toBe('c-neukoelln');
+    expect(find('neukoelln')).toBe('c-neukoelln');
+    expect(find('brandt')).toBeUndefined();
   });
 });
 

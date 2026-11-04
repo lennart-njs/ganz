@@ -1,8 +1,12 @@
 import type { StateStorage } from 'zustand/middleware';
 
-import { ConsentRequiredError } from '@/model/caseMachine';
+import { demoConfig } from '@/config/demo.config';
+import { de } from '@/i18n/de';
+import { availableActions, can } from '@/model/policies/actions';
+import { selectCaseFacts } from '@/model/policies/caseFacts';
 import { createAppStore, selectCaseEvents, selectOpenCases } from '@/store/appStore';
 import type { StoreEnv } from '@/store/env';
+import { unwrap } from '@/test/result';
 
 function memoryStorage(): StateStorage & { data: Map<string, string> } {
   const data = new Map<string, string>();
@@ -63,9 +67,11 @@ describe('Store', () => {
     const s = () => store.getState();
     const c = s().createCase({ deviceId: 'd', entry: 'foto', problemLabel: 'x' });
     s().runCommand(c.id, 'hilfe_holen');
-    expect(() => s().runCommand(c.id, 'schaden_melden', { contractId: 'k-1' })).toThrow(
-      ConsentRequiredError,
-    );
+    expect(s().runCommand(c.id, 'schaden_melden', { contractId: 'k-1' })).toEqual({
+      ok: false,
+      refusal: { code: 'bestaetigung', purpose: 'weitergabe_versicherer' },
+    });
+    expect(s().cases[c.id]?.status).toBe('eskaliert');
     const consent = s().grantConsent({
       caseId: c.id,
       purpose: 'weitergabe_versicherer',
@@ -74,7 +80,7 @@ describe('Store', () => {
       dataCategories: ['Fotos', 'Protokoll', 'Befund'],
       textVersion: '1',
     });
-    expect(s().runCommand(c.id, 'schaden_melden', { contractId: 'k-1' }).status).toBe(
+    expect(unwrap(s().runCommand(c.id, 'schaden_melden', { contractId: 'k-1' })).status).toBe(
       'freigabe_noetig',
     );
     s().revokeConsent(consent.id);
@@ -89,5 +95,783 @@ describe('Store', () => {
     expect(a.id).toBe(b.id);
     expect(a.role).toBe('versicherungsnehmer');
     expect(store.getState().household?.address?.city).toBe('Berlin');
+  });
+});
+
+describe('openCaseFor: ein offener Fall pro Gerät (Entscheidung Nr. 13)', () => {
+  const setup = () => {
+    const store = createAppStore(memoryStorage(), testEnv());
+    return { store, s: () => store.getState() };
+  };
+  const openOf = (state: ReturnType<typeof setup>['s'], deviceId: string) =>
+    selectOpenCases(state()).filter((c) => c.deviceId === deviceId);
+
+  test('ohne offenen Fall: ein neuer Fall', () => {
+    const { s } = setup();
+    const r = unwrap(s().openCaseFor('d-1', 'symptom', 'Wäsche noch nass'));
+    expect(r.art).toBe('neu');
+    expect(s().cases[r.caseId]).toMatchObject({
+      deviceId: 'd-1',
+      entry: 'symptom',
+      problemLabel: 'Wäsche noch nass',
+      status: 'offen',
+    });
+  });
+
+  test('ohne Fortschritt: derselbe Fall mit dem neuen Problem, auch nach einer Pause', () => {
+    const { s } = setup();
+    const first = unwrap(s().openCaseFor('d-1', 'symptom', 'Wäsche noch nass'));
+    s().pauseCase(first.caseId);
+    const r = unwrap(s().openCaseFor('d-1', 'foto', 'Foto vom Display'));
+    expect(r).toEqual({ art: 'ersetzt', caseId: first.caseId });
+    expect(s().cases[r.caseId]).toMatchObject({ entry: 'foto', problemLabel: 'Foto vom Display' });
+    expect(s().cases[r.caseId]?.pausedAt).toBeUndefined();
+    expect(openOf(s, 'd-1')).toHaveLength(1);
+  });
+
+  test('mit Fortschritt: nichts ändert sich, ganz fragt', () => {
+    const { s } = setup();
+    const first = unwrap(s().openCaseFor('d-1', 'symptom', 'Wäsche noch nass'));
+    s().runCommand(first.caseId, 'hilfe_holen');
+    const before = s().events.length;
+    expect(unwrap(s().openCaseFor('d-1', 'symptom', 'Tür geht nicht auf'))).toEqual({
+      art: 'frage_weitermachen',
+      caseId: first.caseId,
+    });
+    expect(s().events).toHaveLength(before);
+    expect(s().cases[first.caseId]?.problemLabel).toBe('Wäsche noch nass');
+  });
+
+  test('„Neues Problem melden“: der alte Fall wird abgebrochen, dann gibt es einen neuen', () => {
+    const { s } = setup();
+    const first = unwrap(s().openCaseFor('d-1', 'symptom', 'Wäsche noch nass'));
+    s().runCommand(first.caseId, 'hilfe_holen');
+    const r = unwrap(
+      s().openCaseFor('d-1', 'symptom', 'Tür geht nicht auf', { neuesProblem: true }),
+    );
+    expect(r.art).toBe('neu');
+    expect(r.caseId).not.toBe(first.caseId);
+    expect(s().cases[first.caseId]).toMatchObject({
+      status: 'abgebrochen',
+      cancelReason: de.thread.newProblemReason,
+    });
+    expect(openOf(s, 'd-1').map((c) => c.id)).toEqual([r.caseId]);
+  });
+
+  test('in der Reparatur: kein Abbruch, kein Absturz, nur die Frage', () => {
+    const { s } = setup();
+    const first = unwrap(s().openCaseFor('d-1', 'symptom', 'Wäsche noch nass'));
+    s().runCommand(first.caseId, 'hilfe_holen');
+    s().runCommand(first.caseId, 'selbst_zahlen');
+    const r = unwrap(
+      s().openCaseFor('d-1', 'symptom', 'Tür geht nicht auf', { neuesProblem: true }),
+    );
+    expect(r).toEqual({ art: 'frage_weitermachen', caseId: first.caseId });
+    expect(s().cases[first.caseId]?.status).toBe('in_reparatur');
+    expect(openOf(s, 'd-1')).toHaveLength(1);
+  });
+
+  test('das Problem des eigenen Falls ändern („Passt nicht“): derselbe Fall, auch mit Foto', () => {
+    const { s } = setup();
+    const first = unwrap(s().openCaseFor('d-1', 'foto', 'Foto vom Display'));
+    s().addPhoto({
+      caseId: first.caseId,
+      deviceId: 'd-1',
+      purpose: 'display',
+      source: 'in_app_camera',
+      uri: '',
+    });
+    expect(unwrap(s().openCaseFor('d-1', 'symptom', 'Tür geht nicht auf')).art).toBe(
+      'frage_weitermachen',
+    );
+    const r = unwrap(
+      s().openCaseFor('d-1', 'symptom', 'Tür geht nicht auf', { aendern: first.caseId }),
+    );
+    expect(r).toEqual({ art: 'ersetzt', caseId: first.caseId });
+    expect(s().cases[r.caseId]).toMatchObject({ entry: 'symptom', photoIds: [expect.any(String)] });
+    expect(openOf(s, 'd-1')).toHaveLength(1);
+  });
+
+  test('ein anderes Gerät bleibt unberührt', () => {
+    const { s } = setup();
+    const a = unwrap(s().openCaseFor('d-1', 'symptom', 'Wäsche noch nass'));
+    const b = unwrap(s().openCaseFor('d-2', 'symptom', 'Tür geht nicht auf'));
+    expect([a.art, b.art]).toEqual(['neu', 'neu']);
+    expect(s().cases[a.caseId]?.problemLabel).toBe('Wäsche noch nass');
+  });
+});
+
+describe('startGuide: nie zwei offene Anleitungen (B-05, R-06)', () => {
+  const setup = () => {
+    const store = createAppStore(memoryStorage(), testEnv());
+    const s = () => store.getState();
+    const id = unwrap(s().openCaseFor('d-1', 'symptom', 'Wäsche noch nass')).caseId;
+    return { s, id };
+  };
+  const open = (s: () => ReturnType<ReturnType<typeof createAppStore>['getState']>, id: string) =>
+    Object.values(s().guideRuns).filter((r) => r.caseId === id && !r.endedAt);
+
+  test('dieselbe Anleitung geht weiter, wo du warst', () => {
+    const { s, id } = setup();
+    const run = unwrap(s().startGuide(id, 'nass'));
+    s().moveGuideStep(run.id, 'next');
+    const again = unwrap(s().startGuide(id, 'nass'));
+    expect(again.id).toBe(run.id);
+    expect(s().guideRuns[run.id]).toMatchObject({ currentStep: 1, completedSteps: [0] });
+    expect(s().cases[id]?.guideRunIds).toEqual([run.id]);
+  });
+
+  test('eine andere Anleitung beendet die offene, die erledigten Schritte bleiben', () => {
+    const { s, id } = setup();
+    const run = unwrap(s().startGuide(id, 'nass'));
+    s().moveGuideStep(run.id, 'next');
+    const next = unwrap(s().startGuide(id, 'tuer'));
+    expect(open(s, id).map((r) => r.id)).toEqual([next.id]);
+    expect(s().guideRuns[run.id]).toMatchObject({
+      completedSteps: [0],
+      endedAt: expect.any(String),
+    });
+    expect(s().guideRuns[run.id]?.outcome).toBeUndefined();
+    const ended = s().events.filter((e) => e.type === 'anleitung_beendet');
+    expect(ended.map((e) => e.payload)).toEqual([
+      { guideRunId: run.id, guideId: 'nass', step: 2, replaced: true },
+    ]);
+  });
+
+  test('openCaseFor beim Ersetzen: eine offene Anleitung bleibt nur, wenn es mit ihr weitergeht', () => {
+    const { s, id } = setup();
+    const run = unwrap(s().startGuide(id, 'nass'));
+    expect(
+      unwrap(s().openCaseFor('d-1', 'symptom', 'Wäsche noch nass', { guideId: 'nass' })).art,
+    ).toBe('ersetzt');
+    expect(open(s, id).map((r) => r.id)).toEqual([run.id]);
+    s().openCaseFor('d-1', 'foto', 'Foto vom Display');
+    expect(open(s, id)).toEqual([]);
+    // Ohne erledigten Schritt ist das kein Fortschritt, der nächste Versuch ersetzt wieder
+    expect(unwrap(s().openCaseFor('d-1', 'symptom', 'Tür geht nicht auf')).art).toBe('ersetzt');
+  });
+});
+
+describe('Befehle ohne Absturz: Result statt Exception', () => {
+  const setup = () => {
+    const store = createAppStore(memoryStorage(), testEnv());
+    return { store, s: () => store.getState() };
+  };
+  const unknown = { code: 'unbekannt', what: 'fall', id: 'GS-99999' };
+
+  test('eine unbekannte Fallnummer wird abgelehnt, ohne etwas zu schreiben', () => {
+    const { s } = setup();
+    const before = s().events.length;
+    expect(s().runCommand('GS-99999', 'hilfe_holen')).toEqual({ ok: false, refusal: unknown });
+    expect(s().escalate('GS-99999')).toEqual({ ok: false, refusal: unknown });
+    expect(s().pauseCase('GS-99999')).toEqual({ ok: false, refusal: unknown });
+    expect(s().resumeCase('GS-99999')).toEqual({ ok: false, refusal: unknown });
+    expect(s().events).toHaveLength(before);
+    expect(s().cases).toEqual({});
+  });
+
+  test('ein verbotener Übergang wird abgelehnt, Fall und Akte bleiben', () => {
+    const { s } = setup();
+    const c = s().createCase({ deviceId: 'd-1', entry: 'foto', problemLabel: 'x' });
+    unwrap(s().runCommand(c.id, 'hilfe_holen'));
+    unwrap(s().runCommand(c.id, 'selbst_zahlen'));
+    const before = { case: s().cases[c.id], events: s().events.length };
+    expect(s().runCommand(c.id, 'abbrechen', { cancelReason: 'x' })).toEqual({
+      ok: false,
+      refusal: { code: 'uebergang', from: 'in_reparatur', command: 'abbrechen' },
+    });
+    expect(s().cases[c.id]).toBe(before.case);
+    expect(s().events).toHaveLength(before.events);
+  });
+
+  test('Hilfe holen gibt den neuen Stand zurück, ein zweites Mal wird abgelehnt', () => {
+    const { s } = setup();
+    const c = s().createCase({ deviceId: 'd-1', entry: 'foto', problemLabel: 'x' });
+    expect(unwrap(s().escalate(c.id)).status).toBe('eskaliert');
+    expect(s().escalate(c.id)).toEqual({
+      ok: false,
+      refusal: { code: 'uebergang', from: 'eskaliert', command: 'hilfe_holen' },
+    });
+  });
+
+  test('ein abgeschlossener Fall lässt sich nicht pausieren', () => {
+    const { s } = setup();
+    const c = s().createCase({ deviceId: 'd-1', entry: 'foto', problemLabel: 'x' });
+    expect(unwrap(s().pauseCase(c.id)).pausedAt).toBeDefined();
+    unwrap(s().runCommand(c.id, 'abbrechen', { cancelReason: 'x' }));
+    const events = s().events.length;
+    expect(s().pauseCase(c.id)).toEqual({
+      ok: false,
+      refusal: { code: 'regel', action: 'pausieren' },
+    });
+    expect(s().events).toHaveLength(events);
+  });
+});
+
+describe('Schadenfall und Termin: erst prüfen, dann in einem Schritt schreiben', () => {
+  const partner = demoConfig.partners[1]!;
+  /** Fall mit Schutz und Kostenvoranschlag, bereit für die Meldung */
+  const setup = (contract = true) => {
+    const store = createAppStore(memoryStorage(), testEnv());
+    const s = () => store.getState();
+    s().ensureHousehold();
+    if (contract) s().linkContract('vertragsnummer');
+    const device = s().addDevice({
+      category: 'waschmaschine',
+      manufacturerId: demoConfig.manufacturer.id,
+      model: demoConfig.device.model,
+      contractId: s().contracts[0]?.id,
+      identifiedBy: 'manuell',
+    });
+    const c = s().createCase({ deviceId: device.id, entry: 'foto', problemLabel: 'x' });
+    unwrap(s().escalate(c.id));
+    s().setFinding(c.id, 'reparatur', 'fachkraft');
+    /** Zählt, wie oft der Store sich ändert */
+    let writes = 0;
+    store.subscribe(() => {
+      writes += 1;
+    });
+    return { s, id: c.id, writes: () => writes };
+  };
+
+  test('die Meldung schreibt Bestätigung, Meldung und Status auf einmal', () => {
+    const { s, id, writes } = setup();
+    const reported = unwrap(s().reportClaim(id));
+    expect(reported.status).toBe('freigabe_noetig');
+    expect(writes()).toBe(1);
+    const consent = s().consents.find((c) => c.purpose === 'weitergabe_versicherer');
+    expect(reported.claim?.confirmationId).toBe(consent?.id);
+    expect(
+      selectCaseEvents(s(), id)
+        .slice(-3)
+        .map((e) => e.type),
+    ).toEqual(['weitergabe_bestaetigt', 'schaden_gemeldet', 'status_geaendert']);
+  });
+
+  test('ein zweites Melden wird abgelehnt, ohne zweite Bestätigung', () => {
+    const { s, id, writes } = setup();
+    unwrap(s().reportClaim(id));
+    expect(s().reportClaim(id)).toEqual({
+      ok: false,
+      refusal: { code: 'regel', action: 'schaden_melden' },
+    });
+    expect(writes()).toBe(1);
+    expect(s().consents.filter((c) => c.purpose === 'weitergabe_versicherer')).toHaveLength(1);
+  });
+
+  test('ohne Schutz und ohne Fall keine Meldung', () => {
+    const without = setup(false);
+    expect(without.s().reportClaim(without.id)).toEqual({
+      ok: false,
+      refusal: { code: 'vertrag' },
+    });
+    expect(without.s().reportClaim('GS-99999')).toEqual({
+      ok: false,
+      refusal: { code: 'unbekannt', what: 'fall', id: 'GS-99999' },
+    });
+    expect(without.writes()).toBe(0);
+  });
+
+  test('selbst zahlen: Status, Bestätigung, Termin und Ereignisse auf einmal', () => {
+    const { s, id, writes } = setup(false);
+    const booking = unwrap(
+      s().requestBooking({
+        caseId: id,
+        kind: 'reparatur',
+        partnerId: partner.id,
+        slotLabel: demoConfig.slots[0]!,
+        selfPay: true,
+      }),
+    );
+    expect(writes()).toBe(1);
+    expect(s().cases[id]).toMatchObject({ status: 'in_reparatur', bookingId: booking.id });
+    expect(booking).toMatchObject({ provider: { id: partner.id }, subjectToApproval: false });
+    expect(
+      selectCaseEvents(s(), id)
+        .slice(-3)
+        .map((e) => e.type),
+    ).toEqual(['status_geaendert', 'weitergabe_bestaetigt', 'termin_angefragt']);
+  });
+
+  test('unbekannter Betrieb, unbekannter Fall und die Pumpe werden abgelehnt', () => {
+    const { s, id, writes } = setup();
+    const input = {
+      caseId: id,
+      kind: 'reparatur' as const,
+      partnerId: partner.id,
+      slotLabel: demoConfig.slots[0]!,
+      selfPay: false,
+    };
+    expect(s().requestBooking({ ...input, partnerId: 'niemand' })).toEqual({
+      ok: false,
+      refusal: { code: 'unbekannt', what: 'betrieb', id: 'niemand' },
+    });
+    expect(s().requestBooking({ ...input, caseId: 'GS-99999' })).toEqual({
+      ok: false,
+      refusal: { code: 'unbekannt', what: 'fall', id: 'GS-99999' },
+    });
+    const pump = de.appliance.waschmaschine.finding.component;
+    expect(s().requestBooking({ ...input, kind: 'ersatzteil_versand', partName: pump })).toEqual({
+      ok: false,
+      refusal: { code: 'nur_betrieb', part: pump },
+    });
+    expect(writes()).toBe(0);
+    expect(s().bookings).toEqual([]);
+  });
+});
+
+describe('Termin-Regeln im Store (model/policies/bookingRules.ts)', () => {
+  const partner = demoConfig.partners[1]!;
+  /** Fall mit Kostenvoranschlag, mit oder ohne Schutz. Ablehnung, wenn gewünscht. */
+  const setup = (contract = true, claimScenario: 'freigeben' | 'ablehnen' = 'freigeben') => {
+    const store = createAppStore(memoryStorage(), testEnv());
+    const s = () => store.getState();
+    s().ensureHousehold();
+    s().setDemo({ claimScenario });
+    if (contract) s().linkContract('vertragsnummer');
+    const device = s().addDevice({
+      category: 'waschmaschine',
+      manufacturerId: demoConfig.manufacturer.id,
+      model: demoConfig.device.model,
+      contractId: s().contracts[0]?.id,
+      identifiedBy: 'manuell',
+    });
+    const c = s().createCase({ deviceId: device.id, entry: 'foto', problemLabel: 'x' });
+    unwrap(s().escalate(c.id));
+    unwrap(s().setFinding(c.id, 'reparatur', 'fachkraft'));
+    const input = {
+      caseId: c.id,
+      kind: 'reparatur' as const,
+      partnerId: partner.id,
+      slotLabel: demoConfig.slots[0]!,
+      selfPay: !contract,
+    };
+    return { store, s, id: c.id, input };
+  };
+
+  test('ein bestätigter Termin: kein zweiter derselben Art, der Store bleibt, wie er ist (R-08)', () => {
+    const { store, s, id, input } = setup(false);
+    const first = unwrap(s().requestBooking(input));
+    expect(s().simulateNext(id)).toBe(true);
+    expect(s().bookings.find((b) => b.id === first.id)?.status).toBe('bestaetigt');
+    const before = store.getState();
+    expect(s().requestBooking({ ...input, slotLabel: demoConfig.slots[1]! })).toEqual({
+      ok: false,
+      refusal: { code: 'termin_laeuft', kind: 'reparatur' },
+    });
+    expect(store.getState()).toBe(before);
+    expect(s().bookings.filter((b) => b.status !== 'storniert')).toHaveLength(1);
+  });
+
+  test('auch ein nur angefragter Termin läuft: kein zweiter daneben', () => {
+    const { s, input } = setup(false);
+    unwrap(s().requestBooking(input));
+    expect(s().requestBooking(input)).toEqual({
+      ok: false,
+      refusal: { code: 'termin_laeuft', kind: 'reparatur' },
+    });
+    expect(s().bookings).toHaveLength(1);
+  });
+
+  test('nach der Ablehnung kein Termin auf Kosten des Versicherers (R-09)', () => {
+    const { store, s, id, input } = setup(true, 'ablehnen');
+    unwrap(s().reportClaim(id));
+    expect(s().simulateNext(id)).toBe(true);
+    expect(s().cases[id]?.status).toBe('abgelehnt');
+    const before = store.getState();
+    expect(s().requestBooking(input)).toEqual({
+      ok: false,
+      refusal: { code: 'regel', action: 'termin_versicherer' },
+    });
+    expect(store.getState()).toBe(before);
+  });
+
+  test('während der Prüfung kein Selbstzahler-Termin, nur vorbehaltlich Freigabe (R-07)', () => {
+    const { s, id, input } = setup(true);
+    unwrap(s().reportClaim(id));
+    expect(s().requestBooking({ ...input, selfPay: true })).toEqual({
+      ok: false,
+      refusal: { code: 'regel', action: 'termin_selbst' },
+    });
+    const booking = unwrap(s().requestBooking(input));
+    expect(booking.subjectToApproval).toBe(true);
+    expect(s().cases[id]?.status).toBe('freigabe_noetig');
+  });
+
+  test('umbuchen nach der Ablehnung: der verfallene Termin wird storniert, ein neuer angelegt', () => {
+    const { s, id, input } = setup(true, 'ablehnen');
+    unwrap(s().reportClaim(id));
+    const lapsed = unwrap(s().requestBooking(input));
+    expect(s().simulateNext(id)).toBe(true);
+    expect(s().cases[id]?.status).toBe('abgelehnt');
+    const rebooked = unwrap(
+      s().requestBooking({ ...input, selfPay: true, slotLabel: demoConfig.slots[1]! }),
+    );
+    expect(s().bookings.find((b) => b.id === lapsed.id)?.status).toBe('storniert');
+    expect(s().bookings.filter((b) => b.status !== 'storniert')).toEqual([rebooked]);
+    expect(rebooked).toMatchObject({ subjectToApproval: false, slotLabel: demoConfig.slots[1] });
+    expect(s().cases[id]).toMatchObject({ status: 'in_reparatur', bookingId: rebooked.id });
+  });
+});
+
+describe('Befund vor Ort (R-10)', () => {
+  const setup = () => {
+    const store = createAppStore(memoryStorage(), testEnv());
+    const s = () => store.getState();
+    s().ensureHousehold();
+    const device = s().addDevice({
+      category: 'waschmaschine',
+      manufacturerId: demoConfig.manufacturer.id,
+      model: demoConfig.device.model,
+      identifiedBy: 'manuell',
+    });
+    const c = s().createCase({ deviceId: device.id, entry: 'symptom', problemLabel: 'x' });
+    unwrap(s().escalate(c.id));
+    return { store, s, id: c.id };
+  };
+
+  test('ohne Termin zur Vor-Ort-Diagnose schreibt kein Betrieb einen Befund', () => {
+    const { store, s, id } = setup();
+    const before = store.getState();
+    expect(s().setFinding(id, 'reparatur', 'betrieb')).toEqual({
+      ok: false,
+      refusal: { code: 'unbekannt', what: 'termin', id },
+    });
+    expect(store.getState()).toBe(before);
+  });
+
+  test('der gebuchte Betrieb schreibt Befund und Kostenvoranschlag, mit seiner Nummer', () => {
+    const { s, id } = setup();
+    const partner = demoConfig.partners[1]!;
+    unwrap(
+      s().requestBooking({
+        caseId: id,
+        kind: 'vor_ort_diagnose',
+        partnerId: partner.id,
+        slotLabel: demoConfig.slots[2]!,
+        selfPay: false,
+      }),
+    );
+    while (s().simulateNext(id));
+    const events = selectCaseEvents(s(), id);
+    for (const type of ['befund_erstellt', 'angebot_erstellt'] as const) {
+      expect(events.find((e) => e.type === type)?.actor).toEqual({
+        kind: 'betrieb',
+        id: partner.id,
+        name: partner.name,
+      });
+    }
+    const quote = s().quotes.find((q) => q.id === s().cases[id]?.quoteId);
+    expect(quote?.createdBy).toEqual({ kind: 'betrieb', name: partner.name });
+    expect(s().diagnoses.at(-1)?.source).toBe('betrieb');
+  });
+});
+
+describe('Videocall und Rückruf: Bestätigung und Anfrage in einem Schritt', () => {
+  const partner = demoConfig.partners[0]!;
+  const share = (caseId: string) => ({
+    caseId,
+    purpose: 'weitergabe_fachkraft' as const,
+    legalBasis: 'vertrag' as const,
+    recipient: { id: partner.id, kind: 'betrieb' as const, name: partner.name },
+    dataCategories: ['Fotos'],
+    textVersion: '1',
+  });
+  const setup = () => {
+    const store = createAppStore(memoryStorage(), testEnv());
+    const s = () => store.getState();
+    s().ensureHousehold();
+    const c = s().createCase({ deviceId: 'd-1', entry: 'foto', problemLabel: 'x' });
+    let writes = 0;
+    store.subscribe(() => {
+      writes += 1;
+    });
+    return { s, id: c.id, writes: () => writes };
+  };
+
+  test('vor „Hilfe holen“ kein Call, nichts wird gespeichert', () => {
+    const { s, id, writes } = setup();
+    expect(s().requestVideoCall(id, { share: share(id) })).toEqual({
+      ok: false,
+      refusal: { code: 'regel', action: 'videocall_anfragen' },
+    });
+    expect(writes()).toBe(0);
+  });
+
+  test('ohne Bestätigung kein Call, auch die Einwilligung in Screenshots bleibt ungespeichert', () => {
+    const { s, id, writes } = setup();
+    unwrap(s().escalate(id));
+    const screenshots = { ...share(id), purpose: 'screenshots_im_call' as const };
+    expect(s().requestVideoCall(id, { screenshots })).toEqual({
+      ok: false,
+      refusal: { code: 'bestaetigung', purpose: 'weitergabe_fachkraft' },
+    });
+    expect(writes()).toBe(1);
+    expect(s().consents).toEqual([]);
+  });
+
+  test('mit dem Tap: Bestätigungen, Call und Ereignisse auf einmal', () => {
+    const { s, id, writes } = setup();
+    unwrap(s().escalate(id));
+    const screenshots = { ...share(id), purpose: 'screenshots_im_call' as const };
+    const session = unwrap(s().requestVideoCall(id, { share: share(id), screenshots }));
+    expect(writes()).toBe(2);
+    expect(s().consents.map((c) => c.purpose)).toEqual([
+      'weitergabe_fachkraft',
+      'screenshots_im_call',
+    ]);
+    expect(session.screenshotsConsentId).toBe(s().consents[1]?.id);
+    expect(unwrap(s().updateVideoCall(session.id, 'verbunden')).outcome).toBe('verbunden');
+    expect(s().updateVideoCall('video-x', 'beendet')).toEqual({
+      ok: false,
+      refusal: { code: 'unbekannt', what: 'videocall', id: 'video-x' },
+    });
+  });
+
+  test('Rückruf: Bestätigung und Anfrage auf einmal, vor „Hilfe holen“ keiner', () => {
+    const { s, id, writes } = setup();
+    expect(s().requestCallback(id, 'heute', share(id))).toEqual({
+      ok: false,
+      refusal: { code: 'regel', action: 'rueckruf_anfragen' },
+    });
+    expect(s().consents).toEqual([]);
+    unwrap(s().escalate(id));
+    expect(s().requestCallback(id, 'heute', share(id))).toEqual({ ok: true, value: undefined });
+    expect(writes()).toBe(2);
+    expect(
+      selectCaseEvents(s(), id)
+        .slice(-2)
+        .map((e) => e.type),
+    ).toEqual(['weitergabe_bestaetigt', 'videocall_angefragt']);
+  });
+});
+
+describe('Anleitung, Befund und Abschluss: Result und ein Schritt', () => {
+  const setup = () => {
+    const store = createAppStore(memoryStorage(), testEnv());
+    const s = () => store.getState();
+    s().ensureHousehold();
+    const c = s().createCase({ deviceId: 'd-1', entry: 'foto', problemLabel: 'x' });
+    let writes = 0;
+    store.subscribe(() => {
+      writes += 1;
+    });
+    return { s, id: c.id, writes: () => writes };
+  };
+
+  test('eine Anleitung starten: Status, Anleitung und Ereignisse auf einmal', () => {
+    const { s, id, writes } = setup();
+    const run = unwrap(s().startGuide(id, 'ablauf'));
+    expect(writes()).toBe(1);
+    expect(s().cases[id]).toMatchObject({ status: 'selbsthilfe', guideRunIds: [run.id] });
+    expect(
+      selectCaseEvents(s(), id).find((e) => e.type === 'anleitung_gestartet')?.payload,
+    ).toEqual({ guideId: 'ablauf', guideRunId: run.id });
+  });
+
+  test('unbekannte Anleitung, unbekannter Fall und „eskaliert“ werden abgelehnt', () => {
+    const { s, id, writes } = setup();
+    expect(s().startGuide(id, 'gibt-es-nicht')).toEqual({
+      ok: false,
+      refusal: { code: 'unbekannt', what: 'anleitung', id: 'gibt-es-nicht' },
+    });
+    expect(s().startGuide('GS-99999', 'ablauf')).toEqual({
+      ok: false,
+      refusal: { code: 'unbekannt', what: 'fall', id: 'GS-99999' },
+    });
+    expect(writes()).toBe(0);
+    unwrap(s().escalate(id));
+    expect(s().startGuide(id, 'ablauf')).toEqual({
+      ok: false,
+      refusal: { code: 'regel', action: 'anleitung_starten' },
+    });
+    expect(s().guideRuns).toEqual({});
+  });
+
+  test('„Geht nicht“ beendet die Anleitung und holt Hilfe in einem Schritt, nur einmal', () => {
+    const { s, id, writes } = setup();
+    const run = unwrap(s().startGuide(id, 'ablauf'));
+    const ended = unwrap(s().finishGuide(run.id, 'geht_nicht', 'klemmt'));
+    expect(writes()).toBe(2);
+    expect(ended).toMatchObject({ outcome: 'geht_nicht', abortNote: 'klemmt' });
+    expect(s().cases[id]?.status).toBe('eskaliert');
+    expect(s().finishGuide(run.id, 'fertig')).toEqual({
+      ok: false,
+      refusal: { code: 'regel', action: 'anleitung_fortsetzen' },
+    });
+    expect(s().finishGuide('anleitung-x', 'fertig')).toEqual({
+      ok: false,
+      refusal: { code: 'unbekannt', what: 'anleitung', id: 'anleitung-x' },
+    });
+    expect(writes()).toBe(2);
+  });
+
+  test('der Befund schreibt Ergebnis, Kostenvoranschlag und Ereignisse auf einmal', () => {
+    const { s, id, writes } = setup();
+    unwrap(s().escalate(id));
+    const after = unwrap(s().setFinding(id, 'reparatur', 'fachkraft'));
+    expect(writes()).toBe(2);
+    expect(after.quoteId).toBe(s().quotes[0]?.id);
+    expect(after.diagnosisIds).toEqual([s().diagnoses[0]?.id]);
+    expect(
+      selectCaseEvents(s(), id)
+        .slice(-2)
+        .map((e) => e.type),
+    ).toEqual(['befund_erstellt', 'angebot_erstellt']);
+    expect(s().setFinding('GS-99999', 'geloest', 'fachkraft')).toEqual({
+      ok: false,
+      refusal: { code: 'unbekannt', what: 'fall', id: 'GS-99999' },
+    });
+  });
+
+  test('im Call gelöst: Befund und „erledigt“ auf einmal', () => {
+    const { s, id, writes } = setup();
+    unwrap(s().escalate(id));
+    expect(unwrap(s().setFinding(id, 'geloest', 'fachkraft')).status).toBe('erledigt');
+    expect(writes()).toBe(2);
+  });
+
+  test('„Läuft wieder“ nur nach der Reparatur, sonst abgelehnt', () => {
+    const { s, id, writes } = setup();
+    expect(s().confirmRepair(id, true)).toEqual({
+      ok: false,
+      refusal: { code: 'regel', action: 'reparatur_bestaetigen' },
+    });
+    expect(s().confirmRepair(id, false)).toEqual({
+      ok: false,
+      refusal: { code: 'regel', action: 'problem_besteht_weiter' },
+    });
+    expect(s().confirmRepair('GS-99999', true)).toEqual({
+      ok: false,
+      refusal: { code: 'unbekannt', what: 'fall', id: 'GS-99999' },
+    });
+    expect(writes()).toBe(0);
+  });
+
+  test('ein Ergebnis ohne Fall wird abgelehnt', () => {
+    const { s, writes } = setup();
+    expect(
+      s().addDiagnosis({
+        caseId: 'GS-99999',
+        photoIds: [],
+        mode: 'display',
+        errorPattern: 'wasserablauf',
+        confidence: 'hoch',
+        confidenceScore: 1,
+        source: 'fehlererkennung',
+      }),
+    ).toEqual({ ok: false, refusal: { code: 'unbekannt', what: 'fall', id: 'GS-99999' } });
+    expect(writes()).toBe(0);
+  });
+});
+
+describe('Widerruf in der Reparatur: keine Sackgasse (R-12)', () => {
+  const partner = demoConfig.partners[1]!;
+  /** Selbst gezahlt, in der Reparatur, dann die Weitergabe an den Betrieb widerrufen */
+  const held = () => {
+    const store = createAppStore(memoryStorage(), testEnv());
+    const s = () => store.getState();
+    s().ensureHousehold();
+    const device = s().addDevice({
+      category: 'waschmaschine',
+      manufacturerId: demoConfig.manufacturer.id,
+      model: demoConfig.device.model,
+      identifiedBy: 'manuell',
+    });
+    const id = unwrap(s().openCaseFor(device.id, 'foto', 'Foto vom Display')).caseId;
+    unwrap(s().escalate(id));
+    unwrap(s().setFinding(id, 'reparatur', 'fachkraft'));
+    unwrap(
+      s().requestBooking({
+        caseId: id,
+        kind: 'reparatur',
+        partnerId: partner.id,
+        slotLabel: demoConfig.slots[0]!,
+        selfPay: true,
+      }),
+    );
+    const first = s().consents.find((c) => c.purpose === 'weitergabe_betrieb')!;
+    s().revokeConsent(first.id);
+    return { s, id, deviceId: device.id, first };
+  };
+
+  test('der Fall hält an, bietet aber mehr als „Später weitermachen“', () => {
+    const { s, id } = held();
+    const facts = selectCaseFacts(s(), id)!;
+    expect(facts).toMatchObject({ status: 'in_reparatur', hold: 'weitergabe_betrieb' });
+    expect(availableActions(facts)).toEqual(['weitergabe_erneuern', 'pausieren']);
+    expect(s().simulateNext(id)).toBe(false);
+  });
+
+  test('erneut bestätigen: derselbe Betrieb, derselbe Umfang und Text, dann geht es weiter', () => {
+    const { s, id, first } = held();
+    const renewed = unwrap(s().renewTransfer(id));
+    expect(renewed).toMatchObject({
+      caseId: id,
+      purpose: 'weitergabe_betrieb',
+      legalBasis: first.legalBasis,
+      recipient: first.recipient,
+      dataCategories: first.dataCategories,
+      textVersion: first.textVersion,
+      textHash: first.textHash,
+    });
+    expect(renewed.id).not.toBe(first.id);
+    expect(selectCaseEvents(s(), id).at(-1)?.type).toBe('weitergabe_bestaetigt');
+    expect(selectCaseFacts(s(), id)?.hold).toBeUndefined();
+    expect(s().simulateNext(id)).toBe(true);
+    expect(s().bookings.at(-1)?.status).toBe('bestaetigt');
+  });
+
+  test('ohne Halt wird abgelehnt, ohne etwas zu schreiben', () => {
+    const { s, id } = held();
+    unwrap(s().renewTransfer(id));
+    const before = s();
+    expect(s().renewTransfer(id)).toEqual({
+      ok: false,
+      refusal: { code: 'regel', action: 'weitergabe_erneuern' },
+    });
+    expect(s().renewTransfer('GS-99999')).toEqual({
+      ok: false,
+      refusal: { code: 'unbekannt', what: 'fall', id: 'GS-99999' },
+    });
+    expect(s()).toBe(before);
+  });
+
+  test('Weitergabe an den Versicherer: erneut an den Versicherer des Vertrags', () => {
+    const store = createAppStore(memoryStorage(), testEnv());
+    const s = () => store.getState();
+    s().ensureHousehold();
+    const contract = s().linkContract('vertragsnummer');
+    const device = s().addDevice({
+      category: 'waschmaschine',
+      manufacturerId: demoConfig.manufacturer.id,
+      model: demoConfig.device.model,
+      contractId: contract.id,
+      identifiedBy: 'vertrag',
+    });
+    const id = unwrap(s().openCaseFor(device.id, 'foto', 'Foto vom Display')).caseId;
+    unwrap(s().escalate(id));
+    unwrap(s().setFinding(id, 'reparatur', 'fachkraft'));
+    unwrap(s().reportClaim(id));
+    const first = s().consents.find((c) => c.purpose === 'weitergabe_versicherer')!;
+    s().revokeConsent(first.id);
+    expect(availableActions(selectCaseFacts(s(), id))).toContain('weitergabe_erneuern');
+    const renewed = unwrap(s().renewTransfer(id));
+    expect(renewed).toMatchObject({
+      purpose: 'weitergabe_versicherer',
+      recipient: contract.provider,
+      textHash: first.textHash,
+    });
+    expect(s().simulateNext(id)).toBe(true);
+    expect(s().cases[id]?.status).not.toBe('freigabe_noetig');
+  });
+
+  test('ein neues Problem für das Gerät: weiter nur über den gehaltenen Fall (Nr. 13)', () => {
+    const { s, id, deviceId } = held();
+    expect(
+      unwrap(s().openCaseFor(deviceId, 'symptom', 'Tür geht nicht auf', { neuesProblem: true })),
+    ).toEqual({ art: 'frage_weitermachen', caseId: id });
+    // Dort steht jetzt ein Weg weiter
+    expect(can(selectCaseFacts(s(), id), 'weitergabe_erneuern')).toBe(true);
   });
 });

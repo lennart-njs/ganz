@@ -35,7 +35,7 @@ export function eventLabel(e: CaseEvent): string {
         .join(' · ');
       break;
     case 'anleitung_beendet':
-      detail = f.outcome[p.outcome as keyof typeof f.outcome];
+      detail = p.replaced ? f.replaced : f.outcome[p.outcome as keyof typeof f.outcome];
       break;
     case 'foto_aufgenommen':
       detail = f.photo(de.caseFile.photoPurpose[p.purpose as PhotoPurpose] ?? '');

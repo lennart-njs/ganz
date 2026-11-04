@@ -1,12 +1,14 @@
-import { fireEvent, renderRouter, screen } from 'expo-router/testing-library';
+import * as Notifications from 'expo-notifications';
+import { act, fireEvent, renderRouter, screen } from 'expo-router/testing-library';
 
 import { demoConfig } from '@/config/demo.config';
 import { de } from '@/i18n/de';
 import { eventLabel } from '@/lib/caseEvents';
 import type { CaseEventType } from '@/model/types';
 import { useAppStore } from '@/store/appStore';
+import { APP } from '@/test/app';
+import { unwrap } from '@/test/result';
 
-const APP = './app';
 const tap = (name: string | RegExp) => fireEvent.press(screen.getByRole('button', { name }));
 
 /** Ein Fall auf dem ganzen Golden Path und ein offener Pflege-Fall */
@@ -34,7 +36,7 @@ function fullHistory() {
     source: 'in_app_camera',
     uri: '',
   });
-  const run = s.startGuide(c.id, 'ablauf');
+  const run = unwrap(s.startGuide(c.id, 'ablauf'));
   s.moveGuideStep(run.id, 'next');
   s.finishGuide(run.id, 'geht_nicht', 'klemmt');
   s.grantConsent({
@@ -45,11 +47,11 @@ function fullHistory() {
     dataCategories: [],
     textVersion: '1',
   });
-  const v = s.requestVideoCall(c.id);
+  const v = unwrap(s.requestVideoCall(c.id));
   s.updateVideoCall(v.id, 'verbunden');
   s.updateVideoCall(v.id, 'beendet');
   s.setFinding(c.id, 'reparatur', 'fachkraft');
-  s.reportClaim(c.id, '1');
+  s.reportClaim(c.id);
   s.requestBooking({
     caseId: c.id,
     kind: 'reparatur',
@@ -179,6 +181,31 @@ describe('Profil', () => {
     expect(
       useAppStore.getState().consents.find((c) => c.purpose === 'hersteller_einzelfall')?.revokedAt,
     ).toBeDefined();
+  });
+
+  test('Mitteilungen: der Schalter folgt der Einwilligung, nicht nur dem System (R-13)', async () => {
+    jest.mocked(Notifications.requestPermissionsAsync).mockResolvedValue({
+      granted: true,
+      canAskAgain: true,
+    } as Awaited<ReturnType<typeof Notifications.requestPermissionsAsync>>);
+    fullHistory();
+    // Ein Stand von früher: erlaubt, aber ohne gespeicherte Einwilligung
+    useAppStore.setState({ notifications: 'erlaubt' });
+    await renderRouter(APP, { initialUrl: '/profil' });
+    const box = () => screen.getByRole('checkbox', { name: de.profile.notifications });
+    const active = () =>
+      useAppStore.getState().consents.filter((c) => c.purpose === 'mitteilungen' && !c.revokedAt);
+    expect(box()).not.toBeChecked();
+    const rows = screen.getAllByRole('button', { name: de.profile.revoke }).length;
+    await fireEvent.press(box());
+    await act(async () => {});
+    expect(box()).toBeChecked();
+    expect(active()).toHaveLength(1);
+    // Eigener Schalter unter „Freiwillig“, keine zweite Zeile unter den Weitergaben
+    expect(screen.getAllByRole('button', { name: de.profile.revoke })).toHaveLength(rows);
+    await fireEvent.press(box());
+    expect(box()).not.toBeChecked();
+    expect(active()).toHaveLength(0);
   });
 
   test('zeigt Schutz und Datenschutz', async () => {

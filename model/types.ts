@@ -117,6 +117,20 @@ export interface Claim {
   };
 }
 
+/**
+ * Eine frühere Runde des Falls. „Problem besteht weiter“ beendet sie. Ihr Befund, Kostenvoranschlag,
+ * Schadenfall und ihre Termine bleiben gespeichert und im Verlauf sichtbar. Für die Regeln der
+ * neuen Runde zählen sie nicht mehr.
+ */
+export interface CaseRound {
+  endedAt: ISODateTime;
+  quoteId?: Id;
+  claim?: Claim;
+  bookingIds: Id[];
+  /** Befunde von Fachkraft oder Betrieb */
+  findingIds: Id[];
+}
+
 export interface Case {
   id: Id; // sichtbar, z. B. „GS-24817“
   householdId: Id;
@@ -137,6 +151,8 @@ export interface Case {
   createdAt: ISODateTime;
   updatedAt: ISODateTime;
   closedAt?: ISODateTime;
+  /** Frühere Runden, älteste zuerst. Ohne Wiederöffnen fehlt das Feld. */
+  rounds?: CaseRound[];
 }
 
 // ---------- Ereignisse ----------
@@ -221,6 +237,11 @@ export interface Diagnosis {
   source: 'fehlererkennung' | 'nutzerangabe' | 'fachkraft' | 'betrieb';
   guideId?: string;
   createdAt: ISODateTime;
+  /**
+   * „Passt nicht“ oder ein anderes Problem im selben Fall: Das Ergebnis gilt nicht mehr. Es
+   * bleibt im Verlauf, geht aber nicht mehr als Ergebnis an Assistent, Fachkraft oder Versicherer.
+   */
+  discardedAt?: ISODateTime;
 }
 
 // ---------- Anleitung ----------
@@ -275,8 +296,11 @@ export interface Consent {
   /** 'vertrag' = Bestätigung einer angefragten Leistung (lit. b), 'einwilligung' = lit. a */
   legalBasis: 'vertrag' | 'einwilligung';
   recipient: PartnerRef;
-  dataCategories: string[]; // „Modell“, „Fotos“, „Protokoll“
-  textVersion: string; // Version des gezeigten Hinweistexts
+  /** Schlüssel aus model/policies/consentScopes.ts. Stände vor Schritt 26: Bezeichnungen. */
+  dataCategories: string[];
+  textVersion: string; // Version des gezeigten Hinweistexts (lib/legalTexts.ts)
+  /** SHA-256 des gezeigten Texts mit den echten Namen. Fehlt bei Ständen vor Schritt 26. */
+  textHash?: string;
   grantedAt: ISODateTime;
   revokedAt?: ISODateTime;
 }
@@ -292,6 +316,13 @@ export interface ChatMessage {
   /** Vorschlag des Assistenten, als Button gezeigt */
   suggestion?: 'anleitung' | 'hilfe';
   guideId?: string;
+  /**
+   * Nur eigene Nachrichten: Ging sie an den Anbieter des Assistenten? true, sobald eine Anfrage
+   * mit ihr bei der Route durchging. false, wenn sie nachweislich nicht dorthin kam (ohne Netz,
+   * ohne Schlüssel, Token, Rate-Limit, Gespräch voll). Ohne Feld (laufende Anfrage, älterer
+   * Stand) zählt sie als weitergegeben, lieber eine zu viel als eine zu wenig.
+   */
+  forwarded?: boolean;
 }
 
 // ---------- Kosten und Buchung ----------

@@ -1,14 +1,16 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
-import { Linking, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import type { KeyboardAwareScrollViewRef } from 'react-native-keyboard-controller';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { CallbackSheet } from '@/components/app/CallbackSheet';
 import { CaseFileCard } from '@/components/app/CaseFileCard';
 import { CaseScreen, useCaseId } from '@/components/app/CaseScreen';
 import { BotSays, QuickReplies, Typing, UserSaid, type Reply } from '@/components/app/Conversation';
 import { CostCompare } from '@/components/app/CostCompare';
 import { DemoHint } from '@/components/app/DemoHint';
+import { ScopeItems } from '@/components/app/ScopeItems';
 import { leaveCase } from '@/components/nav/leaveCase';
 import {
   Button,
@@ -22,27 +24,43 @@ import {
   StarRating,
   Text,
   TextField,
+  Toast,
 } from '@/components/ds';
 import { demoConfig } from '@/config/demo.config';
 import { guides, type GuideId } from '@/data/guides';
+import { useCommand } from '@/hooks/useCommand';
+import { useNotificationDialog } from '@/hooks/useNotificationDialog';
+import { useNotice } from '@/hooks/useNotice';
 import { de } from '@/i18n/de';
 import { formatDecimal, formatEuro } from '@/i18n/format';
 import { caseAppliance, hasGuides } from '@/lib/appliance';
-import { amountToPay, costsLine, requestAppointment } from '@/lib/booking';
+import { amountToPay, asksNotifications, costsLine, requestAppointment } from '@/lib/booking';
 import { chatLimits } from '@/lib/chat/limits';
+import { scopeList } from '@/lib/consent';
+import { textStamp } from '@/lib/legalTexts';
 import { retryableChatErrors, useAssistant } from '@/lib/chat/useAssistant';
-import { hasProgress } from '@/lib/caseView';
 import { deviceTitle, getManufacturer } from '@/lib/devices';
 import { guideTools } from '@/lib/guideMeta';
+import { openPhone } from '@/lib/linking';
 import { toDiagnosis } from '@/lib/diagnosis';
+import { can } from '@/model/policies/actions';
+import { selectCaseFacts } from '@/model/policies/caseFacts';
+import { CONSENT_SCOPES, scopedConsent } from '@/model/policies/consentScopes';
+import { hasProgress } from '@/model/policies/openCase';
+import { earlierRounds, isFinding } from '@/model/policies/rounds';
+import type { Result } from '@/model/result';
 import type { CaseEvent, Diagnosis } from '@/model/types';
 import { services, type FindingOption, type PhotoMode, type QuestionAnswer } from '@/services';
-import { activeBooking, nextSimulationDue, selectCaseEvents, useAppStore } from '@/store/appStore';
+import {
+  nextSimulationDue,
+  notificationsOn,
+  selectCaseEvents,
+  useAppStore,
+  type NewConsent,
+} from '@/store/appStore';
 import { useTheme } from '@/theme';
 
 const t = de.thread;
-const CONSENT_TEXT_VERSION = '2026-10-1';
-const CLAIM_TEXT_VERSION = '2026-10-1';
 
 interface Item {
   at: string;
@@ -74,8 +92,76 @@ export default function FallGespraech() {
   const [onSite, setOnSite] = useState(false);
   const [partnerId, setPartnerId] = useState<string>();
   const [slot, setSlot] = useState<string>();
+  /** Zeitfenster für den Rückruf, bis die Weitergabe bestätigt ist */
+  const [callbackSlot, setCallbackSlot] = useState<string>();
   const [input, setInput] = useState('');
   const [inputError, setInputError] = useState<string>();
+
+  // Buttons, die nur einmal zählen: Ein Doppeltap löst nichts doppelt aus, eine Ablehnung bekommt
+  // einen ruhigen Satz (hooks/useCommand.ts)
+  const call = useCommand(
+    (confirm: { share: NewConsent; screenshots?: NewConsent }) =>
+      useAppStore.getState().requestVideoCall(caseId, confirm),
+    (session) => router.push(`/fall/${caseId}/warteraum?video=${session.id}`),
+  );
+  const claim = useCommand(
+    () => useAppStore.getState().reportClaim(caseId),
+    () => setPayment(undefined),
+  );
+  const book = useCommand(requestAppointment, () => {
+    setPartnerId(undefined);
+    setSlot(undefined);
+    setPayment(undefined);
+    setOnSite(false);
+  });
+  // Der Satz zu Mitteilungen steht nur vor „Termin anfragen“, wenn danach der Systemdialog kommt
+  const dialog = useNotificationDialog(state.notifications === 'offen');
+  const notify = asksNotifications(state, dialog);
+  // Nach einem Widerruf: die Weitergabe noch einmal bestätigen (R-12)
+  const renew = useCommand(() => useAppStore.getState().renewTransfer(caseId));
+  // Anleitung starten: Ein zweiter Tap öffnet sie nicht noch einmal
+  const guide = useCommand(
+    (guideId: string) => {
+      const s = useAppStore.getState();
+      const current = s.cases[caseId];
+      if (current && !current.guideRunIds.length && current.entry === 'freitext') {
+        s.updateCase(caseId, { problemLabel: guides[guideId as GuideId].title });
+      }
+      return s.startGuide(caseId, guideId);
+    },
+    () => router.push(`/fall/${caseId}/anleitung`),
+  );
+  // Antwort auf die Rückfrage und Befund der Fachkraft: je Tap genau einmal
+  const answer = useCommand((choice: QuestionAnswer, question: CaseEvent): Result<unknown> => {
+    const s = useAppStore.getState();
+    s.addEvent({
+      caseId,
+      type: 'rueckfrage_beantwortet',
+      actor: { kind: 'haushalt', id: s.persons[0]?.id },
+      payload: { question: de.question.wasser, answer: de.question.answers[choice] },
+    });
+    const result = services.diagnosis.answer(choice);
+    if (!result) return s.escalate(caseId);
+    s.updateCase(caseId, { problemLabel: guides[result.guideId as GuideId].title });
+    const photoId = question.payload.photoId as string | undefined;
+    return s.addDiagnosis(
+      toDiagnosis(caseId, photoId ? [photoId] : [], question.payload.mode as PhotoMode, result),
+    );
+  });
+  const finding = useCommand((option: FindingOption) =>
+    useAppStore.getState().setFinding(caseId, option, 'fachkraft'),
+  );
+  // Lässt sich die Telefon-App nicht öffnen, steht die Nummer im Hinweis
+  const phoneNotice = useNotice();
+  const commandToast =
+    call.toast ??
+    claim.toast ??
+    book.toast ??
+    renew.toast ??
+    guide.toast ??
+    answer.toast ??
+    finding.toast ??
+    phoneNotice.notice;
 
   // Ein Fall ohne Inhalt bleibt nicht liegen, wenn man das Gespräch verlässt
   useEffect(() => () => useAppStore.getState().discardIfEmpty(caseId), [caseId]);
@@ -136,6 +222,11 @@ export default function FallGespraech() {
     );
   }
 
+  // Was im Fall gilt, sagen die Fakten und Regeln (model/policies), nicht ein Vergleich des Status
+  const facts = selectCaseFacts(state, caseId)!;
+  // „Selbst zahlen“ gilt nur, wo der Haushalt wirklich zahlt. Ist der Schadenfall inzwischen
+  // gemeldet, zählt die Wahl nicht mehr: kein „Du zahlst …“ während der Prüfung (R-07).
+  const selfPay = payment === 'selbst' && can(facts, 'termin_selbst');
   const device = state.devices.find((d) => d.id === c.deviceId);
   const contract = state.contracts.find((k) => k.id === device?.contractId);
   const a = caseAppliance(state, caseId);
@@ -152,8 +243,8 @@ export default function FallGespraech() {
   const sessions = state.videoSessions.filter((v) => v.caseId === caseId);
   const quote = state.quotes.find((q) => q.id === c.quoteId);
   const bookings = state.bookings.filter((b) => b.caseId === caseId);
-  const booking = activeBooking(state, caseId);
-  const repairBooking = bookings.find((b) => b.kind === 'reparatur' && b.status !== 'storniert');
+  const booking = facts.booking;
+  const repairBooking = facts.bookings.reparatur;
   const progress = hasProgress(state, c);
   const of = (type: CaseEvent['type']) => events.filter((e) => e.type === type);
   const after = (
@@ -170,65 +261,30 @@ export default function FallGespraech() {
 
   const escalate = () => useAppStore.getState().escalate(caseId);
 
+  // Der Tap bestätigt die Weitergabe an die Fachkraft. Der Store speichert sie mit dem Call.
+  // Umfang und Rechtsgrundlage kommen aus CONSENT_SCOPES, wie in der Liste darüber (R-14).
   const startCall = () => {
-    const s = useAppStore.getState();
-    escalate();
     const recipient = { id: helpPartner.id, kind: 'betrieb' as const, name: helpPartner.name };
-    s.grantConsent({
-      caseId,
-      purpose: 'weitergabe_fachkraft',
-      legalBasis: 'vertrag',
-      recipient,
-      dataCategories: [...de.help.shareItems],
-      textVersion: CONSENT_TEXT_VERSION,
+    call.run({
+      share: scopedConsent('weitergabe_fachkraft', {
+        caseId,
+        recipient,
+        text: textStamp('fachkraft_videocall'),
+      }),
+      screenshots: screenshots
+        ? scopedConsent('screenshots_im_call', {
+            caseId,
+            recipient,
+            text: textStamp('screenshots'),
+          })
+        : undefined,
     });
-    const shot = screenshots
-      ? s.grantConsent({
-          caseId,
-          purpose: 'screenshots_im_call',
-          legalBasis: 'einwilligung',
-          recipient,
-          dataCategories: [de.help.screenshots],
-          textVersion: CONSENT_TEXT_VERSION,
-        })
-      : undefined;
-    const session = s.requestVideoCall(caseId, shot?.id);
-    router.push(`/fall/${caseId}/warteraum?video=${session.id}`);
   };
 
-  const openGuide = (guideId: string) => {
-    const s = useAppStore.getState();
-    if (!(run && !run.endedAt && run.guideId === guideId)) {
-      if (!c.guideRunIds.length && c.entry === 'freitext') {
-        s.updateCase(caseId, { problemLabel: guides[guideId as GuideId].title });
-      }
-      s.startGuide(caseId, guideId);
-    }
-    router.push(`/fall/${caseId}/anleitung`);
-  };
-
-  const answerQuestion = (answer: QuestionAnswer, question: CaseEvent) => {
-    const s = useAppStore.getState();
-    s.addEvent({
-      caseId,
-      type: 'rueckfrage_beantwortet',
-      actor: { kind: 'haushalt', id: s.persons[0]?.id },
-      payload: { question: de.question.wasser, answer: de.question.answers[answer] },
-    });
-    const finding = services.diagnosis.answer(answer);
-    if (!finding) {
-      escalate();
-      return;
-    }
-    s.updateCase(caseId, { problemLabel: guides[finding.guideId as GuideId].title });
-    const photoId = question.payload.photoId as string | undefined;
-    s.addDiagnosis(
-      toDiagnosis(caseId, photoId ? [photoId] : [], question.payload.mode as PhotoMode, finding),
-    );
-  };
-
-  const confirmFinding = (option: FindingOption) =>
-    useAppStore.getState().setFinding(caseId, option, 'fachkraft');
+  // Läuft dieselbe Anleitung schon, geht startGuide dort weiter (R-06)
+  const openGuide = guide.run;
+  const answerQuestion = answer.run;
+  const confirmFinding = finding.run;
 
   const declineFinding = () => {
     const s = useAppStore.getState();
@@ -240,24 +296,11 @@ export default function FallGespraech() {
     });
   };
 
-  const report = () => {
-    useAppStore.getState().reportClaim(caseId, CLAIM_TEXT_VERSION);
-    setPayment(undefined);
-  };
+  const report = claim.run;
 
   const request = () => {
     if (!partnerId || !slot) return;
-    requestAppointment({
-      caseId,
-      partnerId,
-      slot,
-      selfPay: payment === 'selbst',
-      diagnosis: onSite,
-    });
-    setPartnerId(undefined);
-    setSlot(undefined);
-    setPayment(undefined);
-    setOnSite(false);
+    book.run({ caseId, partnerId, slot, selfPay, diagnosis: onSite, noticeShown: notify });
   };
 
   const sendInput = () => {
@@ -279,6 +322,7 @@ export default function FallGespraech() {
     <Button
       label={t.details}
       variant="link"
+      testID={`details-${path}`}
       onPress={() => router.push(`/fall/${caseId}/${path}`)}
     />
   );
@@ -379,15 +423,18 @@ export default function FallGespraech() {
               : de.result.costNoteNoContract}
           </InfoBox>
         ) : null}
-        {details('ergebnis')}
+        {/* Ein verworfenes Ergebnis („Passt nicht“) bleibt im Verlauf, ohne Details: Es gilt nicht mehr */}
+        {d.discardedAt ? null : details('ergebnis')}
       </BotSays>,
     );
   }
 
-  // Anleitungen
+  // Anleitungen. Eine, die ohne Schritt endete, weil du ein anderes Problem gewählt hast, ist
+  // kein Angebot mehr. Sie steht nur in der Fallakte.
   for (const r of runs) {
     const guide = guides[r.guideId as GuideId];
     if (!guide) continue;
+    if (r.endedAt && !r.outcome && !r.completedSteps.length) continue;
     const tools = guideTools(guide);
     add(
       r.startedAt,
@@ -483,13 +530,28 @@ export default function FallGespraech() {
     if (option === 'geloest') add(e.at, `${e.id}-done`, <BotSays lines={[t.solvedInCall]} />);
   }
 
-  // Kosten und Schadenmeldung
-  if (quote) {
-    const finding = diagnoses.findLast((d) => d.source === 'fachkraft' || d.source === 'betrieb');
+  // Kosten und Schadenmeldung, auch aus früheren Runden vor „Problem besteht weiter“
+  const earlier = earlierRounds(c).findings;
+  const costRounds = [
+    ...(c.rounds ?? []).map((r) => ({
+      quoteId: r.quoteId,
+      claim: r.claim,
+      finding: diagnoses.findLast((d) => r.findingIds.includes(d.id)),
+    })),
+    {
+      quoteId: c.quoteId,
+      claim: c.claim,
+      finding: diagnoses.findLast((d) => isFinding(d) && !earlier.has(d.id)),
+    },
+  ];
+  for (const r of costRounds) {
+    const roundQuote = state.quotes.find((q) => q.id === r.quoteId);
+    if (!roundQuote) continue;
+    const { finding } = r;
     const replacement = finding?.errorPattern === 'ersatzgeraet_noetig';
     add(
-      quote.createdAt,
-      quote.id,
+      roundQuote.createdAt,
+      roundQuote.id,
       <BotSays
         lines={[
           ...(finding?.component ? [de.talk.claim.intro(finding.component)] : []),
@@ -497,16 +559,16 @@ export default function FallGespraech() {
         ]}
       >
         <View style={styles.full}>
-          <CostCompare quote={quote} focus={replacement ? 'replacement' : 'repair'} />
+          <CostCompare quote={roundQuote} focus={replacement ? 'replacement' : 'repair'} />
         </View>
-        {details('kosten')}
+        {roundQuote.id === quote?.id ? details('kosten') : null}
       </BotSays>,
     );
-    if (c.claim) {
-      add(c.claim.reportedAt, 'claim', <UserSaid text={de.costs.report} />);
+    if (r.claim) {
+      add(r.claim.reportedAt, `claim-${roundQuote.id}`, <UserSaid text={de.costs.report} />);
       add(
-        c.claim.reportedAt,
-        'claim-a',
+        r.claim.reportedAt,
+        `claim-${roundQuote.id}-a`,
         <BotSays
           lines={[replacement ? t.replacementNext(insurer) : de.talk.claim.reported(insurer)]}
         />,
@@ -524,7 +586,11 @@ export default function FallGespraech() {
       `${e.id}-a`,
       <BotSays
         lines={[de.status.headline.angefragt]}
-        hint={de.status.text.angefragt(b.provider.name)}
+        hint={
+          notificationsOn(state)
+            ? de.status.text.angefragt(b.provider.name)
+            : de.status.text.angefragtImFall(b.provider.name)
+        }
       >
         {details('status')}
       </BotSays>,
@@ -596,7 +662,7 @@ export default function FallGespraech() {
       e.at,
       `${e.id}-a`,
       <BotSays lines={[de.finish.solvedTitle]}>
-        {repairBooking?.status === 'erledigt' ? (
+        {repairBooking && can(facts, 'bewerten') ? (
           <>
             <Text variant="title">{t.rate}</Text>
             <StarRating
@@ -622,7 +688,9 @@ export default function FallGespraech() {
     );
   }
 
-  // Gespräch mit dem Reparatur-Assistenten
+  // Gespräch mit dem Reparatur-Assistenten. Die erste Antwort sagt, dass ein Computerprogramm
+  // antwortet und kein Mensch (Entscheidung Nr. 6, Art. 50 Abs. 1 KI-VO).
+  const firstReply = msgs.find((m) => m.role === 'assistent')?.id;
   msgs.forEach((m, i) =>
     add(
       m.at,
@@ -630,7 +698,12 @@ export default function FallGespraech() {
       m.role === 'haushalt' ? (
         <UserSaid text={m.text} />
       ) : (
-        <BotSays name={de.chat.title} sender={msgs[i - 1]?.role !== 'assistent'} lines={[m.text]} />
+        <BotSays
+          name={de.chat.title}
+          sender={msgs[i - 1]?.role !== 'assistent'}
+          lines={[m.text]}
+          hint={m.id === firstReply ? de.chat.who : undefined}
+        />
       ),
     ),
   );
@@ -674,46 +747,36 @@ export default function FallGespraech() {
     lastSession?.outcome === 'keine_fachkraft' &&
     !after(lastSession.endedAt, 'videocall_angefragt', (e) => e.payload.art === 'rueckruf') &&
     !booking;
-  const awaitingConfirm = repairBooking?.status === 'erledigt' && c.status === 'in_reparatur';
-  const latestFinding = diagnoses.findLast(
-    (d) => d.source === 'fachkraft' || d.source === 'betrieb',
-  );
-  const replacement = latestFinding?.errorPattern === 'ersatzgeraet_noetig';
+  const awaitingConfirm = can(facts, 'reparatur_bestaetigen');
+  // Befund der laufenden Runde
+  const replacement = facts.replacement;
   const costsOpen =
-    !!quote &&
-    !c.claim &&
     !repairBooking &&
-    !payment &&
+    !selfPay &&
     !replacement &&
-    c.status !== 'abgelehnt' &&
-    c.status !== 'erledigt' &&
-    c.status !== 'abgebrochen';
+    (can(facts, 'schaden_melden') || can(facts, 'selbst_zahlen'));
   // Nach einer Ablehnung: selbst zahlen heißt neuer Termin, der alte Antrag zählt nicht mehr
-  const rejectedRetry = c.status === 'abgelehnt' && payment === 'selbst';
+  const rejected = can(facts, 'selbst_zahlen_nach_ablehnung');
+  const rejectedRetry = rejected && selfPay;
   const lastCallback = of('videocall_angefragt')
     .filter((e) => e.payload.art === 'rueckruf')
     .at(-1);
   const callbackWaiting =
     !!lastCallback &&
-    c.status === 'eskaliert' &&
+    can(facts, 'videocall_anfragen') &&
     !booking &&
     !onSite &&
     (!lastSession || lastCallback.at >= (lastSession.endedAt ?? lastSession.requestedAt));
   const needsAppointment =
     rejectedRetry ||
-    (!repairBooking &&
-      ((c.claim &&
-        !replacement &&
-        (c.status === 'freigabe_noetig' || c.status === 'freigegeben')) ||
-        payment === 'selbst' ||
-        (onSite && !booking)));
+    (!repairBooking && (can(facts, 'termin_versicherer') || selfPay || (onSite && !booking)));
   const demoTap =
     demoConfig.demo.enabled && state.demo.hints && nextSimulationDue(state, caseId) !== undefined;
 
   // Vorschlag des Assistenten zuerst
   const lastMsg = msgs.at(-1);
-  const canGuide = c.status === 'offen' || c.status === 'selbsthilfe';
-  const canHelp = canGuide || c.status === 'eskaliert';
+  const canGuide = can(facts, 'anleitung_starten');
+  const canHelp = can(facts, 'hilfe_holen');
   if (!assistant.pending && lastMsg?.role === 'assistent') {
     const sameGuideRunning = run && !run.endedAt && run.guideId === lastMsg.guideId;
     if (
@@ -726,7 +789,7 @@ export default function FallGespraech() {
       const g = guides[lastMsg.guideId as GuideId];
       reply('vorschlag-anleitung', de.chat.startGuide(g.title), () => openGuide(g.id));
     }
-    if (lastMsg.suggestion === 'hilfe' && canHelp && c.status !== 'eskaliert') {
+    if (lastMsg.suggestion === 'hilfe' && canHelp) {
       reply('vorschlag-hilfe', de.chat.getHelp, escalate);
     }
   }
@@ -736,8 +799,10 @@ export default function FallGespraech() {
     tail.push(
       <View key="consent" style={styles.stack}>
         <UserSaid text={assistant.waiting} />
-        <BotSays name={de.chat.title} lines={[de.chat.consentTitle]}>
+        <BotSays name={de.chat.title} lines={[de.chat.consentTitle]} hint={de.chat.who}>
           <Text variant="bodyLg">{de.chat.consentText(demoConfig.assistant.name)}</Text>
+          <ScopeItems purpose="chat_assistent" />
+          <Text variant="body">{de.chat.consentExcluded}</Text>
           <Text variant="meta">{de.chat.consentBasis}</Text>
         </BotSays>
       </View>,
@@ -747,10 +812,12 @@ export default function FallGespraech() {
       assistant.decline();
       escalate();
     });
-  } else if (c.status === 'abgebrochen') {
+  } else if (facts.closed && !can(facts, 'problem_besteht_weiter')) {
+    // Abgebrochen, oder erledigt, während für das Gerät ein anderer Fall offen ist (Nr. 13)
     reply('fallakte', t.caseFile, () => router.push(`/fall/${caseId}/fallakte`));
     reply('fertig', t.done, leaveCase);
-  } else if (c.status === 'erledigt') {
+  } else if (facts.closed) {
+    // Erledigt, lässt sich wieder öffnen
     reply('fertig', t.done, () => router.dismissTo('/(tabs)/faelle'));
     reply('weiter-kaputt', t.stillBroken, () =>
       useAppStore.getState().confirmRepair(caseId, false),
@@ -782,20 +849,23 @@ export default function FallGespraech() {
     reply('befund-nein', t.findingWrong, declineFinding);
   } else if (noExpert) {
     tail.push(<BotSays key="rueckruf" lines={[t.callbackAsk]} />);
+    // Erst bestätigen, wer welche Daten sieht, dann der Rückruf (R-16)
     for (const s of de.waiting.callbackSlots) {
-      reply(`rueckruf-${s}`, s, () => useAppStore.getState().requestCallback(caseId, s));
+      reply(`rueckruf-${s}`, s, () => setCallbackSlot(s));
     }
     reply('vor-ort', de.waiting.onSiteInstead, () => setOnSite(true));
-  } else if (c.status === 'abgelehnt' && !payment) {
+  } else if (rejected && !selfPay) {
     reply('selbst', t.rejectedChoice.selfPay(formatEuro(quote?.repair.total ?? 0)), () =>
       setPayment('selbst'),
     );
     reply('behalten', t.rejectedChoice.keep, leaveCase);
-    reply('schliessen', t.rejectedChoice.close, () => {
-      useAppStore
-        .getState()
-        .runCommand(caseId, 'abbrechen', { cancelReason: de.costs.closeReason });
-    });
+    if (can(facts, 'abbrechen')) {
+      reply('schliessen', t.rejectedChoice.close, () => {
+        useAppStore
+          .getState()
+          .runCommand(caseId, 'abbrechen', { cancelReason: de.costs.closeReason });
+      });
+    }
   } else if (costsOpen) {
     if (contract) {
       tail.push(
@@ -807,10 +877,10 @@ export default function FallGespraech() {
           {/* Was beim Versicherer ankommt (B-53) */}
           <View style={styles.full}>
             <Disclosure title={de.costs.preview(insurer)}>
-              <View style={styles.stack}>
-                <Text variant="meta">{de.costs.previewContract(contract.contractNumber)}</Text>
-                <CaseFileCard caseId={caseId} detail="voll" />
-              </View>
+              <CaseFileCard
+                caseId={caseId}
+                categories={CONSENT_SCOPES.weitergabe_versicherer.dataCategories}
+              />
             </Disclosure>
           </View>
           <Text variant="meta">{de.costs.legal(insurer)}</Text>
@@ -829,15 +899,48 @@ export default function FallGespraech() {
       );
       reply('selbst', de.costs.toAppointment, () => setPayment('selbst'));
     }
-  } else if (replacement && quote && contract && !c.claim) {
+  } else if (replacement && can(facts, 'schaden_melden')) {
     reply('melden', de.costs.report, report);
+  } else if (facts.hold) {
+    // Widerrufene Weitergabe: Versicherer und Betrieb machen nicht weiter (R-12). Mit einem Tap
+    // bestätigst du sie noch einmal, mit demselben Text wie beim ersten Mal. So bleibt auch ein
+    // Fall in der Reparatur keine Sackgasse, obwohl er sich nicht abbrechen lässt.
+    const toInsurer = facts.hold === 'weitergabe_versicherer';
+    const recipient = toInsurer ? insurer : (facts.booking?.provider.name ?? '');
+    const reviewing = facts.claim === 'in_pruefung';
+    tail.push(
+      <BotSays
+        key="angehalten"
+        lines={[reviewing ? de.status.headline.pruefung(insurer) : de.status.text.paused]}
+        hint={reviewing ? de.status.text.paused : undefined}
+      >
+        <Text variant="body">{t.renewAsk(recipient)}</Text>
+        {toInsurer ? (
+          <>
+            <View style={styles.full}>
+              <Disclosure title={de.costs.preview(insurer)}>
+                <CaseFileCard
+                  caseId={caseId}
+                  categories={CONSENT_SCOPES.weitergabe_versicherer.dataCategories}
+                />
+              </Disclosure>
+            </View>
+            <Text variant="meta">{de.costs.legal(insurer)}</Text>
+          </>
+        ) : (
+          <Text variant="meta">{de.appointment.shares(scopeList('weitergabe_betrieb'))}</Text>
+        )}
+      </BotSays>,
+    );
+    reply('weitergabe-erneuern', t.renewShare, () => renew.run(), recipient);
+    reply('status', de.status.caseFile, () => router.push(`/fall/${caseId}/fallakte`));
   } else if (needsAppointment) {
-    if (payment === 'selbst' && quote) {
+    if (selfPay && quote) {
       tail.push(
         <View key="zahlung" style={styles.stack}>
           <UserSaid
             text={
-              c.status === 'abgelehnt'
+              rejected
                 ? t.rejectedChoice.selfPay(formatEuro(quote.repair.total))
                 : contract
                   ? de.costs.selfPay
@@ -880,7 +983,6 @@ export default function FallGespraech() {
       if (!slot) {
         for (const s of demoConfig.slots) reply(`zeit-${s}`, s, () => setSlot(s));
       } else {
-        const selfPay = payment === 'selbst';
         const address = state.household?.address;
         tail.push(<UserSaid key="zeit" text={slot} onEdit={() => setSlot(undefined)} />);
         tail.push(
@@ -909,13 +1011,14 @@ export default function FallGespraech() {
                 />
               </Card>
             </View>
-            {c.status === 'freigabe_noetig' ? <InfoBox>{de.appointment.pending}</InfoBox> : null}
+            {facts.claim === 'in_pruefung' ? <InfoBox>{de.appointment.pending}</InfoBox> : null}
             {!onSite ? (
               <Text variant="body">
                 {de.appointment.ecoDesign(a.finding.partAcc, demoConfig.ecoDesignDeliveryDays)}
               </Text>
             ) : null}
-            <Text variant="meta">{de.appointment.shares}</Text>
+            <Text variant="meta">{de.appointment.shares(scopeList('weitergabe_betrieb'))}</Text>
+            {notify ? <Text variant="meta">{de.appointment.notificationsNotice}</Text> : null}
           </BotSays>,
         );
         const paid = amountToPay(state, caseId, selfPay, onSite) > 0;
@@ -926,41 +1029,34 @@ export default function FallGespraech() {
     // Rückruf angefragt: Die Fachkraft meldet sich. Vor Ort geht immer noch.
     reply('vor-ort', de.waiting.onSiteInstead, () => setOnSite(true));
     reply('fallakte', t.caseFile, () => router.push(`/fall/${caseId}/fallakte`));
-  } else if (booking && booking.status !== 'erledigt') {
-    if (c.status === 'freigabe_noetig')
+  } else if (facts.bookingOpen) {
+    if (facts.claim === 'in_pruefung')
       tail.push(
         <BotSays
           key="pruefung"
           lines={[de.status.headline.pruefung(insurer)]}
-          hint={de.status.text.pruefung}
+          hint={notificationsOn(state) ? de.status.text.pruefung : de.status.text.pruefungImFall}
         />,
       );
     if (demoTap) reply('demo', t.demoNext, () => useAppStore.getState().simulateNext(caseId));
     reply('status', de.status.caseFile, () => router.push(`/fall/${caseId}/fallakte`));
-  } else if (
-    c.status === 'eskaliert' ||
-    (c.status === 'selbsthilfe' &&
-      (run?.outcome === 'geht_nicht' || run?.outcome === 'laeuft_nicht'))
-  ) {
+  } else if (can(facts, 'videocall_anfragen')) {
     // Hilfe holen: wer welche Daten sieht, steht vor dem Call (B-19)
     tail.push(
       <BotSays key="hilfe" sender={false} lines={[]}>
         {/* Was die Fachkraft vorab sieht: das echte Protokoll (B-22) */}
         <View style={styles.full}>
-          <CaseFileCard caseId={caseId} />
+          <CaseFileCard
+            caseId={caseId}
+            categories={CONSENT_SCOPES.weitergabe_fachkraft.dataCategories}
+          />
         </View>
         <View style={styles.full}>
           <Card>
             <Text variant="labelStrong" accessibilityRole="header">
               {de.help.shareTitle(expert, helpPartner.name)}
             </Text>
-            <View style={styles.items}>
-              {de.help.shareItems.map((item) => (
-                <Text key={item} variant="body">
-                  {de.help.item(item)}
-                </Text>
-              ))}
-            </View>
+            <ScopeItems purpose="weitergabe_fachkraft" />
             <Text variant="labelStrong" style={styles.gapTop}>
               {de.help.noRecording}
             </Text>
@@ -972,7 +1068,7 @@ export default function FallGespraech() {
         <View style={styles.full}>
           <Checkbox
             label={de.help.screenshots}
-            sub={de.help.screenshotsSub}
+            sub={de.help.screenshotsSub(scopeList('screenshots_im_call'))}
             checked={screenshots}
             onChange={setScreenshots}
           />
@@ -990,20 +1086,26 @@ export default function FallGespraech() {
       reply(
         'kundendienst',
         service.label,
-        () => Linking.openURL(`tel:${service.phone.replace(/\s/g, '')}`),
+        () =>
+          openPhone(service.phone).then(
+            (ok) => ok || phoneNotice.show(de.common.phoneFailed(service.phone)),
+          ),
         de.device.serviceSub(service.phone, service.freeOfCharge),
       );
     }
-  } else if (c.status === 'selbsthilfe' && run && !run.endedAt) {
+  } else if (can(facts, 'anleitung_fortsetzen') && run) {
     const g = guides[run.guideId as GuideId];
     if (g)
       tail.push(
         <BotSays key="laeuft" lines={[t.guideRunning(run.currentStep + 1, g.steps.length)]} />,
       );
-    reply('anleitung', t.continueGuide, () => router.push(`/fall/${caseId}/anleitung`));
+    // Über denselben Befehl wie „Anleitung starten“: startGuide geht in der offenen weiter (R-06).
+    // So zählt ein Doppeltap, dessen zweiter Tap schon diesen Button trifft, auch nur einmal.
+    reply('anleitung', t.continueGuide, () => openGuide(run.guideId));
     reply('hilfe', de.result.helpInstead, escalate);
-  } else if (c.status === 'offen' || c.status === 'selbsthilfe') {
-    const d = diagnoses.findLast((x) => x.source === 'fehlererkennung');
+  } else if (canGuide) {
+    // Ein verworfenes Ergebnis („Passt nicht“) bietet seine Anleitung nicht mehr an
+    const d = diagnoses.findLast((x) => x.source === 'fehlererkennung' && !x.discardedAt);
     const guide = d?.guideId ? guides[d.guideId as GuideId] : undefined;
     if (d?.errorPattern === 'geraet_erkannt') {
       reply('foto', de.result.photoDisplay, () => router.push(`/fall/${caseId}/kamera`));
@@ -1034,57 +1136,79 @@ export default function FallGespraech() {
 
   if (assistant.pending) tail.push(<Typing key="typing" label={de.chat.typing} />);
   if (assistant.error && !assistant.waiting) {
+    // Ohne Netz: ein ruhiger Hinweis, dann noch einmal senden oder als Notiz für die Fachkraft
+    const offline = assistant.error === 'netz';
     tail.push(
       <InfoBox key="fehler">
-        {assistant.noted ? t.noteFallback : de.chat.errors[assistant.error]}
+        {assistant.noted
+          ? offline
+            ? de.chat.noteSaved
+            : t.noteFallback
+          : de.chat.errors[assistant.error]}
       </InfoBox>,
     );
-    if (retryableChatErrors.includes(assistant.error) && lastMsg?.role === 'haushalt') {
+    const ownLast = lastMsg?.role === 'haushalt' && !assistant.noted;
+    if (retryableChatErrors.includes(assistant.error) && ownLast) {
       reply('nochmal', de.chat.retry, assistant.retry);
     }
-    if (canHelp && c.status !== 'eskaliert') reply('fehler-hilfe', de.chat.getHelp, escalate);
+    if (offline && ownLast) reply('notiz', de.chat.saveNote, assistant.saveNote);
+    if (canHelp) reply('fehler-hilfe', de.chat.getHelp, escalate);
+  }
+  // Das Gespräch mit dem Assistenten ist voll: Senden ist aus, die Fachkraft hilft weiter (R-11)
+  if (assistant.full && !assistant.pending && !assistant.error && !facts.closed) {
+    tail.push(<InfoBox key="voll">{assistant.noted ? de.chat.fullNoted : de.chat.full}</InfoBox>);
+    if (canHelp && !replies.some((r) => r.label === de.chat.getHelp)) {
+      reply('voll-hilfe', de.chat.getHelp, escalate);
+    }
   }
 
-  const closed = c.status === 'erledigt' || c.status === 'abgebrochen';
-  const inputBar = closed ? undefined : (
-    <View
-      style={[
-        styles.inputBar,
-        {
-          paddingBottom: Math.max(insets.bottom, 12) + 8,
-          paddingHorizontal: theme.gutter,
-          borderTopColor: theme.colors.borderSubtle,
-          backgroundColor: theme.colors.bgPage,
-        },
-      ]}
-    >
-      <View style={styles.inputField}>
-        <TextField
-          label={t.inputLabel}
-          labelHidden
-          placeholder={a.otherPlaceholder}
-          multiline
-          rows={1}
-          value={input}
-          error={inputError}
-          onChangeText={(v) => {
-            setInput(v);
-            setInputError(undefined);
-          }}
+  const closed = facts.closed;
+  const inputBar =
+    closed || assistant.full ? undefined : (
+      <View
+        style={[
+          styles.inputBar,
+          {
+            paddingBottom: Math.max(insets.bottom, 12) + 8,
+            paddingHorizontal: theme.gutter,
+            borderTopColor: theme.colors.borderSubtle,
+            backgroundColor: theme.colors.bgPage,
+          },
+        ]}
+      >
+        <View style={styles.inputField}>
+          <TextField
+            label={t.inputLabel}
+            labelHidden
+            hint={de.chat.inputNotice}
+            placeholder={a.otherPlaceholder}
+            multiline
+            rows={1}
+            value={input}
+            error={inputError}
+            onChangeText={(v) => {
+              setInput(v);
+              setInputError(undefined);
+            }}
+          />
+        </View>
+        <Button
+          label={de.chat.send}
+          disabled={!input.trim() || assistant.pending}
+          onPress={sendInput}
         />
       </View>
-      <Button
-        label={de.chat.send}
-        disabled={!input.trim() || assistant.pending}
-        onPress={sendInput}
-      />
-    </View>
-  );
+    );
 
-  const footer = replies.length ? (
-    <QuickReplies replies={replies} onPick={(key) => handlers[key]?.()} footer={inputBar} />
-  ) : (
-    inputBar
+  const footer = (
+    <>
+      {commandToast ? <Toast message={commandToast} style={styles.toast} /> : null}
+      {replies.length ? (
+        <QuickReplies replies={replies} onPick={(key) => handlers[key]?.()} footer={inputBar} />
+      ) : (
+        inputBar
+      )}
+    </>
   );
 
   return (
@@ -1094,6 +1218,11 @@ export default function FallGespraech() {
         <View key={x.key}>{x.node}</View>
       ))}
       {tail}
+      <CallbackSheet
+        caseId={caseId}
+        slot={callbackSlot}
+        onClose={() => setCallbackSlot(undefined)}
+      />
     </CaseScreen>
   );
 }
@@ -1111,4 +1240,5 @@ const styles = StyleSheet.create({
     borderTopWidth: StyleSheet.hairlineWidth,
   },
   inputField: { flex: 1 },
+  toast: { marginHorizontal: 16, marginBottom: 8 },
 });

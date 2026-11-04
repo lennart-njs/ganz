@@ -1,6 +1,6 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import type { ReactNode } from 'react';
-import { Linking, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
 import { OpenCaseCard } from '@/components/app/OpenCaseCard';
 import {
@@ -13,14 +13,19 @@ import {
   PhotoFrame,
   Screen,
   Text,
+  Toast,
 } from '@/components/ds';
 import { GUIDE_SOURCE } from '@/data/guides';
+import { useNotice } from '@/hooks/useNotice';
 import { de } from '@/i18n/de';
 import { formatDateTime, formatEuro, formatMonthYear } from '@/i18n/format';
 import { hasGuides } from '@/lib/appliance';
 import { caseProgressLabel, caseStatusLabel, deviceStatusLabel, resumeHref } from '@/lib/caseView';
 import { deviceTitle, getManufacturer } from '@/lib/devices';
-import { selectDevice, selectOpenCaseForDevice, useAppStore } from '@/store/appStore';
+import { openPhone } from '@/lib/linking';
+import { isClosed } from '@/model/caseMachine';
+import { findOpenCase } from '@/model/policies/openCase';
+import { selectDevice, useAppStore } from '@/store/appStore';
 
 const t = de.device;
 
@@ -39,6 +44,10 @@ export default function GeraetDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const state = useAppStore();
   const device = selectDevice(state, id);
+  // Lässt sich die Telefon-App nicht öffnen, steht die Nummer im Hinweis
+  const phoneNotice = useNotice();
+  const call = (phone: string) =>
+    openPhone(phone).then((ok) => ok || phoneNotice.show(de.common.phoneFailed(phone)));
 
   if (!device) {
     return (
@@ -51,7 +60,7 @@ export default function GeraetDetail() {
   const title = deviceTitle(device);
   const manufacturer = getManufacturer(device.manufacturerId);
   const contract = state.contracts.find((c) => c.id === device.contractId);
-  const openCase = selectOpenCaseForDevice(state, device.id);
+  const openCase = findOpenCase(state, device.id);
   const cases = Object.values(state.cases)
     .filter((c) => c.deviceId === device.id)
     .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
@@ -73,9 +82,12 @@ export default function GeraetDetail() {
     <Screen
       header={<AppHeader title={title} onBack={() => router.back()} />}
       footer={
-        <ActionBar meta={deviceStatusLabel(state, device.id)} sub={title}>
-          <Button label={t.reportProblem} onPress={report} />
-        </ActionBar>
+        <>
+          {phoneNotice.notice ? <Toast message={phoneNotice.notice} style={styles.toast} /> : null}
+          <ActionBar meta={deviceStatusLabel(state, device.id)} sub={title}>
+            <Button label={t.reportProblem} onPress={report} />
+          </ActionBar>
+        </>
       }
     >
       <PhotoFrame label={title} ratio={4 / 3} />
@@ -129,14 +141,20 @@ export default function GeraetDetail() {
               title={m.title}
               sub={m.sub}
               onPress={() => {
+                // Ein offener Fall pro Gerät (Entscheidung Nr. 13): Mit Fortschritt fragt
+                // „Problem melden“ zuerst, ob du dort weitermachen willst.
                 const st = useAppStore.getState();
-                const c = st.createCase({
-                  deviceId: device.id,
-                  entry: 'pflege',
-                  problemLabel: m.title,
-                });
-                st.startGuide(c.id, m.guideId);
-                router.push(`/fall/${c.id}?weiter=anleitung`);
+                const r = st.openCaseFor(device.id, 'pflege', m.title, { guideId: m.guideId });
+                if (!r.ok) return;
+                if (r.value.art === 'frage_weitermachen') {
+                  router.push({
+                    pathname: '/fall/neu',
+                    params: { geraet: device.id, pflege: m.guideId },
+                  });
+                  return;
+                }
+                const id = r.value.caseId;
+                if (st.startGuide(id, m.guideId).ok) router.push(`/fall/${id}?weiter=anleitung`);
               }}
             />
           ))}
@@ -161,13 +179,15 @@ export default function GeraetDetail() {
               key={c.id}
               title={c.problemLabel}
               sub={de.common.dot(caseStatusLabel(c.status), formatDateTime(c.createdAt))}
-              onPress={() =>
-                router.push(
-                  c.status === 'erledigt' || c.status === 'abgebrochen'
-                    ? `/fall/${c.id}/fallakte`
-                    : resumeHref(state, c),
-                )
-              }
+              onPress={() => {
+                if (isClosed(c.status)) {
+                  router.push(`/fall/${c.id}/fallakte`);
+                  return;
+                }
+                // Wie die Karte „Offener Fall“: weitermachen setzt eine Pause fort
+                if (c.pausedAt) state.resumeCase(c.id);
+                router.push(resumeHref(state, c));
+              }}
             />
           ))
         )}
@@ -180,7 +200,7 @@ export default function GeraetDetail() {
             title={service.label}
             sub={t.serviceSub(service.phone, service.freeOfCharge)}
             accessibilityHint={de.common.phoneHint}
-            onPress={() => Linking.openURL(`tel:${service.phone.replace(/\s/g, '')}`)}
+            onPress={() => call(service.phone)}
           />
         </Section>
       ) : null}
@@ -196,4 +216,5 @@ export default function GeraetDetail() {
 
 const styles = StyleSheet.create({
   section: { gap: 10, marginTop: 8 },
+  toast: { marginHorizontal: 16, marginBottom: 8 },
 });

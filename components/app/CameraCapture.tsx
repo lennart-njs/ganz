@@ -1,11 +1,12 @@
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import * as Haptics from 'expo-haptics';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
-import { AppState, Linking, Platform, Pressable, StyleSheet, View } from 'react-native';
+import { AppState, Platform, Pressable, StyleSheet, View } from 'react-native';
 
 import { Button, Text } from '@/components/ds';
 import { demoConfig } from '@/config/demo.config';
 import { de } from '@/i18n/de';
+import { openSystemSettings } from '@/lib/linking';
 import { useAppStore } from '@/store/appStore';
 import { useTheme } from '@/theme';
 
@@ -104,7 +105,7 @@ export function CameraCapture({ onCapture, help, top }: CameraCaptureProps) {
           label={de.camera.openSettings}
           variant="inverse"
           fullWidth
-          onPress={() => Linking.openSettings()}
+          onPress={() => void openSystemSettings()}
         />
         {demoOption}
       </>,

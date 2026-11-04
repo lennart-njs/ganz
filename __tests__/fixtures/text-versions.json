@@ -1,0 +1,43 @@
+{
+  "datenschutz_start": {
+    "2026-10-1": "cb326bbff6b27f90eb9f4e3c24af659e216a7054dd9a6fb10f89f6117b222536"
+  },
+  "datenschutz_profil": {
+    "2026-10-1": "93bbcc5f21f3e10d9a55a16420aa225eb91920e471e89ee46b4139e42cc8ebef"
+  },
+  "assistent_hinweis": {
+    "2026-10-1": "f6680cc1a5b025c30e0a1a28f5170ee0674eddd21a5b0c1303b42f75e1e7bfcd"
+  },
+  "eingabe_hinweis": {
+    "2026-11-1": "a8a61a4c12151b984fbff729cd2c0e95d5b77c4345b963bad597d51c7137e577"
+  },
+  "assistent_einwilligung": {
+    "2026-11-1": "f4c6b6c31ce7546d242abbaeb25bef29fc0ebe8969ed879ce33e86b32fe87fc9",
+    "2026-11-2": "0094b5530faedc7a0c73fa1cff41eaea64e64f9f10deaeb749d52f8f855efe29",
+    "2026-11-3": "1083cbdfe156cc085c566974e7395e95972dbb52803bf4368fb248ec451bc629"
+  },
+  "fachkraft_videocall": {
+    "2026-11-1": "5a2b2d6ad86945e00385520360cd47402530f11eab081f8c2c26e7db98d346a7"
+  },
+  "fachkraft_rueckruf": {
+    "2026-11-1": "0a2b17a022534227719f10bc9b10b300c32cced2c06f42a2def54fa4996ff95b"
+  },
+  "screenshots": {
+    "2026-11-1": "bdafd6250ceff5a1dd7d2e78e1b69644bbf798f1de2e580cab58ca1578669f62"
+  },
+  "schadenmeldung": {
+    "2026-11-1": "2c3237106fa03fe7fe5dbbbb60d3f30392f3d3553db5f60045502c678dc331d5"
+  },
+  "termin_betrieb": {
+    "2026-11-1": "0b8ed0f17170d9345a5e82926f100826b2fa23e3c0b6e744d5e35d9a807fe576"
+  },
+  "hersteller_einzelfall": {
+    "2026-11-1": "cf29516bea9c1f00c5b70a6c8696ba9cdb3a7076b6805a09d597502efeaff2d7"
+  },
+  "mitteilungen": {
+    "2026-11-1": "332022bd3a2660734ae787a269775046d9794bf2b1b047f5b085b9b6e50acfff"
+  },
+  "mitteilungen_termin": {
+    "2026-11-1": "d5bd67f79b37a11543cda8826b14398a92ad7de1eb875ba55041fc49c0f38878"
+  }
+}

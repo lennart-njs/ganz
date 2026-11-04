@@ -1,0 +1,9 @@
+# Bekannte Fehlalarme von gitleaks (Regel generic-api-key), je mit Commit, Datei, Regel und Zeile.
+# Ein Eintrag gilt nur für genau diese Stelle in genau diesem Commit. Neue Treffer bleiben rot.
+# Geprüft am 03.11.2026 mit gitleaks 8.30.1 (Schritt 28).
+#
+# README.md: Beispielwert pitch-2026-w45 für CHAT_PITCH_TOKEN und EXPO_PUBLIC_CHAT_TOKEN, kein echter Token
+81d3f357717f6ccb2bc3a1ed5149c6b975ddf827:README.md:generic-api-key:32
+81d3f357717f6ccb2bc3a1ed5149c6b975ddf827:README.md:generic-api-key:33
+# __tests__/recovery.test.tsx: feste UUID als Installations-ID im Test, kein Schlüssel
+795aac604629d6ee3e463c6b0c55f75ea96a4835:__tests__/recovery.test.tsx:generic-api-key:93

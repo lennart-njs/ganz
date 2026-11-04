@@ -18,14 +18,16 @@ Die App erzeugt heute alle Daten lokal (Store `store/appStore.ts`). Ein spätere
 | Empfänger | Auslöser in der App | Consent (`purpose`) | Grundlage |
 |---|---|---|---|
 | Betrieb der Fachkraft | „Videocall starten“ | `weitergabe_fachkraft` | lit. b |
+| Betrieb der Fachkraft (Rückruf) | Zeitfenster wählen, dann „Rückruf anfragen“ im Sheet | `weitergabe_fachkraft` | lit. b |
 | Betrieb (Screenshots) | Häkchen „Screenshots als Nachweis erlauben“ | `screenshots_im_call` | lit. a |
 | Versicherer | „Schadenfall melden“ | `weitergabe_versicherer` | lit. b |
 | Betrieb (Auftrag) | „Termin anfragen“ / „Zahlungspflichtig buchen“ | `weitergabe_betrieb` | lit. b |
 | Hersteller (Einzelfall) | Profil: „Einzelfälle an … weitergeben“ | `hersteller_einzelfall` | lit. a |
-| Anbieter des Reparatur-Assistenten (Auftragsverarbeiter) | „Einverstanden“ vor der ersten Nachricht | `chat_assistent` | lit. a |
+| Anbieter des Reparatur-Assistenten (Auftragsverarbeiter) | „Einverstanden“ vor der ersten Nachricht | `chat_assistent`, ohne Fall. Die Fallakte jedes Falls mit Nachrichten nennt die Weitergabe | lit. a |
+| niemand, lokale Mitteilung auf dem eigenen Telefon (Absender ganz) | Systemdialog nach „Termin anfragen“, Profil: „Mitteilungen zum Fall-Status“ | `mitteilungen`, ohne Fall | lit. a |
 | Hersteller (aggregiert) | immer | – | ohne Personenbezug |
 
-Der Reparatur-Assistent bekommt je Nachricht nur Gerät, Modell, Problem, Ergebnis, Stand der Anleitung und das Gespräch, keine Fotos, keine Adresse und keine Vertragsnummer (`lib/chat/context.ts`). Das Gespräch liegt als `ChatMessage` im Fall. Kein Dashboard liest es, die Fallakte zeigt nur die Zahl der Nachrichten.
+Der Reparatur-Assistent bekommt je Nachricht nur Gerät, Modell, Problem, Ergebnis, Stand der Anleitung und das Gespräch, keine Fotos, keine Adresse und keine Vertragsnummer (`lib/chat/context.ts`). Das Gespräch liegt als `ChatMessage` im Fall. Kein Dashboard liest es, die Fallakte zeigt nur die Zahl der Nachrichten, die beim Anbieter ankommen konnten (`ChatMessage.forwarded`, fehlt das Feld, zählt die Nachricht).
 
 Der Händler bekommt keine Einzelfälle. Er sieht nur Zahlen zu Verträgen, die über ihn verknüpft wurden (`Contract.linkedVia = 'haendler_code'`, `Contract.soldBy`).
 
@@ -69,6 +71,7 @@ Der Händler bekommt keine Einzelfälle. Er sieht nur Zahlen zu Verträgen, die 
 | `Case.resolution` | ✓ | (✓) | (✓) | Wie Fälle enden: selbst gelöst, im Call, repariert, Ersatzgerät |
 | `Case.cancelReason` | – | – | (✓) | Abbruchgründe |
 | `Case.createdAt`, `closedAt` | ✓ | (✓) | (✓) | Dauer bis zur Lösung |
+| `Case.rounds` | ✓ | (✓) | (✓) | Frühere Runden vor „Problem besteht weiter“: Kostenvoranschlag, Schadenfall, Termine und Befunde. Sie bleiben im Fall, zählen für die Regeln der neuen Runde aber nicht mehr (`model/policies/rounds.ts`) |
 | `Claim.reportedAt`, `reportedBy` | ✓ | – | – | Erklärung der Versicherungsnehmerin (VVG § 30) |
 | `Claim.confirmationId` | ✓ | – | – | Nachweis der Bestätigung (Consent) |
 | `Claim.decision.result`, `at` | ✓ | – | – | |
@@ -102,6 +105,7 @@ Ereignisse, die ein Dashboard besonders braucht:
 | `Diagnosis.confidence` | ✓ | – | (✓) | in der App nur als Wort |
 | `Diagnosis.confidenceScore` | – | – | (✓) | nur intern und für die Qualität der Erkennung |
 | `Diagnosis.source` | ✓ | – | (✓) | Fehlererkennung, Nutzerangabe, Fachkraft, Betrieb |
+| `Diagnosis.discardedAt` | ✓ | – | (✓) | „Passt nicht“ oder ein anderes Problem im selben Fall: Das Ergebnis gilt nicht mehr und geht nicht mehr als Ergebnis an Assistent, Fachkraft oder Versicherer |
 
 ### Anleitung
 
@@ -111,7 +115,7 @@ Ereignisse, die ein Dashboard besonders braucht:
 | `GuideRun.completedSteps` | ✓ | – | (✓) | Protokoll, auch 0 Schritte (B-22) |
 | `GuideRun.abortedAtStep` | ✓ | – | (✓) | **Häufigster Abbruch** im Hersteller-Portal |
 | `GuideRun.abortNote` | ✓ | – | E | Freitext, darum nur mit Einwilligung |
-| `GuideRun.outcome` | ✓ | – | (✓) | **Selbst gelöst** je Anleitung |
+| `GuideRun.outcome` | ✓ | – | (✓) | **Selbst gelöst** je Anleitung. Fehlt er bei `endedAt`, endete die Anleitung für ein anderes Problem (`anleitung_beendet` mit `replaced`, Schritt 23) |
 | `Guide.sourceDocument` | – | – | ✓ | genutzte Reparaturinformation |
 
 ### Einwilligung
@@ -120,8 +124,9 @@ Ereignisse, die ein Dashboard besonders braucht:
 |---|---|---|---|---|
 | `Consent.purpose`, `recipient` | ✓ | – | ✓ | jeder Empfänger sieht nur seine eigenen |
 | `Consent.legalBasis` | ✓ | – | ✓ | `vertrag` (lit. b) oder `einwilligung` (lit. a) |
-| `Consent.dataCategories` | ✓ | – | ✓ | Datenumfang, so wie in der App gezeigt |
-| `Consent.textVersion` | ✓ | – | ✓ | Version des Hinweistexts |
+| `Consent.dataCategories` | ✓ | – | ✓ | Datenumfang als Schlüssel aus `model/policies/consentScopes.ts` (`geraet`, `fotos`, …), so wie in der Vorschau gezeigt. Stände vor Schritt 26 enthalten Bezeichnungen |
+| `Consent.textVersion` | ✓ | – | ✓ | Version des Hinweistexts aus `lib/legalTexts.ts` |
+| `Consent.textHash` | ✓ | – | ✓ | SHA-256 des gezeigten Texts mit den echten Namen. Fehlt bei Ständen vor Schritt 26 |
 | `Consent.grantedAt`, `revokedAt` | ✓ | – | ✓ | Widerruf beendet die Weitergabe |
 
 ### Kosten, Termin, Videocall

@@ -1,0 +1,32 @@
+# Teil-Flow für alle Flows in e2e/: frisch starten, Onboarding überspringen, Demo-Startstand
+# laden. Danach steht die App auf der Startseite: Schutz verknüpft, Waschmaschine, kein Fall.
+# Wie Schritt 3 im Ablauf von docs/PITCH_CHECK.md.
+#
+# Nicht gelaufen: In der Sandbox von Schritt 29 gibt es weder Simulator noch Maestro.
+# __tests__/build/e2eFlows.test.ts prüft die Selektoren gegen i18n/de.ts und den Code.
+appId: de.ganz.app.pitch
+---
+# Ohne Kamera und ohne Mitteilungen: Die App bietet dann das Beispielfoto an, und vor
+# „Termin anfragen“ kommt kein Systemdialog.
+- launchApp:
+    clearState: true
+    permissions:
+      camera: deny
+      notifications: deny
+- tapOn: 'Los geht’s'
+- tapOn: 'Später'
+- tapOn: 'Später hinzufügen'
+- tapOn: 'Profil.*'
+- scrollUntilVisible:
+    element:
+      text: 'Version .*'
+# Sieben Taps innerhalb von 3 Sekunden öffnen die Demo-Steuerung
+- tapOn:
+    text: 'Version .*'
+    repeat: 7
+    delay: 100
+- scrollUntilVisible:
+    element:
+      text: 'Demo-Startstand laden'
+- tapOn: 'Demo-Startstand laden'
+- assertVisible: "Was ist kaputt\\?.*"
