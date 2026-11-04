@@ -149,6 +149,13 @@ export interface CaseFacts {
    * (Entscheidung 32).
    */
   dealerShared: boolean;
+  /**
+   * Der Fall ging schon an den Händler: Es gibt eine Weitergabe (shares), laufend, mit einem
+   * Widerruf unterwegs oder beendet, oder eine Bestätigung weitergabe_haendler zu ihm, auch
+   * widerrufen. Das Backend kennt ihn dann unter dieser Fallnummer und nimmt ihn nur mit dem
+   * Token der ersten Weitergabe an, nach einem Widerruf gar nicht mehr.
+   */
+  dealerSent: boolean;
 }
 
 function claimState(c: Case): ClaimState {
@@ -304,5 +311,8 @@ export function selectCaseFacts(s: CaseFactsSource, caseId: Id): CaseFacts | und
     )?.id,
     soldBy: device?.soldBy,
     dealerShared: activeConsents.includes('weitergabe_haendler') && !s.shares?.[caseId]?.revoked,
+    dealerSent:
+      !!s.shares?.[caseId] ||
+      s.consents.some((k) => k.caseId === caseId && k.purpose === 'weitergabe_haendler'),
   };
 }

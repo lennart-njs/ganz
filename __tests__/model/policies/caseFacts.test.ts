@@ -510,6 +510,38 @@ describe('selectCaseFacts', () => {
     );
   });
 
+  test('Händler: gesendet bleibt gesendet, auch mit Widerruf unterwegs und nach dem Widerruf', () => {
+    const soldBy = { id: 'fruend', kind: 'haendler' as const, name: 'Händler' };
+    const device = { ...source(makeCase()).devices[0]!, soldBy };
+    const dealer = (extra: Partial<Consent> = {}) =>
+      consent('weitergabe_haendler', { recipient: soldBy, ...extra });
+    const of = (extra: Partial<CaseFactsSource>) =>
+      factsOf(makeCase(), { devices: [device], ...extra });
+    expect(factsOf(makeCase()).dealerSent).toBe(false);
+    expect(of({}).dealerSent).toBe(false);
+    // Weitergabe läuft
+    expect(of({ consents: [dealer()], shares: { 'GS-1': {} } })).toMatchObject({
+      dealerShared: true,
+      dealerSent: true,
+    });
+    // In der App widerrufen, das Backend weiß es noch nicht: nicht mehr beim Händler, aber gesendet
+    expect(of({ consents: [dealer({ revokedAt: NOW })], shares: { 'GS-1': {} } })).toMatchObject({
+      dealerShared: false,
+      dealerSent: true,
+    });
+    // Das Backend weiß vom Widerruf
+    expect(
+      of({ consents: [dealer({ revokedAt: NOW })], shares: { 'GS-1': { revoked: true } } }),
+    ).toMatchObject({ dealerShared: false, dealerSent: true });
+    // Ohne Angabe der Weitergaben zählt jede Bestätigung zu diesem Fall, auch widerrufen
+    expect(of({ consents: [dealer({ revokedAt: NOW })] }).dealerSent).toBe(true);
+    expect(of({ consents: [dealer({ personId: 'person-2' })] }).dealerSent).toBe(true);
+    // Ein anderer Fall oder ein anderer Zweck zählt nicht
+    expect(of({ consents: [dealer({ caseId: 'GS-2' })] }).dealerSent).toBe(false);
+    expect(of({ shares: { 'GS-2': {} } }).dealerSent).toBe(false);
+    expect(of({ consents: [consent('weitergabe_fachkraft')] }).dealerSent).toBe(false);
+  });
+
   test('letzter Videocall', () => {
     const v = (id: string, caseId = 'GS-1'): VideoSession => ({
       id,

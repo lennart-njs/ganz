@@ -380,6 +380,29 @@ describe('Demo-Backend: Fall an den Händler (Entscheidung 28)', () => {
     expect(read.status).toBe(403);
   });
 
+  test('nach dem Widerruf nimmt das Backend denselben Fall nicht wieder an', async () => {
+    // Darum bietet die App „Fall an … senden“ nach einem Widerruf nicht noch einmal an
+    // (an_haendler_senden, dealerSent in model/policies)
+    const { token } = (await shareFile(file())).body;
+    const gone = await revoke(
+      req('/api/v1/faelle/GS-30001', { method: 'DELETE', headers: { 'X-Share-Token': token } }),
+      { id: 'GS-30001' },
+    );
+    expect(gone.status).toBe(200);
+    // Eine neue Weitergabe hat kein Token
+    const again = await shareFile(file());
+    expect(again.status).toBe(403);
+    expect(again.body).toEqual({ error: 'token' });
+    // Mit dem alten Token ist der Fall widerrufen
+    const old = await shareFile(file(), token);
+    expect(old.status).toBe(410);
+    expect(old.body).toEqual({ error: 'widerrufen' });
+    // Im Portal bleibt der Fall geschwärzt
+    const stored = await record('GS-30001');
+    expect(stored.revokedAt).toBeDefined();
+    expect(stored.file.customer.name).toBe('');
+  });
+
   test('Portal: ohne Anmeldung 401, falsches Passwort 401, fremde Fälle 404', async () => {
     expect((await list(req('/api/v1/portal/faelle'))).status).toBe(401);
     expect((await getSettings(req('/api/v1/portal/einstellungen'))).status).toBe(401);

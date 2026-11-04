@@ -61,6 +61,7 @@ function facts(status: CaseStatus, extra: Partial<CaseFacts> = {}): CaseFacts {
     bookingOpen: false,
     activeConsents: [],
     dealerShared: false,
+    dealerSent: false,
     replacement: false,
     ...extra,
   };
@@ -519,7 +520,7 @@ describe('Händler (Entscheidungen 28, 32)', () => {
   /**
    * Das Angebot „Fall an … senden“, wie mach’s es vor der Übertragung im Screen rechnete
    * (app/fall/[id]/index.tsx auf 67d2fd8): needsHelp, ein Händler am Gerät, noch nicht gesendet,
-   * der Fall offen. Die Regel an_haendler_senden muss genau das ergeben.
+   * der Fall offen. Die Regel an_haendler_senden muss das ergeben, mit einer Ausnahme (SHARES).
    */
   function machsOffer(
     status: CaseStatus,
@@ -538,26 +539,40 @@ describe('Händler (Entscheidungen 28, 32)', () => {
     return dealer && !shared && needsHelp && status !== 'erledigt' && status !== 'abgebrochen';
   }
 
-  test('an_haendler_senden ist genau mach’s needsHelp, über alle Status und Fakten', () => {
+  /**
+   * Stand der Weitergabe an den Händler. „unterwegs“: in der App widerrufen, das Backend weiß es
+   * noch nicht. „beendet“: Das Backend weiß vom Widerruf. Auf 67d2fd8 galt ein Fall als gesendet,
+   * solange es eine Weitergabe ohne „beendet“ gab (shared67).
+   */
+  const SHARES = {
+    keine: { facts: { dealerShared: false, dealerSent: false }, shared67: false },
+    laeuft: { facts: { dealerShared: true, dealerSent: true }, shared67: true },
+    unterwegs: { facts: { dealerShared: false, dealerSent: true }, shared67: true },
+    beendet: { facts: { dealerShared: false, dealerSent: true }, shared67: false },
+  } as const;
+
+  test('an_haendler_senden ist mach’s needsHelp, über alle Status und Fakten, einmal je Fall', () => {
     let rows = 0;
     for (const status of ALL_STATUSES) {
       for (const hasQuote of [false, true]) {
         for (const outcome of OUTCOMES) {
           for (const claim of CLAIMS) {
             for (const dealer of [false, true]) {
-              for (const shared of [false, true]) {
+              for (const [share, { facts: shareFacts, shared67 }] of Object.entries(SHARES)) {
                 const f = facts(status, {
                   claim,
                   guideOutcome: outcome,
                   ...(hasQuote ? { quote } : {}),
                   ...(dealer ? { soldBy } : {}),
-                  dealerShared: shared,
+                  ...shareFacts,
                 });
-                const row = [status, hasQuote, outcome, claim, dealer, shared];
-                expect([...row, can(f, 'an_haendler_senden')]).toEqual([
-                  ...row,
-                  machsOffer(status, hasQuote, outcome, dealer, shared),
-                ]);
+                const row = [status, hasQuote, outcome, claim, dealer, share];
+                // Einzige Abweichung von 67d2fd8: Nach dem Widerruf kam dort das Angebot wieder.
+                // Das Senden kam beim Händler nie an, das Backend nimmt den Fall ohne Token nicht
+                // (__tests__/backend.test.ts). Jetzt geht ein Fall einmal an den Händler.
+                const expected =
+                  share !== 'beendet' && machsOffer(status, hasQuote, outcome, dealer, shared67);
+                expect([...row, can(f, 'an_haendler_senden')]).toEqual([...row, expected]);
                 rows += 1;
               }
             }
@@ -565,7 +580,7 @@ describe('Händler (Entscheidungen 28, 32)', () => {
         }
       }
     }
-    expect(rows).toBe(ALL_STATUSES.length * 2 * OUTCOMES.length * CLAIMS.length * 2 * 2);
+    expect(rows).toBe(ALL_STATUSES.length * 2 * OUTCOMES.length * CLAIMS.length * 2 * 4);
   });
 
   test.each([
@@ -588,11 +603,17 @@ describe('Händler (Entscheidungen 28, 32)', () => {
     'Fall an den Händler: %s %o → %s',
     (status, extra, expected) => {
       expect(can(facts(status, { ...extra, soldBy }), 'an_haendler_senden')).toBe(expected);
-      // Ohne Händler am Gerät nie, schon gesendet nie
+      // Ohne Händler am Gerät nie, schon gesendet nie, auch nach dem Widerruf nicht
       expect(can(facts(status, extra), 'an_haendler_senden')).toBe(false);
       expect(
-        can(facts(status, { ...extra, soldBy, dealerShared: true }), 'an_haendler_senden'),
+        can(
+          facts(status, { ...extra, soldBy, dealerShared: true, dealerSent: true }),
+          'an_haendler_senden',
+        ),
       ).toBe(false);
+      expect(can(facts(status, { ...extra, soldBy, dealerSent: true }), 'an_haendler_senden')).toBe(
+        false,
+      );
     },
   );
 
@@ -601,7 +622,7 @@ describe('Händler (Entscheidungen 28, 32)', () => {
       const closed = status === 'erledigt' || status === 'abgebrochen';
       expect([
         status,
-        can(facts(status, { soldBy, dealerShared: true }), 'haendler_schreiben'),
+        can(facts(status, { soldBy, dealerShared: true, dealerSent: true }), 'haendler_schreiben'),
       ]).toEqual([status, !closed]);
       expect([status, can(facts(status, { soldBy }), 'haendler_schreiben')]).toEqual([
         status,
@@ -612,10 +633,16 @@ describe('Händler (Entscheidungen 28, 32)', () => {
 
   test('nach dem Senden: schreiben statt noch einmal senden', () => {
     const before = facts('eskaliert', { soldBy });
-    const after = facts('eskaliert', { soldBy, dealerShared: true });
+    const after = facts('eskaliert', { soldBy, dealerShared: true, dealerSent: true });
     expect(availableActions(before)).toContain('an_haendler_senden');
     expect(availableActions(before)).not.toContain('haendler_schreiben');
     expect(availableActions(after)).toContain('haendler_schreiben');
     expect(availableActions(after)).not.toContain('an_haendler_senden');
+  });
+
+  test('nach dem Widerruf: weder schreiben noch noch einmal senden', () => {
+    const revoked = facts('eskaliert', { soldBy, dealerSent: true });
+    expect(availableActions(revoked)).not.toContain('haendler_schreiben');
+    expect(availableActions(revoked)).not.toContain('an_haendler_senden');
   });
 });

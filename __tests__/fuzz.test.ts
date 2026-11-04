@@ -185,6 +185,8 @@ function household(key: ActionKey, c: Case, f: CaseFacts, s: AppState): Step[] {
   }
 }
 
+const NOCHMAL_HAENDLER = 'nach dem Widerruf noch einmal an den Händler';
+
 /** Was außerhalb des Telefons passiert: Versicherer, Betrieb, Fachkraft, Widerruf in der Fallakte */
 function world(c: Case, f: CaseFacts, s: AppState): Step[] {
   const id = c.id;
@@ -205,6 +207,13 @@ function world(c: Case, f: CaseFacts, s: AppState): Step[] {
     steps.push({ name: `widerruf ${consent.purpose}`, run: (x) => x.revokeConsent(consent.id) });
   }
   if (c.pausedAt) steps.push({ name: 'fortsetzen', run: (x) => x.resumeCase(id) });
+  // Ein Tap auf „Ja, senden“ aus einem älteren Bild, nachdem die Weitergabe an den Händler
+  // widerrufen ist. Der Store muss ablehnen: einmal je Fall (Entscheidung 28).
+  if (
+    s.consents.some((k) => k.caseId === id && k.purpose === 'weitergabe_haendler' && k.revokedAt)
+  ) {
+    steps.push({ name: NOCHMAL_HAENDLER, caseId: id, run: (x) => x.shareWithDealer(id, 'fuzz') });
+  }
   return steps;
 }
 
@@ -578,10 +587,10 @@ function needsHelp(s: AppState, c: Case): boolean {
 }
 
 /**
- * Entscheidungen 28 und 32: Je Fall höchstens eine gültige Weitergabe an den Händler. Eine neue
- * entsteht nur für ein Gerät, das bei ihm gekauft ist, an genau ihn, in einem offenen Fall, der
- * Hilfe braucht, und ohne gültige davor. Eine Nachricht an den Händler gibt es nur mit gültiger
- * Weitergabe in einem offenen Fall.
+ * Entscheidungen 28 und 32: Je Fall höchstens eine Weitergabe an den Händler, auch nach einem
+ * Widerruf keine zweite. Das Backend nähme sie ohne das Token der ersten nicht an. Sie entsteht nur
+ * für ein Gerät, das bei ihm gekauft ist, an genau ihn, in einem offenen Fall, der Hilfe braucht.
+ * Eine Nachricht an den Händler gibt es nur mit gültiger Weitergabe in einem offenen Fall.
  */
 function dealerViolation(before: AppState, after: AppState): string | undefined {
   for (const c of Object.values(after.cases)) {
@@ -598,6 +607,11 @@ function dealerViolation(before: AppState, after: AppState): string | undefined 
     if (isClosed(c.status)) return `${c.id} geschlossen an den Händler`;
     if (!needsHelp(before, c)) return `${c.id} an den Händler, ohne dass Hilfe nötig war`;
     if (dealerShares(before, c.id).length) return `${c.id} an den Händler, obwohl er ihn hat`;
+    if (
+      before.shares[c.id] ||
+      before.consents.some((b) => b.caseId === c.id && b.purpose === 'weitergabe_haendler')
+    )
+      return `${c.id} ein zweites Mal an den Händler`;
     if (after.shares[c.id]?.consentId !== k.id) return `${c.id} Weitergabe ohne Eintrag zum Senden`;
   }
   for (const e of after.events.slice(before.events.length)) {
@@ -670,12 +684,14 @@ test('1.000 zufällige Folgen aus availableActions: keine Exception, je Gerät h
               if (b?.reworkOf) reached.add('nachbesserung_abgesagt');
             }
             if (e.type === 'nachricht_an_haendler') reached.add('haendler_nachricht');
-            if (e.type === 'weitergabe_bestaetigt' && e.payload.purpose === 'weitergabe_haendler') {
-              const revoked = before.consents.some(
-                (k) => k.caseId === e.caseId && k.purpose === 'weitergabe_haendler' && k.revokedAt,
-              );
-              reached.add(revoked ? 'haendler_nach_widerruf' : 'haendler_gesendet');
-            }
+            if (e.type === 'weitergabe_bestaetigt' && e.payload.purpose === 'weitergabe_haendler')
+              reached.add('haendler_gesendet');
+          }
+          // Nach dem Widerruf lehnt der Store ein zweites Senden ab, auch im offenen Fall, der
+          // Hilfe braucht. Dort sendete mach’s vor der Übertragung noch einmal.
+          const tried = step.name === NOCHMAL_HAENDLER ? before.cases[step.caseId!] : undefined;
+          if (tried && isRefused(result) && !isClosed(tried.status) && needsHelp(before, tried)) {
+            reached.add('haendler_nach_widerruf_abgelehnt');
           }
         }
       },
@@ -688,7 +704,7 @@ test('1.000 zufällige Folgen aus availableActions: keine Exception, je Gerät h
   expect([...reached].sort()).toEqual([
     'abbruch_in_reparatur',
     'haendler_gesendet',
-    'haendler_nach_widerruf',
+    'haendler_nach_widerruf_abgelehnt',
     'haendler_nachricht',
     'nachbesserung',
     'nachbesserung_abgesagt',

@@ -359,14 +359,24 @@ describe('Regeln im Store (Übertragung Schritt 3): erst prüfen, dann einmal sc
     ).toMatchObject({ purpose: 'weitergabe_haendler', recipient: dealer.name });
   });
 
-  test('nach dem Widerruf lässt sich der Fall wieder senden', () => {
+  test('einmal je Fall: nicht noch einmal, solange der Widerruf unterwegs ist, und nicht danach', () => {
     const id = openCase();
-    unwrap(useAppStore.getState().escalate(id));
-    const first = unwrap(useAppStore.getState().shareWithDealer(id, 'test'));
-    useAppStore.getState().revokeConsent(first.id);
-    const second = unwrap(useAppStore.getState().shareWithDealer(id, 'test'));
-    expect(useAppStore.getState().shares[id]).toEqual({ consentId: second.id });
-    expect(dealerConsents(id).filter((k) => !k.revokedAt)).toEqual([second]);
+    const s = () => useAppStore.getState();
+    unwrap(s().escalate(id));
+    const first = unwrap(s().shareWithDealer(id, 'test'));
+    s().updateShare(id, { token: 'tok-1', syncedEvents: 1 });
+    s().revokeConsent(first.id);
+    // Der Widerruf ist unterwegs: Die Weitergabe mit ihrem Token bleibt, bis das Backend es weiß
+    let before = s();
+    expect(s().shareWithDealer(id, 'test')).toEqual(rule('an_haendler_senden'));
+    expect(s()).toBe(before);
+    expect(s().shares[id]).toEqual({ consentId: first.id, token: 'tok-1', syncedEvents: 1 });
+    // Das Backend weiß vom Widerruf. Denselben Fall nimmt es nicht wieder an (backend.test.ts).
+    s().updateShare(id, { revoked: true });
+    before = s();
+    expect(s().shareWithDealer(id, 'test')).toEqual(rule('an_haendler_senden'));
+    expect(s()).toBe(before);
+    expect(dealerConsents(id)).toEqual([{ ...first, revokedAt: expect.any(String) }]);
   });
 
   test('Nachricht an den Händler nur, solange der Fall bei ihm ist und offen', () => {
@@ -496,15 +506,97 @@ describe('Gespräch mit dem Händler nach den Regeln (Übertragung Schritt 3)', 
     return { caseId, consent };
   }
 
-  test('nach dem Widerruf verschwinden die Antworten auf die Rückfrage, das Angebot kommt wieder', async () => {
-    const { consent } = await withQuestion();
+  test('nach dem Widerruf verschwinden die Antworten auf die Rückfrage, das Angebot kommt nicht wieder', async () => {
+    const { caseId, consent } = await withQuestion();
     await act(async () => {
       useAppStore.getState().revokeConsent(consent.id);
     });
     expect(screen.getByText('Hast du den Kaufbeleg noch?')).toBeTruthy();
     expect(screen.queryByRole('button', { name: 'Ja, als Foto' })).toBeNull();
     expect(screen.queryByRole('button', { name: 'Nein' })).toBeNull();
-    expect(offerButton()).toBeTruthy();
+    expect(offerButton()).toBeNull();
+    // Auch nicht, wenn das Backend vom Widerruf weiß
+    await act(async () => {
+      await syncShare(caseId);
+    });
+    expect(useAppStore.getState().shares[caseId]?.revoked).toBe(true);
+    expect(offerButton()).toBeNull();
+  });
+
+  /** Fall bei Fründ, so wie nach dem ersten Abgleich: Token vom Backend, alles gesendet */
+  function sentWithToken() {
+    const caseId = setup();
+    const consent = unwrap(useAppStore.getState().shareWithDealer(caseId, 'test'));
+    const synced = useAppStore.getState().events.filter((e) => e.caseId === caseId).length;
+    useAppStore.getState().updateShare(caseId, { token: 'tok-1', syncedEvents: synced });
+    return { caseId, consent };
+  }
+  const settle = async () => {
+    for (let i = 0; i < 20; i += 1) await Promise.resolve();
+  };
+
+  test('Widerruf unterwegs: kein neues Angebot, der Widerruf trifft die erste Weitergabe', async () => {
+    const { caseId, consent } = sentWithToken();
+    let release!: (done: boolean) => void;
+    backend.revoke.mockImplementationOnce(() => new Promise<boolean>((r) => (release = r)));
+    await renderRouter(APP, { initialUrl: `/fall/${caseId}` });
+    expect(offerButton()).toBeNull();
+    await act(async () => {
+      useAppStore.getState().revokeConsent(consent.id);
+      await settle();
+    });
+    // Das Backend hat den Widerruf noch nicht bestätigt
+    expect(backend.revoke).toHaveBeenCalledWith(caseId, 'tok-1');
+    expect(useAppStore.getState().shares[caseId]?.revoked).toBeUndefined();
+    expect(offerButton()).toBeNull();
+    expect(screen.queryByRole('button', { name: de.sharing.send })).toBeNull();
+    await act(async () => {
+      release(true);
+      await settle();
+    });
+    expect(useAppStore.getState().shares[caseId]).toMatchObject({
+      consentId: consent.id,
+      token: 'tok-1',
+      revoked: true,
+    });
+    expect(dealerConsents(caseId).filter((k) => !k.revokedAt)).toEqual([]);
+    expect(backend.share).not.toHaveBeenCalled();
+    expect(offerButton()).toBeNull();
+    expect(screen.getAllByText(de.sharing.sent(dealer.name))).toHaveLength(1);
+  });
+
+  test('Abruf läuft gerade: kein neues Angebot, der Widerruf geht danach mit dem Token raus', async () => {
+    const { caseId, consent } = sentWithToken();
+    await renderRouter(APP, { initialUrl: `/fall/${caseId}` });
+    let releasePoll!: (events: CaseEvent[]) => void;
+    backend.retailerEvents.mockImplementationOnce(
+      () => new Promise<CaseEvent[]>((r) => (releasePoll = r)),
+    );
+    let poll!: Promise<void>;
+    await act(async () => {
+      poll = syncShare(caseId);
+      await settle();
+    });
+    expect(backend.retailerEvents).toHaveBeenCalled();
+    await act(async () => {
+      useAppStore.getState().revokeConsent(consent.id);
+      await settle();
+    });
+    // Der Abgleich ist belegt, der Widerruf wartet auf den nächsten Durchgang
+    expect(backend.revoke).not.toHaveBeenCalled();
+    expect(offerButton()).toBeNull();
+    await act(async () => {
+      releasePoll([]);
+      await poll;
+    });
+    await act(async () => {
+      await syncShare(caseId);
+    });
+    expect(backend.revoke).toHaveBeenCalledWith(caseId, 'tok-1');
+    expect(useAppStore.getState().shares[caseId]).toMatchObject({ token: 'tok-1', revoked: true });
+    expect(backend.share.mock.calls.filter(([, token]) => !token)).toEqual([]);
+    expect(dealerConsents(caseId).filter((k) => !k.revokedAt)).toEqual([]);
+    expect(offerButton()).toBeNull();
   });
 
   test('im geschlossenen Fall keine Antworten auf die Rückfrage', async () => {

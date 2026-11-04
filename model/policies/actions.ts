@@ -110,9 +110,11 @@ const RULES: Record<ActionKey, Rule> = {
     !booked(f, 'vor_ort_diagnose') &&
     !booked(f, 'reparatur'),
 
-  // Gekauft beim Händler: Den Fall kannst du ihm senden, sobald Hilfe nötig ist, einmal je
-  // Bestätigung. Nach einem Widerruf geht es wieder (Entscheidung 28).
-  an_haendler_senden: (f) => !!f.soldBy && !f.dealerShared && !f.closed && dealerHelpNeeded(f),
+  // Gekauft beim Händler: Den Fall kannst du ihm senden, sobald Hilfe nötig ist, einmal je Fall
+  // (Entscheidung 28). Auch nicht, solange ein Widerruf noch unterwegs ist, und nicht nach dem
+  // Widerruf: Das Backend nimmt denselben Fall ohne das Token der ersten Weitergabe nicht an.
+  an_haendler_senden: (f) =>
+    !!f.soldBy && !f.dealerShared && !f.dealerSent && !f.closed && dealerHelpNeeded(f),
   // Antworten und Nachrichten an den Händler, auch die Buttons zu seiner Rückfrage und seinem
   // Terminvorschlag: nur, solange der Fall bei ihm ist und offen (Entscheidung 32)
   haendler_schreiben: (f) => f.dealerShared && !f.closed,
