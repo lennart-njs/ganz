@@ -46,7 +46,7 @@ Lässt sich der gespeicherte Stand nicht laden (kaputtes JSON, falsche Form, unb
 Der Demo-Modus ist in `config/demo.config.ts` eingeschaltet (`demo.enabled`).
 
 - **Demo-Steuerung öffnen:** Profil → 7-mal schnell auf die Versionsnummer tippen.
-- **Dort einstellen:** Ergebnis der Intelligenten Fehlererkennung (Standard, unsicher, unscharf), Typenschild erkannt oder nicht, Fachkraft frei oder nicht, Freigabe oder Ablehnung, Selbstbeteiligung 0 € oder 50 €.
+- **Dort einstellen:** Ergebnis der Intelligenten Fehlererkennung (Standard, unsicher, unscharf), Typenschild erkannt oder nicht, Fachkraft frei oder nicht, Freigabe oder Ablehnung, Selbstbeteiligung 0 € oder 50 €, „Reparatur liegt länger zurück“ (Gewährleistung vorbei, Entscheidung Nr. 32).
 - **Hinweise an/aus:** An zeigt schließbare Tipps, „Wartezeit überspringen“, „Nächster Schritt (Demo)“ und die Kennzeichnung „Beispielwerte“. Aus: keine Demo-Spur in der App.
 - **Offene Fälle einen Schritt weiter:** schaltet Freigabe, Termin, unterwegs, repariert. Ohne Tap läuft das per Timer (Freigabe 10 s, danach je 5 s). Wartet ein Termin auf „Zahlungspflichtig buchen“, geht es erst nach deinem Tap im Gespräch weiter, auch per Timer nicht (Entscheidungen Nr. 31 und Nr. 33).
 - **Demo-Startstand laden:** der feste Stand nach dem Onboarding im Golden Path (`store/demoStart.ts`): Schutz verknüpft, die Waschmaschine aus dem Vertrag, kein Fall, keine Einwilligung, feste Zeit `demo.startAt`. Er ersetzt den Stand ohne Rückfrage, die Darstellung bleibt. Danach steht die App auf der Startseite. So beginnt jeder Pitch gleich (`docs/PITCH_CHECK.md`).
@@ -71,6 +71,10 @@ Der ganze Fall ist ein Gespräch. Die Antworten stehen unten, „Details“ zeig
 Mit 50 € Selbstbeteiligung (Demo-Steuerung, nach dem Demo-Startstand) ändert sich Schritt 7: Während Kranich prüft, bleibt es bei „Termin anfragen“, unverbindlich. Nach „Kranich hat die Kosten freigegeben“ steht im Gespräch die Zusammenfassung mit Betrieb, Zeitfenster, Auftrag und „Selbstbeteiligung 50 €“. Erst nach „Zahlungspflichtig buchen“ bestätigt der Betrieb den Termin (Entscheidung Nr. 31, Flow `e2e/selbstbeteiligung.yaml`). Mit 0 € gibt es diesen Schritt nicht.
 
 Vor-Ort-Diagnose (wenn keine Fachkraft frei ist oder statt des Videocalls): „Termin anfragen“ ist unverbindlich. Mit „Nächster Schritt (Demo)“ nennt der Betrieb den Preis (79 €, Beispielwert). Dann „Zahlungspflichtig buchen“ oder „Nicht buchen“. Ohne den Tap kommt kein Termin (Entscheidung Nr. 33).
+
+Misslungene Reparatur: In Schritt 8 statt „Läuft wieder“ „Problem besteht weiter“. Die Reparatur ist noch in der Gewährleistung (Annahme: 24 Monate ab Abschluss, Beispielwert). Der Betrieb bessert nach: Zeitfenster wählen → „Nachbesserung anfragen“. Keine neue Schadenmeldung, kein Betrag, kein „Zahlungspflichtig buchen“. Hilft auch das nicht, beginnt eine neue Runde mit Hilfe holen (Entscheidung Nr. 32, Flow `e2e/gewaehrleistung.yaml`). Mit „Reparatur liegt länger zurück“ in der Demo-Steuerung beginnt die neue Runde gleich.
+
+Abbrechen geht in jedem offenen Fall, auch in der Reparatur: X → „Fall abbrechen“ → Grund. Läuft ein Termin, steht davor, dass der Betrieb die Absage bekommt, und beim Auftrag, dass er mit dir klärt, ob schon Kosten entstanden sind (Entscheidung Nr. 34).
 
 Eigene Worte: Unten ins Feld schreiben. Der Reparatur-Assistent antwortet im selben Gespräch.
 
@@ -144,7 +148,7 @@ Alle Tests in `ui` laufen mit Fake Timers. Die Zeit läuft nur weiter, wenn ein 
 - `data/guides.ts` – Anleitungen, wörtlich aus der Demo
 - `i18n/de.ts` – alle Texte
 - `docs/` – Review, Bauplan, Zukunftsplan, Entscheidungen, Annahmen, Befunde, Datenmodell, Pitch-Check, Review-Checkliste, Kosten (`KOSTEN.md`), Releases (`RELEASES.md`)
-- `e2e/` – Maestro-Flows für Golden Path, Abbruch, dunkel und 200 %, Selbstbeteiligung 50 €. Noch nicht gelaufen, das kommt mit dem Pitch-Build (Schritt 30). `__tests__/build/e2eFlows.test.ts` hält sie bis dahin mit Texten und Code im Einklang
+- `e2e/` – Maestro-Flows für Golden Path, Abbruch, dunkel und 200 %, Selbstbeteiligung 50 €, Gewährleistung. Noch nicht gelaufen, das kommt mit dem Pitch-Build (Schritt 30). `__tests__/build/e2eFlows.test.ts` hält sie bis dahin mit Texten und Code im Einklang
 - `docs/recht/` – offene Rechtsfragen mit Frist je Frage
 - `__tests__/` – Tests der drei Jest-Projekte, `__tests__/regressions/` mit R-01 bis R-18. `test/` hält gemeinsame Helfer
 - `scripts/` – Prüfungen (`ci-checks.sh`, `commit-if-green.sh`, `lint-changed.js`), Pitch-Tag und Abgleich der Anleitungen

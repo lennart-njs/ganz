@@ -31,6 +31,10 @@ Der Reparatur-Assistent bekommt je Nachricht nur Gerät, Modell, Problem, Ergebn
 
 **Verbindlich buchen (Nr. 31, Nr. 33):** Eine Terminanfrage ist unverbindlich, solange nicht feststeht, was der Haushalt zahlt: während der Versicherer prüft und bei der Vor-Ort-Diagnose, bis der Betrieb den Preis nennt (`Booking.price`, Ereignis `preis_genannt`). Danach wartet der Termin auf „Zahlungspflichtig buchen“ (`CaseFacts.bindingDue`). Der Tap setzt `Booking.binding` und schreibt `zahlungspflichtig_gebucht` mit Betrag, Betrieb, Zeitfenster und dem Stempel des gezeigten Texts (`textVersion`, `textHash` aus `lib/legalTexts.ts`, Schlüssel `verbindliche_buchung`). Steht der Preis schon beim Buchen fest (Selbstzahler, Buchung nach der Freigabe), entsteht beides mit der Buchung. „Nicht buchen“ storniert die Anfrage und schreibt `nicht_gebucht`. Ohne `binding` bestätigt der Betrieb keinen Termin, für den der Haushalt zahlt. Bei 0 € Selbstbeteiligung gibt es keinen zweiten Schritt.
 
+**Nachbesserung (Nr. 32):** Nach „Problem besteht weiter“ prüft der Store, ob die Gewährleistung für die Reparatur noch läuft (`model/policies/warranty.ts`, `Booking.completedAt` plus `demoConfig.warranty.months`). Dann geht der Fall auf `nachbesserung`, die Runde der Reparatur endet, und die neue trägt `Case.rework`. Der Termin zur Nachbesserung (`Booking.reworkOf`) geht mit der Weitergabe aus der Reparatur an denselben Betrieb, ohne neue Bestätigung, ohne Schadenfall, Freigabe oder Betrag. Ist die Weitergabe widerrufen, bestätigt der Haushalt sie erst erneut.
+
+**Abbrechen (Nr. 34):** Der Abbruch storniert jeden laufenden Termin der Runde und schreibt `termin_abgesagt`. An den Betrieb geht nur die Absage, mit der Weitergabe, mit der er den Termin bekam. Eine neue Bestätigung entsteht nicht.
+
 Der Händler bekommt keine Einzelfälle. Er sieht nur Zahlen zu Verträgen, die über ihn verknüpft wurden (`Contract.linkedVia = 'haendler_code'`, `Contract.soldBy`).
 
 ## 3. Felder je Dashboard
@@ -73,7 +77,9 @@ Der Händler bekommt keine Einzelfälle. Er sieht nur Zahlen zu Verträgen, die 
 | `Case.resolution` | ✓ | (✓) | (✓) | Wie Fälle enden: selbst gelöst, im Call, repariert, Ersatzgerät |
 | `Case.cancelReason` | – | – | (✓) | Abbruchgründe |
 | `Case.createdAt`, `closedAt` | ✓ | (✓) | (✓) | Dauer bis zur Lösung |
-| `Case.rounds` | ✓ | (✓) | (✓) | Frühere Runden vor „Problem besteht weiter“: Kostenvoranschlag, Schadenfall, Termine und Befunde. Sie bleiben im Fall, zählen für die Regeln der neuen Runde aber nicht mehr (`model/policies/rounds.ts`) |
+| `Case.rounds` | ✓ | (✓) | (✓) | Frühere Runden vor „Problem besteht weiter“: Kostenvoranschlag, Schadenfall, Termine und Befunde. Sie bleiben im Fall, zählen für die Regeln der neuen Runde aber nicht mehr (`model/policies/rounds.ts`). `CaseRound.rework` markiert eine Runde, die eine Nachbesserung war (Nr. 32) |
+| `Case.rework` | ✓ | – | (✓) | Die laufende Runde ist eine Nachbesserung in der Gewährleistung (Nr. 32): Reparaturtermin, Betrieb, Abschluss, Ende der Frist, Zeitpunkt von „Problem besteht weiter“. Ohne Schadenfall und ohne Betrag. Der Versicherer sieht nur, dass keine neue Meldung kam. Kennzahl für Hersteller: Nachbesserungen je Fehlerbild |
+| `Case.status` = `nachbesserung` | ✓ | (✓) | (✓) | Der Betrieb bessert nach (Nr. 32). Danach `erledigt`, eine neue Runde (`eskaliert`) oder `abgebrochen` |
 | `Claim.reportedAt`, `reportedBy` | ✓ | – | – | Erklärung der Versicherungsnehmerin (VVG § 30) |
 | `Claim.confirmationId` | ✓ | – | – | Nachweis der Bestätigung (Consent) |
 | `Claim.decision.result`, `at` | ✓ | – | – | |
@@ -91,7 +97,7 @@ Der Händler bekommt keine Einzelfälle. Er sieht nur Zahlen zu Verträgen, die 
 Ereignisse, die ein Dashboard besonders braucht:
 
 - **V:** `schaden_gemeldet`, `freigabe_entschieden`, `angebot_erstellt`, `termin_*`, `zahlungspflichtig_gebucht` (Selbstbeteiligung nach der Freigabe), `reparatur_abgeschlossen`, `weitergabe_bestaetigt`, `einwilligung_widerrufen`
-- **Betrieb (später):** `termin_angefragt`, `preis_genannt`, `zahlungspflichtig_gebucht`, `nicht_gebucht`. Erst nach `zahlungspflichtig_gebucht` gilt ein Termin, für den der Haushalt zahlt.
+- **Betrieb (später):** `termin_angefragt`, `preis_genannt`, `zahlungspflichtig_gebucht`, `nicht_gebucht`. Erst nach `zahlungspflichtig_gebucht` gilt ein Termin, für den der Haushalt zahlt. `termin_abgesagt` (Nr. 34): Absage beim Abbrechen, mit `ordered` (der Betrieb hatte den Auftrag) und `costsOpen` (er klärt mit dem Haushalt, ob Kosten entstanden sind). `nachbesserung_verlangt` (Nr. 32): Reparaturtermin, Betrieb und Ende der Gewährleistung. `termin_angefragt` und `reparatur_abgeschlossen` tragen bei der Nachbesserung `rework: true`. `problem_besteht_weiter` nennt in `warranty`, warum keine Nachbesserung kam (`abgelaufen`, `nachbesserung_gescheitert`, `keine_reparatur`), mit `demoLongAgo` aus der Demo-Steuerung.
 - **He:** `ergebnis_erkannt`, `anleitung_gestartet`, `schritt_erledigt`, `schritt_geht_nicht`, `anleitung_beendet`, `befund_erstellt` (alles aggregiert)
 - **Hä:** keine Einzelereignisse, nur Zahlen pro Vertrag
 
@@ -149,6 +155,8 @@ Ereignisse, die ein Dashboard besonders braucht:
 | `Booking.binding` | ✓ | – | – | Zeit und Betrag von „Zahlungspflichtig buchen“ (Nr. 31, Nr. 33). Fehlt bei einer unverbindlichen Anfrage und wo der Haushalt nichts zahlt. Der Versicherer sieht es nur für Termine seines Schadenfalls |
 | `Booking.address` | – | – | – | nur der Betrieb |
 | `Booking.completionPhotoId` | ✓ | – | E | Abschlussfoto |
+| `Booking.completedAt` | ✓ | – | (✓) | Wann der Betrieb fertig war. Beginn der Gewährleistung für die Reparatur (Nr. 32, Annahme). Fehlt bei Terminen von vor Nr. 32 |
+| `Booking.reworkOf` | ✓ | – | (✓) | Dieser Termin ist die Nachbesserung zu diesem Reparaturtermin, beim selben Betrieb, ohne Freigabe, Preis und `binding` (Nr. 32) |
 | `Booking.rating` | (✓) | – | (✓) | Zufriedenheit mit Betrieben |
 | `VideoSession.startedAt`, `endedAt`, `outcome` | ✓ | – | (✓) | Anteil „im Call gelöst“, Wartezeiten, „keine Fachkraft frei“ |
 | `VideoSession.recording` | ✓ | – | – | immer `false` |

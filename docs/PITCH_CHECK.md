@@ -38,6 +38,15 @@ Einmal im Monat zusätzlich mit 50 € Selbstbeteiligung (Demo-Steuerung, nach d
 - „Nächster Schritt (Demo)“ erst nach „Zahlungspflichtig buchen“ wieder da ist und der Betrieb erst dann bestätigt,
 - die Fallakte „Zahlungspflichtig gebucht“ mit Betrieb, Zeitfenster und 50 € zeigt.
 
+Einmal im Monat zusätzlich die misslungene Reparatur, wie im Flow `e2e/gewaehrleistung.yaml` (Entscheidung Nr. 32): in Schritt 8 „Problem besteht weiter“. Bestanden, wenn:
+- „Die Reparatur ist noch in der Gewährleistung.“ steht, mit „… muss die Reparatur nachbessern. Für die Nachbesserung zahlst du nichts Neues.“,
+- es weder „Schadenfall melden“ noch „Zahlungspflichtig buchen“ noch einen Betrag gibt und die Zusammenfassung „Keine neuen Kosten für dich, Gewährleistung“ nennt,
+- der Betrieb nach „Nachbesserung anfragen“ ohne weiteren Tap bestätigt und die Fallakte „Nachbesserung in der Gewährleistung“ zeigt,
+- nach einem zweiten „Problem besteht weiter“ „Auch die Nachbesserung hat nicht geholfen.“ und wieder Hilfe holen kommt,
+- mit „Reparatur liegt länger zurück“ (Demo-Steuerung, vor Schritt 8) gleich „Die Gewährleistung für die Reparatur ist vorbei.“ und eine neue Runde kommt.
+
+Dazu einmal Abbrechen in der Reparatur (Entscheidung Nr. 34): nach „Termin anfragen“ und „Nächster Schritt (Demo)“ X → „Fall abbrechen“. Bestanden, wenn vor dem Grund „… bekommt die Absage.“ und „Ob schon Kosten entstanden sind, klärt … mit dir.“ steht, nirgends „kostenlos“, und nach dem Abbruch kein „Nächster Schritt (Demo)“ mehr kommt.
+
 ### 2. Dark Mode
 
 Profil → „Darstellung“ → „Dunkel“. Dann Start, Gespräch, Ergebnis, Anleitung, Kosten, Termin, Status, Fallakte und Profil ansehen. Danach „Wie System“ wählen und das System im Kontrollzentrum auf dunkel stellen.

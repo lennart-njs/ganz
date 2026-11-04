@@ -179,6 +179,7 @@ export type CaseStatus =
   | 'freigegeben'
   | 'abgelehnt' // Ergänzung zum Auftrag: Ausgang der Prüfung sichtbar machen
   | 'in_reparatur'
+  | 'nachbesserung' // Nr. 32: Der Betrieb bessert in der Gewährleistung nach
   | 'erledigt'
   | 'abgebrochen';
 
@@ -426,6 +427,7 @@ export type CaseCommand =
   | 'selbst_zahlen'
   | 'repariert'
   | 'problem_besteht_weiter'
+  | 'nachbesserung_verlangen'
   | 'abbrechen';
 
 export const TRANSITIONS: Record<CaseStatus, Partial<Record<CaseCommand, CaseStatus>>> = {
@@ -440,8 +442,15 @@ export const TRANSITIONS: Record<CaseStatus, Partial<Record<CaseCommand, CaseSta
   freigabe_noetig: { freigabe_erteilt: 'freigegeben', freigabe_abgelehnt: 'abgelehnt', abbrechen: 'abgebrochen' },
   freigegeben: { termin_bestaetigt: 'in_reparatur', abbrechen: 'abgebrochen' },
   abgelehnt: { selbst_zahlen: 'in_reparatur', abbrechen: 'abgebrochen' },
-  in_reparatur: { repariert: 'erledigt', problem_besteht_weiter: 'eskaliert' },
-  erledigt: { problem_besteht_weiter: 'eskaliert' },
+  // Nr. 34: abbrechen auch hier. Nr. 32: in der Gewährleistung bessert der Betrieb nach.
+  in_reparatur: {
+    repariert: 'erledigt',
+    problem_besteht_weiter: 'eskaliert',
+    nachbesserung_verlangen: 'nachbesserung',
+    abbrechen: 'abgebrochen',
+  },
+  nachbesserung: { repariert: 'erledigt', problem_besteht_weiter: 'eskaliert', abbrechen: 'abgebrochen' },
+  erledigt: { problem_besteht_weiter: 'eskaliert', nachbesserung_verlangen: 'nachbesserung' },
   abgebrochen: {},
 };
 
@@ -469,14 +478,20 @@ stateDiagram-v2
   freigegeben --> in_reparatur: Betrieb bestätigt Termin
   abgelehnt --> in_reparatur: Selbst zahlen
   in_reparatur --> erledigt: Repariert
-  in_reparatur --> eskaliert: Problem besteht weiter
-  erledigt --> eskaliert: Problem besteht weiter
+  in_reparatur --> eskaliert: Problem besteht weiter, Gewährleistung vorbei
+  in_reparatur --> nachbesserung: Problem besteht weiter, in der Gewährleistung
+  nachbesserung --> erledigt: Repariert
+  nachbesserung --> eskaliert: Problem besteht weiter
+  erledigt --> eskaliert: Problem besteht weiter, Gewährleistung vorbei
+  erledigt --> nachbesserung: Problem besteht weiter, in der Gewährleistung
   offen --> abgebrochen
   selbsthilfe --> abgebrochen
   eskaliert --> abgebrochen
   freigabe_noetig --> abgebrochen
   freigegeben --> abgebrochen
   abgelehnt --> abgebrochen
+  in_reparatur --> abgebrochen
+  nachbesserung --> abgebrochen
 ```
 
 Regeln, die Tests prüfen:
@@ -651,6 +666,6 @@ Entscheidungen von Lennart vom 04.11.2026 (`docs/ENTSCHEIDUNGEN.md`). Der Anwalt
 | Nr. | Entscheidung | Akzeptanzkriterien | Stand 04.11.2026 |
 |---|---|---|---|
 | 31 | **Verbindlicher Schritt nach der Freigabe** (Rechtsfrage 46) | Während der Prüfung „Termin anfragen“, kein Betrag als Schuld, auch mit 50 €. Nach der Freigabe mit Selbstbeteiligung über 0 € eine Zusammenfassung mit „Zahlungspflichtig buchen“, erst danach bestätigt der Betrieb. Die Simulation wartet. Der Tap braucht die Weitergabe an den Betrieb und stempelt Text und Betrag. Bei 0 € kein zweiter Schritt. Nach einer Ablehnung wird die Anfrage nie zur Buchung. | erledigt: `CaseFacts.bindingDue`, Regel `zahlungspflichtig_buchen`, `bookBinding`, Text `verbindliche_buchung`, Gespräch, Termin und Status, Fuzz-Invarianten, Maestro-Flow `e2e/selbstbeteiligung.yaml` (nicht gelaufen). Rechtsfragen 48 und 50 sind neu |
-| 32 | **Misslungene Reparatur, Gewährleistung** (Rechtsfrage 47) | Innerhalb von 2 Jahren nach der Reparatur bessert der Betrieb nach, ohne neue Meldung und ohne Kosten. Danach eine neue Runde wie bisher. | offen, nicht Teil dieses Schritts |
+| 32 | **Misslungene Reparatur, Gewährleistung** (Rechtsfrage 47) | Innerhalb von 2 Jahren nach der Reparatur bessert der Betrieb nach, ohne neue Meldung und ohne Kosten. Danach eine neue Runde wie bisher. | erledigt: Status `nachbesserung`, Befehl `nachbesserung_verlangen`, `checkWarranty` mit `demoConfig.warranty` (24 Monate, Annahme), `Booking.completedAt`, markierte Runde (`Case.rework`, `CaseRound.rework`), `requestRework` ohne Betrag und nur mit gültiger Weitergabe, neue Runde nach Ablauf oder gescheiterter Nachbesserung, Demo „Reparatur liegt länger zurück“, Gespräch, Status, Fallakte, Fuzz-Invarianten, Maestro-Flow `e2e/gewaehrleistung.yaml` (nicht gelaufen). Rechtsfragen 52 und 53 sind neu |
 | 33 | **Vor-Ort-Diagnose ohne festen Preis** (Rechtsfrage 34) | „Termin anfragen“, unverbindlich. Der Betrieb nennt den Preis vor dem Termin, dann derselbe Schritt wie in Nr. 31. Ohne den Tap kein Termin. „Nicht buchen“ beendet die Anfrage ohne Kosten, der Fall bietet wieder, was er vorher bot. | erledigt: `Booking.price`, Preis 79 € als Beispielwert, Schritt „Preis nennen“ in der Simulation, derselbe Tap wie Nr. 31, `declineBinding` und Regel `nicht_buchen` für beide. Rechtsfrage 49 ist neu |
-| 34 | **Abbrechen während der Reparatur** (zu Nr. 16) | „Fall abbrechen“ auch in `in_reparatur`, der Betrieb bekommt die Absage. Keine Zusage, dass keine Kosten entstehen. | offen, nicht Teil dieses Schritts |
+| 34 | **Abbrechen während der Reparatur** (zu Nr. 16) | „Fall abbrechen“ auch in `in_reparatur`, der Betrieb bekommt die Absage. Keine Zusage, dass keine Kosten entstehen. | erledigt: `abbrechen` in `TRANSITIONS.in_reparatur`, der Abbruch storniert jeden laufenden Termin mit `termin_abgesagt`, die Simulation steht, Absage und Satz zu den Kosten im Schließen-Sheet, „Fall abbrechen“ auch im Halt nach einem Widerruf, R-01 auf die neue Regel umgestellt, Fuzz-Invarianten. „Neues Problem melden“ bricht einen Auftrag nicht nebenbei ab (offen für Lennart). Rechtsfrage 51 ist neu, Nr. 16 bleibt sonst offen |
