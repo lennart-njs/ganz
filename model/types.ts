@@ -90,6 +90,8 @@ export type CaseStatus =
   | 'freigegeben'
   | 'abgelehnt' // Ergänzung zum Auftrag: Ausgang der Prüfung sichtbar machen
   | 'in_reparatur'
+  /** Der Betrieb bessert eine Reparatur nach, in der gesetzlichen Gewährleistung (Nr. 32) */
+  | 'nachbesserung'
   | 'erledigt'
   | 'abgebrochen';
 
@@ -118,6 +120,24 @@ export interface Claim {
 }
 
 /**
+ * Nachbesserung in der gesetzlichen Gewährleistung (Entscheidung Nr. 32): Nach „Problem besteht
+ * weiter“ innerhalb der Frist bessert derselbe Betrieb die Reparatur nach. Ohne Schadenfall, ohne
+ * Selbstbeteiligung und ohne Betrag für den Haushalt. Eine Runde mit Nachbesserung ist so markiert.
+ */
+export interface Rework {
+  /** Der Reparaturtermin, dessen Reparatur der Betrieb nachbessert */
+  repairBookingId: Id;
+  /** Derselbe Betrieb wie bei der Reparatur */
+  provider: PartnerRef & { authorized: boolean };
+  /** Abschluss der Reparatur, Beginn der Frist (Annahme bis zur Antwort des Anwalts) */
+  completedAt: ISODateTime;
+  /** Ende der Frist: Abschluss plus warranty.months aus config/demo.config.ts */
+  until: ISODateTime;
+  /** Wann der Haushalt „Problem besteht weiter“ gesagt hat */
+  claimedAt: ISODateTime;
+}
+
+/**
  * Eine frühere Runde des Falls. „Problem besteht weiter“ beendet sie. Ihr Befund, Kostenvoranschlag,
  * Schadenfall und ihre Termine bleiben gespeichert und im Verlauf sichtbar. Für die Regeln der
  * neuen Runde zählen sie nicht mehr.
@@ -129,6 +149,8 @@ export interface CaseRound {
   bookingIds: Id[];
   /** Befunde von Fachkraft oder Betrieb */
   findingIds: Id[];
+  /** Die Runde war eine Nachbesserung in der Gewährleistung (Nr. 32) */
+  rework?: Rework;
 }
 
 export interface Case {
@@ -153,6 +175,11 @@ export interface Case {
   closedAt?: ISODateTime;
   /** Frühere Runden, älteste zuerst. Ohne Wiederöffnen fehlt das Feld. */
   rounds?: CaseRound[];
+  /**
+   * Die laufende Runde ist eine Nachbesserung in der Gewährleistung (Nr. 32). Endet sie mit
+   * „Problem besteht weiter“, wandert das Feld in die Runde (closeRound).
+   */
+  rework?: Rework;
 }
 
 // ---------- Ereignisse ----------
@@ -188,6 +215,7 @@ export type CaseEventType =
   | 'reparatur_abgeschlossen'
   | 'abschluss_bestaetigt'
   | 'problem_besteht_weiter'
+  | 'nachbesserung_verlangt'
   | 'bewertet'
   | 'pausiert'
   | 'fortgesetzt'
@@ -371,6 +399,10 @@ export interface Booking {
   binding?: { at: ISODateTime; amount: Cents };
   address?: Address;
   completionPhotoId?: Id;
+  /** Wann der Betrieb fertig war. Beginn der Gewährleistung für die Reparatur (Nr. 32). */
+  completedAt?: ISODateTime;
+  /** Dieser Termin ist die Nachbesserung zu diesem Reparaturtermin, ohne Kosten (Nr. 32) */
+  reworkOf?: Id;
   rating?: { stars: 1 | 2 | 3 | 4 | 5; at: ISODateTime };
   createdAt: ISODateTime;
 }

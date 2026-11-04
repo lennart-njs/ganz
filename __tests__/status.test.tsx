@@ -299,8 +299,11 @@ describe('Abschluss', () => {
     expect(useAppStore.getState().events.at(-1)?.type).toBe('bewertet');
   });
 
+  // Seit Nr. 32 nur nach Ablauf der Gewährleistung. Davor bessert der Betrieb nach, siehe
+  // warranty.test.tsx. Die Demo-Steuerung stellt die Reparatur dafür länger zurück.
   test('„Problem besteht weiter“ öffnet den Fall wieder', async () => {
     const { id, r } = await repaired();
+    await act(async () => useAppStore.getState().setDemo({ repairLongAgo: true }));
     await tap(de.finish.stillBroken);
     expect(caseOf(id).status).toBe('eskaliert');
     expect(r.getPathname()).toBe(`/fall/${id}`);
@@ -309,9 +312,12 @@ describe('Abschluss', () => {
     ).toBeTruthy();
   });
 
+  // Seit Nr. 32 nach Ablauf der Gewährleistung, wie in der Demo mit „Reparatur liegt länger zurück“
   test('nach „Problem besteht weiter“ beginnt eine neue Runde: Vor Ort, Befund, Kosten, Meldung und Termin', async () => {
     const { id } = await repaired();
+    await act(async () => useAppStore.getState().setDemo({ repairLongAgo: true }));
     await tap(de.finish.stillBroken);
+    expect(caseOf(id).rework).toBeUndefined();
     // Der Status sagt nicht mehr „Repariert.“, der alte Termin zählt nicht mehr
     const view = statusView(useAppStore.getState(), caseOf(id));
     expect(view.headline).not.toBe(de.status.headline.repariert);
@@ -369,12 +375,15 @@ describe('Abschluss', () => {
     expect(caseOf(id).status).toBe('erledigt');
   });
 
+  // Seit Nr. 32 öffnet er sich in der Gewährleistung als Nachbesserung, ohne neue Meldung
   test('auch nach „Läuft wieder“ lässt sich ein erledigter Fall wieder öffnen', async () => {
     const { id, r } = await repaired();
     await tap(de.finish.runsAgain);
     await tap(de.finish.stillBroken);
-    expect(caseOf(id).status).toBe('eskaliert');
+    expect(caseOf(id).status).toBe('nachbesserung');
     expect(caseOf(id).closedAt).toBeUndefined();
+    expect(caseOf(id).claim).toBeUndefined();
+    expect(caseOf(id).rework?.repairBookingId).toBe(caseOf(id).rounds?.[0]?.bookingIds[0]);
     expect(r.getPathname()).toBe(`/fall/${id}`);
   });
 });

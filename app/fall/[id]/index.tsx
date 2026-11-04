@@ -751,7 +751,7 @@ export default function FallGespraech() {
       e.id,
       <BotSays
         lines={[de.closeCase.partnerNotice(partner)]}
-        hint={e.payload.ordered ? de.closeCase.costsOpen(partner) : undefined}
+        hint={e.payload.costsOpen ? de.closeCase.costsOpen(partner) : undefined}
       />,
     );
   }

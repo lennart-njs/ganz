@@ -98,6 +98,13 @@ export const demoConfig = {
     diagnosis: 7900 as Cents,
   },
 
+  /**
+   * Gesetzliche Gewährleistung für eine Reparatur (Entscheidung Nr. 32). Annahme bis zur Antwort
+   * des Anwalts: 24 Monate ab Abschluss der Reparatur (§ 634a Abs. 1 Nr. 1 BGB, Rechtsfrage 52).
+   * Beispielwert, keine Rechtsauskunft.
+   */
+  warranty: { months: 24, isAssumption: true },
+
   slots: ['Mo vormittags', 'Di nachmittags', 'Mi vormittags', 'Do abends'],
 
   /** Sichtbare Fallnummer. GS-24817 ist auch im Versicherer-Portal der Demo. */

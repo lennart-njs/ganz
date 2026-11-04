@@ -80,12 +80,21 @@ const claim = z.object({
     .optional(),
 });
 
+const rework = z.object({
+  repairBookingId: id,
+  provider: partnerRef.extend({ authorized: z.boolean() }),
+  completedAt: time,
+  until: time,
+  claimedAt: time,
+});
+
 const caseRound = z.object({
   endedAt: time,
   quoteId: id.optional(),
   claim: claim.optional(),
   bookingIds: z.array(id),
   findingIds: z.array(id),
+  rework: rework.optional(),
 });
 
 const caseRecord = z.object({
@@ -101,6 +110,7 @@ const caseRecord = z.object({
     'freigegeben',
     'abgelehnt',
     'in_reparatur',
+    'nachbesserung',
     'erledigt',
     'abgebrochen',
   ]),
@@ -128,6 +138,7 @@ const caseRecord = z.object({
   updatedAt: time,
   closedAt: time.optional(),
   rounds: z.array(caseRound).optional(),
+  rework: rework.optional(),
 });
 
 const caseEvent = z.object({
@@ -164,6 +175,7 @@ const caseEvent = z.object({
     'reparatur_abgeschlossen',
     'abschluss_bestaetigt',
     'problem_besteht_weiter',
+    'nachbesserung_verlangt',
     'bewertet',
     'pausiert',
     'fortgesetzt',
@@ -291,6 +303,8 @@ const booking = z.object({
   binding: z.object({ at: time, amount: cents }).optional(),
   address: address.optional(),
   completionPhotoId: id.optional(),
+  completedAt: time.optional(),
+  reworkOf: id.optional(),
   rating: z.object({ stars: z.literal([1, 2, 3, 4, 5]), at: time }).optional(),
   createdAt: time,
 });
@@ -314,6 +328,7 @@ const demoSettings = z.object({
   videoScenario: z.enum(['verbunden', 'keine_fachkraft']),
   claimScenario: z.enum(['freigeben', 'ablehnen']),
   deductible: cents,
+  repairLongAgo: z.boolean(),
   dismissedHints: z.array(z.string()),
 });
 

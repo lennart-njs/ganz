@@ -1,5 +1,7 @@
 // Runden eines Falls. „Problem besteht weiter“ beendet eine Runde, danach geht es wieder über
-// Hilfe holen, Befund, Kosten und Termin (REVIEW 5, Soll-Flow). Befund, Kostenvoranschlag,
+// Hilfe holen, Befund, Kosten und Termin (REVIEW 5, Soll-Flow). In der Gewährleistung ist die
+// neue Runde eine Nachbesserung beim selben Betrieb, ohne Schadenfall und ohne Kosten (Nr. 32,
+// model/policies/warranty.ts). Befund, Kostenvoranschlag,
 // Schadenfall und Termine der alten Runde bleiben im Fall, zählen für die Regeln aber nicht mehr.
 // Sonst bliebe der Fall nach einer misslungenen Reparatur stehen: Der erledigte Termin zählte
 // weiter, und es gäbe weder Kosten noch einen neuen Termin.
@@ -27,7 +29,9 @@ export function currentBookings(c: Case, bookings: readonly Booking[]): Booking[
 
 /**
  * Schließt die laufende Runde ab: Kostenvoranschlag, Schadenfall, Termine und Befunde wandern in
- * c.rounds. Der Fall selbst hat danach weder Kostenvoranschlag noch Schadenfall.
+ * c.rounds. Der Fall selbst hat danach weder Kostenvoranschlag noch Schadenfall. War die Runde eine
+ * Nachbesserung (Nr. 32), steht das an der Runde. Beginnt danach eine Nachbesserung, setzt der
+ * Aufrufer c.rework für die neue Runde.
  */
 export function closeRound(
   c: Case,
@@ -42,6 +46,7 @@ export function closeRound(
     ...c,
     quoteId: undefined,
     claim: undefined,
+    rework: undefined,
     rounds: [
       ...(c.rounds ?? []),
       {
@@ -50,6 +55,7 @@ export function closeRound(
         claim: c.claim,
         bookingIds: currentBookings(c, s.bookings).map((b) => b.id),
         findingIds,
+        ...(c.rework ? { rework: c.rework } : {}),
       },
     ],
   };

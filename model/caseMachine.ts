@@ -29,6 +29,7 @@ export type CaseCommand =
   | 'selbst_zahlen'
   | 'repariert'
   | 'problem_besteht_weiter'
+  | 'nachbesserung_verlangen'
   | 'abbrechen';
 
 export const TRANSITIONS: Record<CaseStatus, Partial<Record<CaseCommand, CaseStatus>>> = {
@@ -47,13 +48,23 @@ export const TRANSITIONS: Record<CaseStatus, Partial<Record<CaseCommand, CaseSta
   },
   freigegeben: { termin_bestaetigt: 'in_reparatur', abbrechen: 'abgebrochen' },
   abgelehnt: { selbst_zahlen: 'in_reparatur', abbrechen: 'abgebrochen' },
-  // Abbrechen auch in der Reparatur (Entscheidung Nr. 34): Der Betrieb bekommt die Absage
+  // Abbrechen auch in der Reparatur (Entscheidung Nr. 34): Der Betrieb bekommt die Absage.
+  // „Problem besteht weiter“ in der Gewährleistung: Der Betrieb bessert nach (Nr. 32), sonst
+  // beginnt eine neue Runde mit Hilfe holen.
   in_reparatur: {
+    repariert: 'erledigt',
+    problem_besteht_weiter: 'eskaliert',
+    nachbesserung_verlangen: 'nachbesserung',
+    abbrechen: 'abgebrochen',
+  },
+  // Hilft auch die Nachbesserung nicht, beginnt eine neue Runde. Eine zweite Nachbesserung derselben
+  // Reparatur gibt es nicht, die weiteren Rechte klärt der Anwalt (Rechtsfrage 53).
+  nachbesserung: {
     repariert: 'erledigt',
     problem_besteht_weiter: 'eskaliert',
     abbrechen: 'abgebrochen',
   },
-  erledigt: { problem_besteht_weiter: 'eskaliert' },
+  erledigt: { problem_besteht_weiter: 'eskaliert', nachbesserung_verlangen: 'nachbesserung' },
   abgebrochen: {},
 };
 
@@ -70,6 +81,7 @@ export const ALL_COMMANDS: CaseCommand[] = [
   'selbst_zahlen',
   'repariert',
   'problem_besteht_weiter',
+  'nachbesserung_verlangen',
   'abbrechen',
 ];
 
@@ -170,6 +182,7 @@ const commandEvents: Partial<Record<CaseCommand, CaseEventType>> = {
   freigabe_abgelehnt: 'freigabe_entschieden',
   termin_bestaetigt: 'termin_bestaetigt',
   problem_besteht_weiter: 'problem_besteht_weiter',
+  nachbesserung_verlangen: 'nachbesserung_verlangt',
   abbrechen: 'abgebrochen',
 };
 
@@ -291,7 +304,7 @@ function applyChecked(c: Case, command: CaseCommand, ctx: CommandContext): Comma
   if (resolution) next.resolution = resolution;
   if (to === 'erledigt' || to === 'abgebrochen') next.closedAt = ctx.now;
   if (to === 'abgebrochen') next.cancelReason = ctx.cancelReason;
-  if (command === 'problem_besteht_weiter') {
+  if (command === 'problem_besteht_weiter' || command === 'nachbesserung_verlangen') {
     next.closedAt = undefined;
     next.resolution = undefined;
   }

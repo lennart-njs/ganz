@@ -80,10 +80,33 @@ const allowed = pairs.filter(([s, c]) => TRANSITIONS[s][c] !== undefined);
 const forbidden = pairs.filter(([s, c]) => TRANSITIONS[s][c] === undefined);
 
 describe('Status-Maschine', () => {
-  test('deckt alle 9 Status und 12 Befehle ab', () => {
-    expect(ALL_STATUSES).toHaveLength(9);
-    expect(ALL_COMMANDS).toHaveLength(12);
-    expect(allowed.length + forbidden.length).toBe(108);
+  // Seit Nr. 32 mit Status nachbesserung und Befehl nachbesserung_verlangen
+  test('deckt alle 10 Status und 13 Befehle ab', () => {
+    expect(ALL_STATUSES).toHaveLength(10);
+    expect(ALL_COMMANDS).toHaveLength(13);
+    expect(allowed.length + forbidden.length).toBe(130);
+  });
+
+  test('Nachbesserung (Nr. 32): aus der Reparatur oder erledigt, danach wie eine Reparatur', () => {
+    expect(TRANSITIONS.in_reparatur.nachbesserung_verlangen).toBe('nachbesserung');
+    expect(TRANSITIONS.erledigt.nachbesserung_verlangen).toBe('nachbesserung');
+    expect(TRANSITIONS.nachbesserung).toEqual({
+      repariert: 'erledigt',
+      problem_besteht_weiter: 'eskaliert',
+      abbrechen: 'abgebrochen',
+    });
+    // Keine Nachbesserung einer Nachbesserung, kein Schadenfall, kein Selbstzahlen
+    for (const status of ALL_STATUSES) {
+      if (status !== 'in_reparatur' && status !== 'erledigt') {
+        expect(TRANSITIONS[status].nachbesserung_verlangen).toBeUndefined();
+      }
+    }
+    const done = applyCommand(makeCase('in_reparatur'), 'repariert', ctx()).case;
+    const again = applyCommand(done, 'nachbesserung_verlangen', ctx());
+    expect(again.case).toMatchObject({ status: 'nachbesserung' });
+    expect(again.case.closedAt).toBeUndefined();
+    expect(again.case.resolution).toBeUndefined();
+    expect(again.events.map((e) => e.type)).toEqual(['nachbesserung_verlangt', 'status_geaendert']);
   });
 
   test.each(allowed)('erlaubt: %s → %s', (status, command) => {

@@ -7,7 +7,7 @@ import {
   type ActionKey,
 } from '@/model/policies/actions';
 import type { CaseFacts } from '@/model/policies/caseFacts';
-import type { Booking, BookingStatus, CaseStatus, Quote } from '@/model/types';
+import type { Booking, BookingStatus, CaseStatus, Quote, Rework } from '@/model/types';
 
 const NOW = '2026-11-03T10:00:00+01:00';
 
@@ -22,6 +22,15 @@ const quote: Quote = {
   deductible: 0,
   isExample: true,
   createdAt: NOW,
+};
+
+/** Nachbesserung in der Gewährleistung (Nr. 32) zum Reparaturtermin termin-erledigt */
+const rework: Rework = {
+  repairBookingId: 'termin-erledigt',
+  provider: { id: 'betrieb-1', kind: 'betrieb', name: 'Betrieb', authorized: true },
+  completedAt: NOW,
+  until: '2028-11-03T09:00:00.000Z',
+  claimedAt: NOW,
 };
 
 function booking(status: BookingStatus, extra: Partial<Booking> = {}): Booking {
@@ -124,6 +133,12 @@ const table: [CaseStatus, Partial<CaseFacts>, ActionKey[]][] = [
     'in_reparatur',
     { quote, payer: 'haushalt', ...repair('bestaetigt') },
     ['pausieren', 'abbrechen'],
+  ],
+  // Nachbesserung in der Gewährleistung (Nr. 32): nur der Termin beim Betrieb der Reparatur
+  [
+    'nachbesserung',
+    { rework, payer: 'betrieb' },
+    ['nachbesserung_anfragen', 'pausieren', 'abbrechen'],
   ],
   ['erledigt', {}, ['problem_besteht_weiter']],
   ['abgebrochen', { ...withContract }, []],
@@ -404,5 +419,69 @@ describe('Nach einem Widerruf (R-12)', () => {
     for (const status of ALL_STATUSES) {
       expect(can(facts(status, withContract), 'weitergabe_erneuern')).toBe(false);
     }
+  });
+});
+
+describe('Nachbesserung in der Gewährleistung (Nr. 32)', () => {
+  const reworkBooking = (status: BookingStatus) =>
+    repair(status, { id: 'termin-nach', reworkOf: rework.repairBookingId });
+
+  test('der Termin geht nur in einer Nachbesserung, ohne Halt und nur einmal je Runde', () => {
+    expect(can(facts('nachbesserung', { rework }), 'nachbesserung_anfragen')).toBe(true);
+    expect(can(facts('nachbesserung'), 'nachbesserung_anfragen')).toBe(false);
+    expect(
+      can(facts('nachbesserung', { rework, hold: 'weitergabe_betrieb' }), 'nachbesserung_anfragen'),
+    ).toBe(false);
+    expect(
+      can(
+        facts('nachbesserung', { rework, ...reworkBooking('angefragt') }),
+        'nachbesserung_anfragen',
+      ),
+    ).toBe(false);
+    for (const status of ALL_STATUSES) {
+      if (status === 'nachbesserung') continue;
+      expect([status, can(facts(status, { rework }), 'nachbesserung_anfragen')]).toEqual([
+        status,
+        false,
+      ]);
+    }
+  });
+
+  test('ohne gültige Weitergabe: erst erneut bestätigen, abbrechen geht', () => {
+    const held = facts('nachbesserung', { rework, hold: 'weitergabe_betrieb' });
+    expect(availableActions(held)).toEqual(['weitergabe_erneuern', 'pausieren', 'abbrechen']);
+  });
+
+  test('keine Kosten, kein Schadenfall, kein Tap: nur Termin, Abschluss und Bewertung', () => {
+    const forbidden: ActionKey[] = [
+      'schaden_melden',
+      'selbst_zahlen',
+      'selbst_zahlen_nach_ablehnung',
+      'termin_versicherer',
+      'termin_selbst',
+      'zahlungspflichtig_buchen',
+      'nicht_buchen',
+      'termin_diagnose',
+      'videocall_anfragen',
+      'hilfe_holen',
+    ];
+    for (const status of ['angefragt', 'bestaetigt', 'unterwegs', 'erledigt'] as const) {
+      const f = facts('nachbesserung', {
+        rework,
+        payer: 'betrieb',
+        hasContract: true,
+        deductible: 5000,
+        ...reworkBooking(status),
+      });
+      for (const key of forbidden) expect([key, can(f, key)]).toEqual([key, false]);
+    }
+    const done = facts('nachbesserung', { rework, ...reworkBooking('erledigt') });
+    expect(availableActions(done)).toEqual([
+      'reparatur_bestaetigen',
+      'problem_besteht_weiter',
+      'bewerten',
+      'pausieren',
+      'abbrechen',
+    ]);
   });
 });

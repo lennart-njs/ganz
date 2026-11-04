@@ -15,13 +15,26 @@ const running = (b: Booking) =>
 
 /**
  * Hat der Betrieb den Auftrag schon (Entscheidung Nr. 34)? Ja, wenn er den Termin bestätigt hat,
- * wenn du zahlungspflichtig gebucht hast oder wenn die Reparatur geplant ist. Dann sagt ganz beim
- * Abbrechen nicht, dass keine Kosten entstehen (§ 648 BGB). Eine unverbindliche Anfrage ist kein
- * Auftrag.
+ * wenn du zahlungspflichtig gebucht hast oder wenn Reparatur oder Nachbesserung geplant sind. Dann
+ * sagt ganz beim Abbrechen nicht, dass keine Kosten entstehen (§ 648 BGB). Eine unverbindliche
+ * Anfrage ist kein Auftrag.
  */
 export function isOrdered(c: Case, b: Booking): boolean {
   if (!running(b)) return false;
-  return !!b.binding || b.status !== 'angefragt' || c.status === 'in_reparatur';
+  return (
+    !!b.binding ||
+    b.status !== 'angefragt' ||
+    c.status === 'in_reparatur' ||
+    c.status === 'nachbesserung'
+  );
+}
+
+/**
+ * Kann ein Abbruch Kosten auslösen, die der Betrieb mit dir klärt? Nur bei einem Auftrag, für den du
+ * etwas schuldest. Die Nachbesserung kostet dich nichts Neues (Nr. 32), dort fehlt der Satz.
+ */
+export function cancelMayCost(c: Case, b: Booking): boolean {
+  return isOrdered(c, b) && !b.reworkOf;
 }
 
 /**

@@ -24,7 +24,13 @@ import {
   type CommandResult,
 } from '@/model/caseMachine';
 import { can } from '@/model/policies/actions';
-import { bookingsToCancel, isOrdered, planBooking } from '@/model/policies/bookingRules';
+import {
+  booked,
+  bookingsToCancel,
+  cancelMayCost,
+  isOrdered,
+  planBooking,
+} from '@/model/policies/bookingRules';
 import { selectCaseFacts, type BindingReason, type HoldPurpose } from '@/model/policies/caseFacts';
 import { scopedConsent } from '@/model/policies/consentScopes';
 import {
@@ -35,6 +41,7 @@ import {
 } from '@/model/policies/openCase';
 import { amountDue, bookingCosts } from '@/model/policies/payer';
 import { closeRound, currentBookings } from '@/model/policies/rounds';
+import { addMonths, checkWarranty } from '@/model/policies/warranty';
 import { ok, refuse, type Refused, type Result } from '@/model/result';
 import type {
   Booking,
@@ -80,6 +87,11 @@ export interface DemoSettings {
   claimScenario: 'freigeben' | 'ablehnen';
   /** Selbstbeteiligung im Pitch, Standard aus der Konfiguration */
   deductible: Cents;
+  /**
+   * „Reparatur liegt länger zurück“: Die Prüfung nach „Problem besteht weiter“ tut so, als wäre die
+   * Gewährleistung schon vorbei (Nr. 32). So zeigt der Pitch beide Wege. Kein Datum wird geändert.
+   */
+  repairLongAgo: boolean;
   /** Geschlossene Tipps */
   dismissedHints: string[];
 }
@@ -91,6 +103,7 @@ export const defaultDemoSettings: DemoSettings = {
   videoScenario: 'verbunden',
   claimScenario: 'freigeben',
   deductible: demoConfig.contract.deductible,
+  repairLongAgo: false,
   dismissedHints: [],
 };
 
@@ -273,8 +286,19 @@ export interface AppActions {
    * Ohne gültige Weitergabe für den Schritt passiert nichts, siehe simulationHold.
    */
   simulateNext: (caseId: Id) => boolean;
-  /** Abschluss nach der Reparatur: „Läuft wieder“ oder „Problem besteht weiter“, nach den Regeln */
+  /**
+   * Abschluss nach der Reparatur: „Läuft wieder“ oder „Problem besteht weiter“, nach den Regeln.
+   * „Problem besteht weiter“ prüft die Gewährleistung (Nr. 32, checkWarranty): Läuft sie noch,
+   * bessert derselbe Betrieb nach, in einer markierten Runde ohne Schadenfall und ohne Kosten.
+   * Sonst beginnt eine neue Runde wie bisher. Ein set.
+   */
   confirmRepair: (caseId: Id, works: boolean) => Result<Case>;
+  /**
+   * Termin für die Nachbesserung (Nr. 32): beim Betrieb der Reparatur, ohne Betrag, ohne
+   * „Zahlungspflichtig buchen“. Nur wo die Regel nachbesserung_anfragen gilt und mit gültiger
+   * Weitergabe an genau diesen Betrieb. Eine neue Bestätigung entsteht dabei nicht.
+   */
+  requestRework: (caseId: Id, slotLabel: string) => Result<Booking>;
   rateBooking: (bookingId: Id, stars: 1 | 2 | 3 | 4 | 5) => void;
   /** Befund der Fachkraft oder des Betriebs, bei Reparatur mit Kostenvoranschlag. Ein set. */
   setFinding: (
@@ -545,6 +569,9 @@ export function createAppStore(storage: StateStorage = AsyncStorage, env: StoreE
                 partner: b.provider.name,
                 slot: b.slotLabel,
                 ordered: isOrdered(c, b),
+                // Ob der Betrieb mit dir klärt, ob Kosten entstanden sind. Nicht bei der
+                // Nachbesserung, die kostet dich nichts Neues (Nr. 32).
+                costsOpen: cancelMayCost(c, b),
               },
             }),
           );
@@ -1453,6 +1480,7 @@ export function createAppStore(storage: StateStorage = AsyncStorage, env: StoreE
             const confirmable =
               c.status === 'freigegeben' ||
               c.status === 'in_reparatur' ||
+              c.status === 'nachbesserung' ||
               (c.status === 'eskaliert' && booking.kind === 'vor_ort_diagnose');
             if (booking.status === 'angefragt' && confirmable) {
               if (c.status === 'freigegeben') {
@@ -1486,7 +1514,7 @@ export function createAppStore(storage: StateStorage = AsyncStorage, env: StoreE
             }
             if (booking.status === 'unterwegs') {
               if (booking.kind === 'vor_ort_diagnose') {
-                setBooking({ status: 'erledigt' });
+                setBooking({ status: 'erledigt', completedAt: env.now() });
                 get().setFinding(caseId, 'reparatur', 'betrieb');
                 notify();
                 return true;
@@ -1498,12 +1526,21 @@ export function createAppStore(storage: StateStorage = AsyncStorage, env: StoreE
                 source: 'betrieb',
                 uri: '',
               });
-              setBooking({ status: 'erledigt', completionPhotoId: photo.id });
+              // Der Abschluss ist der Beginn der Gewährleistung (Nr. 32)
+              setBooking({
+                status: 'erledigt',
+                completionPhotoId: photo.id,
+                completedAt: env.now(),
+              });
               get().addEvent({
                 caseId,
                 type: 'reparatur_abgeschlossen',
                 actor: betrieb,
-                payload: { bookingId: booking.id, photoId: photo.id },
+                payload: {
+                  bookingId: booking.id,
+                  photoId: photo.id,
+                  ...(booking.reworkOf ? { rework: true } : {}),
+                },
               });
               notify();
               return true;
@@ -1515,14 +1552,52 @@ export function createAppStore(storage: StateStorage = AsyncStorage, env: StoreE
             const c = get().cases[caseId];
             if (!c) return missingCase(caseId);
             const action = works ? 'reparatur_bestaetigen' : 'problem_besteht_weiter';
-            if (!can(selectCaseFacts(get(), caseId), action))
-              return refuse({ code: 'regel', action });
-            const result = draftCommand(c, works ? 'repariert' : 'problem_besteht_weiter');
+            const facts = selectCaseFacts(get(), caseId);
+            if (!facts || !can(facts, action)) return refuse({ code: 'regel', action });
+            // Hat die Reparatur nicht geholfen: Läuft die Gewährleistung noch (Nr. 32)? Die Demo
+            // kann so tun, als wäre sie vorbei. Dann prüft sie einen Tag nach dem Ende der Frist.
+            const now = env.now();
+            const months = demoConfig.warranty.months;
+            const asOf = get().demo.repairLongAgo ? addMonths(now, months + 1) : now;
+            const warranty = works ? undefined : checkWarranty(facts, asOf, months);
+            const command: CaseCommand = works
+              ? 'repariert'
+              : warranty?.within
+                ? 'nachbesserung_verlangen'
+                : 'problem_besteht_weiter';
+            const result = draftCommand(c, command);
             if (!result.ok) return result;
-            // Die Reparatur hat nicht geholfen: Eine neue Runde beginnt (model/policies/rounds.ts)
-            const next = works
-              ? result.value.case
-              : closeRound(result.value.case, get(), env.now());
+            // Die Fallakte sagt, warum: Nachbesserung mit Betrieb und Frist, oder warum nicht
+            const events = result.value.events.map((e) => {
+              if (e.type === 'nachbesserung_verlangt' && warranty?.within) {
+                const r = warranty.rework;
+                return {
+                  ...e,
+                  payload: {
+                    bookingId: r.repairBookingId,
+                    partner: r.provider.name,
+                    completedAt: r.completedAt,
+                    until: r.until,
+                  },
+                };
+              }
+              if (e.type === 'problem_besteht_weiter' && warranty && !warranty.within) {
+                return {
+                  ...e,
+                  payload: {
+                    warranty: warranty.reason,
+                    ...(get().demo.repairLongAgo ? { demoLongAgo: true } : {}),
+                  },
+                };
+              }
+              return e;
+            });
+            // Die Runde endet (model/policies/rounds.ts). In der Gewährleistung ist die neue Runde
+            // eine Nachbesserung beim selben Betrieb, ohne Schadenfall und ohne Kosten.
+            const closed = works ? result.value.case : closeRound(result.value.case, get(), now);
+            const next: Case = warranty?.within
+              ? { ...closed, rework: { ...warranty.rework, claimedAt: now } }
+              : closed;
             const confirmed = works
               ? [
                   draftEvent({
@@ -1535,9 +1610,68 @@ export function createAppStore(storage: StateStorage = AsyncStorage, env: StoreE
               : [];
             set((s) => ({
               cases: { ...s.cases, [caseId]: next },
-              events: [...s.events, ...result.value.events, ...confirmed],
+              events: [...s.events, ...events, ...confirmed],
             }));
             return ok(next);
+          },
+
+          requestRework: (caseId, slotLabel) => {
+            const c = get().cases[caseId];
+            if (!c) return missingCase(caseId);
+            const facts = selectCaseFacts(get(), caseId)!;
+            const rework = facts.rework;
+            if (!rework || facts.closed) {
+              return refuse({ code: 'regel', action: 'nachbesserung_anfragen' });
+            }
+            if (booked(facts, 'reparatur'))
+              return refuse({ code: 'termin_laeuft', kind: 'reparatur' });
+            // Derselbe Betrieb mit der Weitergabe, die er für die Reparatur bekam (lit. b). Nach
+            // einem Widerruf bestätigst du sie erst erneut (renewTransfer).
+            const shared = findActiveConsent(
+              get().consents,
+              c.reportedBy,
+              'weitergabe_betrieb',
+              caseId,
+              rework.provider.id,
+            );
+            if (!shared) return refuse({ code: 'bestaetigung', purpose: 'weitergabe_betrieb' });
+            if (!can(facts, 'nachbesserung_anfragen')) {
+              return refuse({ code: 'regel', action: 'nachbesserung_anfragen' });
+            }
+            const booking: Booking = {
+              id: env.newId('termin'),
+              caseId,
+              kind: 'reparatur',
+              provider: { ...rework.provider },
+              slotLabel,
+              status: 'angefragt',
+              subjectToApproval: false,
+              reworkOf: rework.repairBookingId,
+              address: get().household?.address,
+              createdAt: env.now(),
+            };
+            const requested = draftEvent({
+              caseId,
+              type: 'termin_angefragt',
+              actor: householdActor(),
+              payload: {
+                bookingId: booking.id,
+                kind: booking.kind,
+                partner: booking.provider.name,
+                slot: slotLabel,
+                subjectToApproval: false,
+                rework: true,
+              },
+            });
+            set((s) => ({
+              bookings: [...s.bookings, booking],
+              cases: {
+                ...s.cases,
+                [caseId]: { ...c, bookingId: booking.id, updatedAt: env.now() },
+              },
+              events: [...s.events, requested],
+            }));
+            return ok(booking);
           },
 
           rateBooking: (bookingId, stars) => {
@@ -1624,7 +1758,9 @@ export function createAppStore(storage: StateStorage = AsyncStorage, env: StoreE
               if (!contract) return refuse({ code: 'vertrag' });
               recipient = contract.provider;
             } else {
-              const provider = facts.booking!.provider;
+              // Der gebuchte Betrieb, oder vor dem Termin zur Nachbesserung der Betrieb der Reparatur
+              const provider = facts.booking?.provider ?? facts.rework?.provider;
+              if (!provider) return refuse({ code: 'regel', action: 'weitergabe_erneuern' });
               recipient = { id: provider.id, kind: provider.kind, name: provider.name };
             }
             const { consent, events } = draftConsent(

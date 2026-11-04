@@ -17,6 +17,7 @@ import type {
   GuideRun,
   Id,
   Quote,
+  Rework,
   VideoSession,
 } from '../types';
 
@@ -25,8 +26,11 @@ export type BookingKind = Booking['kind'];
 /** Stand des Schadenfalls */
 export type ClaimState = 'keiner' | 'in_pruefung' | 'freigegeben' | 'abgelehnt';
 
-/** Wer die Reparatur zahlt, sobald es feststeht */
-export type PayerKind = 'versicherer' | 'haushalt';
+/**
+ * Wer die Reparatur zahlt, sobald es feststeht. Bei der Nachbesserung in der Gewährleistung trägt
+ * der Betrieb die Kosten (§ 635 Abs. 2 BGB, Nr. 32).
+ */
+export type PayerKind = 'versicherer' | 'haushalt' | 'betrieb';
 
 /** Was du mit „Zahlungspflichtig buchen“ zahlst: die Selbstbeteiligung oder den Preis des Betriebs */
 export type BindingReason = 'selbstbeteiligung' | 'preis';
@@ -76,6 +80,11 @@ export interface CaseFacts {
   deductible: Cents;
   /** Kostenvoranschlag der laufenden Runde (model/policies/rounds.ts) */
   quote?: Quote;
+  /**
+   * Die laufende Runde ist eine Nachbesserung in der Gewährleistung (Nr. 32): derselbe Betrieb,
+   * kein Schadenfall, kein Betrag für den Haushalt.
+   */
+  rework?: Rework;
   claim: ClaimState;
   /** Wer zahlt. Offen, solange der Versicherer prüft oder du noch entscheidest. */
   payer?: PayerKind;
@@ -145,6 +154,8 @@ function payerOf(
   quote: Quote | undefined,
   repair: Booking | undefined,
 ): PayerKind | undefined {
+  // Nachbesserung: Der Betrieb trägt die Kosten, kein Schadenfall (Nr. 32)
+  if (c.rework) return 'betrieb';
   if (claim === 'freigegeben') return 'versicherer';
   if (claim === 'in_pruefung') return undefined;
   // Ohne Freigabe in der Reparatur: Der Haushalt hat selbst zahlen gewählt
@@ -185,7 +196,9 @@ function bindingDueOf(
 /**
  * Übergangsregel für den Widerruf bei lit. b, bis Entscheidung Nr. 16 steht: Die Entscheidung des
  * Versicherers braucht weitergabe_versicherer, jeder Schritt des Betriebs weitergabe_betrieb an
- * genau den gebuchten Betrieb. Gibt den Zweck zurück, dessen Bestätigung fehlt.
+ * genau den gebuchten Betrieb. Die Nachbesserung (Nr. 32) braucht sie schon für den Termin, denn
+ * dafür geht der Fall wieder an den Betrieb der Reparatur. Gibt den Zweck zurück, dessen
+ * Bestätigung fehlt.
  */
 function holdOf(
   c: Case,
@@ -197,14 +210,9 @@ function holdOf(
     const ok = findActiveConsent(consents, c.reportedBy, 'weitergabe_versicherer', c.id);
     return ok ? undefined : 'weitergabe_versicherer';
   }
-  if (!booking || booking.status === 'erledigt') return undefined;
-  const ok = findActiveConsent(
-    consents,
-    c.reportedBy,
-    'weitergabe_betrieb',
-    c.id,
-    booking.provider.id,
-  );
+  const provider = booking ? booking.provider : c.rework?.provider;
+  if (!provider || booking?.status === 'erledigt') return undefined;
+  const ok = findActiveConsent(consents, c.reportedBy, 'weitergabe_betrieb', c.id, provider.id);
   return ok ? undefined : 'weitergabe_betrieb';
 }
 
@@ -259,6 +267,7 @@ export function selectCaseFacts(s: CaseFactsSource, caseId: Id): CaseFacts | und
     hasContract,
     deductible,
     quote,
+    rework: c.rework,
     claim,
     payer: payerOf(c, claim, hasContract, quote, bookings.reparatur),
     bookings,

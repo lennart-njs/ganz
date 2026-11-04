@@ -40,12 +40,16 @@ export function CloseCaseSheet({
   const canCancel = useAppStore((s) =>
     caseId ? can(selectCaseFacts(s, caseId), 'abbrechen') : false,
   );
-  // Der Betrieb des laufenden Termins, und ob er den Auftrag schon hat (caseFacts.order)
+  // Der Betrieb des laufenden Termins, und ob er den Auftrag schon hat (caseFacts.order). Bei der
+  // Nachbesserung fehlt der Satz zu den Kosten, sie kostet dich nichts Neues (Nr. 32).
   const partner = useAppStore((s) => {
     const f = caseId ? selectCaseFacts(s, caseId) : undefined;
     return f?.bookingOpen ? f.booking?.provider.name : undefined;
   });
-  const ordered = useAppStore((s) => (caseId ? !!selectCaseFacts(s, caseId)?.order : false));
+  const ordered = useAppStore((s) => {
+    const order = caseId ? selectCaseFacts(s, caseId)?.order : undefined;
+    return !!order && !order.reworkOf;
+  });
   const pauseCase = useAppStore((s) => s.pauseCase);
   const runCommand = useAppStore((s) => s.runCommand);
   const [cancelling, setCancelling] = useState(false);

@@ -7,7 +7,8 @@
 // diesen Tap gibt es nie, solange der Versicherer prüft (Entscheidung Nr. 31). Die Vor-Ort-Diagnose
 // läuft erst mit Preis und Tap, und „Nicht buchen“ beendet die Anfrage ohne Kosten (Nr. 33).
 // Abbrechen geht auch in der Reparatur. Danach läuft kein Termin mehr, jeder bekommt seine Absage,
-// und die Simulation macht keinen Schritt mehr (Nr. 34).
+// und die Simulation macht keinen Schritt mehr (Nr. 34). Hilft eine Reparatur nicht, bessert der
+// Betrieb in der Gewährleistung nach, ohne Schadenfall und ohne Betrag (Nr. 32).
 import { array, assert, boolean, constantFrom, integer, nat, property } from 'fast-check';
 import type { StateStorage } from 'zustand/middleware';
 
@@ -142,6 +143,8 @@ function household(key: ActionKey, c: Case, f: CaseFacts, s: AppState): Step[] {
     }
     case 'nicht_buchen':
       return [step(key, (x) => x.declineBinding(id))];
+    case 'nachbesserung_anfragen':
+      return [step(key, (x) => x.requestRework(id, demoConfig.slots[2]!))];
     case 'reparatur_bestaetigen':
       return [step(key, (x) => x.confirmRepair(id, true))];
     case 'problem_besteht_weiter':
@@ -208,8 +211,25 @@ const pick = (groups: Step[][], choice: number): Step => {
 };
 
 /** Womit eine Folge beginnt. Jeder Stand entsteht über dieselben Befehle wie in der App. */
-type Start = 'leer' | 'befund' | 'gemeldet' | 'vorbehaltlich' | 'diagnose' | 'reparatur';
-const STARTS: Start[] = ['leer', 'befund', 'gemeldet', 'vorbehaltlich', 'diagnose', 'reparatur'];
+type Start =
+  | 'leer'
+  | 'befund'
+  | 'gemeldet'
+  | 'vorbehaltlich'
+  | 'diagnose'
+  | 'reparatur'
+  | 'nachbesserung'
+  | 'nachgebessert';
+const STARTS: Start[] = [
+  'leer',
+  'befund',
+  'gemeldet',
+  'vorbehaltlich',
+  'diagnose',
+  'reparatur',
+  'nachbesserung',
+  'nachgebessert',
+];
 
 function setup(
   start: Start,
@@ -217,11 +237,12 @@ function setup(
   devices: number,
   claimScenario: 'freigeben' | 'ablehnen',
   deductible: number,
+  repairLongAgo: boolean,
 ) {
   const store = createAppStore(nowhere, testEnv());
   const s = () => store.getState();
   s().ensureHousehold();
-  s().setDemo({ claimScenario, deductible });
+  s().setDemo({ claimScenario, deductible, repairLongAgo });
   if (contract) s().linkContract('vertragsnummer');
   for (let i = 0; i < devices; i++) {
     s().addDevice({
@@ -258,9 +279,16 @@ function setup(
   // Termin vorbehaltlich Freigabe: Nach der Freigabe wartet er mit Selbstbeteiligung auf den Tap
   // „Zahlungspflichtig buchen“ (Nr. 31)
   if (start === 'vorbehaltlich' && contract) booking('reparatur', false);
-  if (start === 'reparatur') {
+  if (start === 'reparatur' || start === 'nachbesserung' || start === 'nachgebessert') {
     // Selbst gezahlt, der Betrieb ist fertig
     booking('reparatur', true);
+    while (s().simulateNext(id));
+  }
+  // „Problem besteht weiter“: in der Gewährleistung die Nachbesserung, sonst eine neue Runde
+  if (start === 'nachbesserung' || start === 'nachgebessert') unwrap(s().confirmRepair(id, false));
+  // Der Betrieb hat nachgebessert, die Frage ist, ob das Gerät jetzt läuft
+  if (start === 'nachgebessert' && s().cases[id]?.rework) {
+    unwrap(s().requestRework(id, demoConfig.slots[1]!));
     while (s().simulateNext(id));
   }
   return store;
@@ -325,6 +353,8 @@ const bindings = (s: AppState, bookingId: string) =>
  * bindingViolation.
  */
 function owes(b: Booking, claim: Claim | undefined, deductible: number): boolean {
+  // Die Nachbesserung kostet den Haushalt nichts (Nr. 32), das prüft reworkViolation
+  if (b.reworkOf) return false;
   if (b.kind === 'vor_ort_diagnose') return b.price !== undefined && b.price > 0;
   if (b.kind !== 'reparatur') return false;
   const approved = claim?.decision?.result === 'freigegeben';
@@ -431,6 +461,69 @@ function cancelViolation(before: AppState, after: AppState, step: Step): string 
   return undefined;
 }
 
+/**
+ * Nr. 32: Eine Nachbesserung hat nie einen Schadenfall, nie einen Tap „Zahlungspflichtig buchen“
+ * und nie einen Betrag. Ihr Termin geht an den Betrieb der Reparatur, die sie nachbessert, und
+ * gehört zu einer Runde, die als Nachbesserung markiert ist. Eine Nachbesserung wird nicht noch
+ * einmal nachgebessert. Eine Nachbesserung gibt es nur innerhalb der Frist, mit „Reparatur liegt
+ * länger zurück“ nie.
+ */
+function reworkViolation(s: AppState, longAgo: boolean): string | undefined {
+  for (const c of Object.values(s.cases)) {
+    const rounds = c.rounds ?? [];
+    if (c.status === 'nachbesserung' && !c.rework) return `${c.id} Nachbesserung ohne Markierung`;
+    for (const r of [...rounds.map((x) => x), { claim: c.claim, rework: c.rework }]) {
+      if (r.rework && r.claim) return `${c.id} Nachbesserung mit Schadenfall`;
+      if (r.rework && Date.parse(r.rework.claimedAt) > Date.parse(r.rework.until))
+        return `${c.id} Nachbesserung nach Ablauf der Frist`;
+    }
+    const own = s.bookings.filter((b) => b.caseId === c.id);
+    for (const b of own.filter((x) => x.reworkOf)) {
+      const repaired = own.find((x) => x.id === b.reworkOf);
+      if (!repaired) return `${b.id} Nachbesserung ohne Reparatur`;
+      if (repaired.reworkOf) return `${b.id} Nachbesserung einer Nachbesserung`;
+      if (repaired.provider.id !== b.provider.id)
+        return `${b.id} Nachbesserung bei anderem Betrieb`;
+      if (b.binding || b.subjectToApproval || b.price !== undefined || bindings(s, b.id).length)
+        return `${b.id} Nachbesserung mit Betrag oder Freigabe`;
+      const round = rounds.find((r) => r.bookingIds.includes(b.id));
+      const marked = round ? round.rework : c.rework;
+      if (marked?.repairBookingId !== b.reworkOf) return `${b.id} Nachbesserung ohne ihre Runde`;
+    }
+    if (longAgo && s.events.some((e) => e.caseId === c.id && e.type === 'nachbesserung_verlangt'))
+      return `${c.id} Nachbesserung, obwohl die Reparatur länger zurückliegt`;
+  }
+  return undefined;
+}
+
+/**
+ * Nr. 32 je Schritt: Solange der Fall nachbessert, entsteht kein Schadenfall und kein Tap. Ein neuer
+ * Termin zur Nachbesserung braucht eine gültige Weitergabe an den Betrieb und legt keine neue an.
+ */
+function reworkStep(before: AppState, after: AppState): string | undefined {
+  for (const e of after.events.slice(before.events.length)) {
+    if (e.type !== 'schaden_gemeldet' && e.type !== 'zahlungspflichtig_gebucht') continue;
+    for (const s of [before, after]) {
+      if (s.cases[e.caseId]?.rework) return `${e.type} während der Nachbesserung in ${e.caseId}`;
+    }
+  }
+  for (const b of after.bookings.filter((x) => x.reworkOf)) {
+    if (before.bookings.some((x) => x.id === b.id)) continue;
+    const c = before.cases[b.caseId]!;
+    const active = before.consents.some(
+      (k) =>
+        k.caseId === c.id &&
+        k.purpose === 'weitergabe_betrieb' &&
+        !k.revokedAt &&
+        k.recipient.id === b.provider.id,
+    );
+    if (!active) return `${b.id} Nachbesserung ohne gültige Weitergabe`;
+    if (after.consents.length !== before.consents.length)
+      return `${b.id} Nachbesserung mit neuer Weitergabe`;
+  }
+  return undefined;
+}
+
 const isRefused = (r: unknown): boolean =>
   typeof r === 'object' && r !== null && 'ok' in r && (r as { ok: unknown }).ok === false;
 
@@ -447,9 +540,11 @@ test('1.000 zufällige Folgen aus availableActions: keine Exception, je Gerät h
       constantFrom('freigeben' as const, 'ablehnen' as const),
       // Selbstbeteiligung wie in der Demo-Steuerung: 0 € oder 50 € (Entscheidung Nr. 4)
       constantFrom(0, 5000),
+      // „Reparatur liegt länger zurück“ aus der Demo-Steuerung (Nr. 32)
+      boolean(),
       array(nat(), { minLength: 5, maxLength: 25, size: 'max' }),
-      (start, contract, devices, claimScenario, deductible, choices) => {
-        const store = setup(start, contract, devices, claimScenario, deductible);
+      (start, contract, devices, claimScenario, deductible, longAgo, choices) => {
+        const store = setup(start, contract, devices, claimScenario, deductible, longAgo);
         const trail: string[] = [start];
         for (const choice of choices) {
           const step = pick(menu(store), choice);
@@ -466,11 +561,24 @@ test('1.000 zufällige Folgen aus availableActions: keine Exception, je Gerät h
               : (violation(after) ??
                 bindingViolation(after) ??
                 bindingDuringReview(before, after) ??
-                cancelViolation(before, after, step));
+                cancelViolation(before, after, step) ??
+                reworkViolation(after, longAgo) ??
+                reworkStep(before, after));
           if (problem) throw new Error(`${problem} nach ${trail.join(' → ')}`);
           for (const c of Object.values(after.cases)) {
             if (before.cases[c.id]?.status === 'in_reparatur' && c.status === 'abgebrochen')
               reached.add('abbruch_in_reparatur');
+          }
+          for (const e of after.events.slice(before.events.length)) {
+            if (e.type === 'nachbesserung_verlangt') reached.add('nachbesserung');
+            if (e.type === 'problem_besteht_weiter' && typeof e.payload.warranty === 'string')
+              reached.add(`neue_runde_${e.payload.warranty}`);
+            if (e.type === 'termin_angefragt' && e.payload.rework)
+              reached.add('nachbesserung_termin');
+            if (e.type === 'termin_abgesagt' && e.payload.rework === undefined) {
+              const b = after.bookings.find((x) => x.id === e.payload.bookingId);
+              if (b?.reworkOf) reached.add('nachbesserung_abgesagt');
+            }
           }
         }
       },
@@ -480,5 +588,13 @@ test('1.000 zufällige Folgen aus availableActions: keine Exception, je Gerät h
   expect(steps).toBeGreaterThanOrEqual(RUNS * 10);
   // Die Folgen kommen überall hin: Jede Aktion des Haushalts lief mindestens einmal
   expect(ALL_ACTIONS.filter((a) => !seen.has(a))).toEqual([]);
-  expect([...reached].sort()).toEqual(['abbruch_in_reparatur']);
+  expect([...reached].sort()).toEqual([
+    'abbruch_in_reparatur',
+    'nachbesserung',
+    'nachbesserung_abgesagt',
+    'nachbesserung_termin',
+    'neue_runde_abgelaufen',
+    'neue_runde_keine_reparatur',
+    'neue_runde_nachbesserung_gescheitert',
+  ]);
 });

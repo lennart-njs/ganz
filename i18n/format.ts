@@ -21,6 +21,15 @@ export function formatDateTime(iso: ISODateTime): string {
   return `${day}, ${date} · ${time}`;
 }
 
+/** „04.11.2028“, z. B. das Ende der Gewährleistung */
+export function formatDate(iso: ISODateTime): string {
+  return new Intl.DateTimeFormat('de-DE', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+  }).format(new Date(iso));
+}
+
 /** „03/2023“ */
 export function formatMonthYear(iso: ISODateTime): string {
   const d = new Date(iso);

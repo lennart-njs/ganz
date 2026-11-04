@@ -429,6 +429,64 @@ describe('selectCaseFacts', () => {
     expect(second.rounds?.[1]).toMatchObject({ bookingIds: ['t-3'], findingIds: [] });
   });
 
+  test('Nachbesserung (Nr. 32): markierte Runde, Zahler Betrieb, kein Schadenfall, Weitergabe nötig', () => {
+    const rework = {
+      repairBookingId: 't-1',
+      provider: { id: 'betrieb-1', kind: 'betrieb' as const, name: 'Betrieb', authorized: true },
+      completedAt: NOW,
+      until: '2028-11-03T09:00:00.000Z',
+      claimedAt: NOW,
+    };
+    const repaired = makeCase({
+      status: 'in_reparatur',
+      quoteId: quote.id,
+      claim: claim('freigegeben'),
+    });
+    const bookings = [booking('t-1', { status: 'erledigt', completedAt: NOW })];
+    const reworking = {
+      ...closeRound({ ...repaired, status: 'nachbesserung' }, { bookings, diagnoses: [] }, NOW),
+      rework,
+    };
+    const shared = [consent('weitergabe_betrieb')];
+    const f = factsOf(reworking, { bookings, consents: shared });
+    expect(f).toMatchObject({ rework, payer: 'betrieb', claim: 'keiner', bookings: {} });
+    expect(f.quote).toBeUndefined();
+    expect(f.hold).toBeUndefined();
+    // Ohne gültige Weitergabe an den Betrieb der Reparatur hält der Fall schon vor dem Termin
+    expect(factsOf(reworking, { bookings }).hold).toBe('weitergabe_betrieb');
+    const other = [
+      consent('weitergabe_betrieb', { recipient: { id: 'x', kind: 'betrieb', name: 'X' } }),
+    ];
+    expect(factsOf(reworking, { bookings, consents: other }).hold).toBe('weitergabe_betrieb');
+    // Der Termin zur Nachbesserung zählt in der neuen Runde und ist ein Auftrag
+    const visit = booking('t-2', { reworkOf: 't-1' });
+    const booked = factsOf(reworking, { bookings: [...bookings, visit], consents: shared });
+    expect(booked.bookings.reparatur?.id).toBe('t-2');
+    expect(booked.order?.id).toBe('t-2');
+    // Endet die Nachbesserung mit „Problem besteht weiter“, steht sie an der Runde
+    const next = closeRound(
+      { ...reworking, status: 'eskaliert' },
+      { bookings: [...bookings, visit], diagnoses: [] },
+      NOW,
+    );
+    expect(next.rework).toBeUndefined();
+    expect(next.rounds?.map((r) => r.rework)).toEqual([undefined, rework]);
+    expect(factsOf(next, { bookings: [...bookings, visit] })).toMatchObject({
+      payer: undefined,
+      bookings: {},
+    });
+  });
+
+  test('Auftrag beim Betrieb (Nr. 34): bestätigt, verbindlich oder in der Reparatur', () => {
+    const order = (c: Partial<Case>, b: Partial<Booking>) =>
+      factsOf(makeCase(c), { bookings: [booking('t-1', b)] }).order?.id;
+    expect(order({}, {})).toBeUndefined();
+    expect(order({}, { status: 'bestaetigt' })).toBe('t-1');
+    expect(order({}, { binding: { at: NOW, amount: 7900 } })).toBe('t-1');
+    expect(order({ status: 'in_reparatur' }, {})).toBe('t-1');
+    expect(order({ status: 'in_reparatur' }, { status: 'erledigt' })).toBeUndefined();
+  });
+
   test('letzter Videocall', () => {
     const v = (id: string, caseId = 'GS-1'): VideoSession => ({
       id,

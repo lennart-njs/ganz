@@ -88,6 +88,8 @@ export const de = {
     freigegeben: 'Kosten freigegeben',
     abgelehnt: 'Kosten nicht freigegeben',
     in_reparatur: 'Reparatur geplant',
+    /** Gewährleistung: Der Betrieb bessert nach (Nr. 32) */
+    nachbesserung: 'Nachbesserung',
     erledigt: 'Erledigt',
     abgebrochen: 'Abgebrochen',
   },
@@ -124,6 +126,7 @@ export const de = {
     reparatur_abgeschlossen: 'Reparatur abgeschlossen',
     abschluss_bestaetigt: 'Läuft wieder',
     problem_besteht_weiter: 'Problem besteht weiter',
+    nachbesserung_verlangt: 'Nachbesserung in der Gewährleistung',
     bewertet: 'Bewertet',
     pausiert: 'Später weitermachen',
     fortgesetzt: 'Fortgesetzt',
@@ -1023,6 +1026,17 @@ export const de = {
         `${partner} · ${slot} · ${amount}`,
       /** Preis für die Vor-Ort-Diagnose (Nr. 33) */
       price: (partner: string, amount: string) => `${partner} · ${amount}`,
+      /** Nachbesserung (Nr. 32): Betrieb und Ende der Gewährleistung, Annahme bis zur Antwort des Anwalts */
+      rework: (partner: string, until: string) => `${partner} · Gewährleistung bis ${until}`,
+      /** Termin und Abschluss einer Nachbesserung */
+      reworkBooking: (partner: string, slot: string) =>
+        `Nachbesserung, Gewährleistung · ${partner} · ${slot}`,
+      reworkDone: 'Nachbesserung, Gewährleistung',
+      /** Warum nach „Problem besteht weiter“ keine Nachbesserung kam */
+      noRework: {
+        abgelaufen: 'Gewährleistung abgelaufen',
+        nachbesserung_gescheitert: 'Nachbesserung hat nicht geholfen',
+      },
       stars: (n: number) => `${n} von 5 Sternen`,
       answer: (q: string, a: string) => `${q} ${a}`,
       note: (note: string) => `Notiz: ${note}`,

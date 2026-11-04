@@ -5,11 +5,13 @@ import { de } from '@/i18n/de';
 import { demoNames, textStamp } from '@/lib/legalTexts';
 import { availableActions, can } from '@/model/policies/actions';
 import { selectCaseFacts } from '@/model/policies/caseFacts';
+import { addMonths } from '@/model/policies/warranty';
 import {
   createAppStore,
   nextSimulationDue,
   selectCaseEvents,
   selectOpenCases,
+  type AppState,
 } from '@/store/appStore';
 import type { StoreEnv } from '@/store/env';
 import { unwrap } from '@/test/result';
@@ -1490,5 +1492,235 @@ describe('Abbrechen in der Reparatur (Entscheidung Nr. 34)', () => {
     expect(s().consents.filter((c) => c.purpose === 'weitergabe_betrieb' && !c.revokedAt)).toEqual(
       [],
     );
+  });
+});
+
+describe('Gewährleistung nach „Problem besteht weiter“ (Entscheidung Nr. 32)', () => {
+  const partner = demoConfig.partners[0]!;
+  /** Uhr, die der Test vorstellen kann */
+  const clock = { t: Date.parse('2026-11-04T09:00:00.000Z') };
+  const env: StoreEnv = (() => {
+    let n = 0;
+    return {
+      now: () => new Date((clock.t += 1000)).toISOString(),
+      newId: (p) => `${p}-${++n}`,
+    };
+  })();
+  /**
+   * Mit Schutz und 50 € Selbstbeteiligung: Schadenfall, Freigabe, „Zahlungspflichtig buchen“,
+   * dann repariert der Betrieb. Danach fragt ganz, ob es läuft.
+   */
+  const repaired = (store = createAppStore(memoryStorage(), env)) => {
+    clock.t = Date.parse('2026-11-04T09:00:00.000Z');
+    const s = () => store.getState();
+    s().ensureHousehold();
+    s().setDemo({ deductible: 5000 });
+    const contract = s().linkContract('vertragsnummer');
+    const device = s().addDevice({
+      category: 'waschmaschine',
+      manufacturerId: demoConfig.manufacturer.id,
+      model: demoConfig.device.model,
+      identifiedBy: 'vertrag',
+      contractId: contract.id,
+    });
+    const id = unwrap(s().openCaseFor(device.id, 'foto', 'Foto vom Display')).caseId;
+    unwrap(s().escalate(id));
+    unwrap(s().setFinding(id, 'reparatur', 'fachkraft'));
+    unwrap(s().reportClaim(id));
+    const repair = unwrap(
+      s().requestBooking({
+        caseId: id,
+        kind: 'reparatur',
+        partnerId: partner.id,
+        slotLabel: demoConfig.slots[0],
+        selfPay: false,
+      }),
+    );
+    expect(s().simulateNext(id)).toBe(true);
+    unwrap(s().bookBinding(id, 5000));
+    while (s().simulateNext(id));
+    expect(s().bookings.find((b) => b.id === repair.id)).toMatchObject({
+      status: 'erledigt',
+      completedAt: expect.any(String),
+    });
+    return { store, s, id, repair, deviceId: device.id };
+  };
+  const eventsOf = (s: () => AppState, id: string, type: string) =>
+    s().events.filter((e) => e.caseId === id && e.type === type);
+
+  test('innerhalb der Frist: Nachbesserung beim selben Betrieb, ohne Schadenfall und ohne Betrag', () => {
+    const { s, id, repair } = repaired();
+    const done = s().bookings.find((b) => b.id === repair.id)!;
+    const consents = s().consents.length;
+    const claims = eventsOf(s, id, 'schaden_gemeldet').length;
+    const next = unwrap(s().confirmRepair(id, false));
+    expect(next).toMatchObject({
+      status: 'nachbesserung',
+      rework: {
+        repairBookingId: repair.id,
+        provider: { id: partner.id, name: partner.name },
+        completedAt: done.completedAt,
+        until: addMonths(done.completedAt!, demoConfig.warranty.months),
+      },
+    });
+    // Keine neue Meldung an den Versicherer, die alte bleibt an ihrer Runde
+    expect(next.claim).toBeUndefined();
+    expect(next.rounds?.[0]?.claim?.decision?.result).toBe('freigegeben');
+    expect(eventsOf(s, id, 'schaden_gemeldet')).toHaveLength(claims);
+    expect(eventsOf(s, id, 'nachbesserung_verlangt')).toMatchObject([
+      { payload: { bookingId: repair.id, partner: partner.name, until: next.rework!.until } },
+    ]);
+    const facts = selectCaseFacts(s(), id)!;
+    expect(facts).toMatchObject({ payer: 'betrieb', claim: 'keiner' });
+    expect(facts.bindingDue).toBeUndefined();
+    expect(availableActions(facts)).toEqual(['nachbesserung_anfragen', 'pausieren', 'abbrechen']);
+
+    // Der Termin: derselbe Betrieb, ohne Freigabe, ohne Betrag, ohne neue Weitergabe
+    const visit = unwrap(s().requestRework(id, demoConfig.slots[2]));
+    expect(visit).toMatchObject({
+      kind: 'reparatur',
+      provider: { id: partner.id },
+      slotLabel: demoConfig.slots[2],
+      status: 'angefragt',
+      subjectToApproval: false,
+      reworkOf: repair.id,
+    });
+    expect(visit.binding).toBeUndefined();
+    expect(s().consents).toHaveLength(consents);
+    expect(eventsOf(s, id, 'termin_angefragt').at(-1)?.payload).toMatchObject({ rework: true });
+    // Ein zweiter Termin wird abgelehnt, ohne etwas zu schreiben
+    const before = s();
+    expect(s().requestRework(id, demoConfig.slots[3])).toEqual({
+      ok: false,
+      refusal: { code: 'termin_laeuft', kind: 'reparatur' },
+    });
+    expect(s()).toBe(before);
+
+    // Der Betrieb kommt, ohne „Zahlungspflichtig buchen“, und ist fertig
+    const taps = eventsOf(s, id, 'zahlungspflichtig_gebucht').length;
+    while (s().simulateNext(id));
+    expect(s().bookings.find((b) => b.id === visit.id)).toMatchObject({
+      status: 'erledigt',
+      completedAt: expect.any(String),
+    });
+    expect(eventsOf(s, id, 'zahlungspflichtig_gebucht')).toHaveLength(taps);
+    expect(eventsOf(s, id, 'reparatur_abgeschlossen').at(-1)?.payload).toMatchObject({
+      rework: true,
+    });
+    expect(unwrap(s().confirmRepair(id, true))).toMatchObject({
+      status: 'erledigt',
+      resolution: 'repariert',
+    });
+  });
+
+  test('hilft auch die Nachbesserung nicht: neue Runde, die Nachbesserung steht an ihrer Runde', () => {
+    const { s, id } = repaired();
+    const first = unwrap(s().confirmRepair(id, false)).rework!;
+    unwrap(s().requestRework(id, demoConfig.slots[2]));
+    while (s().simulateNext(id));
+    const next = unwrap(s().confirmRepair(id, false));
+    expect(next.status).toBe('eskaliert');
+    expect(next.rework).toBeUndefined();
+    expect(next.rounds?.map((r) => r.rework)).toEqual([undefined, first]);
+    expect(eventsOf(s, id, 'problem_besteht_weiter').at(-1)?.payload).toMatchObject({
+      warranty: 'nachbesserung_gescheitert',
+    });
+    // Die neue Runde geht über Hilfe holen. Ein Schadenfall entsteht nur mit eigenem Tap.
+    const facts = selectCaseFacts(s(), id)!;
+    expect(availableActions(facts)).toEqual(
+      expect.arrayContaining(['videocall_anfragen', 'termin_diagnose']),
+    );
+    expect(can(facts, 'nachbesserung_anfragen')).toBe(false);
+    expect(next.claim).toBeUndefined();
+    unwrap(s().setFinding(id, 'reparatur', 'fachkraft'));
+    expect(can(selectCaseFacts(s(), id), 'schaden_melden')).toBe(true);
+    expect(s().cases[id]?.claim).toBeUndefined();
+  });
+
+  test('nach Ablauf der Frist: neue Runde wie bisher', () => {
+    const { s, id } = repaired();
+    clock.t += Date.parse(addMonths(new Date(clock.t).toISOString(), 25)) - clock.t;
+    const next = unwrap(s().confirmRepair(id, false));
+    expect(next).toMatchObject({ status: 'eskaliert' });
+    expect(next.rework).toBeUndefined();
+    expect(eventsOf(s, id, 'nachbesserung_verlangt')).toEqual([]);
+    expect(eventsOf(s, id, 'problem_besteht_weiter').at(-1)?.payload).toEqual({
+      warranty: 'abgelaufen',
+    });
+  });
+
+  test('Demo „Reparatur liegt länger zurück“: neue Runde, und die Fallakte sagt, dass es die Demo war', () => {
+    const { s, id, repair } = repaired();
+    const completedAt = s().bookings.find((b) => b.id === repair.id)?.completedAt;
+    s().setDemo({ repairLongAgo: true });
+    const next = unwrap(s().confirmRepair(id, false));
+    expect(next.status).toBe('eskaliert');
+    expect(eventsOf(s, id, 'problem_besteht_weiter').at(-1)?.payload).toEqual({
+      warranty: 'abgelaufen',
+      demoLongAgo: true,
+    });
+    // Kein Datum wird geändert
+    expect(s().bookings.find((b) => b.id === repair.id)?.completedAt).toBe(completedAt);
+  });
+
+  test('nach einem Widerruf: erst die Weitergabe erneut bestätigen, dann der Termin', () => {
+    const { s, id } = repaired();
+    unwrap(s().confirmRepair(id, false));
+    for (const c of s().consents.filter((k) => k.purpose === 'weitergabe_betrieb')) {
+      s().revokeConsent(c.id);
+    }
+    const facts = selectCaseFacts(s(), id)!;
+    expect(facts.hold).toBe('weitergabe_betrieb');
+    expect(availableActions(facts)).toEqual(['weitergabe_erneuern', 'pausieren', 'abbrechen']);
+    const before = s();
+    expect(s().requestRework(id, demoConfig.slots[2])).toEqual({
+      ok: false,
+      refusal: { code: 'bestaetigung', purpose: 'weitergabe_betrieb' },
+    });
+    expect(s()).toBe(before);
+    expect(unwrap(s().renewTransfer(id)).recipient).toMatchObject({ id: partner.id });
+    expect(unwrap(s().requestRework(id, demoConfig.slots[2])).reworkOf).toBeDefined();
+  });
+
+  test('auch nach „Läuft wieder“, und je Gerät bleibt es ein offener Fall', () => {
+    const { s, id, deviceId } = repaired();
+    unwrap(s().confirmRepair(id, true));
+    expect(unwrap(s().confirmRepair(id, false)).status).toBe('nachbesserung');
+    expect(selectOpenCases(s()).filter((c) => c.deviceId === deviceId)).toHaveLength(1);
+    unwrap(s().requestRework(id, demoConfig.slots[2]));
+    expect(s().simulateNext(id)).toBe(true);
+    // Ein neues Problem für das Gerät bricht den Auftrag nicht nebenbei ab (Nr. 13, Nr. 34)
+    expect(
+      unwrap(s().openCaseFor(deviceId, 'symptom', 'Tür geht nicht auf', { neuesProblem: true })),
+    ).toEqual({ art: 'frage_weitermachen', caseId: id });
+    expect(selectOpenCases(s()).filter((c) => c.deviceId === deviceId)).toHaveLength(1);
+  });
+
+  test('Nachbesserung abbrechen: Absage ohne den Satz zu den Kosten', () => {
+    const { s, id } = repaired();
+    unwrap(s().confirmRepair(id, false));
+    const visit = unwrap(s().requestRework(id, demoConfig.slots[2]));
+    unwrap(s().runCommand(id, 'abbrechen', { cancelReason: 'x' }));
+    expect(s().bookings.find((b) => b.id === visit.id)?.status).toBe('storniert');
+    expect(eventsOf(s, id, 'termin_abgesagt')).toMatchObject([
+      { payload: { bookingId: visit.id, ordered: true, costsOpen: false } },
+    ]);
+  });
+
+  test('Nachbesserung, Abschluss und Termin überstehen den Neustart', async () => {
+    const storage = memoryStorage();
+    const first = createAppStore(storage, env);
+    await first.persist.rehydrate();
+    const { s, id } = repaired(first);
+    unwrap(s().confirmRepair(id, false));
+    const visit = unwrap(s().requestRework(id, demoConfig.slots[2]));
+    const second = createAppStore(storage, env);
+    await second.persist.rehydrate();
+    const restored = second.getState();
+    expect(restored.cases[id]?.rework).toEqual(s().cases[id]?.rework);
+    expect(restored.cases[id]?.rounds).toEqual(s().cases[id]?.rounds);
+    expect(restored.bookings.find((b) => b.id === visit.id)?.reworkOf).toBe(visit.reworkOf);
+    expect(restored.bookings.find((b) => b.id === visit.reworkOf)?.completedAt).toBeDefined();
+    expect(selectCaseFacts(restored, id)?.rework).toBeDefined();
   });
 });
