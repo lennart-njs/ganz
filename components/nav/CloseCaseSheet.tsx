@@ -20,7 +20,8 @@ interface CloseCaseSheetProps {
 
 /**
  * X im Fall: später weitermachen oder abbrechen mit Grund (B-04). Beides nur, wo die Regeln es
- * erlauben (R-01), Abbrechen seit Nr. 34 auch in der Reparatur. Läuft ein Termin, steht vor dem
+ * erlauben (R-01), Abbrechen seit Nr. 34 auch in der Reparatur, solange der Betrieb nicht fertig
+ * ist. Danach steht hier, dass die Antwort ins Gespräch gehört. Läuft ein Termin, steht vor dem
  * Abbrechen, dass der Betrieb die Absage bekommt. Hat er den Auftrag schon, steht dabei, dass er
  * mit dir klärt, ob Kosten entstanden sind. ganz sagt nie zu, dass es nichts kostet (§ 648 BGB).
  * Ein abgeschlossener Fall führt nur noch zur Übersicht. Ohne Fall bleibt nur
@@ -39,6 +40,10 @@ export function CloseCaseSheet({
   );
   const canCancel = useAppStore((s) =>
     caseId ? can(selectCaseFacts(s, caseId), 'abbrechen') : false,
+  );
+  // Der Betrieb ist mit der Reparatur fertig: kein Abbrechen mehr, die Antwort gehört ins Gespräch
+  const repairDone = useAppStore((s) =>
+    caseId ? can(selectCaseFacts(s, caseId), 'reparatur_bestaetigen') : false,
   );
   // Der Betrieb des laufenden Termins, und ob er den Auftrag schon hat (caseFacts.order). Bei der
   // Nachbesserung fehlt der Satz zu den Kosten, dafür zahlst du nichts Neues (Nr. 32).
@@ -110,6 +115,7 @@ export function CloseCaseSheet({
       ) : canPause || !exists ? (
         <>
           <Text variant="body">{t.text}</Text>
+          {repairDone && !canCancel ? <Text variant="body">{t.repairDone}</Text> : null}
           <Button label={t.later} fullWidth onPress={later} />
           {canCancel ? (
             <Button

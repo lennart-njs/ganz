@@ -727,6 +727,11 @@ export function createAppStore(storage: StateStorage = AsyncStorage, env: StoreE
             if (!c) return missingCase(caseId);
             const result = draftCommand(c, command, options);
             if (!result.ok) return result;
+            // Abbrechen nur, wo auch die Regel es erlaubt, wie im Sheet: nicht mehr, wenn der
+            // Betrieb mit der Reparatur fertig ist (Nr. 34, Nr. 32)
+            if (command === 'abbrechen' && !can(selectCaseFacts(get(), caseId), 'abbrechen')) {
+              return refuse({ code: 'regel', action: 'abbrechen' });
+            }
             // Mit dem Abbruch bekommt der Betrieb die Absage (Nr. 34). Danach läuft kein Termin
             // mehr, und die Simulation hat keinen Schritt mehr.
             const cancelled = command === 'abbrechen' ? draftCancelBookings(c) : undefined;

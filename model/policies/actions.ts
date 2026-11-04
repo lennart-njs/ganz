@@ -145,7 +145,9 @@ const RULES: Record<ActionKey, Rule> = {
   pausieren: (f) => !f.closed,
   // Nur wo die Status-Maschine es erlaubt: seit Nr. 34 auch in der Reparatur, nie in einem
   // geschlossenen Fall (R-01). Der Betrieb bekommt die Absage, auch ohne gültige Weitergabe.
-  abbrechen: (f) => canTransition(f.status, 'abbrechen'),
+  // Nur, solange die Reparatur läuft: Ist der Betrieb fertig, gibt es nichts mehr abzusagen. Dann
+  // sagst du „Läuft wieder“ oder „Problem besteht weiter“, und die Gewährleistung bleibt (Nr. 32).
+  abbrechen: (f) => canTransition(f.status, 'abbrechen') && !repairDone(f),
 };
 
 /** Darf der Haushalt das jetzt? Ohne Fakten (kein Fall): nein. */

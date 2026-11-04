@@ -1493,6 +1493,32 @@ describe('Abbrechen in der Reparatur (Entscheidung Nr. 34)', () => {
       [],
     );
   });
+  // Gegenprüfung Nr. 31 bis 34 (F4, R3): Ist der Betrieb fertig, gibt es nichts mehr abzusagen.
+  // Ein Abbruch würde nur „Läuft wieder“, die Bewertung und die Gewährleistung nehmen.
+  test('ist der Betrieb fertig, lehnt der Store den Abbruch ab, und die Gewährleistung bleibt', () => {
+    const { s } = setup();
+    const { id, booking } = inRepair(s);
+    while (s().simulateNext(id));
+    expect(s().bookings.find((b) => b.id === booking.id)?.status).toBe('erledigt');
+    const facts = selectCaseFacts(s(), id)!;
+    expect(can(facts, 'abbrechen')).toBe(false);
+    expect(availableActions(facts)).toEqual([
+      'reparatur_bestaetigen',
+      'problem_besteht_weiter',
+      'bewerten',
+      'pausieren',
+    ]);
+    const before = s();
+    expect(s().runCommand(id, 'abbrechen', { cancelReason: 'Hat sich erledigt' })).toEqual({
+      ok: false,
+      refusal: { code: 'regel', action: 'abbrechen' },
+    });
+    expect(s().cases).toBe(before.cases);
+    expect(s().events).toBe(before.events);
+    expect(s().bookings).toBe(before.bookings);
+    // Der Weg in die Nachbesserung ist noch da
+    expect(unwrap(s().confirmRepair(id, false)).status).toBe('nachbesserung');
+  });
 });
 
 describe('Gewährleistung nach „Problem besteht weiter“ (Entscheidung Nr. 32)', () => {

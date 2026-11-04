@@ -231,6 +231,27 @@ describe('Schließen-Sheet nach den Regeln (R-01)', () => {
     expect(screen.queryByText(/kostenlos|kostenfrei/i)).toBeNull();
   });
 
+  // Gegenprüfung Nr. 31 bis 34 (F4, R3): Ist der Betrieb fertig, gibt es nichts mehr abzusagen.
+  // Das Sheet bietet nur „Später weitermachen“ und sagt, dass die Antwort ins Gespräch gehört.
+  test('der Betrieb ist fertig: kein „Fall abbrechen“, die Antwort gehört ins Gespräch', async () => {
+    const { repair } = closedAndRepair();
+    await renderRouter(APP, { initialUrl: `/fall/${repair}` });
+    await openSheet();
+    // Solange der Betrieb noch nicht fertig ist: Abbrechen, ohne den Satz
+    expect(screen.getByRole('button', { name: de.closeCase.cancel })).toBeTruthy();
+    expect(screen.queryByText(de.closeCase.repairDone)).toBeNull();
+    await act(async () => {
+      while (useAppStore.getState().simulateNext(repair));
+    });
+    expect(useAppStore.getState().bookings.find((b) => b.caseId === repair)?.status).toBe(
+      'erledigt',
+    );
+    expect(screen.queryByRole('button', { name: de.closeCase.cancel })).toBeNull();
+    expect(screen.getByText(de.closeCase.repairDone)).toBeTruthy();
+    expect(screen.getByRole('button', { name: de.closeCase.later })).toBeTruthy();
+    expect(useAppStore.getState().cases[repair]?.status).toBe('in_reparatur');
+  });
+
   test('ohne Termin: Abbrechen ohne Satz zum Betrieb', async () => {
     finishOnboarding();
     const s = useAppStore.getState();

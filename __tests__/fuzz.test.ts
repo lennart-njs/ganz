@@ -431,7 +431,8 @@ const currentOf = (s: AppState, c: Case) => {
 
 /**
  * Nr. 34: Ein abgebrochener Fall hat keinen laufenden Termin und keinen nächsten Schritt der
- * Simulation. Wird ein Fall in diesem Schritt abgebrochen, ist jeder Termin, der vorher lief,
+ * Simulation. Ist der Betrieb mit der Reparatur fertig, bricht nichts den Fall mehr ab. Wird ein
+ * Fall in diesem Schritt abgebrochen, ist jeder Termin, der vorher lief,
  * storniert und hat seine Absage in der Fallakte. Dabei entsteht keine neue Weitergabe. Ein
  * Schritt der Simulation in einem geschlossenen Fall schreibt nichts.
  */
@@ -444,6 +445,9 @@ function cancelViolation(before: AppState, after: AppState, step: Step): string 
       return `${c.id} abgebrochen, die Simulation hat noch einen Schritt`;
     const was = before.cases[c.id];
     if (!was || was.status === 'abgebrochen') continue;
+    // Ist der Betrieb fertig, gibt es nichts mehr abzusagen (Gegenprüfung Nr. 31 bis 34, F4)
+    if (currentOf(before, was).some((b) => b.kind === 'reparatur' && b.status === 'erledigt'))
+      return `${c.id} abgebrochen, obwohl der Betrieb fertig war`;
     for (const b of currentOf(before, was).filter((x) => RUNNING.includes(x.status))) {
       const notice = after.events.filter(
         (e) => e.type === 'termin_abgesagt' && e.payload.bookingId === b.id,

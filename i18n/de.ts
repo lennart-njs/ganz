@@ -1366,6 +1366,8 @@ export const de = {
      * (§ 648 BGB, Rechtsfrage 51). Nie „kostenlos“.
      */
     costsOpen: (partner: string) => `Ob schon Kosten entstanden sind, klärt ${partner} mit dir.`,
+    /** Der Betrieb ist fertig: nichts mehr abzusagen, die Antwort gehört ins Gespräch (Nr. 34) */
+    repairDone: 'Der Betrieb ist fertig. Sag im Gespräch, ob das Gerät wieder läuft.',
   },
 
   galerie: {

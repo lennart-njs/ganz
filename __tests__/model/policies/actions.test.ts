@@ -190,14 +190,37 @@ describe('Abbrechen und Später weitermachen (R-01)', () => {
     expect(can(facts(status), 'abbrechen')).toBe(false);
   });
 
-  // Entscheidung Nr. 34: Abbrechen geht auch in der Reparatur, mit jedem Termin und ohne gültige
-  // Weitergabe. Der Betrieb bekommt nur die Absage.
-  test.each(['angefragt', 'bestaetigt', 'unterwegs', 'erledigt'] as const)(
+  // Entscheidung Nr. 34: Abbrechen geht auch in der Reparatur, mit jedem laufenden Termin und ohne
+  // gültige Weitergabe. Der Betrieb bekommt nur die Absage.
+  test.each(['angefragt', 'bestaetigt', 'unterwegs'] as const)(
     'in der Reparatur mit Termin %s: Abbrechen geht',
     (status) => {
       const f = facts('in_reparatur', { quote, payer: 'haushalt', ...repair(status) });
       expect(can(f, 'abbrechen')).toBe(true);
       expect(can({ ...f, hold: 'weitergabe_betrieb' }, 'abbrechen')).toBe(true);
+    },
+  );
+
+  // Gegenprüfung Nr. 31 bis 34 (F4, R3): Ist der Betrieb fertig, gibt es nichts mehr abzusagen.
+  // Dann sagst du „Läuft wieder“ oder „Problem besteht weiter“, und die Gewährleistung bleibt.
+  test.each([
+    ['in_reparatur', { quote, payer: 'haushalt', ...repair('erledigt') }],
+    [
+      'nachbesserung',
+      { rework, payer: 'betrieb', ...repair('erledigt', { reworkOf: 'termin-x' }) },
+    ],
+  ] as [CaseStatus, Partial<CaseFacts>][])(
+    '%s, der Betrieb ist fertig: kein Abbrechen, aber Läuft wieder und Problem besteht weiter',
+    (status, extra) => {
+      const f = facts(status, extra);
+      expect(can(f, 'abbrechen')).toBe(false);
+      expect(can({ ...f, hold: 'weitergabe_betrieb' }, 'abbrechen')).toBe(false);
+      expect(availableActions(f)).toEqual([
+        'reparatur_bestaetigen',
+        'problem_besteht_weiter',
+        'bewerten',
+        'pausieren',
+      ]);
     },
   );
 
@@ -475,13 +498,14 @@ describe('Nachbesserung in der Gewährleistung (Nr. 32)', () => {
       });
       for (const key of forbidden) expect([key, can(f, key)]).toEqual([key, false]);
     }
+    // Ist der Betrieb fertig, gibt es kein Abbrechen mehr (Gegenprüfung Nr. 31 bis 34, F4)
     const done = facts('nachbesserung', { rework, ...reworkBooking('erledigt') });
     expect(availableActions(done)).toEqual([
       'reparatur_bestaetigen',
       'problem_besteht_weiter',
       'bewerten',
       'pausieren',
-      'abbrechen',
     ]);
+    expect(can(done, 'abbrechen')).toBe(false);
   });
 });
