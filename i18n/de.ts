@@ -442,6 +442,9 @@ export const de = {
     problem: 'Problem gemeldet',
     hilfe: 'Hilfe angefragt',
     reparatur: (slot: string) => `Reparatur ${slot}`,
+    /** Gewährleistung: Der Betrieb bessert nach (Nr. 32) */
+    nachbesserung: 'Nachbesserung',
+    nachbesserungTermin: (slot: string) => `Nachbesserung ${slot}`,
   },
 
   device: {
@@ -903,6 +906,8 @@ export const de = {
       angefragt: 'Termin angefragt.',
       /** Der Betrieb hat den Preis für die Vor-Ort-Diagnose genannt (Nr. 33) */
       preis: (partner: string, amount: string) => `${partner} nennt den Preis: ${amount}.`,
+      /** Gewährleistung, noch ohne Termin (Nr. 32) */
+      nachbesserung: (partner: string) => `${partner} bessert nach.`,
       bestaetigt: (slot: string) => `Termin steht: ${slot}.`,
       unterwegs: (partner: string) => `${partner} ist unterwegs.`,
       repariert: 'Repariert.',
@@ -927,6 +932,8 @@ export const de = {
       bestaetigt: (partner: string, part: string) => `${partner} bringt ${part} mit.`,
       diagnoseFertig: 'Sieh dir die Kosten an und entscheide, wie es weitergeht.',
       rueckruf: 'Die Fachkraft ruft dich an. Deine Fallakte hat sie schon.',
+      /** Gewährleistung, noch ohne Termin (Nr. 32) */
+      nachbesserung: 'Wähl im Gespräch einen Termin. Für die Nachbesserung zahlst du nichts Neues.',
       /** Der Termin wartet auf „Zahlungspflichtig buchen“ (Nr. 31) */
       buchen: (partner: string) =>
         `Buch den Termin im Gespräch verbindlich. Erst dann bestätigt ${partner} ihn.`,
@@ -941,6 +948,7 @@ export const de = {
       abgelehnt: (insurer: string) => `${insurer} hat abgelehnt`,
       angefragt: 'Termin angefragt',
       preis: 'Preis genannt',
+      nachbesserung: 'Nachbesserung verlangt, Gewährleistung',
       buchen: 'Verbindlich buchen',
       gebucht: 'Verbindlich gebucht',
       bestaetigt: 'Termin bestätigt',
@@ -1043,6 +1051,34 @@ export const de = {
       reason: (reason: string) => `Grund: ${reason}`,
       detail: (title: string, detail: string) => `${title} · ${detail}`,
     },
+  },
+
+  /**
+   * Nachbesserung in der gesetzlichen Gewährleistung (Entscheidung Nr. 32). Die Sätze sagen nicht
+   * mehr, als das Gesetz hergibt: Der Betrieb muss nachbessern, für die Nachbesserung zahlst du
+   * nichts Neues (§§ 634, 635 BGB). Die Frist ist eine Annahme bis zur Antwort des Anwalts
+   * (Rechtsfrage 52). Was nach einer gescheiterten Nachbesserung gilt, sagt die App nicht
+   * (Rechtsfrage 53).
+   */
+  rework: {
+    title: 'Die Reparatur ist noch in der Gewährleistung.',
+    text: (partner: string) =>
+      `${partner} muss die Reparatur nachbessern. Für die Nachbesserung zahlst du nichts Neues.`,
+    /** Nur mit Schutz: Der Versicherer bekommt keine neue Meldung */
+    noClaim: (insurer: string) => `Eine neue Schadenmeldung an ${insurer} brauchst du dafür nicht.`,
+    until: (date: string, months: number) =>
+      `Gewährleistung bis ${date}. Angenommen sind ${months} Monate ab der Reparatur.`,
+    when: (partner: string) => `${partner} kommt noch einmal. Wann passt es dir?`,
+    job: (part: string) => `Nachbesserung: ${part}`,
+    costs: 'Keine neuen Kosten für dich, Gewährleistung',
+    request: 'Nachbesserung anfragen',
+    bookingAnswer: (slot: string, partner: string) =>
+      `Nachbesserung anfragen: ${slot} · ${partner}`,
+    done: (partner: string) => `${partner} hat nachgebessert.`,
+    /** „Problem besteht weiter“ ohne Nachbesserung: warum eine neue Runde beginnt */
+    expired: 'Die Gewährleistung für die Reparatur ist vorbei.',
+    failed: 'Auch die Nachbesserung hat nicht geholfen.',
+    newRound: 'Darum beginnt eine neue Runde.',
   },
 
   /** Gespräche: ganz fragt, Antworten stehen unten */
@@ -1292,6 +1328,10 @@ export const de = {
     claim: 'Freigabe',
     claimOptions: { freigeben: 'Freigeben', ablehnen: 'Ablehnen' },
     deductible: 'Selbstbeteiligung',
+    /** Beide Wege nach „Problem besteht weiter“ zeigen (Nr. 32) */
+    repairLongAgo: 'Reparatur liegt länger zurück',
+    repairLongAgoSub:
+      'Dann ist die Gewährleistung vorbei, und nach „Problem besteht weiter“ beginnt eine neue Runde.',
     hints: 'Hinweise und Beispielwerte zeigen',
     hintsSub: 'Aus: keine Demo-Spur in der App.',
     advance: 'Offene Fälle einen Schritt weiter',

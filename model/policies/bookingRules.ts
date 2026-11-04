@@ -31,7 +31,7 @@ export function isOrdered(c: Case, b: Booking): boolean {
 
 /**
  * Kann ein Abbruch Kosten auslösen, die der Betrieb mit dir klärt? Nur bei einem Auftrag, für den du
- * etwas schuldest. Die Nachbesserung kostet dich nichts Neues (Nr. 32), dort fehlt der Satz.
+ * etwas schuldest. Für die Nachbesserung zahlst du nichts Neues (Nr. 32), dort fehlt der Satz.
  */
 export function cancelMayCost(c: Case, b: Booking): boolean {
   return isOrdered(c, b) && !b.reworkOf;

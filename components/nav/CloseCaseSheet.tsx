@@ -41,7 +41,7 @@ export function CloseCaseSheet({
     caseId ? can(selectCaseFacts(s, caseId), 'abbrechen') : false,
   );
   // Der Betrieb des laufenden Termins, und ob er den Auftrag schon hat (caseFacts.order). Bei der
-  // Nachbesserung fehlt der Satz zu den Kosten, sie kostet dich nichts Neues (Nr. 32).
+  // Nachbesserung fehlt der Satz zu den Kosten, dafür zahlst du nichts Neues (Nr. 32).
   const partner = useAppStore((s) => {
     const f = caseId ? selectCaseFacts(s, caseId) : undefined;
     return f?.bookingOpen ? f.booking?.provider.name : undefined;

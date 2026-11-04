@@ -34,7 +34,7 @@ import { useCommand } from '@/hooks/useCommand';
 import { useNotificationDialog } from '@/hooks/useNotificationDialog';
 import { useNotice } from '@/hooks/useNotice';
 import { de } from '@/i18n/de';
-import { formatDecimal, formatEuro } from '@/i18n/format';
+import { formatDate, formatDecimal, formatEuro } from '@/i18n/format';
 import { caseAppliance, hasGuides } from '@/lib/appliance';
 import {
   amountToPay,
@@ -133,6 +133,11 @@ export default function FallGespraech() {
   const bind = useCommand((shown: Cents) => useAppStore.getState().bookBinding(caseId, shown));
   // „Nicht buchen“: Die unverbindliche Anfrage endet ohne Kosten (Nr. 33)
   const decline = useCommand(() => useAppStore.getState().declineBinding(caseId));
+  // Termin zur Nachbesserung in der Gewährleistung, ohne Betrag (Nr. 32)
+  const rework = useCommand(
+    (slotLabel: string) => useAppStore.getState().requestRework(caseId, slotLabel),
+    () => setSlot(undefined),
+  );
   // Anleitung starten: Ein zweiter Tap öffnet sie nicht noch einmal
   const guide = useCommand(
     (guideId: string) => {
@@ -174,6 +179,7 @@ export default function FallGespraech() {
     renew.toast ??
     bind.toast ??
     decline.toast ??
+    rework.toast ??
     guide.toast ??
     answer.toast ??
     finding.toast ??
@@ -489,13 +495,41 @@ export default function FallGespraech() {
     }
   }
 
+  // „Problem besteht weiter“: neue Runde, und wenn es eine Reparatur gab, warum ohne
+  // Nachbesserung. In der Gewährleistung bessert der Betrieb nach (Nr. 32).
+  for (const e of of('problem_besteht_weiter')) {
+    add(e.at, e.id, <UserSaid text={t.stillBroken} />);
+    const reason = e.payload.warranty;
+    if (reason === 'abgelaufen' || reason === 'nachbesserung_gescheitert') {
+      add(
+        e.at,
+        `${e.id}-a`,
+        <BotSays
+          lines={[reason === 'abgelaufen' ? de.rework.expired : de.rework.failed]}
+          hint={de.rework.newRound}
+        />,
+      );
+    }
+  }
+  for (const e of of('nachbesserung_verlangt')) {
+    const partner = String(e.payload.partner);
+    add(e.at, e.id, <UserSaid text={t.stillBroken} />);
+    add(
+      e.at,
+      `${e.id}-a`,
+      <BotSays lines={[de.rework.title]} hint={de.rework.text(partner)}>
+        {contract ? <Text variant="body">{de.rework.noClaim(insurer)}</Text> : null}
+        <Text variant="meta">
+          {de.rework.until(formatDate(String(e.payload.until)), demoConfig.warranty.months)}
+        </Text>
+      </BotSays>,
+    );
+  }
+
   // Hilfe holen
   for (const e of of('status_geaendert')) {
     if (e.payload.to !== 'eskaliert') continue;
     add(e.at, e.id, <BotSays lines={[t.helpIntro]} hint={t.helpText} />);
-  }
-  for (const e of of('problem_besteht_weiter')) {
-    add(e.at, e.id, <UserSaid text={t.stillBroken} />);
   }
 
   // Videocall und Rückruf
@@ -596,7 +630,17 @@ export default function FallGespraech() {
   for (const e of of('termin_angefragt')) {
     const b = bookings.find((x) => x.id === e.payload.bookingId) ?? booking;
     if (!b) continue;
-    add(e.at, e.id, <UserSaid text={t.bookingAnswer(b.slotLabel, b.provider.name)} />);
+    add(
+      e.at,
+      e.id,
+      <UserSaid
+        text={
+          e.payload.rework
+            ? de.rework.bookingAnswer(b.slotLabel, b.provider.name)
+            : t.bookingAnswer(b.slotLabel, b.provider.name)
+        }
+      />,
+    );
     add(
       e.at,
       `${e.id}-a`,
@@ -702,7 +746,14 @@ export default function FallGespraech() {
     add(
       e.at,
       e.id,
-      <BotSays lines={[de.finish.repairedTitle]} hint={a.finding.repaired(b?.provider.name ?? '')}>
+      <BotSays
+        lines={[de.finish.repairedTitle]}
+        hint={
+          e.payload.rework
+            ? de.rework.done(b?.provider.name ?? '')
+            : a.finding.repaired(b?.provider.name ?? '')
+        }
+      >
         <View style={styles.full}>
           <PhotoFrame label={de.finish.photo} />
         </View>
@@ -811,7 +862,9 @@ export default function FallGespraech() {
       'rueckfrage_beantwortet',
       (e) => e.payload.question === t.findingQuestion,
     );
+  // Nur, solange Hilfe angefragt ist: Eine Nachbesserung bekommt keinen Rückruf (Nr. 32)
   const noExpert =
+    can(facts, 'videocall_anfragen') &&
     lastSession?.outcome === 'keine_fachkraft' &&
     !after(lastSession.endedAt, 'videocall_angefragt', (e) => e.payload.art === 'rueckruf') &&
     !booking;
@@ -974,7 +1027,10 @@ export default function FallGespraech() {
     // bestätigst du sie noch einmal, mit demselben Text wie beim ersten Mal. So bleibt auch ein
     // Fall in der Reparatur keine Sackgasse, obwohl er sich nicht abbrechen lässt.
     const toInsurer = facts.hold === 'weitergabe_versicherer';
-    const recipient = toInsurer ? insurer : (facts.booking?.provider.name ?? '');
+    // Vor dem Termin zur Nachbesserung ist es der Betrieb der Reparatur (Nr. 32)
+    const recipient = toInsurer
+      ? insurer
+      : (facts.booking?.provider.name ?? facts.rework?.provider.name ?? '');
     const reviewing = facts.claim === 'in_pruefung';
     tail.push(
       <BotSays
@@ -1025,6 +1081,42 @@ export default function FallGespraech() {
     reply('zahlungspflichtig', de.appointment.requestPaid, () => bind.run(due.amount));
     if (can(facts, 'nicht_buchen')) {
       reply('nicht-buchen', de.appointment.decline, () => decline.run(), de.appointment.declineSub);
+    }
+  } else if (can(facts, 'nachbesserung_anfragen') && facts.rework) {
+    // Nachbesserung in der Gewährleistung (Nr. 32): derselbe Betrieb, ohne Betrag und ohne
+    // „Zahlungspflichtig buchen“. Die Weitergabe hat der Betrieb schon, sie muss gültig sein.
+    const partner = facts.rework.provider.name;
+    tail.push(<BotSays key="nachbesserung" lines={[de.rework.when(partner)]} />);
+    if (!slot) {
+      for (const s of demoConfig.slots) reply(`zeit-${s}`, s, () => setSlot(s));
+    } else {
+      const address = state.household?.address;
+      tail.push(<UserSaid key="zeit" text={slot} onEdit={() => setSlot(undefined)} />);
+      tail.push(
+        <BotSays key="zusammenfassung" lines={[de.talk.claim.summary]}>
+          <View style={styles.full}>
+            <Card>
+              <FactList
+                ruled
+                items={[
+                  [de.appointment.facts.partner, partner],
+                  [de.appointment.facts.slot, slot],
+                  [
+                    de.appointment.facts.address,
+                    address
+                      ? de.appointment.addressLine(address.street, address.zip, address.city)
+                      : '',
+                  ],
+                  [de.appointment.facts.job, de.rework.job(a.finding.component)],
+                  [de.appointment.facts.costs, de.rework.costs],
+                ]}
+              />
+            </Card>
+          </View>
+          <Text variant="meta">{de.appointment.shares(scopeList('weitergabe_betrieb'))}</Text>
+        </BotSays>,
+      );
+      reply('nachbesserung', de.rework.request, () => rework.run(slot));
     }
   } else if (needsAppointment) {
     if (selfPay && quote) {

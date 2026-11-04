@@ -570,7 +570,7 @@ export function createAppStore(storage: StateStorage = AsyncStorage, env: StoreE
                 slot: b.slotLabel,
                 ordered: isOrdered(c, b),
                 // Ob der Betrieb mit dir klärt, ob Kosten entstanden sind. Nicht bei der
-                // Nachbesserung, die kostet dich nichts Neues (Nr. 32).
+                // Nachbesserung, dafür zahlst du nichts Neues (Nr. 32).
                 costsOpen: cancelMayCost(c, b),
               },
             }),

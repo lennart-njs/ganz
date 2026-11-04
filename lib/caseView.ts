@@ -22,6 +22,12 @@ export function deviceStatusLabel(s: AppData, deviceId: string): string {
   if (c.status === 'offen' || c.status === 'selbsthilfe') return de.deviceStatus.problem;
   // Ein Termin aus einer Runde vor „Problem besteht weiter“ zählt nicht mehr
   const booking = currentBookings(c, s.bookings).find((b) => b.status !== 'storniert');
+  // Nachbesserung in der Gewährleistung (Nr. 32), mit oder ohne Termin
+  if (c.rework) {
+    return booking
+      ? de.deviceStatus.nachbesserungTermin(booking.slotLabel)
+      : de.deviceStatus.nachbesserung;
+  }
   if (booking) return de.deviceStatus.reparatur(booking.slotLabel);
   return de.deviceStatus.hilfe;
 }

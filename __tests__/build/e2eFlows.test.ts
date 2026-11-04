@@ -13,7 +13,13 @@ import { version } from '../../package.json';
 
 const root = path.resolve(__dirname, '../..');
 const e2e = path.join(root, 'e2e');
-const FLOWS = ['golden-path.yaml', 'abbruch.yaml', 'dark-200.yaml', 'selbstbeteiligung.yaml'];
+const FLOWS = [
+  'golden-path.yaml',
+  'abbruch.yaml',
+  'dark-200.yaml',
+  'selbstbeteiligung.yaml',
+  'gewaehrleistung.yaml',
+];
 
 function yamlFiles(dir: string): string[] {
   return fs.readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {

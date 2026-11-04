@@ -97,6 +97,13 @@ export function DemoControlSheet({ visible, onClose }: { visible: boolean; onClo
           onChange={(v) => setDemo({ deductible: Number(v) })}
         />
       </Row>
+      {/* Beide Wege nach „Problem besteht weiter“: Nachbesserung oder neue Runde (Nr. 32) */}
+      <Checkbox
+        label={t.repairLongAgo}
+        sub={t.repairLongAgoSub}
+        checked={demo.repairLongAgo}
+        onChange={(v) => setDemo({ repairLongAgo: v })}
+      />
       <Checkbox
         label={t.hints}
         sub={t.hintsSub}

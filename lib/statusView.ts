@@ -62,6 +62,8 @@ export function statusView(s: AppData, c: Case): StatusView {
     } else pending(t.timeline.freigabe(insurer));
   }
   if (callback) done(t.timeline.rueckruf, callback.at);
+  // Nachbesserung in der Gewährleistung (Nr. 32): ohne Schadenfall, mit dem Termin darunter
+  if (f?.rework) done(t.timeline.nachbesserung, f.rework.claimedAt);
   // Ein Termin vorbehaltlich Freigabe verfällt mit der Ablehnung (caseFacts). Er erscheint erst
   // wieder, wenn neu gebucht wird.
   if (booking) {
@@ -119,6 +121,10 @@ export function statusView(s: AppData, c: Case): StatusView {
         ? t.headline.preis(due.booking.provider.name, formatEuro(due.amount))
         : t.headline.freigegeben(insurer);
     text = t.text.buchen(due.booking.provider.name);
+  } else if (f?.rework && !booking) {
+    // Der Betrieb der Reparatur bessert nach, der Termin fehlt noch (Nr. 32)
+    headline = t.headline.nachbesserung(f.rework.provider.name);
+    text = t.text.nachbesserung;
   } else if (replacement && f?.claim === 'freigegeben') {
     headline = t.headline.ersatzgeraet(insurer);
   } else if (booking?.status === 'erledigt' && booking.kind === 'vor_ort_diagnose') {
