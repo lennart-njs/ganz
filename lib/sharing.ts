@@ -1,5 +1,6 @@
 // Fallakte für den Händler bauen (Entscheidung 28). Nur nach deiner Bestätigung, nur dieser Fall.
-// Nicht dabei: das Gespräch mit dem Reparatur-Assistenten, die Vertragsnummer, Fotos zu Fragen an ihn.
+// Nicht dabei: das Gespräch mit dem Reparatur-Assistenten samt Notizen daraus, die Vertragsnummer,
+// Fotos zu Fragen an ihn.
 import { ImageManipulator, SaveFormat } from 'expo-image-manipulator';
 
 import { demoConfig } from '@/config/demo.config';
@@ -7,6 +8,7 @@ import { de } from '@/i18n/de';
 import { appliance } from '@/lib/appliance';
 import { eventLabel } from '@/lib/caseEvents';
 import { caseStatusLabel, guideSummary, latestGuideRun } from '@/lib/caseView';
+import { isAssistantNote } from '@/lib/chat/note';
 import { getManufacturer } from '@/lib/devices';
 import { findCatalogEntry } from '@/lib/guideCatalog';
 import { SHARE_FORMAT_VERSION, type SharedCaseFile, type SharedPhoto } from '@/model/sharing';
@@ -37,10 +39,13 @@ const hidden: CaseEvent['type'][] = ['assistent_gefragt', 'nachricht_an_haendler
 /**
  * Gehört das Ereignis in den Zeitstrahl der Akte? Fotos zu Fragen nicht (Übertragung 1.1): Ein
  * Foto für den Assistenten geht den Händler nichts an, ein Foto für den Händler steht bei seiner
- * Nachricht.
+ * Nachricht. Eine Notiz an die Fachkraft aus dem Gespräch mit dem Assistenten auch nicht: Sie ist
+ * eine Nachricht an den Assistenten, auf die keine Antwort kam.
  */
 const inTimeline = (e: CaseEvent) =>
-  !hidden.includes(e.type) && !(e.type === 'foto_aufgenommen' && e.payload.purpose === 'frage');
+  !hidden.includes(e.type) &&
+  !isAssistantNote(e) &&
+  !(e.type === 'foto_aufgenommen' && e.payload.purpose === 'frage');
 
 /** Verkleinert ein Foto für die Akte. Beispielfotos ohne Bild bleiben ohne Bild. */
 export async function photoForShare(photo: Photo): Promise<SharedPhoto> {

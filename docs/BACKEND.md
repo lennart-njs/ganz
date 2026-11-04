@@ -50,7 +50,7 @@ Einstellbar je Händler im Portal (`DealerSettings` in `model/portal.ts`):
 - **Nur dieser Händler.** Jede Abfrage im Portal ist an den Mandanten gebunden (`recipient.id`). Fremde Fälle gibt es als 404.
 - **Nur die App ändert die Akte.** Beim ersten Senden gibt das Backend ein Token zurück, gespeichert wird nur sein Hash. Ändern, Antworten lesen und Widerrufen gehen nur mit diesem Token.
 - **Widerruf löscht Personendaten.** Danach bleiben Fallnummer, Empfänger und Zeitpunkte. Das Portal zeigt „Weitergabe widerrufen“.
-- **Nicht in der Akte:** das Gespräch mit dem Reparatur-Assistenten, Fotos zu Fragen an ihn, die Vertragsnummer.
+- **Nicht in der Akte:** das Gespräch mit dem Reparatur-Assistenten samt den Notizen an die Fachkraft daraus, Fotos zu Fragen an ihn, die Vertragsnummer.
 - **Händler-Aktionen** werden `CaseEvent` mit `actor.kind = 'haendler'` und den Typen `haendler_angenommen`, `haendler_rueckfrage`, `haendler_entscheidung`, `haendler_betrieb`, `haendler_status`, `haendler_nachricht`, `haendler_termin`, `haendler_ersatzteil`. Die App übernimmt nur solche Ereignisse und nur für den richtigen Fall.
 - **Freier Chat** mit dem Händler (Entscheidung 32, ersetzt 29): Nachrichten des Haushalts stehen in der Akte (`messages`, mit Foto), Nachrichten des Händlers sind `haendler_nachricht`. Rückfragen haben weiter bis zu vier Antworten als Buttons, Terminvorschläge bis zu vier Zeitfenster.
 - **Interne Notizen und Zuweisung** kommen nie in der App an.

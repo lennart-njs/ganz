@@ -32,6 +32,13 @@ const flush = async () => {
 const fetchMock = jest.fn();
 const reply = (body: object) =>
   Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve(body) });
+/** Der Assistent kann nicht antworten: Auf dem Rechner fehlt der Schlüssel */
+const noKey = () =>
+  Promise.resolve({
+    ok: false,
+    status: 503,
+    json: () => Promise.resolve({ error: 'kein_schluessel' }),
+  });
 
 let prepare: jest.SpyInstance;
 beforeEach(() => {
@@ -71,6 +78,16 @@ function sharedCase(): { caseId: Id; deviceId: Id } {
     }),
   );
   return { caseId: c.id, deviceId: device.id };
+}
+
+/** Die Akte, die beim nächsten Abgleich an Fründ geht */
+async function fileForDealer(caseId: Id): Promise<SharedCaseFile> {
+  backend.share.mockClear();
+  useAppStore.getState().updateShare(caseId, { syncedEvents: -1 });
+  await act(async () => {
+    await syncShare(caseId, false);
+  });
+  return backend.share.mock.calls.at(-1)![0] as SharedCaseFile;
 }
 
 /** Fründ schreibt ins Gespräch (Abruf alle 5 Sekunden) */
@@ -266,5 +283,62 @@ describe('Foto bleibt beim gewählten Empfänger (Übertragung 1.1)', () => {
     const sent = JSON.stringify(file);
     expect(sent).not.toContain(forAssistant.id);
     expect(sent).not.toContain(de.caseFile.photoPurpose.frage);
+  });
+
+  // Prüfung 1.1 (K1): Antwortet der Assistent nicht, wird die Frage zur Notiz an die Fachkraft.
+  // Sie gehört zum Gespräch mit dem Assistenten und steht nicht in der Akte für Fründ.
+  test('antwortet der Assistent nicht, bleibt die Notiz daraus aus der Akte für Fründ', async () => {
+    const { caseId, deviceId } = sharedCase();
+    const s = useAppStore.getState();
+    const photo = s.addPhoto({ caseId, deviceId, purpose: 'frage', source: 'demo', uri: '' });
+    await renderRouter(APP, { initialUrl: `/fall/${caseId}?foto=${photo.id}&an=assistent` });
+    fetchMock.mockReturnValueOnce(noKey());
+    await tap(de.chat.send);
+    await flush();
+    fetchMock.mockReturnValueOnce(noKey());
+    await fireEvent.changeText(
+      screen.getByLabelText(de.thread.inputLabel),
+      'Ist der Filter kaputt?',
+    );
+    await tap(de.chat.send);
+    await flush();
+    const answers = () =>
+      useAppStore
+        .getState()
+        .events.filter((e) => e.caseId === caseId && e.type === 'rueckfrage_beantwortet');
+    // In der App sind beide Notizen da, für die Fachkraft
+    expect(answers().map((e) => e.payload.answer)).toEqual([
+      `${de.chat.photoMarker} ${de.chat.photoDefault}`,
+      'Ist der Filter kaputt?',
+    ]);
+    expect(toDealer()).toEqual([]);
+    // Eine Notiz, die vor dem Merkmal gespeichert wurde, und eine Antwort, die in die Akte gehört
+    s.addEvent({
+      caseId,
+      type: 'rueckfrage_beantwortet',
+      actor: { kind: 'haushalt' },
+      payload: { question: de.thread.noteQuestion, answer: 'Alte Notiz' },
+    });
+    s.addEvent({
+      caseId,
+      type: 'rueckfrage_beantwortet',
+      actor: { kind: 'haushalt' },
+      payload: { question: de.question.wasser, answer: de.question.answers.ablauf },
+    });
+
+    const file = await fileForDealer(caseId);
+    const sent = JSON.stringify(file);
+    for (const text of [
+      de.thread.noteQuestion,
+      de.chat.photoMarker,
+      de.chat.photoDefault,
+      'Ist der Filter kaputt?',
+      'Alte Notiz',
+    ]) {
+      expect(sent).not.toContain(text);
+    }
+    expect(file.timeline.filter((x) => x.type === 'rueckfrage_beantwortet')).toEqual([
+      expect.objectContaining({ label: expect.stringContaining(de.question.wasser) }),
+    ]);
   });
 });

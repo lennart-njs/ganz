@@ -15,6 +15,7 @@ import { useAppStore } from '@/store/appStore';
 
 import { chatContext, hasChatConsent, hasPhotoConsent } from './context';
 import { chatFull, fitsRequest } from './limits';
+import { assistantNotePayload } from './note';
 import { chatImage, releaseChatImage } from './photo';
 
 /** Bei diesen Fehlern lohnt ein zweiter Versuch. Sonst wird die Nachricht zur Notiz. */
@@ -95,7 +96,7 @@ export function useAssistant(caseId: string) {
       caseId,
       type: 'rueckfrage_beantwortet',
       actor: { kind: 'haushalt', id: s.persons[0]?.id },
-      payload: { question: de.thread.noteQuestion, answer: text },
+      payload: assistantNotePayload(text),
     });
     setNoted(true);
   };

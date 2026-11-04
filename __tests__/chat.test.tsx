@@ -248,7 +248,7 @@ describe('Reparatur-Assistent', () => {
         .getState()
         .events.filter((e) => e.caseId === id && e.type === 'rueckfrage_beantwortet');
     expect(notes().map((e) => e.payload)).toEqual([
-      { question: de.thread.noteQuestion, answer: 'Die Tür geht nicht auf.' },
+      { question: de.thread.noteQuestion, answer: 'Die Tür geht nicht auf.', source: 'assistent' },
     ]);
     expect(screen.getByText(t.noteSaved)).toBeTruthy();
     expect(screen.queryByRole('button', { name: t.saveNote })).toBeNull();
@@ -490,7 +490,11 @@ describe('Grenze von 40 Nachrichten (R-11)', () => {
     const note = useAppStore
       .getState()
       .events.find((e) => e.caseId === id && e.type === 'rueckfrage_beantwortet');
-    expect(note?.payload).toEqual({ question: de.thread.noteQuestion, answer: 'Noch eine Frage' });
+    expect(note?.payload).toEqual({
+      question: de.thread.noteQuestion,
+      answer: 'Noch eine Frage',
+      source: 'assistent',
+    });
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
