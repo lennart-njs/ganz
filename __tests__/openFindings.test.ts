@@ -2,7 +2,7 @@
 // Regressionstest aktiv ist und docs/BEFUNDE.md ihn als „behoben“ führt. Ein übersprungener oder
 // mit .only markierter Test macht alle Befunde wieder offen (Review vom 03.11.2026, Schritt 28h).
 // Die Tests laufen gegen eine Kopie des Scripts in einem leeren Ordner, nie gegen das Repo.
-import { execFileSync } from 'child_process';
+import { execFileSync, spawnSync } from 'child_process';
 import fs from 'fs';
 import os from 'os';
 import path from 'path';
@@ -66,6 +66,81 @@ describe('Pitch-Gate', () => {
     const result = gate(repoWith(source), 'R-07');
     expect(result.code).toBe(1);
     expect(result.out).toMatch(/R-07|Alle/);
+  });
+
+  // Gegenprüfung zu Schritt 28: Diese Formen fand das Gate nicht
+  test.each([
+    ['describe.skip.each', active.replace('describe(', 'describe.skip.each([[1]])(')],
+    ['xdescribe.each', active.replace('describe(', 'xdescribe.each([[1]])(')],
+    ['test.concurrent.skip', `${active}test.concurrent.skip('anderes', async () => {});\n`],
+    [
+      'Alias',
+      `const later = describe.skip;\nlater('R-07 Befund', () => {\n  test('R-07 behoben', () => {});\n});\n`,
+    ],
+  ])('%s im Quelltext: offen', (_, source) => {
+    const result = gate(repoWith(source), 'R-07');
+    expect(result.code).toBe(1);
+    expect(result.out).toMatch(/Alle/);
+  });
+
+  describe('mit dem Ergebnis von Jest', () => {
+    type Entry = { title: string; status: string; failing?: boolean };
+    /** Schreibt ein Ergebnis wie jest --json für die Testdatei in base */
+    function results(base: string, entries: Entry[], file = 'r07.test.tsx'): string {
+      const out = path.join(base, 'jest.json');
+      const name = path.join(base, '__tests__', 'regressions', file);
+      const status = entries.every((e) => e.status === 'passed') ? 'passed' : 'focused';
+      const assertionResults = entries.map((e) => ({ failing: false, ...e }));
+      fs.writeFileSync(out, JSON.stringify({ testResults: [{ name, status, assertionResults }] }));
+      return out;
+    }
+    const passed: Entry = { title: 'R-07 behoben', status: 'passed' };
+
+    test('grün gelaufen: zu', () => {
+      const base = repoWith(active);
+      expect(gate(base, '--results', results(base, [passed]), 'R-07')).toMatchObject({ code: 0 });
+    });
+
+    const own = 'r07.test.tsx';
+    test.each<[string, Entry[], string]>([
+      ['übersprungen', [{ ...passed, status: 'pending' }], own],
+      ['nur todo daneben', [passed, { title: 'anderes', status: 'todo' }], own],
+      ['test.failing', [{ ...passed, failing: true }], own],
+      ['rot', [{ ...passed, status: 'failed' }], own],
+      [
+        'nicht ausgeführt, etwa hinter einem if',
+        [{ title: 'R-07 Ausgangslage: Aufbau', status: 'passed' }],
+        own,
+      ],
+      ['Datei nicht gelaufen', [passed], 'andere.test.tsx'],
+    ])('%s: offen', (_, entries, file) => {
+      const base = repoWith(active);
+      const result = gate(base, '--results', results(base, entries, file), 'R-07');
+      expect(result.code).toBe(1);
+      expect(result.out).toMatch(/R-07|Alle/);
+    });
+
+    test('ohne --results sagt das Gate, dass es nur den Quelltext geprüft hat', () => {
+      const base = repoWith(active);
+      const run = spawnSync(
+        process.execPath,
+        [path.join(base, 'scripts', 'open-findings.js'), 'R-07'],
+        {
+          encoding: 'utf8',
+        },
+      );
+      expect(run.status).toBe(0);
+      expect(run.stderr).toContain('nur der Quelltext');
+    });
+
+    test('pitch-tag.sh ruft das Gate mit dem Ergebnis von Jest auf, vor ci-checks.sh', () => {
+      const tag = fs.readFileSync(path.join(root, 'scripts', 'pitch-tag.sh'), 'utf8');
+      const jest = tag.indexOf('npx jest __tests__/regressions');
+      const gateCall = tag.indexOf('node scripts/open-findings.js --results');
+      expect(jest).toBeGreaterThan(0);
+      expect(gateCall).toBeGreaterThan(jest);
+      expect(tag).toMatch(/--json --outputFile="\$results"/);
+    });
   });
 
   test('BEFUNDE.md ohne „behoben“: offen', () => {

@@ -107,16 +107,18 @@ npm test               # nur Tests
 npm run guides:check   # Anleitungen wörtlich gegen die Demo prüfen
 npm run lint           # nur Lint
 scripts/ci-checks.sh   # alles wie in CI: check, guides:check, gitleaks, osv-scanner
-scripts/commit-if-green.sh -m "Nachricht"   # committet, was mit git add bereitliegt, nur wenn alles grün ist
+scripts/commit-if-green.sh -m "Nachricht"   # committet, was mit git add bereitliegt, nur wenn alles grün ist und nichts anderes offen ist
 scripts/pitch-tag.sh   # lokaler Tag pitch-JJJJ-Wxx, nach docs/PITCH_CHECK.md und grünem Check
-node scripts/open-findings.js   # offene Regelbrüche R-07, R-12, R-13, R-16, R-17 (mit Nummern als Argument: diese)
+node scripts/open-findings.js   # offene Regelbrüche R-07, R-12, R-13, R-16, R-17 (mit Nummern als Argument: diese, mit --results jest.json auch das Ergebnis von Jest)
 npm run typecheck      # nur tsc
 npm run format         # Prettier schreibt
 ```
 
 `scripts/ci-checks.sh` ist die eine Quelle für alle Prüfungen. CI (`.github/workflows/check.yml`) und `scripts/commit-if-green.sh` rufen es auf. gitleaks und osv-scanner laufen lokal nur, wenn sie installiert sind, sonst steht ein Hinweis da. In CI laufen sie immer, mit fester Version und fester SHA-256 im Workflow. Die Actions stehen auf Commit-SHA. osv-scanner braucht api.osv.dev, ohne Zugang geht nur `osv-scanner scan source --offline-vulnerabilities --download-offline-databases --lockfile package-lock.json`. Ausnahmen für osv-scanner stehen mit Grund und Enddatum in `osv-scanner.toml`, bekannte Fehlalarme von gitleaks einzeln in `.gitleaksignore`. Auf GitHub gelaufen ist der Workflow noch nicht, das geht erst mit Push (Nr. 15).
 
-`scripts/pitch-tag.sh` setzt den Pitch-Tag der Woche nur, wenn der Arbeitsbaum sauber ist, kein regelbrechender Befund offen ist (R-07, R-12, R-13, R-16, R-17, geprüft von `scripts/open-findings.js`) und `scripts/ci-checks.sh` grün ist. Ein übersprungener oder mit `.only` markierter Test in `__tests__/regressions/` zählt dabei als offen. Vorher gehst du `docs/PITCH_CHECK.md` auf dem Pitch-Telefon durch. Gelaufen ist das Script noch nicht, geprüft sind nur `bash -n` und `open-findings.js`.
+`scripts/pitch-tag.sh` setzt den Pitch-Tag der Woche nur, wenn der Arbeitsbaum sauber ist, kein regelbrechender Befund offen ist (R-07, R-12, R-13, R-16, R-17, geprüft von `scripts/open-findings.js`) und `scripts/ci-checks.sh` grün ist. Dafür lässt es zuerst Jest über `__tests__/regressions/` laufen und gibt das Ergebnis (`--json`) an `open-findings.js --results`. Ein Befund ist nur zu, wenn jeder Test zu ihm wirklich grün gelaufen ist. Ein übersprungener, offener (`todo`) oder mit `.only` markierter Test, ein roter Test oder eine Datei, die nicht lief, macht alle offen. Das gilt auch für Formen, die man dem Quelltext nicht ansieht, etwa einen Test hinter einem `if`. Ohne `--results` prüft das Gate nur den Quelltext und sagt das. Vorher gehst du `docs/PITCH_CHECK.md` auf dem Pitch-Telefon durch. Gelaufen ist das Script noch nicht, geprüft sind nur `bash -n` und `open-findings.js`.
+
+`scripts/commit-if-green.sh` prüft den Arbeitsbaum, committet aber nur, was bereitliegt. Darum bricht es ab, solange eine Datei geändert ist, ohne dass sie bereitliegt, oder eine neue Datei fehlt. So gilt das Grün genau für den Commit.
 
 Lint prüft das ganze Repo mit `--max-warnings 0`. Eigene Regeln stehen im Plugin `ganz` in `eslint.config.js`: keine Farbwerte außerhalb von `theme/` (`ganz/farben-aus-theme`), kein Text außerhalb von `i18n/de.ts` (`ganz/text-aus-i18n` für JSX, `ganz/text-in-ausdruecken` für jeden String in `app/`, `components/` und `hooks/`, auch Konstanten, Objektwerte und Argumente in Handlern) und kein Status-Vergleich in diesen Ordnern (`ganz/kein-status-vergleich`, Ausnahmen nur mit Grund in der Allowlist). Dazu kein `Text` direkt aus `react-native`. Die Textregel ist ein Netz, keine Garantie: Was nicht nach Text aussieht (klein, ohne Leerzeichen), fällt nicht auf, und `lib/` prüft sie nicht. `__tests__/lint.test.ts` zeigt, dass alle Regeln gleichzeitig greifen. Ein Test prüft jeden Screen auf Rolle, Label, 44 pt und Schrift bis 200 %.
 

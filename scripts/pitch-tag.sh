@@ -5,7 +5,7 @@
 # Bricht ab,
 #   - wenn der Arbeitsbaum Änderungen hat. Die Prüfung gälte sonst nicht für HEAD.
 #   - solange ein Befund offen ist, der eine feste Regel bricht (R-07, R-12, R-13, R-16, R-17),
-#     siehe scripts/open-findings.js,
+#     siehe scripts/open-findings.js. Es prüft das Ergebnis von Jest für __tests__/regressions/,
 #   - wenn es den Tag dieser Woche schon auf einem anderen Commit gibt,
 #   - wenn scripts/ci-checks.sh rot ist.
 # Aufruf: scripts/pitch-tag.sh
@@ -21,7 +21,13 @@ if [ -n "$(git status --porcelain)" ]; then
   exit 1
 fi
 
-if ! node scripts/open-findings.js; then
+# Erst die Regressionstests mit Ergebnis als JSON, dann das Gate darauf: Es zählt, was Jest
+# wirklich ausgeführt hat, nicht nur, was im Quelltext steht. Ein roter Test bricht hier noch nicht
+# ab, das Gate nennt ihn mit seinem Befund.
+results="$(mktemp "${TMPDIR:-/tmp}/ganz-regressions.XXXXXX")"
+trap 'rm -f "$results"' EXIT
+npx jest __tests__/regressions --maxWorkers=2 --json --outputFile="$results" >/dev/null 2>&1 || true
+if ! node scripts/open-findings.js --results "$results"; then
   echo "Abbruch: Solange ein regelbrechender Befund offen ist, gibt es keinen Pitch-Tag." >&2
   exit 1
 fi
