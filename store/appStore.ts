@@ -33,6 +33,7 @@ import {
   type OpenCaseArt,
   type OpenCaseOptions,
 } from '@/model/policies/openCase';
+import { closeRound, currentBookings } from '@/model/policies/rounds';
 import { ok, refuse, type Refused, type Result } from '@/model/result';
 import type {
   Booking,
@@ -1318,6 +1319,10 @@ export function createAppStore(storage: StateStorage = AsyncStorage, env: StoreE
               return refuse({ code: 'regel', action });
             const result = draftCommand(c, works ? 'repariert' : 'problem_besteht_weiter');
             if (!result.ok) return result;
+            // Die Reparatur hat nicht geholfen: Eine neue Runde beginnt (model/policies/rounds.ts)
+            const next = works
+              ? result.value.case
+              : closeRound(result.value.case, get(), env.now());
             const confirmed = works
               ? [
                   draftEvent({
@@ -1329,10 +1334,10 @@ export function createAppStore(storage: StateStorage = AsyncStorage, env: StoreE
                 ]
               : [];
             set((s) => ({
-              cases: { ...s.cases, [caseId]: result.value.case },
+              cases: { ...s.cases, [caseId]: next },
               events: [...s.events, ...result.value.events, ...confirmed],
             }));
-            return ok(result.value.case);
+            return ok(next);
           },
 
           rateBooking: (bookingId, stars) => {
@@ -1536,8 +1541,13 @@ export function selectOpenCases(s: AppData): Case[] {
 }
 
 /** Laufender Termin eines Falls (nicht storniert) */
+/** Neuester Termin der laufenden Runde, der nicht storniert ist */
 export function activeBooking(s: AppData, caseId: Id): Booking | undefined {
-  return [...s.bookings].reverse().find((b) => b.caseId === caseId && b.status !== 'storniert');
+  const c = s.cases[caseId];
+  if (!c) return undefined;
+  return currentBookings(c, s.bookings)
+    .reverse()
+    .find((b) => b.status !== 'storniert');
 }
 
 const bookingEvents: CaseEvent['type'][] = [

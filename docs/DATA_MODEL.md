@@ -71,6 +71,7 @@ Der Händler bekommt keine Einzelfälle. Er sieht nur Zahlen zu Verträgen, die 
 | `Case.resolution` | ✓ | (✓) | (✓) | Wie Fälle enden: selbst gelöst, im Call, repariert, Ersatzgerät |
 | `Case.cancelReason` | – | – | (✓) | Abbruchgründe |
 | `Case.createdAt`, `closedAt` | ✓ | (✓) | (✓) | Dauer bis zur Lösung |
+| `Case.rounds` | ✓ | (✓) | (✓) | Frühere Runden vor „Problem besteht weiter“: Kostenvoranschlag, Schadenfall, Termine und Befunde. Sie bleiben im Fall, zählen für die Regeln der neuen Runde aber nicht mehr (`model/policies/rounds.ts`) |
 | `Claim.reportedAt`, `reportedBy` | ✓ | – | – | Erklärung der Versicherungsnehmerin (VVG § 30) |
 | `Claim.confirmationId` | ✓ | – | – | Nachweis der Bestätigung (Consent) |
 | `Claim.decision.result`, `at` | ✓ | – | – | |

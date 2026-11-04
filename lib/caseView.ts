@@ -6,6 +6,7 @@ import { demoConfig } from '@/config/demo.config';
 import { guides, type GuideId } from '@/data/guides';
 import { de } from '@/i18n/de';
 import { findOpenCase } from '@/model/policies/openCase';
+import { currentBookings } from '@/model/policies/rounds';
 import type { Case, CaseStatus, Diagnosis, GuideRun } from '@/model/types';
 import type { AppData } from '@/store/appStore';
 
@@ -19,7 +20,8 @@ export function deviceStatusLabel(s: AppData, deviceId: string): string {
   const c = findOpenCase(s, deviceId);
   if (!c) return de.deviceStatus.laeuft;
   if (c.status === 'offen' || c.status === 'selbsthilfe') return de.deviceStatus.problem;
-  const booking = s.bookings.find((b) => b.caseId === c.id && b.status !== 'storniert');
+  // Ein Termin aus einer Runde vor „Problem besteht weiter“ zählt nicht mehr
+  const booking = currentBookings(c, s.bookings).find((b) => b.status !== 'storniert');
   if (booking) return de.deviceStatus.reparatur(booking.slotLabel);
   return de.deviceStatus.hilfe;
 }

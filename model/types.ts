@@ -117,6 +117,20 @@ export interface Claim {
   };
 }
 
+/**
+ * Eine frühere Runde des Falls. „Problem besteht weiter“ beendet sie. Ihr Befund, Kostenvoranschlag,
+ * Schadenfall und ihre Termine bleiben gespeichert und im Verlauf sichtbar. Für die Regeln der
+ * neuen Runde zählen sie nicht mehr.
+ */
+export interface CaseRound {
+  endedAt: ISODateTime;
+  quoteId?: Id;
+  claim?: Claim;
+  bookingIds: Id[];
+  /** Befunde von Fachkraft oder Betrieb */
+  findingIds: Id[];
+}
+
 export interface Case {
   id: Id; // sichtbar, z. B. „GS-24817“
   householdId: Id;
@@ -137,6 +151,8 @@ export interface Case {
   createdAt: ISODateTime;
   updatedAt: ISODateTime;
   closedAt?: ISODateTime;
+  /** Frühere Runden, älteste zuerst. Ohne Wiederöffnen fehlt das Feld. */
+  rounds?: CaseRound[];
 }
 
 // ---------- Ereignisse ----------

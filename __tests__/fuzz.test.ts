@@ -245,7 +245,7 @@ function setup(
 
 /**
  * Je Gerät höchstens ein offener Fall (Nr. 13), je Fall höchstens eine offene Anleitung (B-05)
- * und je Art höchstens ein Termin, der zählt (R-08). Ein Termin vorbehaltlich Freigabe, der nach
+ * und je Art und Runde höchstens ein Termin, der zählt (R-08). Ein Termin vorbehaltlich Freigabe, der nach
  * der Ablehnung nur angefragt ist, zählt nicht mehr. Gibt den ersten Verstoß zurück. Ohne expect
  * je Schritt, damit 1.000 Folgen schnell laufen.
  */
@@ -258,16 +258,30 @@ function violation(s: AppState): string | undefined {
   for (const c of Object.values(s.cases)) {
     const running = c.guideRunIds.filter((r) => s.guideRuns[r] && !s.guideRuns[r].endedAt);
     if (running.length > 1) return `zwei offene Anleitungen in ${c.id}`;
-    const rejected = c.claim?.decision?.result === 'abgelehnt';
-    const kinds = s.bookings
-      .filter(
-        (b) =>
-          b.caseId === c.id &&
-          b.status !== 'storniert' &&
-          !(rejected && b.subjectToApproval && b.status === 'angefragt'),
-      )
-      .map((b) => b.kind);
-    if (new Set(kinds).size < kinds.length) return `zwei Termine derselben Art in ${c.id}`;
+    // Je Runde (model/policies/rounds.ts): jede frühere für sich und die laufende. Jeder Termin
+    // des Falls gehört zu genau einer Runde.
+    const own = s.bookings.filter((b) => b.caseId === c.id);
+    const rounds = c.rounds ?? [];
+    const archived = rounds.flatMap((r) => r.bookingIds);
+    if (new Set(archived).size < archived.length) return `Termin in zwei Runden in ${c.id}`;
+    if (archived.some((id) => !own.some((b) => b.id === id)))
+      return `Runde mit fremdem Termin in ${c.id}`;
+    const groups = [
+      ...rounds.map((r) => ({ ids: r.bookingIds, claim: r.claim })),
+      { ids: own.filter((b) => !archived.includes(b.id)).map((b) => b.id), claim: c.claim },
+    ];
+    for (const g of groups) {
+      const rejected = g.claim?.decision?.result === 'abgelehnt';
+      const kinds = own
+        .filter(
+          (b) =>
+            g.ids.includes(b.id) &&
+            b.status !== 'storniert' &&
+            !(rejected && b.subjectToApproval && b.status === 'angefragt'),
+        )
+        .map((b) => b.kind);
+      if (new Set(kinds).size < kinds.length) return `zwei Termine derselben Art in ${c.id}`;
+    }
   }
   return undefined;
 }

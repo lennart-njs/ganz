@@ -5,6 +5,8 @@ import { act, fireEvent, renderRouter, screen } from 'expo-router/testing-librar
 import { demoConfig } from '@/config/demo.config';
 import { de } from '@/i18n/de';
 import { statusView } from '@/lib/statusView';
+import { availableActions } from '@/model/policies/actions';
+import { selectCaseFacts } from '@/model/policies/caseFacts';
 import { CONSENT_SCOPES } from '@/model/policies/consentScopes';
 import { nextSimulationDue, simulationHold, useAppStore } from '@/store/appStore';
 import { APP } from '@/test/app';
@@ -272,6 +274,51 @@ describe('Abschluss', () => {
     expect(
       screen.getByRole('button', { name: new RegExp(`^${de.thread.callStart}`) }),
     ).toBeTruthy();
+  });
+
+  test('nach „Problem besteht weiter“ beginnt eine neue Runde: Vor Ort, Befund, Kosten, Meldung und Termin', async () => {
+    const { id } = await repaired();
+    await tap(de.finish.stillBroken);
+    // Der Status sagt nicht mehr „Repariert.“, der alte Termin zählt nicht mehr
+    const view = statusView(useAppStore.getState(), caseOf(id));
+    expect(view.headline).not.toBe(de.status.headline.repariert);
+    expect(view.next).not.toBe('abschluss');
+    // Vor Ort führt zur Wahl des Betriebs
+    await fireEvent.press(screen.getByTestId('antwort-vor-ort'));
+    expect(screen.getByTestId(`antwort-betrieb-${demoConfig.partners[0]!.id}`)).toBeTruthy();
+    await tap(de.talk.edit(de.thread.onSite));
+
+    // Neuer Befund aus dem Videocall: Kosten und Meldung sind wieder offen
+    await act(async () => {
+      useAppStore.getState().setFinding(id, 'reparatur', 'fachkraft');
+    });
+    const facts = selectCaseFacts(useAppStore.getState(), id)!;
+    expect(availableActions(facts)).toEqual(
+      expect.arrayContaining(['schaden_melden', 'selbst_zahlen']),
+    );
+    // Der alte Kostenvoranschlag bleibt im Verlauf stehen, der neue kommt dazu
+    expect(screen.getAllByText(de.costs.title)).toHaveLength(2);
+    await fireEvent.press(screen.getByTestId('antwort-melden'));
+    expect(caseOf(id).claim?.decision).toBeUndefined();
+    expect(caseOf(id).rounds?.[0]?.claim?.decision?.result).toBe('freigegeben');
+    await fireEvent.press(screen.getByTestId(`antwort-betrieb-${demoConfig.partners[0]!.id}`));
+    await fireEvent.press(screen.getByTestId(`antwort-zeit-${demoConfig.slots[1]}`));
+    await fireEvent.press(screen.getByTestId('antwort-anfragen'));
+    await act(async () => {});
+    const repairs = useAppStore
+      .getState()
+      .bookings.filter((b) => b.caseId === id && b.kind === 'reparatur');
+    expect(repairs.map((b) => b.status)).toEqual(['erledigt', 'angefragt']);
+    // Die zweite Runde läuft bis zur Frage, ob das Gerät wieder läuft
+    for (let i = 0; i < 4; i++) {
+      await act(async () => {
+        useAppStore.getState().simulateNext(id);
+      });
+    }
+    expect(caseOf(id).status).toBe('in_reparatur');
+    expect(screen.getByTestId('antwort-laeuft')).toBeTruthy();
+    await fireEvent.press(screen.getByTestId('antwort-laeuft'));
+    expect(caseOf(id)).toMatchObject({ status: 'erledigt', resolution: 'repariert' });
   });
 
   test('läuft für das Gerät schon ein neuer Fall, öffnet sich der erledigte nicht wieder (Nr. 13)', async () => {

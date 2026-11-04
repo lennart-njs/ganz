@@ -2,6 +2,7 @@ import fs from 'fs';
 import path from 'path';
 
 import { selectCaseFacts, type CaseFactsSource } from '@/model/policies/caseFacts';
+import { closeRound } from '@/model/policies/rounds';
 import type {
   Booking,
   Case,
@@ -287,6 +288,65 @@ describe('selectCaseFacts', () => {
     expect(f.finding?.id).toBe('e-1');
     expect(f.replacement).toBe(true);
     expect(factsOf(makeCase()).replacement).toBe(false);
+  });
+
+  test('Runden: nach „Problem besteht weiter“ zählen Termine, Befund, Kosten und Schadenfall der alten Runde nicht mehr', () => {
+    const finding: Diagnosis = {
+      id: 'e-1',
+      caseId: 'GS-1',
+      photoIds: [],
+      mode: 'bauteil',
+      errorPattern: 'ersatzgeraet_noetig',
+      confidence: 'hoch',
+      confidenceScore: 1,
+      source: 'fachkraft',
+      createdAt: NOW,
+    };
+    const repaired = makeCase({
+      status: 'in_reparatur',
+      quoteId: quote.id,
+      claim: claim('freigegeben'),
+      diagnosisIds: ['e-1'],
+    });
+    const bookings = [
+      booking('t-1', { status: 'erledigt' }),
+      booking('t-2', { kind: 'vor_ort_diagnose', status: 'erledigt' }),
+    ];
+    const before = factsOf(repaired, { bookings, diagnoses: [finding] });
+    expect(before.bookings.reparatur?.id).toBe('t-1');
+    expect(before.replacement).toBe(true);
+
+    const reopened = closeRound(
+      { ...repaired, status: 'eskaliert' },
+      { bookings, diagnoses: [finding] },
+      NOW,
+    );
+    expect(reopened.rounds).toEqual([
+      {
+        endedAt: NOW,
+        quoteId: quote.id,
+        claim: claim('freigegeben'),
+        bookingIds: ['t-1', 't-2'],
+        findingIds: ['e-1'],
+      },
+    ]);
+    const f = factsOf(reopened, { bookings, diagnoses: [finding] });
+    expect(f.quote).toBeUndefined();
+    expect(f.claim).toBe('keiner');
+    expect(f.bookings).toEqual({});
+    expect(f.booking).toBeUndefined();
+    expect(f.finding).toBeUndefined();
+    expect(f.replacement).toBe(false);
+    // Ein neuer Termin zählt in der neuen Runde
+    const again = factsOf(reopened, { bookings: [...bookings, booking('t-3')] });
+    expect(again.bookings.reparatur?.id).toBe('t-3');
+    // Eine zweite Runde nimmt nur, was seit der ersten dazukam
+    const second = closeRound(
+      reopened,
+      { bookings: [...bookings, booking('t-3')], diagnoses: [] },
+      NOW,
+    );
+    expect(second.rounds?.[1]).toMatchObject({ bookingIds: ['t-3'], findingIds: [] });
   });
 
   test('letzter Videocall', () => {

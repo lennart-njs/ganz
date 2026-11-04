@@ -80,6 +80,14 @@ const claim = z.object({
     .optional(),
 });
 
+const caseRound = z.object({
+  endedAt: time,
+  quoteId: id.optional(),
+  claim: claim.optional(),
+  bookingIds: z.array(id),
+  findingIds: z.array(id),
+});
+
 const caseRecord = z.object({
   id,
   householdId: id,
@@ -119,6 +127,7 @@ const caseRecord = z.object({
   createdAt: time,
   updatedAt: time,
   closedAt: time.optional(),
+  rounds: z.array(caseRound).optional(),
 });
 
 const caseEvent = z.object({

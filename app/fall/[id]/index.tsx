@@ -46,6 +46,7 @@ import { can } from '@/model/policies/actions';
 import { selectCaseFacts } from '@/model/policies/caseFacts';
 import { CONSENT_SCOPES, scopedConsent } from '@/model/policies/consentScopes';
 import { hasProgress } from '@/model/policies/openCase';
+import { earlierRounds, isFinding } from '@/model/policies/rounds';
 import type { CaseEvent, Diagnosis } from '@/model/types';
 import { services, type FindingOption, type PhotoMode, type QuestionAnswer } from '@/services';
 import {
@@ -510,13 +511,28 @@ export default function FallGespraech() {
     if (option === 'geloest') add(e.at, `${e.id}-done`, <BotSays lines={[t.solvedInCall]} />);
   }
 
-  // Kosten und Schadenmeldung
-  if (quote) {
-    const finding = diagnoses.findLast((d) => d.source === 'fachkraft' || d.source === 'betrieb');
+  // Kosten und Schadenmeldung, auch aus früheren Runden vor „Problem besteht weiter“
+  const earlier = earlierRounds(c).findings;
+  const costRounds = [
+    ...(c.rounds ?? []).map((r) => ({
+      quoteId: r.quoteId,
+      claim: r.claim,
+      finding: diagnoses.findLast((d) => r.findingIds.includes(d.id)),
+    })),
+    {
+      quoteId: c.quoteId,
+      claim: c.claim,
+      finding: diagnoses.findLast((d) => isFinding(d) && !earlier.has(d.id)),
+    },
+  ];
+  for (const r of costRounds) {
+    const roundQuote = state.quotes.find((q) => q.id === r.quoteId);
+    if (!roundQuote) continue;
+    const { finding } = r;
     const replacement = finding?.errorPattern === 'ersatzgeraet_noetig';
     add(
-      quote.createdAt,
-      quote.id,
+      roundQuote.createdAt,
+      roundQuote.id,
       <BotSays
         lines={[
           ...(finding?.component ? [de.talk.claim.intro(finding.component)] : []),
@@ -524,16 +540,16 @@ export default function FallGespraech() {
         ]}
       >
         <View style={styles.full}>
-          <CostCompare quote={quote} focus={replacement ? 'replacement' : 'repair'} />
+          <CostCompare quote={roundQuote} focus={replacement ? 'replacement' : 'repair'} />
         </View>
-        {details('kosten')}
+        {roundQuote.id === quote?.id ? details('kosten') : null}
       </BotSays>,
     );
-    if (c.claim) {
-      add(c.claim.reportedAt, 'claim', <UserSaid text={de.costs.report} />);
+    if (r.claim) {
+      add(r.claim.reportedAt, `claim-${roundQuote.id}`, <UserSaid text={de.costs.report} />);
       add(
-        c.claim.reportedAt,
-        'claim-a',
+        r.claim.reportedAt,
+        `claim-${roundQuote.id}-a`,
         <BotSays
           lines={[replacement ? t.replacementNext(insurer) : de.talk.claim.reported(insurer)]}
         />,
@@ -702,10 +718,8 @@ export default function FallGespraech() {
     !after(lastSession.endedAt, 'videocall_angefragt', (e) => e.payload.art === 'rueckruf') &&
     !booking;
   const awaitingConfirm = can(facts, 'reparatur_bestaetigen');
-  const latestFinding = diagnoses.findLast(
-    (d) => d.source === 'fachkraft' || d.source === 'betrieb',
-  );
-  const replacement = latestFinding?.errorPattern === 'ersatzgeraet_noetig';
+  // Befund der laufenden Runde
+  const replacement = facts.replacement;
   const costsOpen =
     !repairBooking &&
     !selfPay &&

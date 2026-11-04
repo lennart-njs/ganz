@@ -2,6 +2,7 @@
 // Screens fragen can() und availableActions(), statt selbst den Status zu vergleichen.
 // Kein Import aus react, expo, i18n, config oder store (ZUKUNFTSPLAN 3.1).
 import { findActiveConsent, isClosed } from '../caseMachine';
+import { currentBookings, earlierRounds, isFinding } from './rounds';
 import type {
   Booking,
   Case,
@@ -55,14 +56,15 @@ export interface CaseFacts {
   paused: boolean;
   /** Das Gerät hat einen verknüpften Schutz */
   hasContract: boolean;
-  /** Kostenvoranschlag des Falls */
+  /** Kostenvoranschlag der laufenden Runde (model/policies/rounds.ts) */
   quote?: Quote;
   claim: ClaimState;
   /** Wer zahlt. Offen, solange der Versicherer prüft oder du noch entscheidest. */
   payer?: PayerKind;
   /**
-   * Neuester Termin je Art, der zählt: nicht storniert und nicht verfallen. Ein erledigter zählt.
-   * Ein Termin vorbehaltlich Freigabe verfällt mit der Ablehnung, solange er nur angefragt ist.
+   * Neuester Termin je Art, der zählt: aus der laufenden Runde, nicht storniert und nicht verfallen.
+   * Ein erledigter zählt. Ein Termin vorbehaltlich Freigabe verfällt mit der Ablehnung, solange er
+   * nur angefragt ist. Termine aus einer Runde vor „Problem besteht weiter“ zählen nicht mehr.
    */
   bookings: Partial<Record<BookingKind, Booking>>;
   /** Neuester Termin, der zählt, gleich welcher Art */
@@ -82,7 +84,7 @@ export interface CaseFacts {
   guideRun?: GuideRun;
   /** Wie die neueste Anleitung endete */
   guideOutcome?: GuideRun['outcome'];
-  /** Neuester Befund von Fachkraft oder Betrieb */
+  /** Neuester Befund von Fachkraft oder Betrieb in der laufenden Runde */
   finding?: Diagnosis;
   /** Der Befund sagt: Ersatzgerät nötig */
   replacement: boolean;
@@ -156,8 +158,8 @@ export function selectCaseFacts(s: CaseFactsSource, caseId: Id): CaseFacts | und
   const quote = c.quoteId ? s.quotes.find((q) => q.id === c.quoteId) : undefined;
   const claim = claimState(c);
 
-  const counting = s.bookings.filter(
-    (b) => b.caseId === caseId && b.status !== 'storniert' && !lapsed(b, claim),
+  const counting = currentBookings(c, s.bookings).filter(
+    (b) => b.status !== 'storniert' && !lapsed(b, claim),
   );
   const bookings: Partial<Record<BookingKind, Booking>> = {};
   for (const b of counting) bookings[b.kind] = b;
@@ -178,10 +180,12 @@ export function selectCaseFacts(s: CaseFactsSource, caseId: Id): CaseFacts | und
 
   const runs = c.guideRunIds.map((id) => s.guideRuns[id]).filter((r): r is GuideRun => !!r);
   const lastRun = runs.at(-1);
+  const earlier = earlierRounds(c).findings;
   const finding = [...c.diagnosisIds]
     .reverse()
+    .filter((id) => !earlier.has(id))
     .map((id) => s.diagnoses.find((d) => d.id === id))
-    .find((d) => d?.source === 'fachkraft' || d?.source === 'betrieb');
+    .find(isFinding);
 
   return {
     caseId,
