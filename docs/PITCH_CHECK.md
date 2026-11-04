@@ -45,7 +45,7 @@ Einmal im Monat zusätzlich die misslungene Reparatur, wie im Flow `e2e/gewaehrl
 - nach einem zweiten „Problem besteht weiter“ „Auch die Nachbesserung hat nicht geholfen.“ und wieder Hilfe holen kommt,
 - mit „Reparatur liegt länger zurück“ (Demo-Steuerung, vor Schritt 8) gleich „Die Gewährleistung für die Reparatur ist vorbei.“ und eine neue Runde kommt.
 
-Dazu einmal Abbrechen in der Reparatur (Entscheidung Nr. 34): nach „Termin anfragen“ und „Nächster Schritt (Demo)“ X → „Fall abbrechen“. Bestanden, wenn vor dem Grund „… bekommt die Absage.“ und „Ob schon Kosten entstanden sind, klärt … mit dir.“ steht, nirgends „kostenlos“, und nach dem Abbruch kein „Nächster Schritt (Demo)“ mehr kommt.
+Dazu einmal Abbrechen in der Reparatur (Entscheidung Nr. 34): nach „Termin anfragen“ zweimal „Nächster Schritt (Demo)“, bis „Termin steht“, dann X → „Fall abbrechen“. Bestanden, wenn vor dem Grund „… bekommt die Absage.“ und „Ob schon Kosten entstanden sind, klärt … mit dir.“ steht, nirgends „kostenlos“, und nach dem Abbruch kein „Nächster Schritt (Demo)“ mehr kommt.
 
 ### 2. Dark Mode
 

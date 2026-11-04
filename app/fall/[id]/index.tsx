@@ -1025,7 +1025,7 @@ export default function FallGespraech() {
   } else if (facts.hold) {
     // Widerrufene Weitergabe: Versicherer und Betrieb machen nicht weiter (R-12). Mit einem Tap
     // bestätigst du sie noch einmal, mit demselben Text wie beim ersten Mal. So bleibt auch ein
-    // Fall in der Reparatur keine Sackgasse, obwohl er sich nicht abbrechen lässt.
+    // Fall in der Reparatur keine Sackgasse. Abbrechen geht dort seit Nr. 34 auch.
     const toInsurer = facts.hold === 'weitergabe_versicherer';
     // Vor dem Termin zur Nachbesserung ist es der Betrieb der Reparatur (Nr. 32)
     const recipient = toInsurer
