@@ -85,6 +85,13 @@ export function useAssistant(caseId: string) {
   };
 
   const ask = async () => {
+    // Die einzige Stelle, an der etwas den Anbieter erreicht. Ohne Einwilligung geht nichts raus,
+    // auch nicht mit „Noch einmal senden“ nach einem Widerruf. Dann bleibt auch die
+    // Installations-ID gelöscht (services/chatService.ts legt sie erst beim Senden an).
+    if (!hasChatConsent(useAppStore.getState())) {
+      setError(undefined);
+      return;
+    }
     const context = chatContext(useAppStore.getState(), caseId);
     if (!context) return;
     // Das ganze Gespräch geht mit, kein Fenster über den Verlauf. Passt die Antwort nicht mehr

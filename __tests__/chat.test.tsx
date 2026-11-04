@@ -1,4 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { renderHook } from '@testing-library/react-native';
 import { router } from 'expo-router';
 import { act, fireEvent, renderRouter, screen } from 'expo-router/testing-library';
 
@@ -8,6 +9,7 @@ import { de } from '@/i18n/de';
 import { formatDateTime } from '@/i18n/format';
 import { assistantTransfer, chatContext } from '@/lib/chat/context';
 import { chatLimits } from '@/lib/chat/limits';
+import { useAssistant } from '@/lib/chat/useAssistant';
 import { legalParts, textStamp } from '@/lib/legalTexts';
 import { parseRequest, type ChatContext } from '@/lib/chat/prompt';
 import { CHAT_HEADERS, INSTALLATION_ID } from '@/lib/chat/protocol';
@@ -177,6 +179,33 @@ describe('Reparatur-Assistent', () => {
     expect(useAppStore.getState().chatMessages.filter((m) => m.role === 'haushalt')).toHaveLength(
       1,
     );
+  });
+
+  test('nach dem Widerruf schickt auch „Noch einmal senden“ nichts, und keine neue Installations-ID entsteht', async () => {
+    setup();
+    const c = useAppStore.getState().createCase({
+      deviceId: useAppStore.getState().devices[0]!.id,
+      entry: 'freitext',
+      problemLabel: 'Pumpe',
+    });
+    const { result } = await renderHook(() => useAssistant(c.id));
+    fetchMock.mockRejectedValueOnce(new TypeError('Network request failed'));
+    await act(async () => result.current.send('Es pumpt nicht ab.'));
+    await act(async () => result.current.accept());
+    await flush();
+    expect(result.current.error).toBe('netz');
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    const consent = useAppStore.getState().consents.find((k) => k.purpose === 'chat_assistent')!;
+    await act(async () => useAppStore.getState().revokeConsent(consent.id));
+    await flush();
+    expect(result.current.consent).toBe(false);
+    expect(await AsyncStorage.getItem(INSTALLATION_KEY)).toBeNull();
+    fetchMock.mockReturnValue(reply({ reply: 'Gut.', suggestion: 'keine', guideId: '' }));
+    await act(async () => result.current.retry());
+    await flush();
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(result.current.error).toBeUndefined();
+    expect(await AsyncStorage.getItem(INSTALLATION_KEY)).toBeNull();
   });
 
   test('ohne Netz: ein ruhiger Hinweis mit zwei Wegen, noch einmal senden oder als Notiz', async () => {
