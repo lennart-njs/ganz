@@ -65,6 +65,7 @@ const GUARD_ENV = [
   'CHAT_RATE_PER_MINUTE',
   'CHAT_RATE_PER_DAY',
   'CHAT_DAILY_LIMIT',
+  'CHAT_TRUSTED_PROXY_HOPS',
 ];
 
 beforeEach(() => {
@@ -430,6 +431,7 @@ describe('Missbrauch begrenzen', () => {
 
   test('nach N Anfragen in der Minute 429, je IP-Adresse und je Installation', async () => {
     ok();
+    process.env.CHAT_TRUSTED_PROXY_HOPS = '1';
     jest.setSystemTime(new Date('2026-11-03T10:00:00.000Z'));
     const n = rateConfig().perWindow;
     expect(await statuses(n, () => from('10.0.0.1', 'installation-a'))).toEqual(Array(n).fill(200));
@@ -449,6 +451,7 @@ describe('Missbrauch begrenzen', () => {
 
   test('X-Forwarded-For: Es zählt der Eintrag des Proxys, nicht der vom Client', async () => {
     ok();
+    process.env.CHAT_TRUSTED_PROXY_HOPS = '1';
     const n = rateConfig().perWindow;
     const spoofed = (i: number) => post(ask, { 'X-Forwarded-For': `192.0.2.${i}, 10.0.0.9` });
     let i = 0;
@@ -458,8 +461,33 @@ describe('Missbrauch begrenzen', () => {
     expect(clientKeys(request(ask))).toEqual(['ip:unbekannt']);
   });
 
+  test('ohne Proxy davor zählen X-Forwarded-For und X-Real-IP nicht, ein Wechsel hilft nicht', async () => {
+    ok();
+    process.env.CHAT_RATE_PER_MINUTE = '2';
+    const rotating = (i: number) =>
+      post(ask, { 'X-Forwarded-For': `10.0.0.${i}`, 'X-Real-IP': `10.0.1.${i}` });
+    let i = 0;
+    expect(await statuses(4, () => rotating(i++))).toEqual([200, 200, 429, 429]);
+    expect(clientKeys(request(ask, { 'X-Forwarded-For': '10.0.0.1' }))).toEqual(['ip:unbekannt']);
+    expect(clientKeys(request(ask, { 'X-Real-IP': '10.0.0.7' }))).toEqual(['ip:unbekannt']);
+  });
+
+  test('mit zwei Proxys zählt der zweite Eintrag von hinten', () => {
+    const headers = { 'X-Forwarded-For': '192.0.2.1, 10.0.0.5, 172.16.0.2' };
+    const env = { CHAT_TRUSTED_PROXY_HOPS: '2' };
+    expect(clientKeys(request(ask, headers), env)).toEqual(['ip:10.0.0.5']);
+    expect(clientKeys(request(ask, headers), { CHAT_TRUSTED_PROXY_HOPS: '1' })).toEqual([
+      'ip:172.16.0.2',
+    ]);
+    for (const value of ['', '0', '-1', 'zwei'])
+      expect(clientKeys(request(ask, headers), { CHAT_TRUSTED_PROXY_HOPS: value })).toEqual([
+        'ip:unbekannt',
+      ]);
+  });
+
   test('Tagesgrenze je Client und insgesamt, ab Mitternacht (UTC) geht es weiter', async () => {
     ok();
+    process.env.CHAT_TRUSTED_PROXY_HOPS = '1';
     process.env.CHAT_RATE_PER_DAY = '3';
     process.env.CHAT_DAILY_LIMIT = '5';
     jest.setSystemTime(new Date('2026-11-03T22:00:00.000Z'));

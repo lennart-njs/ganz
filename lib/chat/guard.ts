@@ -1,7 +1,8 @@
 // Begrenzt Missbrauch der Chat-Route: Pitch-Token, Rate-Limit je IP-Adresse und Installation,
 // Tagesgrenze. Läuft nur auf dem Server (app/api/chat+api.ts), im Speicher des Prozesses.
 // Das begrenzt Missbrauch, ist aber kein Schutz: Der Token steckt in der App und lässt sich
-// auslesen, IP-Adresse und Installations-ID lassen sich wechseln. Ab Phase 5 gibt es Anmeldung.
+// auslesen, die Installations-ID lässt sich wechseln, eine Adresse hinter einem Proxy auch. Ab
+// Phase 5 gibt es Anmeldung.
 import { CHAT_HEADERS, INSTALLATION_ID } from './protocol';
 
 // ---------- Pitch-Token ----------
@@ -36,14 +37,36 @@ export function pitchTokenOk(
 // ---------- Wer fragt ----------
 
 /**
- * Schlüssel für das Rate-Limit: die IP-Adresse und, wenn die App sie schickt, die Installations-ID.
- * Die Adresse kommt aus dem letzten Eintrag von X-Forwarded-For, den setzt der Proxy vor dem
- * Server. Ohne Proxy zählen alle Anfragen als eine Adresse. null: Die Installations-ID hat eine
- * falsche Form.
+ * Wie viele Proxys vor der Route Einträge an X-Forwarded-For hängen (CHAT_TRUSTED_PROXY_HOPS).
+ * Ohne Angabe: keiner. Dann schreibt jeden Eintrag der Client selbst, etwa auf dem Dev-Server.
  */
-export function clientKeys(request: Request): string[] | null {
-  const forwarded = request.headers.get('x-forwarded-for')?.split(',').at(-1)?.trim();
-  const ip = (forwarded || request.headers.get('x-real-ip')?.trim() || 'unbekannt').slice(0, 64);
+export function trustedProxyHops(env: Record<string, string | undefined> = process.env): number {
+  const n = Number(env.CHAT_TRUSTED_PROXY_HOPS);
+  return Number.isInteger(n) && n > 0 ? Math.min(n, 10) : 0;
+}
+
+/**
+ * Schlüssel für das Rate-Limit: die IP-Adresse und, wenn die App sie schickt, die Installations-ID.
+ * X-Forwarded-For und X-Real-IP gelten nur, wenn CHAT_TRUSTED_PROXY_HOPS sagt, dass ein Proxy davor
+ * steht. Dann zählt der Eintrag, den der äußerste vertraute Proxy anhängte (n-ter von hinten).
+ * Davor kann der Client alles schreiben. Ohne Proxy zählen alle Anfragen als eine Adresse
+ * („unbekannt“), sonst könnte jede Anfrage eine neue Adresse nennen. null: Die Installations-ID
+ * hat eine falsche Form.
+ */
+export function clientKeys(
+  request: Request,
+  env: Record<string, string | undefined> = process.env,
+): string[] | null {
+  const hops = trustedProxyHops(env);
+  const forwarded = hops
+    ? request.headers
+        .get('x-forwarded-for')
+        ?.split(',')
+        .map((x) => x.trim())
+        .at(-hops)
+    : undefined;
+  const real = hops ? request.headers.get('x-real-ip')?.trim() : undefined;
+  const ip = (forwarded || real || 'unbekannt').slice(0, 64);
   const installation = request.headers.get(CHAT_HEADERS.installation)?.trim();
   if (installation && !INSTALLATION_ID.test(installation)) return null;
   return [`ip:${ip}`, ...(installation ? [`installation:${installation}`] : [])];
