@@ -161,10 +161,10 @@ const sharedFileCategory: Record<keyof SharedCaseFile, readonly DataCategory[] |
 };
 
 /** Gerät beim Händler gekauft, ohne Schutz, Fall mit Befund: „Fall an … senden“ steht im Gespräch */
-function dealerCase(): Id {
+function dealerCase(dealerId: string = dealer.id): Id {
   start({ contract: false });
   const device = addWasher();
-  useAppStore.getState().setDeviceDealer(device.id, dealer.id);
+  useAppStore.getState().setDeviceDealer(device.id, dealerId);
   return caseAfterFinding(device.id);
 }
 
@@ -269,6 +269,26 @@ const flows: Record<ConsentPurpose, Record<string, () => Promise<void> | void>> 
       expect(
         de.sharing.dataSummary(dealer.name, de.common.list(categoryLabels(consent.dataCategories))),
       ).toBe(summary);
+    },
+    // Bei Fründ sind die Namen des Falls die der Demo. Der Stempel muss aber den Händler aus dem
+    // Gerät nennen, sonst passte der Hash bei jedem anderen Händler nicht zum gezeigten Satz.
+    'Gekauft bei einem anderen Händler: Satz und Stempel nennen ihn': async () => {
+      const other = demoConfig.dealers.find((d) => d.id === 'lindemann')!;
+      const id = dealerCase(other.id);
+      const names = caseNames(useAppStore.getState(), id);
+      expect(names.haendler).toBe(other.name);
+      await renderRouter(APP, { initialUrl: `/fall/${id}` });
+      await tap(new RegExp(`^${escapeRegExp(de.sharing.offer(other.name))}`));
+      for (const part of legalParts('haendler_weitergabe', names)) {
+        expect([part, screen.queryAllByText(part).length > 0]).toEqual([part, true]);
+      }
+      const scope = de.common.list(scopeLabels('weitergabe_haendler'));
+      expect(screen.queryByText(de.sharing.dataSummary(dealer.name, scope))).toBeNull();
+      await tap(de.sharing.send);
+      const consent = consentsFor('weitergabe_haendler', id).at(-1)!;
+      expect(consent.recipient).toEqual({ id: other.id, kind: 'haendler', name: other.name });
+      expect(consent).toMatchObject(textStamp('haendler_weitergabe', names));
+      expect(consent.textHash).not.toBe(textStamp('haendler_weitergabe').textHash);
     },
   },
   screenshots_im_call: {
