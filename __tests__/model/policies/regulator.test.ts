@@ -7,10 +7,10 @@ import {
   type RegulatorInput,
   type RegulatorOption,
   type RegulatorRules,
+  purchaseWarrantyUntil,
   regulatorOptions,
   withinPurchaseWarranty,
 } from '@/model/policies/regulator';
-import { addMonths } from '@/model/policies/warranty';
 import type { PartnerRef, RegulatorKind } from '@/model/types';
 
 /** Stichtag: Fall angelegt am Morgen der Demo-Woche (demo.startAt) */
@@ -53,6 +53,15 @@ function input(
 }
 
 const shape = (o: RegulatorOption): Shape => [o.kind, o.basis, o.certainty];
+
+/** Tag in Berlin, unabhängig von der Zeitzone, in der der Test läuft */
+const berlinDate = (iso: string) =>
+  new Intl.DateTimeFormat('de-DE', {
+    timeZone: 'Europe/Berlin',
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+  }).format(new Date(iso));
 
 describe('regulatorOptions: Tabelle aus regulierer §1.3', () => {
   test.each<[string, RegulatorInput, Shape[]]>([
@@ -163,6 +172,30 @@ describe('regulatorOptions: Reihenfolge und Grenzen', () => {
       [SELF],
     ],
     [
+      'Kauf am 01.03. um Mitternacht Ortszeit, Stichtag 29.02. im Schaltjahr: Gewährleistung sicher',
+      {
+        ...input({ soldBy: FRUEND, purchaseDate: '2022-03-01T00:00:00+01:00' }),
+        asOf: '2024-02-29T12:00:00+01:00',
+      },
+      [['haendler', 'gewaehrleistung', 'sicher'], SELF],
+    ],
+    [
+      'Jahrestag des Kaufs um 10 Uhr: Gewährleistung sicher',
+      {
+        ...input({ soldBy: FRUEND, purchaseDate: '2025-06-14T00:00:00+02:00' }),
+        asOf: '2027-06-14T10:00:00+02:00',
+      },
+      [['haendler', 'gewaehrleistung', 'sicher'], SELF],
+    ],
+    [
+      'Tag nach dem Jahrestag des Kaufs: Kulanz',
+      {
+        ...input({ soldBy: FRUEND, purchaseDate: '2025-06-14T00:00:00+02:00' }),
+        asOf: '2027-06-15T00:00:00+02:00',
+      },
+      [['haendler', 'kulanz', 'pruefen'], SELF],
+    ],
+    [
       'Frist aus den Regeln: 30 Monate nach dem Kauf, mit 24 Monaten Kulanz',
       input({ soldBy: FRUEND, purchaseDate: '2024-05-02T08:00:00.000Z' }),
       [['haendler', 'kulanz', 'pruefen'], SELF],
@@ -194,14 +227,15 @@ describe('regulatorOptions: Reihenfolge und Grenzen', () => {
 });
 
 describe('regulatorOptions: Angaben je Möglichkeit', () => {
-  test('Händler: Partei aus dem Gerät, Frist bis Kaufdatum plus 24 Monate, schickt selbst', () => {
+  test('Händler: Partei aus dem Gerät, Frist bis Ende des Kauftags plus 24 Monate, schickt selbst', () => {
     const [dealer] = regulatorOptions(input({ soldBy: FRUEND, purchaseDate: BOUGHT_03_2025 }));
     expect(dealer).toEqual({
       kind: 'haendler',
       basis: 'gewaehrleistung',
       party: { id: 'fruend', kind: 'haendler', name: 'Fründ Elektrogeräte AG' },
       certainty: 'sicher',
-      until: addMonths(BOUGHT_03_2025, 24),
+      // 10.03.2027, 23:59:59,999 Uhr in Berlin (Winterzeit)
+      until: '2027-03-10T22:59:59.999Z',
       arranges: true,
       needsQuote: false,
     });
@@ -275,18 +309,52 @@ describe('regulatorOptions: Angaben je Möglichkeit', () => {
   });
 });
 
-describe('withinPurchaseWarranty: Kalendermonate', () => {
-  test('bis einschließlich Kaufdatum plus Monate', () => {
+describe('withinPurchaseWarranty: Kalendermonate, Kalendertage in Berlin', () => {
+  test('bis zum Ende des Tages, der dem Kauftag entspricht (§ 188 Abs. 2 BGB), nicht zur Uhrzeit', () => {
+    // 02.11.2024, 9 Uhr in Berlin
     const bought = '2024-11-02T08:00:00.000Z';
-    expect(withinPurchaseWarranty(bought, '2026-11-02T08:00:00.000Z', 24)).toBe(true);
-    expect(withinPurchaseWarranty(bought, '2026-11-02T08:00:00.001Z', 24)).toBe(false);
+    expect(purchaseWarrantyUntil(bought, 24)).toBe('2026-11-02T22:59:59.999Z');
+    expect(withinPurchaseWarranty(bought, '2026-11-02T08:00:00.001Z', 24)).toBe(true);
+    expect(withinPurchaseWarranty(bought, '2026-11-02T22:59:59.999Z', 24)).toBe(true);
+    expect(withinPurchaseWarranty(bought, '2026-11-02T23:00:00.000Z', 24)).toBe(false);
     expect(withinPurchaseWarranty(bought, '2025-01-01T00:00:00.000Z', 24)).toBe(true);
   });
 
   test('am Monatsende der letzte Tag (29.02. plus 24 Monate ist der 28.02.)', () => {
     const bought = '2024-02-29T10:00:00.000Z';
-    expect(withinPurchaseWarranty(bought, '2026-02-28T10:00:00.000Z', 24)).toBe(true);
+    expect(purchaseWarrantyUntil(bought, 24)).toBe('2026-02-28T22:59:59.999Z');
+    expect(withinPurchaseWarranty(bought, '2026-02-28T22:59:59.999Z', 24)).toBe(true);
+    expect(withinPurchaseWarranty(bought, '2026-02-28T23:00:00.000Z', 24)).toBe(false);
     expect(withinPurchaseWarranty(bought, '2026-03-01T00:00:00.000Z', 24)).toBe(false);
+    expect(purchaseWarrantyUntil('2025-01-31T12:00:00+01:00', 1)).toBe('2025-02-28T22:59:59.999Z');
+  });
+
+  test('Kauf am 01.03. mit Ortszeit: im Schaltjahr endet die Frist am 01.03., nicht am 29.02.', () => {
+    const bought = '2022-03-01T00:00:00+01:00';
+    expect(purchaseWarrantyUntil(bought, 24)).toBe('2024-03-01T22:59:59.999Z');
+    expect(withinPurchaseWarranty(bought, '2024-02-29T12:00:00+01:00', 24)).toBe(true);
+    expect(withinPurchaseWarranty(bought, '2024-03-01T23:59:59+01:00', 24)).toBe(true);
+    expect(withinPurchaseWarranty(bought, '2024-03-02T00:00:00+01:00', 24)).toBe(false);
+  });
+
+  test('der Kauftag ist der Tag in Berlin, gleich in welcher Zeitzone gespeichert', () => {
+    const until = '2027-06-14T21:59:59.999Z';
+    expect(purchaseWarrantyUntil('2025-06-14T00:00:00+02:00', 24)).toBe(until);
+    // 14.06.2025, 0:30 Uhr in Berlin, in UTC noch der 13.06.
+    expect(purchaseWarrantyUntil('2025-06-13T22:30:00.000Z', 24)).toBe(until);
+    expect(purchaseWarrantyUntil('2025-06-14T23:59:59+02:00', 24)).toBe(until);
+    expect(purchaseWarrantyUntil('2025-06-14', 24)).toBe(until);
+  });
+
+  test('Ende an Tagen um die Zeitumstellung, als letzter Augenblick des Tages in Berlin', () => {
+    // 28.03.2027 und 31.10.2027 sind die Tage der Umstellung
+    expect(purchaseWarrantyUntil('2025-03-27T12:00:00+01:00', 24)).toBe('2027-03-27T22:59:59.999Z');
+    expect(purchaseWarrantyUntil('2025-03-28T12:00:00+01:00', 24)).toBe('2027-03-28T21:59:59.999Z');
+    expect(purchaseWarrantyUntil('2025-10-30T12:00:00+01:00', 24)).toBe('2027-10-30T21:59:59.999Z');
+    expect(purchaseWarrantyUntil('2025-10-31T12:00:00+01:00', 24)).toBe('2027-10-31T22:59:59.999Z');
+    for (const iso of ['2027-03-27T22:59:59.999Z', '2027-10-31T22:59:59.999Z']) {
+      expect(berlinDate(iso)).not.toBe(berlinDate(new Date(Date.parse(iso) + 1).toISOString()));
+    }
   });
 
   test('nicht in Monaten zu 30,44 Tagen: 731 Tage mit Schalttag sind noch 24 Monate', () => {
@@ -302,6 +370,8 @@ describe('withinPurchaseWarranty: Kalendermonate', () => {
     expect(withinPurchaseWarranty('', AS_OF, 24)).toBe(false);
     expect(withinPurchaseWarranty('irgendwann', AS_OF, 24)).toBe(false);
     expect(withinPurchaseWarranty(BOUGHT_03_2025, 'irgendwann', 24)).toBe(false);
+    expect(purchaseWarrantyUntil('', 24)).toBeUndefined();
+    expect(purchaseWarrantyUntil('irgendwann', 24)).toBeUndefined();
   });
 });
 
@@ -348,18 +418,42 @@ describe('Werte der Demo', () => {
   const fruend = demoConfig.dealers[0]!;
   const soldBy: PartnerRef = { id: fruend.id, kind: 'haendler', name: fruend.name };
 
+  const dealerDevice: RegulatorInput['device'] = {
+    soldBy,
+    purchaseDate: demoConfig.dealerDemo.purchaseDate,
+    category: 'geschirrspueler',
+    manufacturerId: 'miele',
+  };
+
   test('Startstand Fründ (dealerDemo): Gewährleistung sicher am Demo-Tag', () => {
     const options = regulatorOptions({
-      device: {
-        soldBy,
-        purchaseDate: demoConfig.dealerDemo.purchaseDate,
-        category: 'geschirrspueler',
-        manufacturerId: 'miele',
-      },
+      device: dealerDevice,
       asOf: demoConfig.demo.startAt,
       rules,
     });
     expect(options.map(shape)).toEqual([['haendler', 'gewaehrleistung', 'sicher'], SELF]);
+  });
+
+  test('Startstand Fründ: Ende und Einstufung passen zusammen, auch am letzten Tag', () => {
+    const dayBefore = regulatorOptions({
+      device: dealerDevice,
+      asOf: '2027-06-13T10:00:00+02:00',
+      rules,
+    })[0]!;
+    expect(berlinDate(dayBefore.until!)).toBe('14.06.2027');
+    const lastDay = regulatorOptions({
+      device: dealerDevice,
+      asOf: '2027-06-14T23:59:00+02:00',
+      rules,
+    });
+    expect(lastDay.map(shape)).toEqual([['haendler', 'gewaehrleistung', 'sicher'], SELF]);
+    expect(lastDay[0]!.until).toBe(dayBefore.until);
+    const dayAfter = regulatorOptions({
+      device: dealerDevice,
+      asOf: '2027-06-15T00:00:00+02:00',
+      rules,
+    });
+    expect(dayAfter.map(shape)).toEqual([['haendler', 'kulanz', 'pruefen'], SELF]);
   });
 
   test('Gerät der ganz-Linie (03/2023) mit Fründ: 43 Monate, Kulanz', () => {

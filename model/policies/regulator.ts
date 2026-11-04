@@ -17,7 +17,6 @@ import type {
   RegulatorKind,
   RegulatorRef,
 } from '../types';
-import { addMonths } from './warranty';
 
 export interface RegulatorRules {
   /**
@@ -94,9 +93,94 @@ function time(iso: ISODateTime | undefined): number | undefined {
   return Number.isNaN(t) ? undefined : t;
 }
 
+/** Ein Kalendertag in Berlin, Monat 1 bis 12 */
+interface Day {
+  readonly y: number;
+  readonly m: number;
+  readonly d: number;
+}
+
+const BERLIN = 'Europe/Berlin';
+let berlinFormat: Intl.DateTimeFormat | undefined;
+
+/** Wanduhr in Berlin zum Zeitpunkt t, auf die Sekunde. Das Format entsteht erst beim ersten Aufruf. */
+function berlinClock(
+  t: number,
+): Day & { readonly h: number; readonly min: number; readonly s: number } {
+  berlinFormat ??= new Intl.DateTimeFormat('en-US', {
+    timeZone: BERLIN,
+    year: 'numeric',
+    month: 'numeric',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: 'numeric',
+    second: 'numeric',
+    hour12: false,
+  });
+  const parts = berlinFormat.formatToParts(new Date(t));
+  const part = (type: Intl.DateTimeFormatPartTypes) =>
+    Number(parts.find((p) => p.type === type)?.value);
+  // Manche Laufzeiten schreiben Mitternacht als 24 Uhr
+  return {
+    y: part('year'),
+    m: part('month'),
+    d: part('day'),
+    h: part('hour') % 24,
+    min: part('minute'),
+    s: part('second'),
+  };
+}
+
+/** Abstand der Berliner Uhr zu UTC in ms zum Zeitpunkt t (Winter 1 Stunde, Sommer 2 Stunden) */
+function berlinOffset(t: number): number {
+  const c = berlinClock(t);
+  return Date.UTC(c.y, c.m - 1, c.d, c.h, c.min, c.s) - Math.floor(t / 1000) * 1000;
+}
+
+/** Erster Zeitpunkt des Tages in Berlin. Mitternacht liegt nie in einer Zeitumstellung. */
+function startOfBerlinDay({ y, m, d }: Day): number {
+  const wall = Date.UTC(y, m - 1, d);
+  return wall - berlinOffset(wall - berlinOffset(wall));
+}
+
+/** Tag plus Monate. Fehlt der Tag im Zielmonat, gilt dessen letzter Tag (§ 188 Abs. 3 BGB). */
+function addCalendarMonths({ y, m, d }: Day, months: number): Day {
+  const target = new Date(Date.UTC(y, m - 1 + months, 1));
+  const last = new Date(Date.UTC(target.getUTCFullYear(), target.getUTCMonth() + 1, 0));
+  return {
+    y: target.getUTCFullYear(),
+    m: target.getUTCMonth() + 1,
+    d: Math.min(d, last.getUTCDate()),
+  };
+}
+
 /**
- * Läuft die Gewährleistung auf den Kauf am Stichtag noch? Bis einschließlich Kaufdatum plus months,
- * in Kalendermonaten (addMonths, § 188 Abs. 3 BGB), nicht in Tagen. Ohne lesbares Datum: nein.
+ * Ende der Gewährleistung auf den Kauf: der letzte Augenblick des Tages in Berlin, der nach seiner
+ * Zahl dem Kauftag entspricht, months Monate später (§§ 187 Abs. 1, 188 Abs. 2 und 3 BGB). Der
+ * Kauftag ist der Tag in Berlin, gleich mit welcher Zeitzone das Datum gespeichert ist. Kauf am
+ * 14.06.2025 ergibt das Ende des 14.06.2027, Kauf am 31.01. plus 1 Monat das Ende des 28.02.
+ * Ohne lesbares Datum undefined.
+ */
+export function purchaseWarrantyUntil(
+  purchase: ISODateTime,
+  months: number,
+): ISODateTime | undefined {
+  const bought = time(purchase);
+  if (bought === undefined) return undefined;
+  const last = addCalendarMonths(berlinClock(bought), months);
+  const next = new Date(Date.UTC(last.y, last.m - 1, last.d + 1));
+  const end = startOfBerlinDay({
+    y: next.getUTCFullYear(),
+    m: next.getUTCMonth() + 1,
+    d: next.getUTCDate(),
+  });
+  return new Date(end - 1).toISOString();
+}
+
+/**
+ * Läuft die Gewährleistung auf den Kauf am Stichtag noch? Bis einschließlich purchaseWarrantyUntil,
+ * also nach Kalendertagen in Berlin, nicht nach Uhrzeit und nicht in Monaten zu 30,44 Tagen.
+ * Ohne lesbares Datum: nein.
  */
 export function withinPurchaseWarranty(
   purchase: ISODateTime,
@@ -104,8 +188,9 @@ export function withinPurchaseWarranty(
   months: number,
 ): boolean {
   const at = time(asOf);
-  if (time(purchase) === undefined || at === undefined) return false;
-  return at <= Date.parse(addMonths(purchase, months));
+  const until = purchaseWarrantyUntil(purchase, months);
+  if (at === undefined || until === undefined) return false;
+  return at <= Date.parse(until);
 }
 
 function asRegulator(ref: PartnerRef, kind: RegulatorKind): RegulatorRef | undefined {
@@ -133,21 +218,19 @@ export function regulatorOptions(i: RegulatorInput): RegulatorOption[] {
   const options: RegulatorOption[] = [];
 
   const dealer = device.soldBy ? asRegulator(device.soldBy, 'haendler') : undefined;
-  const purchase = time(device.purchaseDate) === undefined ? undefined : device.purchaseDate;
   let kulanz: RegulatorOption | undefined;
   let warrantySure = false;
   if (dealer) {
     const base = { kind: 'haendler', party: dealer, arranges: true, needsQuote: false } as const;
-    if (purchase === undefined || at === undefined) {
+    const until =
+      device.purchaseDate === undefined
+        ? undefined
+        : purchaseWarrantyUntil(device.purchaseDate, months);
+    if (until === undefined || at === undefined) {
       options.push({ ...base, basis: 'gewaehrleistung', certainty: 'pruefen' });
-    } else if (withinPurchaseWarranty(purchase, asOf, months)) {
+    } else if (at <= Date.parse(until)) {
       warrantySure = true;
-      options.push({
-        ...base,
-        basis: 'gewaehrleistung',
-        certainty: 'sicher',
-        until: addMonths(purchase, months),
-      });
+      options.push({ ...base, basis: 'gewaehrleistung', certainty: 'sicher', until });
     } else {
       kulanz = { ...base, basis: 'kulanz', certainty: 'pruefen' };
     }
