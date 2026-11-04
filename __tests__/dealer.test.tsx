@@ -290,6 +290,10 @@ describe('Kosten beim Händler-Gerät: kein „Du zahlst“ vor der Wahl (Übert
 
     // Erst der Tap mit Preis macht dich zum Zahler, dann steht der Preis vor dem Buchen
     await tap(re(selfPay()));
+    // Deine Antwort im Gespräch ist der Button, den du getippt hast, nicht „Weiter zum Termin“
+    expect(screen.getByRole('button', { name: re(de.talk.edit(selfPay())) })).toBeTruthy();
+    expect(screen.queryByText(de.costs.toAppointment)).toBeNull();
+    expect(tree()).not.toContain(de.costs.toAppointment);
     expect(screen.getByText(de.talk.claim.selfPay(price()))).toBeTruthy();
     await tap(re(SERVICE));
     await tap(demoConfig.slots[0]!);
