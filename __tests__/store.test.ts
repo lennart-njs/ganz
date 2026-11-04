@@ -891,6 +891,57 @@ describe('Vor-Ort-Diagnose: erst der Preis, dann verbindlich oder nicht (Entsche
   });
 });
 
+describe('Neustart mit wartendem und gebuchtem Termin (Nr. 31, Nr. 33)', () => {
+  test('Preis, verbindliche Buchung und Ereignisse überstehen den Neustart, die Formprüfung behält sie', async () => {
+    const storage = memoryStorage();
+    const first = createAppStore(storage, testEnv());
+    await first.persist.rehydrate();
+    const s = () => first.getState();
+    s().ensureHousehold();
+    const device = s().addDevice({
+      category: 'waschmaschine',
+      manufacturerId: demoConfig.manufacturer.id,
+      model: demoConfig.device.model,
+      identifiedBy: 'manuell',
+    });
+    const id = s().createCase({ deviceId: device.id, entry: 'symptom', problemLabel: 'x' }).id;
+    unwrap(s().escalate(id));
+    const booking = unwrap(
+      s().requestBooking({
+        caseId: id,
+        kind: 'vor_ort_diagnose',
+        partnerId: demoConfig.partners[0]!.id,
+        slotLabel: demoConfig.slots[0]!,
+        selfPay: false,
+      }),
+    );
+    s().simulateNext(id);
+
+    // Neustart vor dem Tap: Der Preis ist da, der Termin wartet weiter
+    const second = createAppStore(storage, testEnv());
+    await second.persist.rehydrate();
+    const restored = second.getState().bookings.find((b) => b.id === booking.id);
+    expect(restored?.price).toBe(demoConfig.prices.diagnosis);
+    expect(selectCaseFacts(second.getState(), id)?.bindingDue?.amount).toBe(
+      demoConfig.prices.diagnosis,
+    );
+    expect(second.getState().simulateNext(id)).toBe(false);
+
+    // Neustart nach dem Tap: binding und Ereignis bleiben, der Betrieb bestätigt
+    unwrap(second.getState().bookBinding(id, demoConfig.prices.diagnosis));
+    const third = createAppStore(storage, testEnv());
+    await third.persist.rehydrate();
+    expect(third.getState().bookings.find((b) => b.id === booking.id)?.binding?.amount).toBe(
+      demoConfig.prices.diagnosis,
+    );
+    expect(selectCaseEvents(third.getState(), id).map((e) => e.type)).toEqual(
+      expect.arrayContaining(['preis_genannt', 'zahlungspflichtig_gebucht']),
+    );
+    expect(selectCaseFacts(third.getState(), id)?.bindingDue).toBeUndefined();
+    expect(third.getState().simulateNext(id)).toBe(true);
+  });
+});
+
 describe('Befund vor Ort (R-10)', () => {
   const setup = () => {
     const store = createAppStore(memoryStorage(), testEnv());
