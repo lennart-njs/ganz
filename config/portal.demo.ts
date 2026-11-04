@@ -187,6 +187,9 @@ export const fruendSettings: DealerSettings = {
 /** Demo-Anmeldung: wer im Portal angemeldet ist */
 export const portalLogin = { email: 'demo@fruend.example', memberId: 'sk', dealerId: 'fruend' };
 
+/** Beispiel für die Vorschau unter Einstellungen → Nachrichten, für {kunde} und {fall} */
+export const messagePreview = { customer: 'Robin', caseNumber: 'GS-24816' };
+
 /** Bausteine für die Beispielfälle im Portal (server/backend/seed.ts) */
 export const portalSeed = {
   /** So viele Fälle mit Weitergabe und so viele anonyme Fälle (Auswertung) */

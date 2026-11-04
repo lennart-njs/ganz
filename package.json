@@ -18,6 +18,7 @@
     "test": "jest",
     "check": "npm run typecheck && npm run lint && npm run format:check && jest --maxWorkers=2",
     "check:fast": "tsc --noEmit && node scripts/lint-changed.js && jest --maxWorkers=2 --selectProjects unit build",
+    "check:portal": "npm --prefix portal run typecheck",
     "guides:check": "jest __tests__/guides.test.ts",
     "guides:import": "node scripts/guides-import.mjs",
     "guides:approve": "node scripts/guides-approve.mjs"

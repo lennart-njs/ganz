@@ -1,6 +1,9 @@
 // Nachweise für die Review zu Phase 1, Nr. 9 und Nr. 11 (docs/BEFUNDE.md): Die Lieferkette in CI
-// steht fest, und jedes Jest-Projekt prüft nur seinen Ordner.
+// steht fest, und jedes Jest-Projekt prüft nur seinen Ordner. Dazu, seit der Übertragung in mach’s:
+// Prüfskript und CI prüfen auch das Händlerportal.
+import { spawnSync } from 'child_process';
 import fs from 'fs';
+import os from 'os';
 import path from 'path';
 
 const root = path.resolve(__dirname, '..', '..');
@@ -39,5 +42,109 @@ describe('Jest-Projekte (Nr. 11)', () => {
       expect.arrayContaining(['<rootDir>/__tests__/model/', '<rootDir>/__tests__/build/']),
     );
     expect(pkg.scripts['check:fast']).toContain('--selectProjects unit build');
+  });
+});
+
+describe('Händlerportal im Prüfskript und in CI', () => {
+  /**
+   * scripts/ci-checks.sh in einem leeren Ordner. npm, gitleaks und osv-scanner sind Attrappen, die
+   * nur ihre Argumente mitschreiben. So zeigt der Test, was das Script aufruft und in welcher Reihenfolge.
+   */
+  function run({ ci, portalModules }: { ci: boolean; portalModules: boolean }) {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'machs-ci-checks-'));
+    try {
+      fs.mkdirSync(path.join(dir, 'scripts'));
+      fs.mkdirSync(path.join(dir, 'bin'));
+      fs.mkdirSync(path.join(dir, 'portal', portalModules ? 'node_modules' : ''), {
+        recursive: true,
+      });
+      fs.copyFileSync(
+        path.join(root, 'scripts', 'ci-checks.sh'),
+        path.join(dir, 'scripts', 'ci-checks.sh'),
+      );
+      const log = path.join(dir, 'aufrufe.log');
+      for (const name of ['npm', 'gitleaks', 'osv-scanner']) {
+        const file = path.join(dir, 'bin', name);
+        fs.writeFileSync(file, `#!/usr/bin/env bash\necho "${name} $*" >> "${log}"\n`);
+        fs.chmodSync(file, 0o755);
+      }
+      const result = spawnSync('bash', [path.join(dir, 'scripts', 'ci-checks.sh')], {
+        env: {
+          ...process.env,
+          PATH: `${path.join(dir, 'bin')}${path.delimiter}${process.env.PATH ?? ''}`,
+          CI: ci ? 'true' : '',
+          BASH_ENV: '',
+        },
+        encoding: 'utf8',
+      });
+      const calls = fs.existsSync(log) ? fs.readFileSync(log, 'utf8').trim().split('\n') : [];
+      return { status: result.status, stdout: result.stdout, stderr: result.stderr, calls };
+    } finally {
+      fs.rmSync(dir, { recursive: true, force: true });
+    }
+  }
+
+  const before = ['npm run check', 'npm run guides:check'];
+  const after = [
+    'gitleaks git --no-banner --redact .',
+    'gitleaks git --no-banner --redact --pre-commit --staged .',
+    'gitleaks git --no-banner --redact --pre-commit .',
+    'osv-scanner scan source --lockfile package-lock.json --lockfile portal/package-lock.json',
+  ];
+
+  test('frischer Klon: erst npm ci im Portal, dann der Typecheck des Portals, kein Build', () => {
+    const r = run({ ci: false, portalModules: false });
+    expect([r.status, r.stderr]).toEqual([0, '']);
+    expect(r.calls).toEqual([
+      ...before,
+      'npm --prefix portal ci',
+      'npm --prefix portal run typecheck',
+      ...after,
+    ]);
+    expect(r.stdout).toContain('Hinweis: next build für das Portal läuft nur in CI.');
+  });
+
+  test('mit portal/node_modules: kein zweites npm ci', () => {
+    const r = run({ ci: false, portalModules: true });
+    expect(r.status).toBe(0);
+    expect(r.calls).toEqual([...before, 'npm --prefix portal run typecheck', ...after]);
+  });
+
+  test('in CI: npm ci, Typecheck und next build für das Portal', () => {
+    const r = run({ ci: true, portalModules: false });
+    expect([r.status, r.stderr]).toEqual([0, '']);
+    expect(r.calls).toEqual([
+      ...before,
+      'npm --prefix portal ci',
+      'npm --prefix portal run typecheck',
+      'npm --prefix portal run build',
+      ...after,
+    ]);
+    expect(r.stdout).not.toContain('Hinweis: next build');
+  });
+
+  test('der Typecheck läuft im Ordner portal/ mit dessen tsconfig, nicht über npm exec', () => {
+    const pkg = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8')) as {
+      scripts: Record<string, string>;
+    };
+    const portal = JSON.parse(
+      fs.readFileSync(path.join(root, 'portal', 'package.json'), 'utf8'),
+    ) as {
+      scripts: Record<string, string>;
+    };
+    expect(portal.scripts.typecheck).toBe('tsc --noEmit');
+    expect(pkg.scripts['check:portal']).toBe('npm --prefix portal run typecheck');
+    // npm exec liefe im Wurzelordner. tsc prüfte dort die App, die portal/ ausschließt.
+    expect(fs.readFileSync(path.join(root, 'scripts', 'ci-checks.sh'), 'utf8')).not.toMatch(
+      /npm --prefix portal exec/,
+    );
+    // Ein frischer Klon hat kein portal/node_modules. npm run check bleibt darum ohne Portal.
+    expect(pkg.scripts.check).not.toMatch(/portal/);
+  });
+
+  test('der Cache in CI hängt an beiden Lockfiles', () => {
+    expect(workflow).toMatch(
+      /cache: npm\n\s+(#.*\n\s+)?cache-dependency-path: \|\n\s+package-lock\.json\n\s+portal\/package-lock\.json\n/,
+    );
   });
 });

@@ -1,9 +1,12 @@
 /**
  * @jest-environment node
  */
-import { fruendSettings } from '@/config/portal.demo';
+import fs from 'node:fs';
+import path from 'node:path';
+
+import { fruendSettings, messagePreview, portalSeed } from '@/config/portal.demo';
 import { de } from '@/i18n/de';
-import { settingsSections } from '@/model/portal';
+import { fillTemplate, settingsSections } from '@/model/portal';
 import type { SharedPhoto } from '@/model/sharing';
 import { warrantyCheck } from '@/portal/lib/check';
 import { conversation } from '@/portal/lib/conversation';
@@ -179,5 +182,40 @@ describe('Händlerportal: Logik', () => {
       autoAccept: true,
       requestProof: false,
     });
+  });
+});
+
+describe('Händlerportal: erfundene Werte', () => {
+  // Fiktive Namen und Nummern stehen in config/portal.demo.ts (CLAUDE.md), nicht im Code des Portals
+  const dir = path.resolve(__dirname, '..', 'portal');
+  const files = ['app', 'components', 'lib'].flatMap((sub) =>
+    fs
+      .readdirSync(path.join(dir, sub), { recursive: true, encoding: 'utf8' })
+      .filter((f) => /\.tsx?$/.test(f))
+      .map((f) => path.join(sub, f)),
+  );
+
+  test('kein Vorname aus der Demo und keine Fallnummer als Text im Code', () => {
+    const people = [...portalSeed.customers, ...s.team.map((m) => m.name), messagePreview.customer];
+    const firstNames = [...new Set(people.map((n) => n.split(' ')[0]!))];
+    const literal = new RegExp(`['"\`](?:${firstNames.join('|')})\\b|['"\`]GS-\\d`);
+    const hits = files.flatMap((f) =>
+      fs
+        .readFileSync(path.join(dir, f), 'utf8')
+        .split('\n')
+        .flatMap((line, i) => (literal.test(line) ? [`${f}:${i + 1}: ${line.trim()}`] : [])),
+    );
+    expect(files.length).toBeGreaterThan(20);
+    expect(firstNames).toEqual(expect.arrayContaining(['Robin', 'Sandra', 'Markus']));
+    expect(hits).toEqual([]);
+  });
+
+  test('Vorschau unter Einstellungen → Nachrichten füllt Kunde und Fall aus der Konfiguration', () => {
+    expect(
+      fillTemplate('Hallo {kunde}, Fall {fall}', {
+        kunde: messagePreview.customer,
+        fall: messagePreview.caseNumber,
+      }),
+    ).toBe('Hallo Robin, Fall GS-24816');
   });
 });

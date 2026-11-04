@@ -1,5 +1,6 @@
 # Prüft jeden Push und jeden Pull Request mit scripts/ci-checks.sh, derselben Quelle wie
-# scripts/commit-if-green.sh. Pflicht für einen Merge wird es erst mit Branch und PR (Nr. 15).
+# scripts/commit-if-green.sh, für App und Händlerportal (portal/, mit next build).
+# Pflicht für einen Merge wird es erst mit Branch und PR (Nr. 15).
 # gitleaks und osv-scanner kommen als Binärdateien mit fester Version und fester Prüfsumme,
 # nicht als Actions. gitleaks-action braucht für Repos einer Organisation eine Lizenz.
 # Die SHA-256 stehen hier, nicht aus der Prüfsummen-Datei desselben Releases: Ein verändertes
@@ -43,6 +44,10 @@ jobs:
         with:
           node-version-file: .nvmrc
           cache: npm
+          # Beide Lockfiles bestimmen den Cache. Das Portal lädt scripts/ci-checks.sh mit npm ci.
+          cache-dependency-path: |
+            package-lock.json
+            portal/package-lock.json
 
       - run: npm ci
 

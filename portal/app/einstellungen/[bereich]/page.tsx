@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 
+import { messagePreview } from '@/config/portal.demo';
 import { de } from '@/i18n/de';
 import {
   fillTemplate,
@@ -130,8 +131,8 @@ function Profile({ s }: { s: DealerSettings }) {
 function Messages({ s }: { s: DealerSettings }) {
   const m = s.messages;
   const example = {
-    kunde: 'Robin',
-    fall: 'GS-24816',
+    kunde: messagePreview.customer,
+    fall: messagePreview.caseNumber,
     haendler: s.profile.shortName,
     telefon: s.profile.phone,
   };

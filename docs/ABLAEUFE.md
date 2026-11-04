@@ -36,6 +36,8 @@ npm run check
 cd portal && npx tsc --noEmit
 ```
 
+Alles wie in CI, mit Portal, gitleaks und osv-scanner: `scripts/ci-checks.sh`.
+
 ## Demo
 
 1. Vorher die Beispielfälle frisch anlegen: `.data/ganz-backend.json` löschen und die App neu starten. Sie bleiben aber auch ohne das aktuell.
