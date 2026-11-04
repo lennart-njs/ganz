@@ -172,11 +172,15 @@ export const de = {
     fallstand: 'Stand deiner Fälle',
     name: 'Name',
     kaufdatum: 'Kaufdatum',
-    /** Anbieter, Produkt und Laufzeit des Schutzes, mehr als die Angabe „schutz“ */
-    versicherung: 'Schutz mit Anbieter, Produkt und Laufzeit',
+    /**
+     * Anbieter, Produkt und Laufzeit des Schutzes, mehr als die Angabe „schutz“. Ohne „und“: Die
+     * Bezeichnung steht mitten in der Aufzählung vor „Ja, senden“ (haendler_weitergabe 2026-11-4).
+     */
+    versicherung: 'Schutz (Anbieter, Produkt, Laufzeit)',
     termin: 'Termin',
     verlauf: 'Verlauf des Falls',
-    nachrichten_haendler: 'Nachrichten und Antworten an den Händler',
+    /** Auch die Antworten auf Rückfragen des Händlers, sie stehen im Gespräch mit ihm */
+    nachrichten_haendler: 'Nachrichten an den Händler',
     bewertung: 'Bewertung des Betriebs',
     /** Teil von assistent_einwilligung 2026-11-4 (lib/legalTexts.ts). Nur mit neuer Version ändern. */
     gespraechsfotos: 'Fotos, die du im Gespräch für den Assistenten aufnimmst',
