@@ -74,6 +74,8 @@ tags:
     id: 'antwort-melden'
 
 # Termin: erster Betrieb, erstes Zeitfenster. Vor der Freigabe keine Kostenzusage.
+# Der Startstand hat 0 € Selbstbeteiligung: Nach der Freigabe gibt es keinen zweiten Schritt
+# (Entscheidung Nr. 31). Den Schritt mit 50 € prüft e2e/selbstbeteiligung.yaml.
 - tapOn:
     id: 'antwort-betrieb-.*'
     index: 0

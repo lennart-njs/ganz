@@ -1,6 +1,6 @@
 # Rechtsfragen und ungeprüfte Annahmen
 
-Stand: 04.11.2026 · Startbestand aus `docs/ZUKUNFTSPLAN.md` Abschnitt 10, Nr. 46 aus Schritt 28, Nr. 47 aus seiner Gegenprüfung
+Stand: 04.11.2026 · Startbestand aus `docs/ZUKUNFTSPLAN.md` Abschnitt 10, Nr. 46 aus Schritt 28, Nr. 47 aus seiner Gegenprüfung, Nr. 48 bis 50 aus den Entscheidungen Nr. 31 und Nr. 33
 
 Diese Liste geht an Anwalt und Datenschutzbeauftragte (DSB). Den ersten Termin mit beiden buchst du für Woche 2 (KW 46). Danach gibt es feste Termine im Monat. Bis eine Antwort da ist, baut ihr die strengere Variante (ZUKUNFTSPLAN Grundsatz 5). Die Antwort kann dann nur lockern.
 
@@ -28,7 +28,7 @@ Die Frist nennt die Phase oder das Gate, vor dem die Antwort da sein muss. Phase
 | vor Phase 6 | ab etwa Juni 2027 |
 | vor Pilot-Gate | vor dem ersten echten Fall, mit dem Pilotvertrag |
 
-**Status:** offen, gestellt, beantwortet, umgesetzt. Bei „beantwortet“ stehen Datum und Quelle in der Spalte „Antwort“. Die Antwort selbst kommt als eigene Datei in `docs/recht/`.
+**Status:** offen, gestellt, entschieden, beantwortet, umgesetzt. „Entschieden (Nr. X), Prüfung RA offen“ heißt: Lennart hat in `docs/ENTSCHEIDUNGEN.md` entschieden, die App setzt das um, der Anwalt prüft noch. Bei „beantwortet“ stehen Datum und Quelle in der Spalte „Antwort“. Die Antwort selbst kommt als eigene Datei in `docs/recht/`.
 
 ## Technik
 
@@ -87,13 +87,16 @@ Die Frist nennt die Phase oder das Gate, vor dem die Antwort da sein muss. Phase
 | 31 | Das Europäische Formular für Reparaturinformationen stellt laut Recherche freiwillig der Reparaturbetrieb aus (Art. 245 EGBGB). Stimmt das, und was folgt daraus für ganz? | RA | vor Phase 6 | offen | – |
 | 32 | Ökodesign: Frist von 15 Arbeitstagen für Ersatzteile gegen EUR-Lex prüfen (REVIEW 4.1). Die App zeigt den Wert heute schon (`ecoDesignDeliveryDays` in `config/demo.config.ts`). | RA | vor Gate externe Tests | offen | – |
 | 33 | Marktplatz: Pflichten von ganz als Vermittler (§ 312l BGB mit Art. 246d EGBGB), P2B-Verordnung (EU) 2019/1150, § 5b UWG zur Reihenfolge der Betriebe. Ab welcher Größe gelten Art. 30 bis 32 DSA? | RA | vor Phase 6 | offen | – |
-| 34 | Selbstzahler: Button-Lösung nach § 312j Abs. 3 BGB und Widerrufsrecht im Namen des Fachbetriebs (Nr. 27). Dazu die Vor-Ort-Diagnose ohne festen Preis: Die App fragt sie mit „Termin anfragen“ an, und der Betrieb nennt den Preis vor dem Termin. Reicht das? Wo muss dann der Schritt mit „Zahlungspflichtig buchen“ kommen? | RA | vor Phase 6 | offen | – |
+| 34 | Selbstzahler: Button-Lösung nach § 312j Abs. 3 BGB und Widerrufsrecht im Namen des Fachbetriebs (Nr. 27). Dazu die Vor-Ort-Diagnose ohne festen Preis: Die App fragt sie mit „Termin anfragen“ an, und der Betrieb nennt den Preis vor dem Termin. Reicht das? Wo muss dann der Schritt mit „Zahlungspflichtig buchen“ kommen? | RA | vor Phase 6 | entschieden (Nr. 33), Prüfung RA offen | Vor-Ort-Diagnose: Nr. 33 vom 04.11.2026, umgesetzt (`docs/ANNAHMEN.md`, Nach Phase 1). Selbstzahler im Pilot (Nr. 27) und das Widerrufsrecht bleiben offen |
 | 35 | BFSG (gilt seit dem 28.06.2025): Sind Buchungen in der App eine Dienstleistung im elektronischen Geschäftsverkehr? Wer ist Dienstleistungserbringer, ganz oder der Versicherer im Co-Branding? Die Ausnahme für Kleinstunternehmen nach § 3 Abs. 3 hilft nur dem Anbieter selbst. | RA | vor Pilot-Gate | offen | – |
 | 36 | Produkthaftung: Sind App, Anleitungen und Fehlererkennung ein Produkt nach der Richtlinie (EU) 2024/2853? Sie ist laut Recherche bis 09.12.2026 umzusetzen. | RA | vor Pilot-Gate | offen | – |
 | 37 | Wer haftet, wenn eine Anleitung oder ein Befund zu einem Schaden führt? Was dürfen die Nutzungsbedingungen begrenzen? Welche Versicherung braucht ganz vor dem Pilot? (Nr. 26) | RA | vor Pilot-Gate | offen | – |
 | 38 | Lizenz der Anleitungstexte des Herstellers (Nr. 26) | RA | vor Gate externe Tests | offen | – |
-| 46 | Selbstbeteiligung bei einem Termin vorbehaltlich Freigabe (Nr. 4, Nr. 5): Die App bucht heute mit „Zahlungspflichtig buchen“ und nennt die Selbstbeteiligung „falls Kranich freigibt“. Reicht das? Oder muss die Anfrage während der Prüfung unverbindlich sein und nach der Freigabe ein eigener Schritt mit Zusammenfassung und „Zahlungspflichtig buchen“ folgen? Folgt die Pflicht zur Selbstbeteiligung aus dem Versicherungsvertrag oder aus dem Auftrag an den Betrieb? (Nachtrag aus Schritt 28) | RA | vor Gate externe Tests | offen | – |
+| 46 | Selbstbeteiligung bei einem Termin vorbehaltlich Freigabe (Nr. 4, Nr. 5): Die App bucht heute mit „Zahlungspflichtig buchen“ und nennt die Selbstbeteiligung „falls Kranich freigibt“. Reicht das? Oder muss die Anfrage während der Prüfung unverbindlich sein und nach der Freigabe ein eigener Schritt mit Zusammenfassung und „Zahlungspflichtig buchen“ folgen? Folgt die Pflicht zur Selbstbeteiligung aus dem Versicherungsvertrag oder aus dem Auftrag an den Betrieb? (Nachtrag aus Schritt 28) | RA | vor Gate externe Tests | entschieden (Nr. 31), Prüfung RA offen | Nr. 31 vom 04.11.2026: unverbindliche Anfrage, nach der Freigabe eigener Schritt mit Zusammenfassung und „Zahlungspflichtig buchen“, umgesetzt (`docs/ANNAHMEN.md`, Nach Phase 1). Woraus die Pflicht zur Selbstbeteiligung folgt, bleibt offen (Nr. 48) |
 | 47 | Misslungene Reparatur: Nach „Problem besteht weiter“ beginnt in der App eine neue Runde mit neuem Befund, neuer Meldung an Kranich und neuem Termin, jeweils mit eigenem Tap. Ist das richtig, oder ist es Nachbesserung des Betriebs (§ 634 Nr. 1, § 635 BGB) ohne neue Kosten und ohne neue Schadenmeldung? Wer zahlt die zweite Reparatur, und darf die App dafür einen zweiten Schadenfall anlegen? (Nachtrag aus der Gegenprüfung zu Schritt 28) | RA | vor Gate externe Tests | offen | – |
+| 48 | Selbstbeteiligung nach der Freigabe (Nr. 31): Die Zusammenfassung vor „Zahlungspflichtig buchen“ nennt Betrieb, Zeitfenster, Adresse, Auftrag und „Du zahlst: Selbstbeteiligung 50 €“. Reicht das nach § 312j Abs. 2 BGB mit Art. 246a § 1 EGBGB? Wem schuldet der Haushalt die Selbstbeteiligung, dem Versicherer oder dem Betrieb, und muss die Karte das nennen? Wer ist Unternehmer im Sinn von § 312j, wenn ganz nur vermittelt? | RA | vor Gate externe Tests | offen | – |
+| 49 | „Nicht buchen“ (Nr. 33): Die App sagt nach einer unverbindlichen Anfrage „Die Anfrage endet. Du zahlst nichts.“ Stimmt das auch, wenn der Betrieb schon einen Preis genannt hat? Kann der Betrieb für die Anfrage oder die Preisnennung etwas verlangen? Gilt dasselbe nach der Freigabe, wenn der Haushalt die Selbstbeteiligung nicht buchen will? | RA | vor Gate externe Tests | offen | – |
+| 50 | Nachweis der Bestellung (Nr. 31, Nr. 33): Die Fallakte hält den Tap mit Betrag, Betrieb, Zeitfenster, Textversion und SHA-256 des gezeigten Satzes fest. Reicht das als Nachweis nach § 312j Abs. 3 BGB? Muss eine Bestätigung auf einem dauerhaften Datenträger folgen (§ 312f BGB), und schickt sie ganz oder der Betrieb? | RA | vor Gate externe Tests | offen | – |
 
 ## App Store
 

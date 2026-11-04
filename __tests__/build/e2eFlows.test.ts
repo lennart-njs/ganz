@@ -13,7 +13,7 @@ import { version } from '../../package.json';
 
 const root = path.resolve(__dirname, '../..');
 const e2e = path.join(root, 'e2e');
-const FLOWS = ['golden-path.yaml', 'abbruch.yaml', 'dark-200.yaml'];
+const FLOWS = ['golden-path.yaml', 'abbruch.yaml', 'dark-200.yaml', 'selbstbeteiligung.yaml'];
 
 function yamlFiles(dir: string): string[] {
   return fs.readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
@@ -102,10 +102,20 @@ const sources = {
   thread: read(path.join(root, 'app/fall/[id]/index.tsx')),
   problem: read(path.join(root, 'app/fall/neu.tsx')),
   replies: read(path.join(root, 'components/app/Conversation.tsx')),
+  demo: read(path.join(root, 'components/app/DemoControlSheet.tsx')),
+  segments: read(path.join(root, 'components/ds/SegmentedControl.tsx')),
 };
 
-/** antwort-<Schlüssel> und details-<Ziel>: Gibt es den Schlüssel im Code? */
+/**
+ * antwort-<Schlüssel>, details-<Ziel> und demo-<Gruppe>-<Wert> (Demo-Steuerung): Gibt es den
+ * Schlüssel im Code?
+ */
 function idInCode(id: string): boolean {
+  const demo = /^demo-(.+)-([^-]+)$/.exec(id);
+  if (demo)
+    return (
+      sources.demo.includes(`testID="demo-${demo[1]}"`) && sources.demo.includes(`'${demo[2]}'`)
+    );
   const [, prefix, key] = /^(antwort|details)-(.+)$/.exec(id) ?? [];
   if (!prefix || !key) return false;
   if (prefix === 'details') return sources.thread.includes(`details('${key}')`);
@@ -115,7 +125,7 @@ function idInCode(id: string): boolean {
 }
 
 describe('Maestro-Flows in e2e/', () => {
-  test('die drei Flows und ihr Teil-Flow sind da', () => {
+  test('die Flows und ihr Teil-Flow sind da', () => {
     for (const flow of FLOWS) expect(fs.existsSync(path.join(e2e, flow))).toBe(true);
     expect(files.map(rel).sort()).toEqual(
       ['e2e/common/demo-startstand.yaml', ...FLOWS.map((f) => `e2e/${f}`)].sort(),
@@ -169,5 +179,6 @@ describe('Maestro-Flows in e2e/', () => {
   test('die Antworten und Details-Links tragen die IDs, die die Flows nutzen', () => {
     expect(sources.replies).toContain('testID={`antwort-${r.key}`}');
     expect(sources.thread).toContain('testID={`details-${path}`}');
+    expect(sources.segments).toContain('testID={testID ? `${testID}-${o.value}` : undefined}');
   });
 });

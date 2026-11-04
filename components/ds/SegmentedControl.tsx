@@ -16,6 +16,8 @@ interface SegmentedControlProps<T extends string> {
   accessibilityLabel: string;
   /** 'inverse' über Foto oder Kamera, in beiden Modi gleich */
   tone?: 'default' | 'inverse';
+  /** Fester Name je Option für die Maestro-Flows in e2e/: <testID>-<value> */
+  testID?: string;
 }
 
 export function SegmentedControl<T extends string>({
@@ -24,6 +26,7 @@ export function SegmentedControl<T extends string>({
   onChange,
   accessibilityLabel,
   tone = 'default',
+  testID,
 }: SegmentedControlProps<T>) {
   const theme = useTheme();
   const inverse = tone === 'inverse';
@@ -44,6 +47,7 @@ export function SegmentedControl<T extends string>({
         return (
           <Pressable
             key={o.value}
+            testID={testID ? `${testID}-${o.value}` : undefined}
             accessibilityRole="radio"
             accessibilityLabel={o.label}
             accessibilityState={{ checked: on }}

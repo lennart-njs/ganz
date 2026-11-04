@@ -1,0 +1,120 @@
+# Selbstbeteiligung 50 €: erst unverbindlich anfragen, nach der Freigabe zahlungspflichtig buchen
+# (Entscheidung Nr. 31). Wie der Golden Path bis zur Schadenmeldung, dann mit Selbstbeteiligung.
+# Prüft auf dem Gerät: Während der Prüfung gibt es kein „Zahlungspflichtig buchen“. Nach der
+# Freigabe wartet der Betrieb auf den Tap, auch „Nächster Schritt (Demo)“ fehlt bis dahin.
+#
+# Nicht gelaufen: In der Sandbox gibt es weder Simulator noch Maestro. Den ersten Lauf macht
+# Schritt 30 mit dem Pitch-Build. __tests__/build/e2eFlows.test.ts prüft bis dahin, dass jeder
+# Text in i18n/de.ts steht und jede ID im Code vorkommt.
+#
+# Lauf: maestro test e2e/selbstbeteiligung.yaml
+appId: de.ganz.app.pitch
+name: Selbstbeteiligung
+tags:
+  - pitch
+---
+- runFlow: common/demo-startstand.yaml
+
+# Demo-Steuerung: Selbstbeteiligung 50 €. Der Startstand setzt sie auf 0 €, darum erst danach.
+- tapOn: 'Profil.*'
+- scrollUntilVisible:
+    element:
+      text: 'Version .*'
+- tapOn:
+    text: 'Version .*'
+    repeat: 7
+    delay: 100
+- tapOn:
+    id: 'demo-selbstbeteiligung-5000'
+- tapOn: 'Fertig'
+- tapOn: 'Geräte.*'
+- assertVisible: "Was ist kaputt\\?.*"
+
+# Foto, Anleitung bis „Geht nicht“, Hilfe holen, Videocall und Befund wie im Golden Path
+- tapOn: "Was ist kaputt\\?.*"
+- tapOn:
+    id: 'antwort-foto'
+- tapOn: 'Beispielfoto nehmen'
+- extendedWaitUntil:
+    visible:
+      id: 'antwort-anleitung'
+    timeout: 20000
+- tapOn:
+    id: 'antwort-anleitung'
+- repeat:
+    times: 4
+    commands:
+      - tapOn: 'Erledigt'
+      - waitForAnimationToEnd
+- tapOn: 'Geht nicht'
+- tapOn: 'Hilfe holen'
+- extendedWaitUntil:
+    visible:
+      id: 'antwort-call'
+    timeout: 10000
+- tapOn:
+    id: 'antwort-call'
+- tapOn:
+    text: "Wartezeit überspringen \\(Demo\\)"
+    optional: true
+- extendedWaitUntil:
+    visible: 'Auflegen'
+    timeout: 20000
+- tapOn: 'Auflegen'
+- extendedWaitUntil:
+    visible:
+      id: 'antwort-befund-ok'
+    timeout: 10000
+- tapOn:
+    id: 'antwort-befund-ok'
+- tapOn:
+    id: 'antwort-melden'
+
+# Während der Prüfung: unverbindliche Anfrage, keine Zahlungspflicht
+- tapOn:
+    id: 'antwort-betrieb-.*'
+    index: 0
+- tapOn:
+    id: 'antwort-zeit-.*'
+    index: 0
+- assertVisible: "Die Anfrage ist unverbindlich\\. Gibt .* frei, buchst du danach verbindlich\\."
+- assertNotVisible: 'Zahlungspflichtig buchen'
+- assertNotVisible: 'Du zahlst.*'
+- takeScreenshot: selbstbeteiligung-1-anfrage
+- tapOn:
+    id: 'antwort-anfragen'
+
+# Freigabe: Danach wartet der Termin auf den Tap. Der Timer kann schneller sein als der Tap.
+- repeat:
+    times: 4
+    while:
+      notVisible:
+        id: 'antwort-zahlungspflichtig'
+    commands:
+      - tapOn:
+          id: 'antwort-demo'
+          optional: true
+      - waitForAnimationToEnd
+- assertVisible: "Jetzt buchst du verbindlich\\."
+- assertVisible: 'Selbstbeteiligung .*'
+- assertNotVisible:
+    id: 'antwort-demo'
+- takeScreenshot: selbstbeteiligung-2-verbindlich
+- tapOn:
+    id: 'antwort-zahlungspflichtig'
+- assertVisible: "Verbindlich gebucht\\."
+
+# Erst jetzt bestätigt der Betrieb: Termin, unterwegs, repariert
+- repeat:
+    times: 6
+    while:
+      notVisible:
+        id: 'antwort-laeuft'
+    commands:
+      - tapOn:
+          id: 'antwort-demo'
+          optional: true
+      - waitForAnimationToEnd
+- tapOn:
+    id: 'antwort-laeuft'
+- takeScreenshot: selbstbeteiligung-3-abschluss

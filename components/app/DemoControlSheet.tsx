@@ -87,6 +87,8 @@ export function DemoControlSheet({ visible, onClose }: { visible: boolean; onClo
       <Row label={t.deductible}>
         <SegmentedControl
           accessibilityLabel={t.deductible}
+          // Für e2e/selbstbeteiligung.yaml: demo-selbstbeteiligung-5000
+          testID="demo-selbstbeteiligung"
           options={(['0', '5000'] as const).map((v) => ({
             value: v,
             label: formatEuro(Number(v)),

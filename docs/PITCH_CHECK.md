@@ -1,6 +1,6 @@
 # Pitch-Check
 
-Stand: 03.11.2026 · gehört zum Pitch-Gate in `docs/ZUKUNFTSPLAN.md` (Abschnitt 0 und Grundsatz 1)
+Stand: 04.11.2026 · gehört zum Pitch-Gate in `docs/ZUKUNFTSPLAN.md` (Abschnitt 0 und Grundsatz 1)
 
 Diese Prüfungen laufen vor jedem Pitch-Tag, also mindestens einmal pro Woche und vor jedem wichtigen Termin. Du prüfst auf dem Pitch-Telefon, mit dem Commit, der den Tag bekommt. Was ein Test im Repo schon abdeckt, steht hier nicht. Hier steht, was nur auf dem Gerät sichtbar wird.
 
@@ -31,6 +31,12 @@ Bestanden, wenn:
 - der Fall am Ende im Tab „Fälle“ steht.
 
 Einmal im Monat zusätzlich mit „Alles zurücksetzen“ und dem Onboarding aus Schritt 1.
+
+Einmal im Monat zusätzlich mit 50 € Selbstbeteiligung (Demo-Steuerung, nach dem Demo-Startstand), wie im Flow `e2e/selbstbeteiligung.yaml` (Entscheidung Nr. 31). Bestanden, wenn:
+- während der Prüfung nur „Termin anfragen“ steht, mit „Die Anfrage ist unverbindlich“, und nirgends „Zahlungspflichtig buchen“,
+- nach der Freigabe die Zusammenfassung mit Betrieb, Zeitfenster, Auftrag und „Selbstbeteiligung 50 €“ steht,
+- „Nächster Schritt (Demo)“ erst nach „Zahlungspflichtig buchen“ wieder da ist und der Betrieb erst dann bestätigt,
+- die Fallakte „Zahlungspflichtig gebucht“ mit Betrieb, Zeitfenster und 50 € zeigt.
 
 ### 2. Dark Mode
 

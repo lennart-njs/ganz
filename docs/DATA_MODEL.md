@@ -1,6 +1,6 @@
 # Datenmodell und Dashboards
 
-Stand: 26.10.2026 · Phase 2, Schritt 14 · Typen: `model/types.ts` · Status-Maschine: `model/caseMachine.ts`
+Stand: 26.10.2026 · Phase 2, Schritt 14, ergänzt am 04.11.2026 um den verbindlichen Schritt (Entscheidungen Nr. 31 und Nr. 33) · Typen: `model/types.ts` · Status-Maschine: `model/caseMachine.ts`
 
 Die App erzeugt heute alle Daten lokal (Store `store/appStore.ts`). Ein späteres Backend übernimmt dieselben Typen. Die Web-Dashboards für Versicherer, Händler und Hersteller lesen dann diese Felder. In die App kommen keine Links zu den Dashboards.
 
@@ -28,6 +28,8 @@ Die App erzeugt heute alle Daten lokal (Store `store/appStore.ts`). Ein spätere
 | Hersteller (aggregiert) | immer | – | ohne Personenbezug |
 
 Der Reparatur-Assistent bekommt je Nachricht nur Gerät, Modell, Problem, Ergebnis, Stand der Anleitung und das Gespräch, keine Fotos, keine Adresse und keine Vertragsnummer (`lib/chat/context.ts`). Das Gespräch liegt als `ChatMessage` im Fall. Kein Dashboard liest es, die Fallakte zeigt nur die Zahl der Nachrichten, die beim Anbieter ankommen konnten (`ChatMessage.forwarded`, fehlt das Feld, zählt die Nachricht).
+
+**Verbindlich buchen (Nr. 31, Nr. 33):** Eine Terminanfrage ist unverbindlich, solange nicht feststeht, was der Haushalt zahlt: während der Versicherer prüft und bei der Vor-Ort-Diagnose, bis der Betrieb den Preis nennt (`Booking.price`, Ereignis `preis_genannt`). Danach wartet der Termin auf „Zahlungspflichtig buchen“ (`CaseFacts.bindingDue`). Der Tap setzt `Booking.binding` und schreibt `zahlungspflichtig_gebucht` mit Betrag, Betrieb, Zeitfenster und dem Stempel des gezeigten Texts (`textVersion`, `textHash` aus `lib/legalTexts.ts`, Schlüssel `verbindliche_buchung`). Steht der Preis schon beim Buchen fest (Selbstzahler, Buchung nach der Freigabe), entsteht beides mit der Buchung. „Nicht buchen“ storniert die Anfrage und schreibt `nicht_gebucht`. Ohne `binding` bestätigt der Betrieb keinen Termin, für den der Haushalt zahlt. Bei 0 € Selbstbeteiligung gibt es keinen zweiten Schritt.
 
 Der Händler bekommt keine Einzelfälle. Er sieht nur Zahlen zu Verträgen, die über ihn verknüpft wurden (`Contract.linkedVia = 'haendler_code'`, `Contract.soldBy`).
 
@@ -88,7 +90,8 @@ Der Händler bekommt keine Einzelfälle. Er sieht nur Zahlen zu Verträgen, die 
 
 Ereignisse, die ein Dashboard besonders braucht:
 
-- **V:** `schaden_gemeldet`, `freigabe_entschieden`, `angebot_erstellt`, `termin_*`, `reparatur_abgeschlossen`, `weitergabe_bestaetigt`, `einwilligung_widerrufen`
+- **V:** `schaden_gemeldet`, `freigabe_entschieden`, `angebot_erstellt`, `termin_*`, `zahlungspflichtig_gebucht` (Selbstbeteiligung nach der Freigabe), `reparatur_abgeschlossen`, `weitergabe_bestaetigt`, `einwilligung_widerrufen`
+- **Betrieb (später):** `termin_angefragt`, `preis_genannt`, `zahlungspflichtig_gebucht`, `nicht_gebucht`. Erst nach `zahlungspflichtig_gebucht` gilt ein Termin, für den der Haushalt zahlt.
 - **He:** `ergebnis_erkannt`, `anleitung_gestartet`, `schritt_erledigt`, `schritt_geht_nicht`, `anleitung_beendet`, `befund_erstellt` (alles aggregiert)
 - **Hä:** keine Einzelereignisse, nur Zahlen pro Vertrag
 
@@ -141,7 +144,9 @@ Ereignisse, die ein Dashboard besonders braucht:
 | `Booking.kind` | ✓ | – | (✓) | `reparatur`, `vor_ort_diagnose`; Pumpe nie an den Haushalt |
 | `Booking.provider` (inkl. `authorized`) | ✓ | – | ✓ | Reparaturnachweise: autorisierter oder freier Betrieb |
 | `Booking.slotLabel`, `status` | ✓ | – | – | |
-| `Booking.subjectToApproval` | ✓ | – | – | Termin vorbehaltlich Freigabe (Entscheidung 5) |
+| `Booking.subjectToApproval` | ✓ | – | – | Termin vorbehaltlich Freigabe (Entscheidung 5), bis dahin unverbindlich (Nr. 31) |
+| `Booking.price` | – | – | – | Preis, den der Betrieb vor der Vor-Ort-Diagnose nennt (Nr. 33). Beispielwert aus `config/demo.config.ts` |
+| `Booking.binding` | ✓ | – | – | Zeit und Betrag von „Zahlungspflichtig buchen“ (Nr. 31, Nr. 33). Fehlt bei einer unverbindlichen Anfrage und wo der Haushalt nichts zahlt. Der Versicherer sieht es nur für Termine seines Schadenfalls |
 | `Booking.address` | – | – | – | nur der Betrieb |
 | `Booking.completionPhotoId` | ✓ | – | E | Abschlussfoto |
 | `Booking.rating` | (✓) | – | (✓) | Zufriedenheit mit Betrieben |
