@@ -429,17 +429,52 @@ describe('Gespräch mit dem Händler nach den Regeln (Übertragung Schritt 3)', 
     expect(screen.getByText(de.sharing.sent(dealer.name))).toBeTruthy();
   });
 
-  test('ist der Fall inzwischen geschlossen, sendet „Ja, senden“ nichts und sagt es ruhig', async () => {
+  test('schließt der Fall bei offener Karte, geht sie zu, und der geschlossene Fall hat seine Knöpfe', async () => {
+    const caseId = setup();
+    await renderRouter(APP, { initialUrl: `/fall/${caseId}` });
+    await tap(new RegExp(`^${de.sharing.offer(dealer.name)}`));
+    expect(screen.getByRole('button', { name: de.sharing.send })).toBeTruthy();
+    await act(async () => {
+      unwrap(useAppStore.getState().runCommand(caseId, 'abbrechen', { cancelReason: 'Test' }));
+    });
+    expect(screen.queryByRole('button', { name: de.sharing.send })).toBeNull();
+    expect(screen.queryByRole('button', { name: de.sharing.cancel })).toBeNull();
+    expect(screen.queryByText(de.sharing.confirmTitle(dealer.name))).toBeNull();
+    expect(screen.getByRole('button', { name: de.thread.caseFile })).toBeTruthy();
+    expect(screen.getByRole('button', { name: de.thread.done })).toBeTruthy();
+    expect(dealerConsents(caseId)).toEqual([]);
+  });
+
+  test('kommt „Ja, senden“ im selben Moment wie das Schließen, sendet es nichts und sagt es ruhig', async () => {
     const caseId = setup();
     await renderRouter(APP, { initialUrl: `/fall/${caseId}` });
     await tap(new RegExp(`^${de.sharing.offer(dealer.name)}`));
     const send = screen.getByRole('button', { name: de.sharing.send });
+    // Der Tap trifft die Karte, bevor sie sich nach dem Schließen neu zeichnet
     await act(async () => {
       unwrap(useAppStore.getState().runCommand(caseId, 'abbrechen', { cancelReason: 'Test' }));
+      fireEvent.press(send);
     });
-    await fireEvent.press(send);
     expect(dealerConsents(caseId)).toEqual([]);
     expect(screen.getByText(de.command.refused.other)).toBeTruthy();
+    // Danach bietet die Karte das Senden nicht mehr an
+    expect(screen.queryByRole('button', { name: de.sharing.send })).toBeNull();
+    expect(screen.getByRole('button', { name: de.thread.caseFile })).toBeTruthy();
+  });
+
+  test('wird der Fall nach dem Schließen wieder geöffnet, kommt die Karte erst nach einem neuen Tap', async () => {
+    const caseId = setup();
+    await renderRouter(APP, { initialUrl: `/fall/${caseId}` });
+    await tap(new RegExp(`^${de.sharing.offer(dealer.name)}`));
+    await act(async () => {
+      unwrap(useAppStore.getState().runCommand(caseId, 'im_call_geloest'));
+    });
+    expect(screen.queryByRole('button', { name: de.sharing.send })).toBeNull();
+    // „Geht doch nicht“: Der Fall braucht wieder Hilfe, das Angebot steht da, die Karte nicht
+    await tap(de.thread.stillBroken);
+    expect(useAppStore.getState().cases[caseId]?.status).toBe('eskaliert');
+    expect(offerButton()).toBeTruthy();
+    expect(screen.queryByRole('button', { name: de.sharing.send })).toBeNull();
   });
 
   /** Fall bei Fründ mit offener Rückfrage */

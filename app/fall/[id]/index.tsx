@@ -389,6 +389,10 @@ export default function FallGespraech() {
     ? (demoConfig.dealers.find((d) => d.id === dealer.id)?.shortName ?? dealer.name)
     : '';
   const dealerWritable = can(facts, 'haendler_schreiben');
+  // Angebot und Karte „Fall an … senden“ nur, solange die Regel an_haendler_senden gilt. Endet
+  // sie, etwa weil der Fall inzwischen geschlossen ist, schließt die Karte (Zustand beim Rendern).
+  const dealerOffer = !!dealer && can(facts, 'an_haendler_senden');
+  if (dealerConfirm && !dealerOffer) setDealerConfirm(false);
   const lastDealerAt =
     events.filter((e) => e.actor.kind === 'haendler' || e.type === 'nachricht_an_haendler').at(-1)
       ?.at ?? '';
@@ -1231,7 +1235,7 @@ export default function FallGespraech() {
     for (const [i, o] of (options.length ? options : de.sharing.defaultOptions).entries()) {
       reply(`haendler-antwort-${i}`, o, () => answerDealer(dealerQuestion, o));
     }
-  } else if (dealerConfirm && dealer) {
+  } else if (dealerConfirm && dealerOffer && dealer) {
     // Was der Händler sieht, steht vor dem Senden (wie beim Versicherer, B-53)
     tail.push(
       <View key="haendler" style={styles.stack}>
@@ -1695,7 +1699,7 @@ export default function FallGespraech() {
 
   // Gekauft beim Händler: Den Fall kannst du ihm senden, sobald Hilfe nötig ist (Entscheidung 28).
   // Wann, sagt die Regel an_haendler_senden in model/policies/actions.ts.
-  if (dealer && can(facts, 'an_haendler_senden') && !dealerConfirm && !dealerQuestion) {
+  if (dealerOffer && dealer && !dealerConfirm && !dealerQuestion) {
     reply(
       'haendler',
       de.sharing.offer(dealer.name),
