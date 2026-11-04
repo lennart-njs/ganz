@@ -1623,7 +1623,7 @@ describe('Gewährleistung nach „Problem besteht weiter“ (Entscheidung Nr. 32
         repairBookingId: repair.id,
         provider: { id: partner.id, name: partner.name },
         completedAt: done.completedAt,
-        until: addMonths(done.completedAt!, demoConfig.warranty.months),
+        until: addMonths(done.completedAt!, demoConfig.warranty.repairMonths),
       },
     });
     // Keine neue Meldung an den Versicherer, die alte bleibt an ihrer Runde

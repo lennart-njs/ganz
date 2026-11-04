@@ -1746,7 +1746,7 @@ export function createAppStore(storage: StateStorage = AsyncStorage, env: StoreE
             // Hat die Reparatur nicht geholfen: Läuft die Gewährleistung noch (Nr. 32)? Die Demo
             // kann so tun, als wäre sie vorbei. Dann prüft sie einen Tag nach dem Ende der Frist.
             const now = env.now();
-            const months = demoConfig.warranty.months;
+            const months = demoConfig.warranty.repairMonths;
             const asOf = get().demo.repairLongAgo ? addMonths(now, months + 1) : now;
             const warranty = works ? undefined : checkWarranty(facts, asOf, months);
             const command: CaseCommand = works

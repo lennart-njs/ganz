@@ -818,7 +818,7 @@ export default function FallGespraech() {
       <BotSays lines={[de.rework.title]} hint={de.rework.text(partner)}>
         {contract ? <Text variant="body">{de.rework.noClaim(insurer)}</Text> : null}
         <Text variant="meta">
-          {de.rework.until(formatDate(String(e.payload.until)), demoConfig.warranty.months)}
+          {de.rework.until(formatDate(String(e.payload.until)), demoConfig.warranty.repairMonths)}
         </Text>
       </BotSays>,
     );

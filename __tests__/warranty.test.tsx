@@ -112,12 +112,12 @@ describe('Nachbesserung im Gespräch (Nr. 32)', () => {
     await stillBroken(id);
     expect(caseOf(id).status).toBe('nachbesserung');
     const until = caseOf(id).rework!.until;
-    expect(until).toBe(addMonths(caseOf(id).rework!.completedAt, demoConfig.warranty.months));
+    expect(until).toBe(addMonths(caseOf(id).rework!.completedAt, demoConfig.warranty.repairMonths));
     expect(screen.getByText(de.rework.title)).toBeTruthy();
     expect(screen.getByText(de.rework.text(partner.name))).toBeTruthy();
     expect(screen.getByText(de.rework.noClaim(insurer))).toBeTruthy();
     expect(
-      screen.getByText(de.rework.until(formatDate(until), demoConfig.warranty.months)),
+      screen.getByText(de.rework.until(formatDate(until), demoConfig.warranty.repairMonths)),
     ).toBeTruthy();
     expect(screen.getByText(de.rework.when(partner.name))).toBeTruthy();
     // Kein Schadenfall, kein Betrag, kein Hilfe holen, keine Wahl des Betriebs

@@ -3,8 +3,9 @@
 // Betrieb nach: keine neue Schadenmeldung, keine Selbstbeteiligung, kein Betrag für den Haushalt.
 // Danach, ohne gespeicherten Abschluss oder wenn schon die Nachbesserung nicht half, beginnt eine
 // neue Runde wie bisher (model/policies/rounds.ts).
-// Die Frist ist eine Annahme bis zur Antwort des Anwalts (Rechtsfrage 52): warranty.months aus
-// config/demo.config.ts ab Abschluss der Reparatur. Die Uhr und den Wert gibt der Aufrufer mit.
+// Die Frist ist eine Annahme bis zur Antwort des Anwalts (Rechtsfrage 52): warranty.repairMonths
+// aus config/demo.config.ts ab Abschluss der Reparatur. Die Uhr und den Wert gibt der Aufrufer mit.
+// Die Gewährleistung des Händlers auf den Kauf ist eine andere (regulator.ts, purchaseMonths).
 // Kein Import aus react, expo, i18n, config oder store (ZUKUNFTSPLAN 3.1).
 import type { ISODateTime, Rework } from '../types';
 import type { CaseFacts } from './caseFacts';

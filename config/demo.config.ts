@@ -166,11 +166,14 @@ export const demoConfig = {
   },
 
   /**
-   * Gesetzliche Gewährleistung für eine Reparatur (ganz Nr. 32). Annahme bis zur Antwort
-   * des Anwalts: 24 Monate ab Abschluss der Reparatur (§ 634a Abs. 1 Nr. 1 BGB, Rechtsfrage 52).
-   * Beispielwert, keine Rechtsauskunft. Nicht die Gewährleistung des Händlers auf den Kauf.
+   * Zwei gesetzliche Gewährleistungen, getrennt benannt (U11). Beide Annahmen bis zur Antwort des
+   * Anwalts, Beispielwerte, keine Rechtsauskunft.
+   * - repairMonths: auf eine Reparatur, ab ihrem Abschluss (ganz Nr. 32, § 634a Abs. 1 Nr. 1 BGB,
+   *   Rechtsfrage 52). Liest model/policies/warranty.ts.
+   * - purchaseMonths: des Händlers auf den Kauf, ab Kaufdatum (§ 438 Abs. 1 Nr. 3 BGB). Liest
+   *   model/policies/regulator.ts. Die Prüfung im Portal nimmt die Regeln des Händlers.
    */
-  warranty: { months: 24, isAssumption: true },
+  warranty: { repairMonths: 24, purchaseMonths: 24, isAssumption: true },
 
   /** Zeitfenster für die Fründ-Demo (Annahme, ANNAHMEN „Werte für Fründ“) */
   slots: ['Mo, 8–12 Uhr', 'Di, 12–16 Uhr', 'Mi, 8–12 Uhr', 'Fr, 9–13 Uhr'],

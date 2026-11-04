@@ -55,6 +55,26 @@ export interface Contract {
   linkedAt: ISODateTime;
 }
 
+/**
+ * Regulierer: wer über die Kosten entscheidet und die Freigabe gibt (zu ganz Nr. 31 bis 34).
+ * Beim Selbstzahlen gibt es keinen, der Haushalt entscheidet und zahlt.
+ */
+export type RegulatorKind = Extract<PartnerKind, 'versicherer' | 'haendler' | 'hersteller'>;
+
+export type RegulatorRef = PartnerRef & { kind: RegulatorKind };
+
+/**
+ * Worauf eine Meldung an den Regulierer beruht. Getrennt vom Zahler (ZUKUNFTSPLAN 3a):
+ * Bei der Reparaturpflicht entscheidet der Hersteller, es zahlt der Haushalt.
+ */
+export type CoverageBasis =
+  | 'versicherung'
+  | 'herstellergarantie'
+  /** Gewährleistung des Händlers auf den Kauf, nicht die auf eine Reparatur (ganz Nr. 32) */
+  | 'gewaehrleistung'
+  | 'kulanz'
+  | 'reparaturpflicht';
+
 // ---------- Gerät ----------
 
 export type DeviceCategory = 'waschmaschine' | 'geschirrspueler' | 'trockner' | 'kuehlschrank';
@@ -133,7 +153,7 @@ export interface Rework {
   provider: PartnerRef & { authorized: boolean };
   /** Abschluss der Reparatur, Beginn der Frist (Annahme bis zur Antwort des Anwalts) */
   completedAt: ISODateTime;
-  /** Ende der Frist: Abschluss plus warranty.months aus config/demo.config.ts */
+  /** Ende der Frist: Abschluss plus warranty.repairMonths aus config/demo.config.ts */
   until: ISODateTime;
   /** Wann der Haushalt „Problem besteht weiter“ gesagt hat */
   claimedAt: ISODateTime;
