@@ -1353,12 +1353,13 @@ export default function FallGespraech() {
     } else {
       // Kann der Händler die Kosten übernehmen (Regulierer, U10), steht „Fall an … senden“ zuerst.
       // Selbstzahlen nur mit Preis, nie „Weiter zum Termin“: Das führte gleich zu „Zahlungspflichtig
-      // buchen“ (Übertragung 4.1).
+      // buchen“ (Übertragung 4.1). Solange der Zahler offen ist, passt die Frage zu dieser Antwort,
+      // auch wenn der Fall schon beim Händler ist und nur Selbstzahlen bleibt.
       const dealerFirst = facts.regulator?.kind === 'haendler' && dealerOffer ? dealer : undefined;
       tail.push(
         <BotSays key="kosten" sender={false} lines={[]}>
           <Text variant="title">
-            {dealerFirst
+            {payerOpen
               ? de.talk.claim.askCosts
               : dealerService(device)
                 ? de.talk.claim.askDealer(helpPartner.name)

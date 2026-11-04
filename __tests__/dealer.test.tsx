@@ -335,7 +335,9 @@ describe('Kosten beim Händler-Gerät: kein „Du zahlst“ vor der Wahl (Übert
     await flush();
     expect(tree()).not.toMatch(SAYS_PAY);
     expect(screen.queryByRole('button', { name: re(offer) })).toBeNull();
-    expect(screen.getByText(de.talk.claim.askDealer(SERVICE))).toBeTruthy();
+    // Die Frage passt zur einzigen Antwort: nicht „Soll Fründ Kundendienst …?“ mit „selbst zahlen“
+    expect(screen.getByText(de.talk.claim.askCosts)).toBeTruthy();
+    expect(screen.queryByText(de.talk.claim.askDealer(SERVICE))).toBeNull();
     expect(screen.getByRole('button', { name: re(selfPay()) })).toBeTruthy();
     expect(screen.queryByRole('button', { name: re(de.costs.toAppointment) })).toBeNull();
   });
