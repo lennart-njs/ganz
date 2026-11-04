@@ -17,6 +17,7 @@ Quelle für Inhalte: `reference/demo-v1.0/Main.dc.html`. Nur als Spezifikation l
 - Keine Hex-Werte außerhalb von `theme/`. Dark Mode, Dynamic Type bis 200 %, Screenreader-Labels, Trefferflächen ab 44 pt.
 - Keine Links zu Portalen. Einziger Chat ist der Reparatur-Assistent (ENTSCHEIDUNGEN Nr. 6). Der API-Schlüssel nie in die App.
 - Keine Datenweitergabe ohne Bestätigung. Kein Schadenfall ohne aktiven Tap. Keine Kostenzusage vor der Freigabe.
+- Keine Status-Vergleiche in Screens (`app/`, `components/`). Sie fragen die Regeln in `model/policies/` (`selectCaseFacts`, `can`, `availableActions`). Lint prüft das mit `ganz/kein-status-vergleich`.
 
 ## Arbeitsweise
 - Schritte aus BUILD_PLAN Abschnitt 5 der Reihe nach. Ein Commit pro Schritt, kleine Commits.

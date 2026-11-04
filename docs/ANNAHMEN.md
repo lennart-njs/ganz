@@ -263,7 +263,7 @@ Annahmen, die ich beim Bauen getroffen habe. Jede lässt sich ändern.
 - **Auslöser:** Push auf jeden Branch (keine Tags, sonst liefe ein Pitch-Tag doppelt) und jeder Pull Request. `concurrency` je Ereignis und Branch: Ein neuer Commit bricht den älteren Lauf auf demselben Branch ab. Push und Pull Request bleiben getrennt, damit ein Abbruch nie den Lauf trifft, den ein PR braucht.
 - **Wirkt erst mit Nr. 15:** Solange die Sitzungen ohne Branch und PR arbeiten und nichts pushen, läuft CI nicht. Bis dahin ist `scripts/commit-if-green.sh` der Weg.
 - **`commit-if-green.sh` übergibt alle Argumente an `git commit`.** Es macht kein `git add -A` mehr. Was in den Commit soll, legst du vorher fest. So landet keine fremde Datei aus Versehen im Commit. Aufruf: `scripts/commit-if-green.sh -m "Nachricht"`. Ist etwas rot, zeigt es die letzten 40 Zeilen und den Pfad zum ganzen Protokoll.
-- **Übersprungen: `.env` für Sitzungen sperren.** ZUKUNFTSPLAN Phase 0 sieht vor, dass `.claude/settings.json` das Lesen von `.env` verweigert, mit deinem OK. Die Sitzungen ändern `.claude/` nicht. Das machst du selbst, wenn du willst. `.env` steht schon in `.gitignore`, und gitleaks prüft jeden Commit.
+- **Übersprungen: `.env` für Sitzungen sperren.** ZUKUNFTSPLAN Phase 0 sieht vor, dass `.claude/settings.json` das Lesen von `.env` verweigert, mit deinem OK. Die Sitzungen ändern `.claude/` nicht. Das machst du selbst, wenn du willst. `.env` steht schon in `.gitignore`, und gitleaks prüft jeden Commit. Nachtrag 04.11.: Mit Lennarts OK (ENTSCHEIDUNGEN Nr. 36) sperrt `.claude/settings.json` jetzt Read auf `.env`, `.env.local` und `.env.*.local` und die einfachen Bash-Befehle darauf. `.env.example` bleibt lesbar. Das ist eine Erschwernis, kein Schutz.
 
 ## Schritt 19: Speicher und Start
 
@@ -391,7 +391,7 @@ Annahmen, die ich beim Bauen getroffen habe. Jede lässt sich ändern.
 - **Allowlist mit Grund:** Jeder Eintrag nennt Datei, den Ausdruck genau wie im Code und einen Grund mit mindestens zehn Zeichen. Ohne Grund ist die Konfiguration ungültig, ein Eintrag ohne Treffer meldet die Regel selbst. Der Ausdruck statt einer Zeilennummer, damit der Eintrag nicht bei jeder Änderung darüber verrutscht. Heute steht ein Eintrag drin: der Ladezustand des Speichers in `components/app/RecoveryScreen.tsx`. Er ist kein Status eines Falls.
 - **Zwei Treffer außerhalb der Liste aus dem Plan:** `app/geraet/[id].tsx` (Fälle des Geräts) und `app/fall/neu.tsx` (`caseFor`) prüften „erledigt oder abgebrochen“ selbst. Beide fragen jetzt `isClosed` aus `model/caseMachine.ts`, das Verhalten bleibt gleich. `caseFor` ersetzt Schritt 23 durch `openCaseFor`.
 - **Pfade relativ zum Repo:** Die Regel rechnet den Dateipfad relativ zu `eslint.config.js`, nicht zum Arbeitsverzeichnis. So passt die Allowlist auch, wenn ESLint aus einem anderen Ordner läuft. Dafür bekommt `eslint.config.js` die Node-Globals wie `scripts/`.
-- **`CLAUDE.md` bleibt unverändert.** Die Zeile „Keine Status-Vergleiche in Screens“ trägt Lennart nach Phase 1 selbst ein (ZUKUNFTSPLAN Abschnitt 5).
+- **`CLAUDE.md` bleibt unverändert.** Die Zeile „Keine Status-Vergleiche in Screens“ trägt Lennart nach Phase 1 selbst ein (ZUKUNFTSPLAN Abschnitt 5). Nachtrag 04.11.: Mit Lennarts OK (ENTSCHEIDUNGEN Nr. 36) steht die Zeile jetzt in `CLAUDE.md`.
 
 ## Schritt 23: Ein Weg, einen Fall zu öffnen
 
