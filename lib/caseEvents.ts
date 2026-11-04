@@ -65,6 +65,12 @@ export function eventLabel(e: CaseEvent): string {
     case 'zahlungspflichtig_gebucht':
       detail = f.binding(String(p.partner), String(p.slot), formatEuro(Number(p.amount)));
       break;
+    case 'preis_genannt':
+      detail = f.price(String(p.partner), formatEuro(Number(p.price)));
+      break;
+    case 'nicht_gebucht':
+      detail = f.booking(String(p.partner), String(p.slot));
+      break;
     case 'bewertet':
       detail = f.stars(Number(p.stars));
       break;

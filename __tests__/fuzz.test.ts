@@ -4,7 +4,8 @@
 // Kein Schritt darf werfen. Je Gerät gibt es höchstens einen offenen Fall, je Fall höchstens
 // eine offene Anleitung und je Art höchstens einen Termin, der zählt. Eine Ablehnung ändert nichts.
 // Ein Termin, für den der Haushalt zahlt, läuft nur mit dem Tap „Zahlungspflichtig buchen“, und
-// diesen Tap gibt es nie, solange der Versicherer prüft (Entscheidung Nr. 31).
+// diesen Tap gibt es nie, solange der Versicherer prüft (Entscheidung Nr. 31). Die Vor-Ort-Diagnose
+// läuft erst mit Preis und Tap, und „Nicht buchen“ beendet die Anfrage ohne Kosten (Nr. 33).
 import { array, assert, boolean, constantFrom, integer, nat, property } from 'fast-check';
 import type { StateStorage } from 'zustand/middleware';
 
@@ -133,6 +134,8 @@ function household(key: ActionKey, c: Case, f: CaseFacts, s: AppState): Step[] {
         step(`${key} anderer Betrag`, (x) => x.bookBinding(id, due.amount + 100)),
       ];
     }
+    case 'nicht_buchen':
+      return [step(key, (x) => x.declineBinding(id))];
     case 'reparatur_bestaetigen':
       return [step(key, (x) => x.confirmRepair(id, true))];
     case 'problem_besteht_weiter':
@@ -311,9 +314,12 @@ const bindings = (s: AppState, bookingId: string) =>
 /**
  * Zahlt der Haushalt für diesen Termin, nachgerechnet ohne die Regeln der App: Selbstzahler den
  * Preis, nach der Freigabe die Selbstbeteiligung über 0 €. Vorbehaltlich Freigabe nur, wenn sie
- * kam. Claim ist der Schadenfall der Runde, zu der der Termin gehört.
+ * kam. Claim ist der Schadenfall der Runde, zu der der Termin gehört. Die Vor-Ort-Diagnose kostet,
+ * was der Betrieb genannt hat. Ohne Preis kann der Betrieb sie nicht bestätigen, das prüft
+ * bindingViolation.
  */
 function owes(b: Booking, claim: Claim | undefined, deductible: number): boolean {
+  if (b.kind === 'vor_ort_diagnose') return b.price !== undefined && b.price > 0;
   if (b.kind !== 'reparatur') return false;
   const approved = claim?.decision?.result === 'freigegeben';
   if (b.subjectToApproval || approved) return approved && deductible > 0;
@@ -352,6 +358,14 @@ function bindingViolation(s: AppState): string | undefined {
       const lapsed = b.subjectToApproval && claim?.decision?.result === 'abgelehnt';
       if (lapsed && (b.binding || taps.length || REACHED.includes(b.status)))
         return `${b.id} nach der Ablehnung gebucht`;
+      // Nr. 33: kein Besuch ohne genannten Preis, „Nicht buchen“ beendet die Anfrage ohne Kosten
+      if (b.kind === 'vor_ort_diagnose' && REACHED.includes(b.status) && b.price === undefined)
+        return `${b.id} Vor-Ort-Diagnose ohne Preis bestätigt`;
+      const declined = s.events.some(
+        (e) => e.type === 'nicht_gebucht' && e.payload.bookingId === b.id,
+      );
+      if (declined && (b.status !== 'storniert' || b.binding || taps.length))
+        return `${b.id} nach „Nicht buchen“ weiter gebucht`;
     }
   }
   return undefined;

@@ -277,8 +277,10 @@ describe('Verbindlich buchen nach der Freigabe (Entscheidung Nr. 31)', () => {
     });
 
   test('der Termin wartet auf den Tap: „Zahlungspflichtig buchen“, sonst kein Termin', () => {
+    // Seit Nr. 33 auch „Nicht buchen“: Die unverbindliche Anfrage endet ohne Kosten
     expect(availableActions(approved({ bindingDue: due }))).toEqual([
       'zahlungspflichtig_buchen',
+      'nicht_buchen',
       'pausieren',
       'abbrechen',
     ]);
@@ -308,7 +310,26 @@ describe('Verbindlich buchen nach der Freigabe (Entscheidung Nr. 31)', () => {
   test('ein geschlossener Fall bucht nichts mehr, auch wenn ein Termin wartet', () => {
     for (const status of ['erledigt', 'abgebrochen'] as const) {
       expect(can(facts(status, { bindingDue: due }), 'zahlungspflichtig_buchen')).toBe(false);
+      expect(can(facts(status, { bindingDue: due }), 'nicht_buchen')).toBe(false);
     }
+  });
+
+  test('„Nicht buchen“ (Nr. 33) nur, wo ein Termin wartet, auch ohne gültige Weitergabe', () => {
+    expect(can(approved(), 'nicht_buchen')).toBe(false);
+    expect(can(approved({ bindingDue: due, hold: 'weitergabe_betrieb' }), 'nicht_buchen')).toBe(
+      true,
+    );
+    const visit = booking('angefragt', { kind: 'vor_ort_diagnose', price: 7900 });
+    const priced = facts('eskaliert', {
+      bookings: { vor_ort_diagnose: visit },
+      booking: visit,
+      bookingOpen: true,
+      bindingDue: { booking: visit, amount: 7900, reason: 'preis' },
+    });
+    expect(availableActions(priced)).toEqual(
+      expect.arrayContaining(['zahlungspflichtig_buchen', 'nicht_buchen']),
+    );
+    expect(can(priced, 'termin_diagnose')).toBe(false);
   });
 });
 

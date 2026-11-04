@@ -179,7 +179,9 @@ export type CaseEventType =
   | 'schaden_gemeldet'
   | 'freigabe_entschieden'
   | 'termin_angefragt'
+  | 'preis_genannt'
   | 'zahlungspflichtig_gebucht'
+  | 'nicht_gebucht'
   | 'termin_bestaetigt'
   | 'betrieb_unterwegs'
   | 'reparatur_abgeschlossen'
@@ -354,6 +356,11 @@ export interface Booking {
   slotStart?: ISODateTime;
   status: BookingStatus;
   subjectToApproval: boolean; // „vorbehaltlich Freigabe“
+  /**
+   * Preis, den der Betrieb vor dem Termin nennt, für die Vor-Ort-Diagnose (Entscheidung Nr. 33).
+   * Bis dahin ist die Anfrage unverbindlich und ohne Betrag.
+   */
+  price?: Cents;
   /**
    * Der Tap auf „Zahlungspflichtig buchen“ (§ 312j BGB, Entscheidungen Nr. 31 und Nr. 33): wann
    * und mit welchem Betrag. Fehlt bei einer unverbindlichen Anfrage und wo du nichts zahlst. Ein

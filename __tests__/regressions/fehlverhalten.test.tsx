@@ -369,7 +369,10 @@ describe('R-09 Termin nach der Ablehnung', () => {
 
 // ---------- R-10 ----------
 
-/** Vor-Ort-Diagnose beim zweiten Betrieb, die Simulation läuft bis zum Befund */
+/**
+ * Vor-Ort-Diagnose beim zweiten Betrieb, die Simulation läuft bis zum Befund. Seit Entscheidung
+ * Nr. 33 nennt der Betrieb erst den Preis, und der Haushalt bucht zahlungspflichtig.
+ */
 function onSiteDiagnosisWithSecondPartner() {
   start({ contract: false });
   const s = useAppStore.getState();
@@ -387,6 +390,8 @@ function onSiteDiagnosisWithSecondPartner() {
     slotLabel: demoConfig.slots[2],
     selfPay: false,
   });
+  expect(s.simulateNext(c.id)).toBe(true);
+  unwrap(s.bookBinding(c.id, demoConfig.prices.diagnosis));
   for (let i = 0; i < 3; i++) s.simulateNext(c.id);
   return { id: c.id, partner: partner.name };
 }

@@ -252,6 +252,30 @@ describe('selectCaseFacts', () => {
       }
     });
 
+    test('Vor-Ort-Diagnose (Nr. 33): erst mit dem Preis des Betriebs, nur nach „Hilfe holen“', () => {
+      const visit = (extra: Partial<Booking> = {}) =>
+        booking('t-2', { kind: 'vor_ort_diagnose', ...extra });
+      const escalated = makeCase();
+      expect(factsOf(escalated, { bookings: [visit()] }).bindingDue).toBeUndefined();
+      expect(factsOf(escalated, { bookings: [visit({ price: 0 })] }).bindingDue).toBeUndefined();
+      const named = visit({ price: 7900 });
+      expect(factsOf(escalated, { bookings: [named] }).bindingDue).toEqual({
+        booking: named,
+        amount: 7900,
+        reason: 'preis',
+      });
+      // Ohne Schutz genauso: Den Besuch zahlt der Haushalt
+      expect(factsOf(escalated, { bookings: [named], contracts: [] }).bindingDue?.amount).toBe(
+        7900,
+      );
+      const bound = visit({ price: 7900, binding: { at: NOW, amount: 7900 } });
+      expect(factsOf(escalated, { bookings: [bound] }).bindingDue).toBeUndefined();
+      const declined = visit({ price: 7900, status: 'storniert' });
+      expect(factsOf(escalated, { bookings: [declined] }).bindingDue).toBeUndefined();
+      const reviewing = makeCase({ status: 'freigabe_noetig', claim: claim() });
+      expect(factsOf(reviewing, { bookings: [named] }).bindingDue).toBeUndefined();
+    });
+
     test('ein geschlossener Fall wartet auf nichts', () => {
       for (const status of ['erledigt', 'abgebrochen'] as const) {
         const closed = makeCase({ status, claim: claim('freigegeben') });

@@ -21,8 +21,9 @@ export type ActionKey =
   | 'selbst_zahlen_nach_ablehnung'
   | 'termin_versicherer'
   | 'termin_selbst'
-  // Verbindlich buchen, sobald feststeht, was du zahlst (Nr. 31)
+  // Verbindlich buchen, sobald feststeht, was du zahlst (Nr. 31, Nr. 33), oder nicht buchen
   | 'zahlungspflichtig_buchen'
+  | 'nicht_buchen'
   // Reparatur
   | 'reparatur_bestaetigen'
   | 'problem_besteht_weiter'
@@ -48,6 +49,7 @@ export const ALL_ACTIONS: readonly ActionKey[] = [
   'termin_versicherer',
   'termin_selbst',
   'zahlungspflichtig_buchen',
+  'nicht_buchen',
   'reparatur_bestaetigen',
   'problem_besteht_weiter',
   'bewerten',
@@ -114,6 +116,9 @@ const RULES: Record<ActionKey, Rule> = {
   // zahlst (bindingDue in caseFacts.ts), nie während der Prüfung. Nur mit gültiger Weitergabe an
   // den Betrieb. Fehlt sie, bestätigst du sie erst erneut (R-12).
   zahlungspflichtig_buchen: (f) => !!f.bindingDue && !f.hold && !f.closed,
+  // Du buchst nicht: Die unverbindliche Anfrage endet ohne Kosten, und der Fall bietet wieder, was
+  // er vorher bot (Nr. 33, nach der Freigabe genauso). Dafür braucht es keine Weitergabe.
+  nicht_buchen: (f) => !!f.bindingDue && !f.closed,
 
   reparatur_bestaetigen: (f) => canTransition(f.status, 'repariert') && repairDone(f),
   // Ein erledigter Fall öffnet sich nur wieder, wenn für das Gerät kein anderer offen ist (Nr. 13)

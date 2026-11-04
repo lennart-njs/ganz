@@ -332,7 +332,9 @@ describe('R-16 Rückruf ohne Bestätigung', () => {
 
 /**
  * Mitteilungen erlaubt. Drei Fälle laufen durch die Simulation: Freigabe bis zur Reparatur,
- * Ablehnung, Vor-Ort-Diagnose bis zum Kostenvoranschlag. Gibt alle Mitteilungen zurück.
+ * Ablehnung, Vor-Ort-Diagnose bis zum Kostenvoranschlag. Seit Entscheidung Nr. 33 nennt der Betrieb
+ * dort erst den Preis (eine Mitteilung mehr), dann bucht der Haushalt zahlungspflichtig. Gibt alle
+ * Mitteilungen zurück.
  */
 function notificationsOfAllSteps() {
   jest.mocked(Notifications.scheduleNotificationAsync).mockClear();
@@ -368,6 +370,8 @@ function notificationsOfAllSteps() {
     slotLabel: demoConfig.slots[2],
     selfPay: false,
   });
+  s.simulateNext(onSite);
+  unwrap(s.bookBinding(onSite, demoConfig.prices.diagnosis));
   for (let i = 0; i < 3; i++) s.simulateNext(onSite);
 
   const sent = jest
@@ -384,7 +388,7 @@ describe('R-17 Mitteilungstexte mit Falldetails', () => {
     );
     expect(caseOf(rejected).status).toBe('abgelehnt');
     expect(caseOf(onSite).quoteId).toBeDefined();
-    expect(sent.length).toBeGreaterThanOrEqual(8);
+    expect(sent.length).toBeGreaterThanOrEqual(9);
   });
 
   // i18n/de.ts, de.notify: Die Texte nennen Versicherer, Entscheidung, Betrieb, Zeitfenster und

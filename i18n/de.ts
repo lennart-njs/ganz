@@ -115,7 +115,9 @@ export const de = {
     schaden_gemeldet: 'Schadenfall gemeldet',
     freigabe_entschieden: 'Freigabe entschieden',
     termin_angefragt: 'Termin angefragt',
+    preis_genannt: 'Preis genannt',
     zahlungspflichtig_gebucht: 'Zahlungspflichtig gebucht',
+    nicht_gebucht: 'Nicht gebucht',
     termin_bestaetigt: 'Termin bestätigt',
     betrieb_unterwegs: 'Betrieb ist unterwegs',
     reparatur_abgeschlossen: 'Reparatur abgeschlossen',
@@ -839,7 +841,7 @@ export const de = {
      * der Betrieb ihn vorher. Kein Betrag, keine Zusage (payer.ts).
      */
     costsDiagnosis:
-      'Den Besuch zahlst du selbst. Den Preis nennt dir der Betrieb vor dem Termin. Den Kostenvoranschlag für die Reparatur siehst du danach.',
+      'Den Besuch zahlst du selbst. Die Anfrage ist unverbindlich. Der Betrieb nennt dir vor dem Termin den Preis, dann entscheidest du. Den Kostenvoranschlag für die Reparatur siehst du danach.',
     pending: 'Der Termin ist vorbehaltlich Freigabe. Gibt es keine Freigabe, entscheidest du neu.',
     /**
      * Während der Prüfung mit Selbstbeteiligung über 0 €: Die Anfrage bindet dich noch nicht. Der
@@ -851,6 +853,14 @@ export const de = {
     bindingTitle: 'Jetzt buchst du verbindlich.',
     bindingAsk: 'Prüf die Zusammenfassung. Erst dein Tap macht die Buchung verbindlich.',
     dueDeductible: (amount: string) => `Selbstbeteiligung ${amount}`,
+    /** Vor-Ort-Diagnose: der Preis, den der Betrieb genannt hat (Nr. 33) */
+    duePrice: (amount: string) => `${amount} für den Besuch`,
+    priceNamed: (partner: string, amount: string) =>
+      `${partner} nennt den Preis für den Besuch: ${amount}.`,
+    /** Du buchst nicht: Die unverbindliche Anfrage endet (Nr. 33) */
+    decline: 'Nicht buchen',
+    declineSub: 'Die Anfrage endet. Du zahlst nichts.',
+    declined: 'Die Anfrage ist beendet. Du zahlst nichts.',
     /**
      * Steht bei jedem „Zahlungspflichtig buchen“, direkt beim Termin und im Schritt nach der
      * Freigabe. Gestempelt mit dem Tap (lib/legalTexts.ts, verbindliche_buchung).
@@ -887,6 +897,8 @@ export const de = {
       freigegeben: (insurer: string) => `${insurer} hat die Kosten freigegeben.`,
       abgelehnt: (insurer: string) => `${insurer} übernimmt die Kosten nicht.`,
       angefragt: 'Termin angefragt.',
+      /** Der Betrieb hat den Preis für die Vor-Ort-Diagnose genannt (Nr. 33) */
+      preis: (partner: string, amount: string) => `${partner} nennt den Preis: ${amount}.`,
       bestaetigt: (slot: string) => `Termin steht: ${slot}.`,
       unterwegs: (partner: string) => `${partner} ist unterwegs.`,
       repariert: 'Repariert.',
@@ -905,6 +917,9 @@ export const de = {
         `${partner} bestätigt den Termin. Danach bekommst du eine Mitteilung.`,
       angefragtImFall: (partner: string) =>
         `${partner} bestätigt den Termin. Das siehst du dann hier im Fall.`,
+      /** Vor-Ort-Diagnose angefragt: Erst kommt der Preis (Nr. 33) */
+      angefragtDiagnose: (partner: string) =>
+        `${partner} nennt dir vor dem Termin den Preis. Dann entscheidest du, ob du buchst.`,
       bestaetigt: (partner: string, part: string) => `${partner} bringt ${part} mit.`,
       diagnoseFertig: 'Sieh dir die Kosten an und entscheide, wie es weitergeht.',
       rueckruf: 'Die Fachkraft ruft dich an. Deine Fallakte hat sie schon.',
@@ -921,6 +936,7 @@ export const de = {
       freigegeben: (insurer: string) => `${insurer} hat freigegeben`,
       abgelehnt: (insurer: string) => `${insurer} hat abgelehnt`,
       angefragt: 'Termin angefragt',
+      preis: 'Preis genannt',
       buchen: 'Verbindlich buchen',
       gebucht: 'Verbindlich gebucht',
       bestaetigt: 'Termin bestätigt',
@@ -1004,6 +1020,8 @@ export const de = {
       /** Zahlungspflichtig gebucht: Betrieb, Zeitfenster und Betrag (Nr. 31) */
       binding: (partner: string, slot: string, amount: string) =>
         `${partner} · ${slot} · ${amount}`,
+      /** Preis für die Vor-Ort-Diagnose (Nr. 33) */
+      price: (partner: string, amount: string) => `${partner} · ${amount}`,
       stars: (n: number) => `${n} von 5 Sternen`,
       answer: (q: string, a: string) => `${q} ${a}`,
       note: (note: string) => `Notiz: ${note}`,

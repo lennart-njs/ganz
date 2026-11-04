@@ -719,6 +719,178 @@ describe('Zahlungspflichtig buchen erst nach der Freigabe (Entscheidung Nr. 31)'
   });
 });
 
+describe('Vor-Ort-Diagnose: erst der Preis, dann verbindlich oder nicht (Entscheidung Nr. 33)', () => {
+  const partner = demoConfig.partners[1]!;
+  const price = demoConfig.prices.diagnosis;
+  /** Nach „Hilfe holen“, ohne Schutz, Vor-Ort-Diagnose angefragt */
+  const setup = () => {
+    const store = createAppStore(memoryStorage(), testEnv());
+    const s = () => store.getState();
+    s().ensureHousehold();
+    const device = s().addDevice({
+      category: 'waschmaschine',
+      manufacturerId: demoConfig.manufacturer.id,
+      model: demoConfig.device.model,
+      identifiedBy: 'manuell',
+    });
+    const id = s().createCase({ deviceId: device.id, entry: 'symptom', problemLabel: 'x' }).id;
+    unwrap(s().escalate(id));
+    const options = availableActions(selectCaseFacts(s(), id));
+    const booking = unwrap(
+      s().requestBooking({
+        caseId: id,
+        kind: 'vor_ort_diagnose',
+        partnerId: partner.id,
+        slotLabel: demoConfig.slots[2]!,
+        selfPay: false,
+      }),
+    );
+    return { store, s, id, booking, options };
+  };
+  const bookingIn = (s: ReturnType<typeof setup>['s'], id: string) =>
+    s().bookings.find((b) => b.id === id)!;
+
+  test('der Preis ist ein Beispielwert aus der Konfiguration, über 0 €', () => {
+    expect(price).toBeGreaterThan(0);
+    expect(demoConfig.isExample).toBe(true);
+  });
+
+  test('die Anfrage ist unverbindlich: kein Preis, kein Betrag, kein Tap', () => {
+    const { s, id, booking } = setup();
+    expect(booking.price).toBeUndefined();
+    expect(booking.binding).toBeUndefined();
+    expect(selectCaseFacts(s(), id)!.bindingDue).toBeUndefined();
+    expect(s().bookBinding(id, price).ok).toBe(false);
+  });
+
+  test('der Betrieb nennt den Preis vor dem Termin, dann wartet die Simulation auf dich', () => {
+    const { s, id, booking } = setup();
+    expect(s().simulateNext(id)).toBe(true);
+    expect(bookingIn(s, booking.id)).toMatchObject({ status: 'angefragt', price });
+    const named = selectCaseEvents(s(), id).find((e) => e.type === 'preis_genannt')!;
+    expect(named).toMatchObject({
+      actor: { kind: 'betrieb', id: partner.id, name: partner.name },
+      payload: { bookingId: booking.id, partner: partner.name, price },
+    });
+    const f = selectCaseFacts(s(), id)!;
+    expect(f.bindingDue).toEqual({
+      booking: expect.objectContaining({ id: booking.id }),
+      amount: price,
+      reason: 'preis',
+    });
+    expect(availableActions(f)).toEqual(
+      expect.arrayContaining(['zahlungspflichtig_buchen', 'nicht_buchen']),
+    );
+    expect(nextSimulationDue(s(), id)).toBeUndefined();
+    for (let i = 0; i < 5; i++) expect(s().simulateNext(id)).toBe(false);
+    expect(bookingIn(s, booking.id).status).toBe('angefragt');
+    expect(selectCaseEvents(s(), id).some((e) => e.type === 'termin_bestaetigt')).toBe(false);
+  });
+
+  test('„Zahlungspflichtig buchen“ mit dem Preis, dann bestätigt der Betrieb und kommt', () => {
+    const { s, id, booking } = setup();
+    s().simulateNext(id);
+    const bound = unwrap(s().bookBinding(id, price));
+    expect(bound.binding?.amount).toBe(price);
+    expect(
+      selectCaseEvents(s(), id).find((e) => e.type === 'zahlungspflichtig_gebucht')?.payload,
+    ).toEqual({
+      bookingId: booking.id,
+      kind: 'vor_ort_diagnose',
+      partner: partner.name,
+      slot: demoConfig.slots[2],
+      amount: price,
+      reason: 'preis',
+      separateStep: true,
+      ...textStamp('verbindliche_buchung', { ...demoNames(), fachbetrieb: partner.name }),
+    });
+    while (s().simulateNext(id));
+    expect(bookingIn(s, booking.id).status).toBe('erledigt');
+    expect(s().cases[id]?.quoteId).toBeDefined();
+  });
+
+  test('„Nicht buchen“: Anfrage storniert, keine Kosten, der Fall bietet, was er vorher bot', () => {
+    const { store, s, id, booking, options } = setup();
+    s().simulateNext(id);
+    let writes = 0;
+    const off = store.subscribe(() => {
+      writes += 1;
+    });
+    const declined = unwrap(s().declineBinding(id));
+    off();
+    expect(writes).toBe(1);
+    expect(declined).toMatchObject({ id: booking.id, status: 'storniert' });
+    expect(bookingIn(s, booking.id).binding).toBeUndefined();
+    const events = selectCaseEvents(s(), id);
+    expect(events.some((e) => e.type === 'zahlungspflichtig_gebucht')).toBe(false);
+    expect(events.at(-1)).toMatchObject({
+      type: 'nicht_gebucht',
+      actor: { kind: 'haushalt' },
+      payload: { bookingId: booking.id, amount: price, reason: 'preis' },
+    });
+    const f = selectCaseFacts(s(), id)!;
+    expect(f.status).toBe('eskaliert');
+    expect(f.bindingDue).toBeUndefined();
+    expect(availableActions(f)).toEqual(options);
+    expect(options).toContain('termin_diagnose');
+    expect(s().simulateNext(id)).toBe(false);
+    // Kein zweites „Nicht buchen“ und kein Tap mehr
+    expect(s().declineBinding(id)).toEqual({
+      ok: false,
+      refusal: { code: 'regel', action: 'nicht_buchen' },
+    });
+    expect(s().bookBinding(id, price).ok).toBe(false);
+  });
+
+  test('ohne wartenden Termin wird „Nicht buchen“ abgelehnt, ohne etwas zu schreiben', () => {
+    const { store, s, id } = setup();
+    const before = store.getState();
+    expect(s().declineBinding(id)).toEqual({
+      ok: false,
+      refusal: { code: 'regel', action: 'nicht_buchen' },
+    });
+    expect(store.getState()).toBe(before);
+    expect(s().declineBinding('GS-99999')).toEqual({
+      ok: false,
+      refusal: { code: 'unbekannt', what: 'fall', id: 'GS-99999' },
+    });
+  });
+
+  test('derselbe Weg nach der Freigabe (Nr. 31): „Nicht buchen“, dann neu und gleich verbindlich', () => {
+    const store = createAppStore(memoryStorage(), testEnv());
+    const s = () => store.getState();
+    s().ensureHousehold();
+    s().setDemo({ deductible: 5000 });
+    s().linkContract('vertragsnummer');
+    const device = s().addDevice({
+      category: 'waschmaschine',
+      manufacturerId: demoConfig.manufacturer.id,
+      model: demoConfig.device.model,
+      contractId: s().contracts[0]?.id,
+      identifiedBy: 'vertrag',
+    });
+    const id = s().createCase({ deviceId: device.id, entry: 'foto', problemLabel: 'x' }).id;
+    unwrap(s().escalate(id));
+    unwrap(s().setFinding(id, 'reparatur', 'fachkraft'));
+    unwrap(s().reportClaim(id));
+    const input = {
+      caseId: id,
+      kind: 'reparatur' as const,
+      partnerId: partner.id,
+      slotLabel: demoConfig.slots[0]!,
+      selfPay: false,
+    };
+    const first = unwrap(s().requestBooking(input));
+    s().simulateNext(id);
+    unwrap(s().declineBinding(id));
+    expect(s().cases[id]?.status).toBe('freigegeben');
+    expect(bookingIn(s, first.id)).toMatchObject({ status: 'storniert' });
+    expect(can(selectCaseFacts(s(), id), 'termin_versicherer')).toBe(true);
+    const second = unwrap(s().requestBooking({ ...input, slotLabel: demoConfig.slots[1]! }));
+    expect(second).toMatchObject({ subjectToApproval: false, binding: { amount: 5000 } });
+  });
+});
+
 describe('Befund vor Ort (R-10)', () => {
   const setup = () => {
     const store = createAppStore(memoryStorage(), testEnv());
@@ -757,8 +929,18 @@ describe('Befund vor Ort (R-10)', () => {
         selfPay: false,
       }),
     );
+    // Seit Entscheidung Nr. 33 nennt der Betrieb erst den Preis, dann wartet die Simulation auf
+    // „Zahlungspflichtig buchen“. Vorher lief sie ohne Tap bis zum Befund.
+    while (s().simulateNext(id));
+    expect(selectCaseEvents(s(), id).some((e) => e.type === 'befund_erstellt')).toBe(false);
+    unwrap(s().bookBinding(id, demoConfig.prices.diagnosis));
     while (s().simulateNext(id));
     const events = selectCaseEvents(s(), id);
+    expect(events.find((e) => e.type === 'preis_genannt')?.actor).toEqual({
+      kind: 'betrieb',
+      id: partner.id,
+      name: partner.name,
+    });
     for (const type of ['befund_erstellt', 'angebot_erstellt'] as const) {
       expect(events.find((e) => e.type === type)?.actor).toEqual({
         kind: 'betrieb',

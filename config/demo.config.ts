@@ -91,6 +91,11 @@ export const demoConfig = {
     /** Reparatur 189 € (Original-Laugenpumpe und Arbeit). Aufteilung ist eine Annahme. */
     repair: { parts: 11900 as Cents, labor: 7000 as Cents },
     replacement: 89900 as Cents,
+    /**
+     * Vor-Ort-Diagnose 79 € (Anfahrt und Prüfung). Den Preis nennt der Betrieb vor dem Termin,
+     * dann buchst du zahlungspflichtig oder nicht (Entscheidung Nr. 33). Beispielwert.
+     */
+    diagnosis: 7900 as Cents,
   },
 
   slots: ['Mo vormittags', 'Di nachmittags', 'Mi vormittags', 'Do abends'],

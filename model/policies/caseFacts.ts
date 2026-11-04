@@ -148,8 +148,11 @@ function payerOf(
 /**
  * Wartet ein Termin auf „Zahlungspflichtig buchen“? Nur ein angefragter, noch unverbindlicher
  * Termin, für den du jetzt einen festen Betrag zahlst, und nur dort, wo der Betrieb ihn als Nächstes
- * bestätigen würde: die Reparatur nach der Freigabe (freigegeben) mit Selbstbeteiligung über 0 €
- * (Nr. 31). Während der Prüfung bleibt die Anfrage unverbindlich, nach einer Ablehnung verfällt sie.
+ * bestätigen würde. Ein Mechanismus für zwei Fälle:
+ * - Reparatur nach der Freigabe (freigegeben) mit Selbstbeteiligung über 0 € (Nr. 31). Während der
+ *   Prüfung bleibt die Anfrage unverbindlich, nach einer Ablehnung verfällt sie.
+ * - Vor-Ort-Diagnose nach „Hilfe holen“ (eskaliert), sobald der Betrieb einen Preis über 0 €
+ *   genannt hat (Nr. 33).
  * Selbstzahler binden sich schon mit der Buchung, der Preis steht davor.
  */
 function bindingDueOf(
@@ -163,6 +166,10 @@ function bindingDueOf(
   const repair = bookings.reparatur;
   if (c.status === 'freigegeben' && claim === 'freigegeben' && open(repair) && deductible > 0) {
     return { booking: repair, amount: deductible, reason: 'selbstbeteiligung' };
+  }
+  const visit = bookings.vor_ort_diagnose;
+  if (c.status === 'eskaliert' && open(visit) && visit.price !== undefined && visit.price > 0) {
+    return { booking: visit, amount: visit.price, reason: 'preis' };
   }
   return undefined;
 }

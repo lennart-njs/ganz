@@ -258,6 +258,12 @@ export interface AppActions {
    */
   bookBinding: (caseId: Id, shown: Cents) => Result<Booking>;
   /**
+   * „Nicht buchen“ statt „Zahlungspflichtig buchen“ (Entscheidung Nr. 33, nach der Freigabe
+   * genauso): Die unverbindliche Anfrage endet ohne Kosten, der Termin ist storniert, und der Fall
+   * bietet wieder, was er vorher bot. Nur wo die Regel nicht_buchen gilt. Ein set.
+   */
+  declineBinding: (caseId: Id) => Result<Booking>;
+  /**
    * Antwort auf den Systemdialog oder den Schalter im Profil. „erlaubt“ speichert die Einwilligung
    * 'mitteilungen' (lit. a), alles andere widerruft sie (R-13).
    */
@@ -1294,6 +1300,35 @@ export function createAppStore(storage: StateStorage = AsyncStorage, env: StoreE
             return ok(bound.booking);
           },
 
+          declineBinding: (caseId) => {
+            const c = get().cases[caseId];
+            if (!c) return missingCase(caseId);
+            const facts = selectCaseFacts(get(), caseId)!;
+            const due = facts.bindingDue;
+            if (!due || !can(facts, 'nicht_buchen')) {
+              return refuse({ code: 'regel', action: 'nicht_buchen' });
+            }
+            const declined: Booking = { ...due.booking, status: 'storniert' };
+            const ev = draftEvent({
+              caseId,
+              type: 'nicht_gebucht',
+              actor: householdActor(),
+              payload: {
+                bookingId: declined.id,
+                kind: declined.kind,
+                partner: declined.provider.name,
+                slot: declined.slotLabel,
+                amount: due.amount,
+                reason: due.reason,
+              },
+            });
+            set((s) => ({
+              bookings: s.bookings.map((b) => (b.id === declined.id ? declined : b)),
+              events: [...s.events, ev],
+            }));
+            return ok(declined);
+          },
+
           setNotifications: (value, shown = 'mitteilungen') => {
             set({ notifications: value });
             if (value === 'erlaubt') {
@@ -1352,6 +1387,28 @@ export function createAppStore(storage: StateStorage = AsyncStorage, env: StoreE
             // Ein Termin, für den du zahlst, gilt erst mit „Zahlungspflichtig buchen“ (Nr. 31).
             // Bis dahin bestätigt der Betrieb nicht, weder per Timer noch per „Nächster Schritt“.
             if (selectCaseFacts(get(), caseId)?.bindingDue) return false;
+            // Nr. 33: Zur Vor-Ort-Diagnose nennt der Betrieb vor dem Termin den Preis. Dann wartet der
+            // Termin auf „Zahlungspflichtig buchen“ oder „Nicht buchen“.
+            if (
+              booking.kind === 'vor_ort_diagnose' &&
+              booking.status === 'angefragt' &&
+              booking.price === undefined &&
+              c.status === 'eskaliert'
+            ) {
+              const price = cfg.prices.diagnosis;
+              const named = draftEvent({
+                caseId,
+                type: 'preis_genannt',
+                actor: { ...betrieb, id: booking.provider.id },
+                payload: { bookingId: booking.id, partner, price },
+              });
+              set((s) => ({
+                bookings: s.bookings.map((b) => (b.id === booking.id ? { ...b, price } : b)),
+                events: [...s.events, named],
+              }));
+              notify();
+              return true;
+            }
             const confirmable =
               c.status === 'freigegeben' ||
               c.status === 'in_reparatur' ||
@@ -1654,6 +1711,7 @@ export function activeBooking(s: AppData, caseId: Id): Booking | undefined {
 
 const bookingEvents: CaseEvent['type'][] = [
   'termin_angefragt',
+  'preis_genannt',
   'zahlungspflichtig_gebucht',
   'termin_bestaetigt',
   'betrieb_unterwegs',
