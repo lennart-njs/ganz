@@ -665,7 +665,9 @@ export default function FallGespraech() {
     );
   }
 
-  // Gespräch mit dem Reparatur-Assistenten
+  // Gespräch mit dem Reparatur-Assistenten. Die erste Antwort sagt, dass ein Computerprogramm
+  // antwortet und kein Mensch (Entscheidung Nr. 6, Art. 50 Abs. 1 KI-VO).
+  const firstReply = msgs.find((m) => m.role === 'assistent')?.id;
   msgs.forEach((m, i) =>
     add(
       m.at,
@@ -673,7 +675,12 @@ export default function FallGespraech() {
       m.role === 'haushalt' ? (
         <UserSaid text={m.text} />
       ) : (
-        <BotSays name={de.chat.title} sender={msgs[i - 1]?.role !== 'assistent'} lines={[m.text]} />
+        <BotSays
+          name={de.chat.title}
+          sender={msgs[i - 1]?.role !== 'assistent'}
+          lines={[m.text]}
+          hint={m.id === firstReply ? de.chat.who : undefined}
+        />
       ),
     ),
   );
@@ -769,7 +776,7 @@ export default function FallGespraech() {
     tail.push(
       <View key="consent" style={styles.stack}>
         <UserSaid text={assistant.waiting} />
-        <BotSays name={de.chat.title} lines={[de.chat.consentTitle]}>
+        <BotSays name={de.chat.title} lines={[de.chat.consentTitle]} hint={de.chat.who}>
           <Text variant="bodyLg">{de.chat.consentText(demoConfig.assistant.name)}</Text>
           <ScopeItems purpose="chat_assistent" />
           <Text variant="body">{de.chat.consentExcluded}</Text>

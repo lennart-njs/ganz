@@ -51,7 +51,7 @@ export const LEGAL_TEXTS = {
     version: '2026-10-1',
     parts: () => [de.profile.privacyText],
   },
-  /** Wer antwortet: ein Computerprogramm, kein Mensch */
+  /** Wer antwortet: ein Computerprogramm, kein Mensch. In der Einwilligung und an der ersten Antwort. */
   assistent_hinweis: {
     version: '2026-10-1',
     parts: () => [de.chat.who],
@@ -61,12 +61,16 @@ export const LEGAL_TEXTS = {
     version: '2026-11-1',
     parts: () => [de.chat.inputNotice],
   },
-  /** Vor der ersten Nachricht an den Assistenten (lit. a) */
+  /**
+   * Vor der ersten Nachricht an den Assistenten (lit. a). Mit dem Hinweis, dass ein
+   * Computerprogramm antwortet (Art. 50 Abs. 1 KI-VO), so steht er im Gespräch.
+   */
   assistent_einwilligung: {
-    version: '2026-11-2',
+    version: '2026-11-3',
     scope: 'chat_assistent',
     parts: (n) => [
       de.chat.consentTitle,
+      de.chat.who,
       de.chat.consentText(n.assistent),
       ...items('chat_assistent'),
       de.chat.consentExcluded,

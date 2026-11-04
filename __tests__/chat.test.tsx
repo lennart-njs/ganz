@@ -8,7 +8,7 @@ import { de } from '@/i18n/de';
 import { formatDateTime } from '@/i18n/format';
 import { assistantTransfer, chatContext } from '@/lib/chat/context';
 import { chatLimits } from '@/lib/chat/limits';
-import { textStamp } from '@/lib/legalTexts';
+import { legalParts, textStamp } from '@/lib/legalTexts';
 import { parseRequest, type ChatContext } from '@/lib/chat/prompt';
 import { CHAT_HEADERS, INSTALLATION_ID } from '@/lib/chat/protocol';
 import { CONSENT_SCOPES, scopedConsent } from '@/model/policies/consentScopes';
@@ -283,6 +283,33 @@ describe('Reparatur-Assistent', () => {
     // Der frühere Satz versprach das auch für Freitext, der solche Angaben enthalten kann
     expect(JSON.stringify(de)).not.toContain('Nicht dabei sind Fotos, Adresse und Vertragsnummer');
     expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  test('der Hinweis „Computerprogramm, kein Mensch“ steht in der Einwilligung und an der ersten Antwort', async () => {
+    setup();
+    await renderRouter(APP, { initialUrl: '/fall/neu' });
+    fetchMock
+      .mockReturnValueOnce(reply({ reply: 'Steht Wasser in der Trommel?', suggestion: 'keine' }))
+      .mockReturnValueOnce(reply({ reply: 'Dann prüf den Laugenfilter.', suggestion: 'keine' }));
+    await ask('Es pumpt nicht ab.');
+    // In der Einwilligung, vor der ersten Nachricht an den Assistenten
+    expect(screen.getByText(t.consentTitle)).toBeTruthy();
+    expect(screen.getAllByText(t.who)).toHaveLength(1);
+    await tap(t.consentAccept);
+    await flush();
+    // Der Stempel der Einwilligung belegt den Hinweis mit
+    const consent = useAppStore.getState().consents.find((k) => k.purpose === 'chat_assistent');
+    expect(consent?.textHash).toBe(textStamp('assistent_einwilligung').textHash);
+    expect(legalParts('assistent_einwilligung')).toContain(t.who);
+    // An der ersten Antwort, für Screenreader lesbar
+    expect(screen.getByText('Steht Wasser in der Trommel?')).toBeTruthy();
+    expect(screen.getAllByText(t.who)).toHaveLength(1);
+    expect(screen.getByText(t.who)).not.toHaveProp('accessibilityElementsHidden', true);
+    // Nur an der ersten, nicht an jeder Antwort
+    await ask('Ja, es steht Wasser drin.');
+    await flush();
+    expect(screen.getByText('Dann prüf den Laugenfilter.')).toBeTruthy();
+    expect(screen.getAllByText(t.who)).toHaveLength(1);
   });
 
   test('die Oberfläche sagt nie „KI“ oder „AI“', () => {

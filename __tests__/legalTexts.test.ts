@@ -5,6 +5,11 @@
 // Texts erhöhen und in __tests__/fixtures/text-versions.json unter seinem Schlüssel eine neue
 // Zeile „Version: Hash“ ergänzen. Den Hash nennt der rote Test. Alte Zeilen nie ändern: Sie
 // belegen, welchen Text eine Bestätigung mit dieser Version gezeigt hat.
+import fs from 'fs';
+import path from 'path';
+
+import { fireEvent, renderRouter, screen } from 'expo-router/testing-library';
+
 import { demoConfig } from '@/config/demo.config';
 import { de } from '@/i18n/de';
 import {
@@ -12,6 +17,7 @@ import {
   LEGAL_TEXT_KEYS,
   PLACEHOLDER_NAMES,
   demoNames,
+  legalParts,
   legalText,
   templateHash,
   textStamp,
@@ -19,6 +25,9 @@ import {
 } from '@/lib/legalTexts';
 import { CONSENT_SCOPES } from '@/model/policies/consentScopes';
 import { sha256Hex } from '@/model/sha256';
+import { useAppStore } from '@/store/appStore';
+import { APP } from '@/test/app';
+import { addWasher, start } from '@/test/regressions';
 
 import history from './fixtures/text-versions.json';
 
@@ -89,4 +98,73 @@ describe('Versionierte Texte', () => {
     }
     expect(legalText('schadenmeldung')).toContain(demoConfig.insurer.shortName);
   });
+});
+
+// Ein Hinweis, den keine Bestätigung stempelt, belegt nur der Screen. Fiel er aus dem Screen,
+// merkte es kein Test (Gegenprüfung zu Schritt 28: „Computerprogramm, kein Mensch“ fehlte).
+describe('Hinweise ohne Bestätigung stehen auf dem Screen', () => {
+  const ROOT = path.join(__dirname, '..');
+  const files = (dir: string): string[] =>
+    fs
+      .readdirSync(dir, { withFileTypes: true })
+      .flatMap((e) =>
+        e.isDirectory()
+          ? files(path.join(dir, e.name))
+          : /\.tsx?$/.test(e.name)
+            ? [path.join(dir, e.name)]
+            : [],
+      );
+  const sources = ['app', 'components', 'hooks', 'lib', 'store']
+    .flatMap((d) => files(path.join(ROOT, d)))
+    .filter((f) => !f.endsWith(path.join('lib', 'legalTexts.ts')))
+    .map((f) => fs.readFileSync(f, 'utf8'));
+  /** Ein Schlüssel, den der Code nennt, geht in einen Stempel (textStamp, TRANSFER_TEXT, …) */
+  const stamped = (key: LegalTextKey) => sources.some((src) => src.includes(`'${key}'`));
+
+  const openCase = () => {
+    start();
+    const c = useAppStore.getState().createCase({
+      deviceId: addWasher().id,
+      entry: 'freitext',
+      problemLabel: 'Es pumpt nicht ab.',
+    });
+    return c.id;
+  };
+
+  /** Wo der Hinweis steht, und wie man dorthin kommt */
+  const SHOWN: Partial<Record<LegalTextKey, () => Promise<void>>> = {
+    datenschutz_start: async () => {
+      useAppStore.getState().reset();
+      await renderRouter(APP, { initialUrl: '/willkommen' });
+      await fireEvent.press(screen.getByRole('button', { name: de.onboarding.privacyTitle }));
+    },
+    datenschutz_profil: async () => {
+      start();
+      await renderRouter(APP, { initialUrl: '/profil' });
+      await fireEvent.press(screen.getByRole('button', { name: de.profile.privacy }));
+    },
+    assistent_hinweis: async () => {
+      const id = openCase();
+      useAppStore.getState().addChatMessage({ caseId: id, role: 'haushalt', text: 'Hallo' });
+      useAppStore.getState().addChatMessage({ caseId: id, role: 'assistent', text: 'Guten Tag' });
+      await renderRouter(APP, { initialUrl: `/fall/${id}` });
+    },
+    eingabe_hinweis: async () => {
+      await renderRouter(APP, { initialUrl: `/fall/${openCase()}` });
+    },
+  };
+
+  test('jeder Text, den kein Code stempelt, hat hier seinen Screen', () => {
+    expect(LEGAL_TEXT_KEYS.filter((k) => !stamped(k)).sort()).toEqual(Object.keys(SHOWN).sort());
+  });
+
+  test.each(Object.keys(SHOWN) as LegalTextKey[])(
+    '%s: jeder Teil steht auf dem Screen',
+    async (key) => {
+      await SHOWN[key]!();
+      for (const part of legalParts(key)) {
+        expect(screen.getAllByText(part).length).toBeGreaterThan(0);
+      }
+    },
+  );
 });
