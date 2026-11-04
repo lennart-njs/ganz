@@ -8,6 +8,7 @@ import { VARIANTS } from '@/app.config';
 import { demoConfig } from '@/config/demo.config';
 import { catalog } from '@/data/catalog';
 import { guides } from '@/data/guides';
+import { modelGuides } from '@/data/modelGuides';
 import { de } from '@/i18n/de';
 
 import { version } from '../../package.json';
@@ -224,5 +225,56 @@ describe('Maestro-Flows in e2e/', () => {
     const model = catalog.find((m) => m.id === demoConfig.dealerDemo.catalogId)!;
     const [, problem] = /id: 'antwort-(gs_[a-z]+)'/.exec(flow) ?? [];
     expect(model.problems?.map((p) => p.id)).toContain(problem);
+  });
+});
+
+// Pitch-Check und Demo-Ablauf sind Anleitungen für Menschen. Was dort „in Anführungszeichen“ steht,
+// ist ein Knopf oder ein Text auf dem Bildschirm. Heißt er anders, sucht man am Tag der Demo.
+describe('Pitch-Check und Demo-Ablauf nennen nur Texte, die es gibt', () => {
+  /** Ein Abschnitt ab seiner Überschrift bis zur nächsten Überschrift derselben Ebene */
+  const part = (file: string, heading: string) => {
+    const text = read(path.join(root, file));
+    const start = text.indexOf(`\n${heading}\n`);
+    if (start < 0) throw new Error(`${file}: Überschrift fehlt: ${heading}`);
+    const level = heading.split(' ')[0]!;
+    const end = text.indexOf(`\n${level} `, start + heading.length + 2);
+    return text.slice(start, end < 0 ? undefined : end);
+  };
+  /** Nur die nummerierten Schritte, ohne „Bestanden, wenn“ und die monatlichen Zusätze */
+  const steps = (text: string) => text.split('\n').filter((l) => /^\d+\. /.test(l));
+  /** Ohne Verweise auf Abschnitte anderer Dateien wie `docs/ABLAEUFE.md` → „Starten“ */
+  const quoted = (lines: string[]) =>
+    lines
+      .map((l) => l.replace(/`[^`]+\.md` → „[^“]+“/g, ''))
+      .flatMap((l) => [...l.matchAll(/„([^“]+)“/g)].map((m) => m[1]!));
+
+  // Texte mit echten Namen (die Flows nennen keine, der Pitch-Check schon), dazu Katalog und
+  // Anleitungen der Modelle
+  const names = demoConfig.dealers.flatMap((d) => [d.name, d.shortName]);
+  const shown = new Set(texts);
+  const walk = (value: unknown) => {
+    if (typeof value === 'function' && value.length > 0) {
+      for (const name of names) {
+        try {
+          const result: unknown = value(...Array<string>(value.length).fill(name));
+          if (typeof result === 'string') shown.add(result);
+        } catch {
+          // Funktionen, die mehr als Text brauchen, zählen hier nicht
+        }
+      }
+    } else if (value && typeof value === 'object') Object.values(value).forEach(walk);
+  };
+  walk(de);
+  for (const m of catalog) for (const p of m.problems ?? []) shown.add(p.label);
+  for (const g of Object.values(modelGuides)) for (const s of g.steps) shown.add(s.t);
+
+  test.each([
+    ['docs/PITCH_CHECK.md', '## Ablauf'],
+    ['docs/PITCH_CHECK.md', '### 1. Händler-Weg (Demo)'],
+    ['docs/ABLAEUFE.md', '## Demo'],
+  ])('%s, „%s“', (file, heading) => {
+    const quotes = quoted(steps(part(file, heading)));
+    expect(quotes.length).toBeGreaterThan(0);
+    expect(quotes.filter((q) => !shown.has(q))).toEqual([]);
   });
 });

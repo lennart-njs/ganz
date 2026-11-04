@@ -19,7 +19,7 @@ export default function GeraetBestaetigen() {
   const title = deviceTitle({ manufacturerId: demoConfig.manufacturer.id, model: cfg.model });
 
   // Nach dem Abschluss schaltet Stack.Protected auf die Tabs um.
-  // Dasselbe Gerät steht im Demo-Startstand (store/demoStart.ts).
+  // Dasselbe Gerät steht im „Demo-Startstand Versicherung“ (store/demoStart.ts).
   const confirm = () => {
     addDevice(contractDevice(contract?.id));
     completeOnboarding();

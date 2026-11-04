@@ -38,7 +38,7 @@ export const demoConfig = {
     enabled: true,
     /** Schließbare Tipps im Demo-Modus. Aus für den Pitch (Entscheidung 21), an über die Demo-Steuerung. */
     hints: false,
-    /** Feste Zeit im Demo-Startstand (Schutz verknüpft, Gerät angelegt), siehe store/demoStart.ts */
+    /** Feste Zeit beider Demo-Startstände (Händler und Versicherung), siehe store/demoStart.ts */
     startAt: '2026-11-02T08:00:00.000Z',
   },
 

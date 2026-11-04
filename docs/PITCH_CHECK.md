@@ -8,7 +8,7 @@ Diese Prüfungen laufen vor jedem Pitch-Tag, also mindestens einmal pro Woche un
 
 1. Alles ist committet, der Arbeitsbaum ist sauber.
 2. App und Portal laufen wie in `docs/ABLAEUFE.md` → „Starten“: `npx expo start` für App und Backend, das Portal mit `npm run build` und `npm start`. Die App läuft auf dem Pitch-Telefon, heute über Expo Go, ab Phase 2 als eigener Pitch-Build.
-3. Demo-Startstand laden: Profil → 7-mal auf die Versionsnummer tippen → „Demo-Startstand laden“. Danach ist der Geschirrspüler da, gekauft bei Fründ, ohne Versicherung, und es gibt keinen Fall. Dann `.data/ganz-backend.json` löschen, denn der erste Fall bekommt wieder die erste Fallnummer.
+3. Demo-Startstand laden: Steht das Onboarding noch da, „Los geht’s“ → „Später hinzufügen“. Dann Profil → 7-mal auf die Versionsnummer tippen → „Demo-Startstand laden“. Danach ist der Geschirrspüler da, gekauft bei Fründ, ohne Versicherung, und es gibt keinen Fall. Dann `.data/ganz-backend.json` löschen, denn der erste Fall bekommt wieder die erste Fallnummer.
 4. Die sieben Prüfungen unten durchgehen. Je Prüfung Datum, Commit, Gerät und Ergebnis in die Tabelle „Stand“ eintragen.
 5. Die Tabelle committen. Der Commit ändert nur diese Datei.
 6. `scripts/pitch-tag.sh` ausführen. Es bricht ab, solange ein regelbrechender Befund offen ist (R-07, R-12, R-13, R-16, R-17). Danach läuft `scripts/ci-checks.sh`. Ist alles grün, setzt es den lokalen Tag `pitch-JJJJ-Wxx`.
@@ -18,13 +18,13 @@ Scheitert eine Prüfung, gibt es keinen Tag. Trag den Fehler in `docs/BEFUNDE.md
 
 ## Die Prüfungen
 
-### 1. Golden Path
+### 1. Händler-Weg (Demo)
 
 Der Ablauf aus `docs/ABLAEUFE.md` → „Demo“, vom Demo-Startstand aus. Telefon und Portal stehen nebeneinander.
 
 1. Am Telefon: „Was ist kaputt?“ → „Wasser bleibt stehen“. Fünf Schritte „Erledigt“, im Schritt „Ablaufpumpe reinigen“ „Geht nicht“ → „Hilfe holen“.
 2. „Fall an Fründ Elektrogeräte AG senden“ → die Vorschau lesen → „Ja, senden“.
-3. Im Portal anmelden (`demo@fruend.example`, `demo`). Den Fall öffnen, „Annehmen“, „Gewährleistung bestätigen“. Dann eine Nachricht und einen Terminvorschlag senden.
+3. Im Portal anmelden (`demo@fruend.example`, `demo`). Den Fall öffnen, „Fall annehmen“, „Gewährleistung bestätigen“. Dann eine Nachricht und einen Terminvorschlag senden.
 4. Am Telefon ein Zeitfenster wählen.
 5. Im Portal Auswertung und Einstellungen → Schnittstellen zeigen.
 
@@ -114,7 +114,7 @@ Je Prüfung das letzte Datum. Ältere Stände zeigt `git log -p docs/PITCH_CHECK
 
 | Prüfung | Zuletzt geprüft | Commit | Gerät und iOS | Ergebnis | Wer |
 |---|---|---|---|---|---|
-| 1 Golden Path | – | – | – | noch nicht geprüft | – |
+| 1 Händler-Weg (Demo) | – | – | – | noch nicht geprüft | – |
 | 2 Dark Mode | – | – | – | noch nicht geprüft | – |
 | 3 Schrift 200 % | – | – | – | noch nicht geprüft | – |
 | 4 VoiceOver-Stichprobe | – | – | – | noch nicht geprüft | – |

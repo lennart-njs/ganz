@@ -1,7 +1,7 @@
 # Golden Path mit Versicherung (README, „Golden Path für den Pitch“, Schritte 2 bis 8), als
 # Maestro-Flow. Start aus „Demo-Startstand Versicherung“. Der Händler-Weg für die Demo steht in
-# e2e/haendler.yaml. Einmal im Monat (docs/PITCH_CHECK.md, Prüfung 1), nachts auf iOS, einmal pro
-# Woche im Android-Emulator.
+# e2e/haendler.yaml. Monatliche Zusatzprüfung zu Prüfung 1 in docs/PITCH_CHECK.md, heute von Hand.
+# Mit dem Pitch-Build: nachts auf iOS, einmal pro Woche im Android-Emulator.
 #
 # Nicht gelaufen: In der Sandbox von Schritt 29 gibt es weder Simulator noch Maestro. Den ersten
 # Lauf macht Schritt 30 mit dem Pitch-Build. __tests__/build/e2eFlows.test.ts prüft bis dahin,

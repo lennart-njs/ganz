@@ -11,7 +11,7 @@ Hier steht jede Version von ganz mit einer kurzen Notiz, dazu einmal im Monat de
 - **Laufzeit:** `pitch` und `production` nehmen den Fingerprint des nativen Stands. Ändert sich etwas Natives (Paket mit nativem Code, Plugin, Recht, Bundle-ID), braucht es einen neuen Build. Ein Update reicht dann nicht.
 - **Updates auf `pitch`** gehen nur per Script aus einem Commit mit Pitch-Tag raus (`scripts/pitch-tag.sh`, das Update-Script kommt mit Schritt 30). Im Pitch-Build lädt die App ein Update nur per Tap in der Demo-Steuerung.
 - **Rechtstexte** ändern sich nur mit neuer `textVersion` (`lib/legalTexts.ts`). Die Notiz nennt jede neue Version.
-- **Vorher grün:** `scripts/ci-checks.sh`, für einen Pitch-Build dazu `e2e/golden-path.yaml` (ab Schritt 30) und `docs/PITCH_CHECK.md`.
+- **Vorher grün:** `scripts/ci-checks.sh`, für einen Pitch-Build dazu `e2e/haendler.yaml` und `e2e/golden-path.yaml` (ab Schritt 30) und `docs/PITCH_CHECK.md`.
 
 ## Vorlage für einen Eintrag
 

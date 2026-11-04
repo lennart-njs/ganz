@@ -30,7 +30,7 @@ Was die Kosten außerdem bewegt:
 ## So wird gemessen
 
 1. Die Route läuft auf dem Host mit echtem Schlüssel. Kein anderer Verkehr auf diesem Schlüssel, solange gemessen wird.
-2. Zehn Demo-Fälle nach der Tabelle unten, jeder aus dem Demo-Startstand.
+2. Zehn Demo-Fälle nach der Tabelle unten, jeder aus „Demo-Startstand Versicherung“ (Kranich, Waschmaschine). Nur Zeile 8 startet aus „Demo-Startstand laden“ (Geschirrspüler von Fründ, ohne Schutz).
 3. Je Anfrage die vier Zahlen aus `response.usage`: `input_tokens`, `cache_creation_input_tokens`, `cache_read_input_tokens`, `output_tokens`. Die Route schreibt sie heute nicht ins Log. Schritt 30 ergänzt dafür eine Log-Zeile nur mit diesen Zahlen und der Anfrage-Nummer, ohne Inhalte (wie bei den Fehlern seit Schritt 27). Gegenprobe: die Nutzung des Tages in der Console von Anthropic.
 4. Kosten je Anfrage in USD:
    `(input × 4,00 + cache_geschrieben × 5,00 + cache_gelesen × 0,20 + output × 20,00) / 1.000.000`
