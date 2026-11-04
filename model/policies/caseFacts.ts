@@ -3,6 +3,13 @@
 // Kein Import aus react, expo, i18n, config oder store (ZUKUNFTSPLAN 3.1).
 import { findActiveConsent, isClosed } from '../caseMachine';
 import { isOrdered } from './bookingRules';
+import {
+  DEFAULT_REGULATOR_RULES,
+  regulatorOptions,
+  type Regulator,
+  type RegulatorOption,
+  type RegulatorRules,
+} from './regulator';
 import { currentBookings, earlierRounds, isFinding } from './rounds';
 import type {
   Booking,
@@ -29,9 +36,10 @@ export type ClaimState = 'keiner' | 'in_pruefung' | 'freigegeben' | 'abgelehnt';
 
 /**
  * Wer die Reparatur zahlt, sobald es feststeht. Bei der Nachbesserung in der Gewährleistung trägt
- * der Betrieb die Kosten (§ 635 Abs. 2 BGB, Nr. 32).
+ * der Betrieb die Kosten (§ 635 Abs. 2 BGB, ganz Nr. 32). Händler und Hersteller zahlen erst nach
+ * ihrer eigenen Freigabe. Die gibt es mit Schritt 5, bis dahin steht keiner von beiden als Zahler da.
  */
-export type PayerKind = 'versicherer' | 'haushalt' | 'betrieb';
+export type PayerKind = 'versicherer' | 'haendler' | 'hersteller' | 'haushalt' | 'betrieb';
 
 /** Was du mit „Zahlungspflichtig buchen“ zahlst: die Selbstbeteiligung oder den Preis des Betriebs */
 export type BindingReason = 'selbstbeteiligung' | 'preis';
@@ -69,6 +77,12 @@ export interface CaseFactsSource {
   diagnoses: readonly Diagnosis[];
   /** Fälle, die an den Händler gingen (Entscheidung 28). Ohne Angabe zählt nur die Bestätigung. */
   shares?: Readonly<Record<Id, DealerShareSource>>;
+  /**
+   * Regeln für den Regulierer (regulator.ts). Ohne Angabe DEFAULT_REGULATOR_RULES. Die Frist auf den
+   * Kauf ist dort dieselbe wie warranty.purchaseMonths in config/demo.config.ts, ein Test hält
+   * beide gleich (regulator.test.ts).
+   */
+  rules?: RegulatorRules;
 }
 
 export interface CaseFacts {
@@ -95,7 +109,24 @@ export interface CaseFacts {
    */
   rework?: Rework;
   claim: ClaimState;
-  /** Wer zahlt. Offen, solange der Versicherer prüft oder du noch entscheidest. */
+  /**
+   * Wer die Kosten übernehmen kann, aus Gerät, Vertrag und Stichtag Case.createdAt
+   * (regulatorOptions in regulator.ts), geordnet wie U10. Selbstzahlen steht am Ende. Ohne Gerät
+   * leer. Fakten, die nicht aus selectCaseFacts kommen, dürfen es weglassen: Dann ist keiner bekannt.
+   */
+  regulators?: readonly RegulatorOption[];
+  /**
+   * Der Regulierer des Falls: beim Schadenfall der Versicherer seines Vertrags, sonst die erste
+   * Möglichkeit vor dem Selbstzahlen (U10). Ohne Regulierer undefined. Mit Versicherung zeigen die
+   * Screens wie heute den Versicherer, auch wenn der Händler zuerst steht, bis Lennart die
+   * Reihenfolge festlegt (U10).
+   */
+  regulator?: Regulator;
+  /**
+   * Wer zahlt. Offen, solange der Versicherer prüft oder du noch entscheidest. Ohne Schutz zahlt der
+   * Haushalt nur, wenn kein Regulierer die Kosten übernehmen kann. Kann es der Händler, bleibt es
+   * offen, bis du wählst: kein „Du zahlst“ vor deinem Tap (Übertragung 4.1).
+   */
   payer?: PayerKind;
   /**
    * Neuester Termin je Art, der zählt: aus der laufenden Runde, nicht storniert und nicht verfallen.
@@ -171,20 +202,36 @@ function lapsed(b: Booking, claim: ClaimState): boolean {
   return claim === 'abgelehnt' && b.subjectToApproval && b.status === 'angefragt';
 }
 
+/**
+ * Der Regulierer des Falls. Mit Schadenfall der, an den gemeldet ist: bis Schritt 5 der Versicherer
+ * des Vertrags im Schadenfall. Gilt dieser Vertrag am Stichtag nicht, keiner. Sonst die erste
+ * Möglichkeit vor dem Selbstzahlen.
+ */
+function regulatorOf(c: Case, options: readonly RegulatorOption[]): Regulator | undefined {
+  const regulators = options.filter((o): o is Regulator => o.kind !== 'haushalt');
+  const reported = c.claim?.contractId;
+  if (reported !== undefined) return regulators.find((o) => o.contractId === reported);
+  return regulators[0];
+}
+
 function payerOf(
   c: Case,
   claim: ClaimState,
   hasContract: boolean,
+  regulator: Regulator | undefined,
   quote: Quote | undefined,
   repair: Booking | undefined,
 ): PayerKind | undefined {
-  // Nachbesserung: Der Betrieb trägt die Kosten, kein Schadenfall (Nr. 32)
+  // Nachbesserung: Der Betrieb trägt die Kosten, kein Schadenfall (ganz Nr. 32)
   if (c.rework) return 'betrieb';
   if (claim === 'freigegeben') return 'versicherer';
   if (claim === 'in_pruefung') return undefined;
   // Ohne Freigabe in der Reparatur: Der Haushalt hat selbst zahlen gewählt
   if ((c.status === 'in_reparatur' || c.status === 'erledigt') && repair) return 'haushalt';
-  if (quote && !hasContract) return 'haushalt';
+  // Ohne Schutz zahlt der Haushalt, wenn niemand sonst die Kosten übernehmen kann. Kann es der
+  // Händler oder der Hersteller, bleibt der Zahler offen, bis du wählst. Selbstzahlen bleibt
+  // erlaubt (selbst_zahlen), nur steht vorher kein „Du zahlst“ da.
+  if (quote && !hasContract && !regulator) return 'haushalt';
   return undefined;
 }
 
@@ -252,6 +299,15 @@ export function selectCaseFacts(s: CaseFactsSource, caseId: Id): CaseFacts | und
   const deductible = contract?.deductible ?? 0;
   const quote = c.quoteId ? s.quotes.find((q) => q.id === c.quoteId) : undefined;
   const claim = claimState(c);
+  const regulators = device
+    ? regulatorOptions({
+        device,
+        contract,
+        asOf: c.createdAt,
+        rules: s.rules ?? DEFAULT_REGULATOR_RULES,
+      })
+    : [];
+  const regulator = regulatorOf(c, regulators);
 
   const counting = currentBookings(c, s.bookings).filter(
     (b) => b.status !== 'storniert' && !lapsed(b, claim),
@@ -293,7 +349,9 @@ export function selectCaseFacts(s: CaseFactsSource, caseId: Id): CaseFacts | und
     quote,
     rework: c.rework,
     claim,
-    payer: payerOf(c, claim, hasContract, quote, bookings.reparatur),
+    regulators,
+    regulator,
+    payer: payerOf(c, claim, hasContract, regulator, quote, bookings.reparatur),
     bookings,
     booking,
     bookingOpen: !!booking && booking.status !== 'erledigt',

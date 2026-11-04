@@ -1179,6 +1179,8 @@ export const de = {
       ask: (insurer: string) => `Willst du den Schadenfall an ${insurer} melden?`,
       askNoContract: 'Sollen wir einen Fachbetrieb für die Reparatur suchen?',
       askDealer: (service: string) => `Soll ${service} die Reparatur übernehmen?`,
+      /** Ohne Schutz, gekauft beim Händler: vor „Fall an … senden“ und Selbstzahlen mit Preis */
+      askCosts: 'Wer soll die Kosten übernehmen?',
       reported: (insurer: string) =>
         `Gemeldet. ${insurer} prüft die Kosten. Den Termin kannst du schon anfragen.`,
       selfPay: (amount: string) => `Gut. Du zahlst die Reparatur selbst: ${amount}.`,

@@ -4,7 +4,7 @@
 // Selbstzahlen (U10). Die Reihenfolge ist ein Vorschlag, bis Lennart sie festlegt.
 // Zwei Gewährleistungen, getrennt benannt: hier die des Händlers auf den Kauf
 // (purchaseWarrantyMonths), in warranty.ts die auf eine Reparatur (ganz Nr. 32).
-// Noch ohne Aufrufer (Schritt 4.1). Werte und Stichtag gibt der Aufrufer mit.
+// Aufrufer ist selectCaseFacts (caseFacts.ts). Werte und Stichtag gibt der Aufrufer mit.
 // Kein Import aus react, expo, i18n, config oder store (ZUKUNFTSPLAN 3.1).
 import type {
   Contract,
@@ -22,7 +22,8 @@ export interface RegulatorRules {
   /**
    * Gewährleistung des Händlers auf den Kauf, in Monaten (§ 438 Abs. 1 Nr. 3 BGB). Annahme: ab
    * Kaufdatum. Das Gesetz nennt die Ablieferung (§ 438 Abs. 2 BGB), die kennt die App nicht.
-   * In der App kommt der Wert ab Schritt 4.1 aus warranty.purchaseMonths (config/demo.config.ts).
+   * Die Fakten nehmen DEFAULT_REGULATOR_RULES, gleich mit warranty.purchaseMonths
+   * (config/demo.config.ts). Ein Test hält beide gleich.
    */
   readonly purchaseWarrantyMonths: number;
   /**
@@ -74,6 +75,9 @@ export type RegulatorOption =
       readonly basis: 'selbstzahler';
       readonly party?: undefined;
     });
+
+/** Eine Möglichkeit mit Regulierer, also nicht Selbstzahlen */
+export type Regulator = Exclude<RegulatorOption, { readonly kind: 'haushalt' }>;
 
 /**
  * Zweck der Bestätigung, mit der der Haushalt an den Regulierer meldet, je Empfänger ein eigener.

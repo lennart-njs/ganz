@@ -1175,6 +1175,10 @@ export default function FallGespraech() {
     !selfPay &&
     !replacement &&
     (can(facts, 'schaden_melden') || can(facts, 'selbst_zahlen'));
+  // Ohne Schutz steht der Zahler noch nicht fest, solange ein Regulierer die Kosten übernehmen kann,
+  // etwa der Händler. Dann nennt Selbstzahlen den Preis schon auf dem Button, und vor diesem Tap
+  // steht kein „Du zahlst“ (Übertragung 4.1).
+  const payerOpen = !facts.hasContract && facts.payer === undefined;
   // Nach einer Ablehnung: selbst zahlen heißt neuer Termin, der alte Antrag zählt nicht mehr
   const rejected = can(facts, 'selbst_zahlen_nach_ablehnung');
   const rejectedRetry = rejected && selfPay;
@@ -1347,16 +1351,36 @@ export default function FallGespraech() {
       reply('melden', de.costs.report, report);
       reply('selbst', de.costs.selfPay, () => setPayment('selbst'));
     } else {
+      // Kann der Händler die Kosten übernehmen (Regulierer, U10), steht „Fall an … senden“ zuerst.
+      // Selbstzahlen nur mit Preis, nie „Weiter zum Termin“: Das führte gleich zu „Zahlungspflichtig
+      // buchen“ (Übertragung 4.1).
+      const dealerFirst = facts.regulator?.kind === 'haendler' && dealerOffer ? dealer : undefined;
       tail.push(
         <BotSays key="kosten" sender={false} lines={[]}>
           <Text variant="title">
-            {dealerService(device)
-              ? de.talk.claim.askDealer(helpPartner.name)
-              : de.talk.claim.askNoContract}
+            {dealerFirst
+              ? de.talk.claim.askCosts
+              : dealerService(device)
+                ? de.talk.claim.askDealer(helpPartner.name)
+                : de.talk.claim.askNoContract}
           </Text>
         </BotSays>,
       );
-      reply('selbst', de.costs.toAppointment, () => setPayment('selbst'));
+      if (dealerFirst) {
+        reply(
+          'haendler',
+          de.sharing.offer(dealerFirst.name),
+          () => setDealerConfirm(true),
+          de.sharing.offerSub,
+        );
+      }
+      reply(
+        'selbst',
+        payerOpen
+          ? t.rejectedChoice.selfPay(formatEuro(quote?.repair.total ?? 0))
+          : de.costs.toAppointment,
+        () => setPayment('selbst'),
+      );
     }
   } else if (replacement && can(facts, 'schaden_melden')) {
     reply('melden', de.costs.report, report);
@@ -1462,7 +1486,7 @@ export default function FallGespraech() {
         <View key="zahlung" style={styles.stack}>
           <UserSaid
             text={
-              rejected
+              rejected || payerOpen
                 ? t.rejectedChoice.selfPay(formatEuro(quote.repair.total))
                 : contract
                   ? de.costs.selfPay
@@ -1689,8 +1713,15 @@ export default function FallGespraech() {
   }
 
   // Gekauft beim Händler: Den Fall kannst du ihm senden, sobald Hilfe nötig ist (Entscheidung 28).
-  // Wann, sagt die Regel an_haendler_senden in model/policies/actions.ts.
-  if (dealerOffer && dealer && !dealerConfirm && !dealerQuestion) {
+  // Wann, sagt die Regel an_haendler_senden in model/policies/actions.ts. Beim Kosten-Schritt steht
+  // das Angebot schon oben, dann nicht noch einmal.
+  if (
+    dealerOffer &&
+    dealer &&
+    !dealerConfirm &&
+    !dealerQuestion &&
+    !replies.some((r) => r.key === 'haendler')
+  ) {
     reply(
       'haendler',
       de.sharing.offer(dealer.name),

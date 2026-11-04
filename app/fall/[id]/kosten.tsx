@@ -96,8 +96,13 @@ export default function Kosten() {
   // Wer zahlt, sagen die Fakten: du selbst, Kranich nach der Freigabe oder, solange nichts
   // entschieden ist, Kranich vorbehaltlich Freigabe. Kein Betrag als Zusage.
   const payer = caseFacts?.payer;
-  const facts: [string, string][] =
-    payer === 'haushalt' || !contract
+  // Ohne Schutz, aber ein Regulierer wie der Händler kann die Kosten übernehmen: Der Zahler steht
+  // noch nicht fest. Dann kein „Du selbst“ und kein „Du zahlst“, und Selbstzahlen nennt den Preis
+  // (Übertragung 4.1). Den Fall an den Händler sendest du im Gespräch.
+  const payerOpen = !contract && payer === undefined;
+  const facts: [string, string][] = payerOpen
+    ? []
+    : payer === 'haushalt' || !contract
       ? [[t.payer, t.payerSelf]]
       : payer === 'versicherer'
         ? [
@@ -124,7 +129,12 @@ export default function Kosten() {
     </ActionBar>
   ) : !contract && can(caseFacts, 'termin_selbst') ? (
     <ActionBar>
-      <Button label={t.toAppointment} size="lg" fullWidth onPress={() => toAppointment(true)} />
+      <Button
+        label={payerOpen ? t.rejectedSelfPay(formatEuro(quote.repair.total)) : t.toAppointment}
+        size="lg"
+        fullWidth
+        onPress={() => toAppointment(true)}
+      />
     </ActionBar>
   ) : undefined;
 
@@ -136,10 +146,12 @@ export default function Kosten() {
         {replacement ? t.titleReplacement : t.title}
       </Text>
       <CostCompare quote={quote} focus={replacement ? 'replacement' : 'repair'} />
-      <Card>
-        <FactList items={facts} ruled />
-      </Card>
-      {!contract ? <Text variant="body">{t.noContractText}</Text> : null}
+      {facts.length ? (
+        <Card>
+          <FactList items={facts} ruled />
+        </Card>
+      ) : null}
+      {!contract && !payerOpen ? <Text variant="body">{t.noContractText}</Text> : null}
       {replacement && contract ? <Text variant="body">{t.replacementNext(insurer)}</Text> : null}
 
       {contract ? (

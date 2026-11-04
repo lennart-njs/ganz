@@ -2,8 +2,11 @@ import { act, fireEvent, renderRouter, screen, within } from 'expo-router/testin
 
 import { demoConfig } from '@/config/demo.config';
 import { de } from '@/i18n/de';
+import { formatEuro } from '@/i18n/format';
 import { scopeList } from '@/lib/consent';
 import { caseNames, legalText, textStamp } from '@/lib/legalTexts';
+import { can } from '@/model/policies/actions';
+import { selectCaseFacts } from '@/model/policies/caseFacts';
 import { scopedConsent } from '@/model/policies/consentScopes';
 import { useAppStore } from '@/store/appStore';
 import { unwrap } from '@/test/result';
@@ -215,5 +218,131 @@ describe('Videocall und Rückruf beim Händler-Gerät', () => {
     expect(before.requestVideoCall(id, { share: other })).toEqual(refused);
     expect(before.requestCallback(id, de.waiting.callbackSlots[0]!, other)).toEqual(refused);
     expect(useAppStore.getState()).toBe(before);
+  });
+});
+
+describe('Kosten beim Händler-Gerät: kein „Du zahlst“ vor der Wahl (Übertragung 4.1)', () => {
+  const dealer = demoConfig.dealers[0]!;
+  const offer = de.sharing.offer(dealer.name);
+  /** Jede Aussage, dass du zahlst, auch in Buttons und Hinweisen */
+  const SAYS_PAY = /du zahlst|zahlst du/i;
+  const re = (text: string) => new RegExp(`^${text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`);
+  // Die Abfragen vergleichen Text mit einfachen Leerzeichen, formatEuro setzt ein festes
+  const price = () =>
+    formatEuro(useAppStore.getState().quotes[0]!.repair.total).replace(/\s/g, ' ');
+  const selfPay = () => de.thread.rejectedChoice.selfPay(price());
+  const labels = () =>
+    screen
+      .getAllByRole('button')
+      .map((b) => String(b.props.accessibilityLabel ?? '').replace(/\s+/g, ' '));
+
+  /** Fründ-Gerät ohne Versicherung: Anleitung ging nicht, Befund im Videocall mit Kostenvoranschlag */
+  function quotedCase(withDealer = true) {
+    const s = useAppStore.getState();
+    const deviceId = withDealer
+      ? setup()
+      : (() => {
+          s.reset();
+          useAppStore.setState({ onboardingDone: true });
+          return s.addDevice({
+            manufacturerId: 'miele',
+            category: 'geschirrspueler',
+            model: 'G 5833 SC',
+            identifiedBy: 'katalog',
+          }).id;
+        })();
+    const c = s.createCase({
+      deviceId,
+      entry: 'symptom',
+      problemLabel: 'Wasser bleibt im Spülraum',
+    });
+    const run = unwrap(s.startGuide(c.id, 'g5833_ablauf'));
+    unwrap(s.finishGuide(run.id, 'geht_nicht', 'Laufrad klemmt'));
+    unwrap(s.setFinding(c.id, 'reparatur', 'fachkraft'));
+    return c.id;
+  }
+
+  test('Fakten: Fründ kann die Kosten übernehmen, der Zahler ist offen, Selbstzahlen erlaubt', () => {
+    const id = quotedCase();
+    const f = selectCaseFacts(useAppStore.getState(), id)!;
+    expect(f.quote).toBeDefined();
+    expect(f.regulator).toMatchObject({ kind: 'haendler', party: { id: dealer.id } });
+    expect(f.payer).toBeUndefined();
+    expect(can(f, 'selbst_zahlen')).toBe(true);
+    expect(can(f, 'termin_selbst')).toBe(true);
+    expect(can(f, 'an_haendler_senden')).toBe(true);
+  });
+
+  test('im Gespräch: erst „Fall an … senden“, dann Selbstzahlen mit Preis, vorher kein „Du zahlst“', async () => {
+    const id = quotedCase();
+    await renderRouter(APP, { initialUrl: `/fall/${id}` });
+    await flush();
+    expect(tree()).not.toMatch(SAYS_PAY);
+    expect(screen.getByText(de.talk.claim.askCosts)).toBeTruthy();
+    expect(screen.queryByRole('button', { name: re(de.costs.toAppointment) })).toBeNull();
+    const all = labels();
+    const send = all.findIndex((l) => re(offer).test(l));
+    const self = all.findIndex((l) => re(selfPay()).test(l));
+    expect(send).toBeGreaterThanOrEqual(0);
+    expect(self).toBeGreaterThan(send);
+    // Das Angebot steht nur einmal da
+    expect(all.filter((l) => re(offer).test(l))).toHaveLength(1);
+
+    // Erst der Tap mit Preis macht dich zum Zahler, dann steht der Preis vor dem Buchen
+    await tap(re(selfPay()));
+    expect(screen.getByText(de.talk.claim.selfPay(price()))).toBeTruthy();
+    await tap(re(SERVICE));
+    await tap(demoConfig.slots[0]!);
+    expect(screen.getByText(de.appointment.costsSelf(price()))).toBeTruthy();
+    expect(screen.getByRole('button', { name: de.appointment.requestPaid })).toBeTruthy();
+  });
+
+  test('„Fall an … senden“ aus dem Kosten-Schritt zeigt erst, was der Händler sieht', async () => {
+    const id = quotedCase();
+    await renderRouter(APP, { initialUrl: `/fall/${id}` });
+    await flush();
+    await tap(re(offer));
+    expect(
+      screen.getByText(de.sharing.dataSummary(dealer.name, scopeList('weitergabe_haendler'))),
+    ).toBeTruthy();
+    expect(screen.getByRole('button', { name: de.sharing.send })).toBeTruthy();
+    expect(useAppStore.getState().consents.some((k) => k.purpose === 'weitergabe_haendler')).toBe(
+      false,
+    );
+  });
+
+  test('Kosten im Detail: kein „Du selbst“, Selbstzahlen mit Preis führt zum Termin', async () => {
+    const id = quotedCase();
+    const r = await renderRouter(APP, { initialUrl: `/fall/${id}/kosten` });
+    await flush();
+    expect(tree()).not.toMatch(SAYS_PAY);
+    expect(screen.queryByText(de.costs.payerSelf)).toBeNull();
+    expect(screen.queryByText(de.costs.noContractText)).toBeNull();
+    expect(screen.queryByRole('button', { name: de.costs.toAppointment })).toBeNull();
+    await tap(de.costs.rejectedSelfPay(price()));
+    expect(r.getPathname()).toBe(`/fall/${id}/termin`);
+    expect(screen.getByText(de.appointment.costsSelf(price()))).toBeTruthy();
+  });
+
+  test('schon bei Fründ: Selbstzahlen bleibt, mit Preis, ohne zweites Angebot', async () => {
+    const id = quotedCase();
+    unwrap(useAppStore.getState().shareWithDealer(id));
+    await renderRouter(APP, { initialUrl: `/fall/${id}` });
+    await flush();
+    expect(tree()).not.toMatch(SAYS_PAY);
+    expect(screen.queryByRole('button', { name: re(offer) })).toBeNull();
+    expect(screen.getByText(de.talk.claim.askDealer(SERVICE))).toBeTruthy();
+    expect(screen.getByRole('button', { name: re(selfPay()) })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: re(de.costs.toAppointment) })).toBeNull();
+  });
+
+  test('ohne Händler bleibt der Kosten-Schritt, wie er war', async () => {
+    const id = quotedCase(false);
+    expect(selectCaseFacts(useAppStore.getState(), id)!.payer).toBe('haushalt');
+    await renderRouter(APP, { initialUrl: `/fall/${id}` });
+    await flush();
+    expect(screen.getByText(de.talk.claim.askNoContract)).toBeTruthy();
+    expect(screen.getByRole('button', { name: re(de.costs.toAppointment) })).toBeTruthy();
+    expect(screen.queryByText(de.talk.claim.askCosts)).toBeNull();
   });
 });
