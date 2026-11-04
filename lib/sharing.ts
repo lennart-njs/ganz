@@ -34,6 +34,14 @@ const actorName = (e: CaseEvent) =>
 /** Ereignisse, die nicht in den Zeitstrahl der Akte gehören. Nachrichten stehen eigens in `messages`. */
 const hidden: CaseEvent['type'][] = ['assistent_gefragt', 'nachricht_an_haendler'];
 
+/**
+ * Gehört das Ereignis in den Zeitstrahl der Akte? Fotos zu Fragen nicht (Übertragung 1.1): Ein
+ * Foto für den Assistenten geht den Händler nichts an, ein Foto für den Händler steht bei seiner
+ * Nachricht.
+ */
+const inTimeline = (e: CaseEvent) =>
+  !hidden.includes(e.type) && !(e.type === 'foto_aufgenommen' && e.payload.purpose === 'frage');
+
 /** Verkleinert ein Foto für die Akte. Beispielfotos ohne Bild bleiben ohne Bild. */
 export async function photoForShare(photo: Photo): Promise<SharedPhoto> {
   const base: SharedPhoto = {
@@ -69,7 +77,7 @@ export function buildSharedCaseFile(
   const rated = s.bookings.findLast((b) => b.caseId === caseId && b.rating)?.rating;
   const person = s.persons[0];
   const contract = s.contracts.find((k) => k.id === device.contractId);
-  const events = s.events.filter((e) => e.caseId === caseId && !hidden.includes(e.type));
+  const events = s.events.filter((e) => e.caseId === caseId && inTimeline(e));
   const summary = guideSummary(s, c);
   const run = latestGuideRun(s, c);
   const finding = [...s.diagnoses]

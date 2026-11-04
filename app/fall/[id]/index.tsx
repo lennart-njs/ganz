@@ -48,7 +48,14 @@ import {
   requestAppointment,
 } from '@/lib/booking';
 import { chatLimits } from '@/lib/chat/limits';
-import { chatInputOpen, chatRecipient } from '@/lib/chat/recipient';
+import {
+  chatInputOpen,
+  chatRecipient,
+  photoForRecipient,
+  recipientParam,
+  recipientSelectable,
+  type AttachedPhoto,
+} from '@/lib/chat/recipient';
 import { scopeList } from '@/lib/consent';
 import { caseNames, textStamp } from '@/lib/legalTexts';
 import { retryableChatErrors, useAssistant } from '@/lib/chat/useAssistant';
@@ -162,6 +169,7 @@ export default function FallGespraech() {
     frage?: string;
     entwurf?: string;
     foto?: string;
+    an?: string;
   }>();
   const state = useAppStore();
   const c = state.cases[caseId];
@@ -301,14 +309,14 @@ export default function FallGespraech() {
     setDraft(params.entwurf);
     setInput(params.entwurf);
   }
-  // Foto für den Assistenten: hängt am Eingabefeld, bis du sendest (Entscheidung 26)
+  // Foto für den Assistenten oder den Händler: hängt am Eingabefeld, bis du sendest (Entscheidungen
+  // 26, 32). Es bleibt bei dem Empfänger, für den du es aufgenommen hast (`an`).
   const [photoParam, setPhotoParam] = useState<string>();
-  const [attached, setAttached] = useState<string>();
+  const [attached, setAttached] = useState<AttachedPhoto>();
   if (params.foto && params.foto !== photoParam) {
     setPhotoParam(params.foto);
-    setAttached(params.foto);
+    setAttached({ id: params.foto, an: recipientParam(params.an) });
   }
-  const attachedPhoto = attached ? state.photos.find((p) => p.id === attached) : undefined;
 
   const events = c ? selectCaseEvents(state, caseId) : [];
   const last = events.at(-1)?.id;
@@ -373,13 +381,18 @@ export default function FallGespraech() {
   const lastDealerAt =
     events.filter((e) => e.actor.kind === 'haendler' || e.type === 'nachricht_an_haendler').at(-1)
       ?.at ?? '';
-  // Ist das Gespräch mit dem Assistenten voll, geht die Nachricht an den Händler (R-11)
+  // Ist das Gespräch mit dem Assistenten voll, geht die Nachricht an den Händler (R-11). Ein
+  // angehängtes Foto hält seinen Empfänger, auch wenn inzwischen der andere geschrieben hat.
   const recipient = chatRecipient({
     dealerShared,
     assistantFull: assistant.full,
     pick: recipientPick,
     dealerSpokeLast: lastDealerAt > (msgs.at(-1)?.at ?? ''),
+    photoFor: attached?.an,
   });
+  // Nur ein Foto für diesen Empfänger geht mit. Passt er nicht mehr, bleibt das Foto hier.
+  const photoToSend = photoForRecipient(attached, recipient);
+  const attachedPhoto = photoToSend ? state.photos.find((p) => p.id === photoToSend.id) : undefined;
   const after = (
     iso: string | undefined,
     type: CaseEvent['type'],
@@ -486,15 +499,15 @@ export default function FallGespraech() {
   const sendInput = () => {
     const toDealer = recipient === 'haendler';
     const text =
-      input.trim() || (attached ? (toDealer ? de.chat.photoLabel : de.chat.photoDefault) : '');
+      input.trim() || (photoToSend ? (toDealer ? de.chat.photoLabel : de.chat.photoDefault) : '');
     if (!text) return;
     if (text.length > chatLimits.chars) {
       setInputError(de.chat.tooLong(chatLimits.chars));
       return;
     }
     setInput('');
-    if (toDealer) useAppStore.getState().messageDealer(caseId, text, attached);
-    else assistant.send(text, attached);
+    if (toDealer) useAppStore.getState().messageDealer(caseId, text, photoToSend?.id);
+    else assistant.send(text, photoToSend?.id);
     setAttached(undefined);
   };
   const photoOf = (id: string | undefined) =>
@@ -1725,6 +1738,7 @@ export default function FallGespraech() {
   // Laufende Anleitung: Der Platzhalter lädt zur Frage zum aktuellen Schritt ein (statt eines Links)
   const stepNow = can(facts, 'anleitung_fortsetzen') && run ? run.currentStep + 1 : 0;
   const toDealer = recipient === 'haendler';
+  const choice = { assistantFull: assistant.full, photoFor: attached?.an };
   // Ohne Händler und mit vollem Gespräch gibt es kein Eingabefeld mehr (R-11)
   const inputBar =
     closed || !chatInputOpen({ dealerShared, assistantFull: assistant.full }) ? undefined : (
@@ -1747,22 +1761,30 @@ export default function FallGespraech() {
         }}
         onSend={sendInput}
         sendLabel={de.chat.send}
-        canSend={(!!input.trim() || !!attached) && (toDealer || !assistant.pending)}
+        canSend={(!!input.trim() || !!photoToSend) && (toDealer || !assistant.pending)}
         camera={{
           label: toDealer ? de.sharing.photoButtonDealer(dealerName) : de.chat.photoButton,
           disabled: !toDealer && assistant.pending,
           onPress: () => router.push(`/fall/${caseId}/foto-frage${toDealer ? '?an=haendler' : ''}`),
         }}
         // An den Assistenten oder an den Händler (Entscheidung 32). Ist das Gespräch mit dem
-        // Assistenten voll, bleibt nur der Händler.
+        // Assistenten voll, bleibt nur der Händler. Mit Foto bleibt nur sein Empfänger.
         recipient={
           dealerShared
             ? {
                 accessibilityLabel: de.sharing.recipient,
                 value: recipient,
                 options: [
-                  { value: 'assistent', label: de.sharing.toAssistant, disabled: assistant.full },
-                  { value: 'haendler', label: dealerName },
+                  {
+                    value: 'assistent',
+                    label: de.sharing.toAssistant,
+                    disabled: !recipientSelectable(choice, 'assistent'),
+                  },
+                  {
+                    value: 'haendler',
+                    label: dealerName,
+                    disabled: !recipientSelectable(choice, 'haendler'),
+                  },
                 ],
                 onChange: setRecipientPick,
               }

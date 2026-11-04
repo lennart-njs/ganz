@@ -10,7 +10,13 @@ import { formatDateTime } from '@/i18n/format';
 import { assistantTransfer, chatContext } from '@/lib/chat/context';
 import { chatLimits } from '@/lib/chat/limits';
 import { setChatImageForTest } from '@/lib/chat/photo';
-import { chatInputOpen, chatRecipient } from '@/lib/chat/recipient';
+import {
+  chatInputOpen,
+  chatRecipient,
+  photoForRecipient,
+  recipientParam,
+  recipientSelectable,
+} from '@/lib/chat/recipient';
 import { useAssistant } from '@/lib/chat/useAssistant';
 import { legalParts, textStamp } from '@/lib/legalTexts';
 import { parseRequest, type ChatContext } from '@/lib/chat/prompt';
@@ -683,6 +689,45 @@ describe('Empfänger im Eingabefeld (Entscheidung 32, R-11)', () => {
     const o = { ...base, assistantFull: true };
     expect(chatRecipient({ ...o, pick: 'assistent' })).toBe('haendler');
     expect(chatInputOpen(o)).toBe(true);
+  });
+
+  test('ein angehängtes Foto hält seinen Empfänger, gegen Wahl und letzten Sprecher (Übertragung 1.1)', () => {
+    for (const dealerSpokeLast of [false, true]) {
+      for (const pick of [undefined, 'assistent', 'haendler'] as const) {
+        const o = { ...base, dealerSpokeLast, pick };
+        expect(chatRecipient({ ...o, photoFor: 'assistent' })).toBe('assistent');
+        expect(chatRecipient({ ...o, photoFor: 'haendler' })).toBe('haendler');
+      }
+    }
+    // Ohne Weitergabe oder mit vollem Gespräch entscheidet weiter die Regel davor
+    expect(chatRecipient({ ...base, dealerShared: false, photoFor: 'haendler' })).toBe('assistent');
+    expect(chatRecipient({ ...base, assistantFull: true, photoFor: 'assistent' })).toBe('haendler');
+  });
+
+  test('mit Foto ist nur sein Empfänger wählbar, der Assistent nie bei vollem Gespräch', () => {
+    const o = { assistantFull: false };
+    expect(recipientSelectable(o, 'assistent')).toBe(true);
+    expect(recipientSelectable(o, 'haendler')).toBe(true);
+    expect(recipientSelectable({ ...o, photoFor: 'haendler' }, 'assistent')).toBe(false);
+    expect(recipientSelectable({ ...o, photoFor: 'haendler' }, 'haendler')).toBe(true);
+    expect(recipientSelectable({ ...o, photoFor: 'assistent' }, 'haendler')).toBe(false);
+    expect(recipientSelectable({ ...o, photoFor: 'assistent' }, 'assistent')).toBe(true);
+    expect(recipientSelectable({ assistantFull: true }, 'assistent')).toBe(false);
+    expect(recipientSelectable({ assistantFull: true }, 'haendler')).toBe(true);
+  });
+
+  test('ein Foto geht nur an den Empfänger, für den es aufgenommen wurde', () => {
+    const forDealer = { id: 'foto_1', an: 'haendler' as const };
+    const forAssistant = { id: 'foto_2', an: 'assistent' as const };
+    expect(photoForRecipient(forDealer, 'haendler')).toBe(forDealer);
+    expect(photoForRecipient(forDealer, 'assistent')).toBeUndefined();
+    expect(photoForRecipient(forAssistant, 'assistent')).toBe(forAssistant);
+    expect(photoForRecipient(forAssistant, 'haendler')).toBeUndefined();
+    expect(photoForRecipient(undefined, 'assistent')).toBeUndefined();
+    // Der Parameter der Aufnahme: ohne Angabe der Assistent
+    expect(recipientParam('haendler')).toBe('haendler');
+    expect(recipientParam(undefined)).toBe('assistent');
+    expect(recipientParam(['haendler'])).toBe('assistent');
   });
 });
 
