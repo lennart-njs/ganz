@@ -2,6 +2,7 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
+import { BindingSummary } from '@/components/app/BindingSummary';
 import { CaseScreen, useCaseId } from '@/components/app/CaseScreen';
 import { backToThread } from '@/components/nav/leaveCase';
 import {
@@ -23,19 +24,28 @@ import { de } from '@/i18n/de';
 import { formatDecimal, formatEuro } from '@/i18n/format';
 import { getManufacturer } from '@/lib/devices';
 import { caseAppliance } from '@/lib/appliance';
-import { amountToPay, asksNotifications, costsLine, requestAppointment } from '@/lib/booking';
+import {
+  amountToPay,
+  asksNotifications,
+  bindsLater,
+  costsLine,
+  requestAppointment,
+} from '@/lib/booking';
 import { scopeList } from '@/lib/consent';
 import { can, type ActionKey } from '@/model/policies/actions';
 import { selectCaseFacts } from '@/model/policies/caseFacts';
+import type { Cents } from '@/model/types';
 import { useAppStore } from '@/store/appStore';
 
 const t = de.appointment;
 
 /**
  * Betrieb und Termin: Betrieb, Zeitfenster, Adresse und Zusammenfassung vor dem Tap (B-29, B-32).
- * Steht ein Betrag fest, den die Nutzerin mit der Buchung zahlen kann, heißt der Button
- * „Zahlungspflichtig buchen“ (§ 312j BGB): der Preis beim Selbstzahlen, die Selbstbeteiligung über
- * 0 €, auch vorbehaltlich Freigabe (Entscheidung Nr. 4). Die Vor-Ort-Diagnose zahlt der Haushalt,
+ * Steht ein Betrag fest, den die Nutzerin mit der Buchung zahlt, heißt der Button
+ * „Zahlungspflichtig buchen“ (§ 312j BGB): der Preis beim Selbstzahlen, nach der Freigabe die
+ * Selbstbeteiligung über 0 €. Während der Prüfung ist die Anfrage unverbindlich, der Button heißt
+ * „Termin anfragen“, und nach der Freigabe zeigt dieser Screen den eigenen Schritt mit
+ * „Zahlungspflichtig buchen“ (Entscheidung Nr. 31). Die Vor-Ort-Diagnose zahlt der Haushalt,
  * einen Preis gibt es aber noch nicht. Sie bleibt „Termin anfragen“, den Preis nennt der Betrieb
  * vorher (docs/recht/RECHTSFRAGEN.md Nr. 34 und 46).
  * Ob es den Termin gibt, sagen die Regeln: nach der Ablehnung keiner auf Kosten des Versicherers
@@ -67,8 +77,14 @@ export default function Termin() {
   const claimPending = facts?.claim === 'in_pruefung';
 
   const paid = amountToPay(state, caseId, selfPay, diagnosis) > 0;
+  const later = bindsLater(state, caseId, selfPay, diagnosis);
   // Einmal anfragen: Ein zweiter Tap bucht nicht doppelt, eine Ablehnung bekommt einen ruhigen Satz
   const book = useCommand(requestAppointment, () => backToThread(caseId));
+  // Der eigene Schritt nach der Freigabe (Nr. 31), mit dem Betrag, den die Karte zeigt
+  const bind = useCommand(
+    (shown: Cents) => useAppStore.getState().bookBinding(caseId, shown),
+    () => backToThread(caseId),
+  );
   // Der Satz zu Mitteilungen steht nur da, wenn danach wirklich der Systemdialog kommt
   const dialog = useNotificationDialog(state.notifications === 'offen');
   const notify = asksNotifications(state, dialog);
@@ -78,6 +94,31 @@ export default function Termin() {
     return (
       <CaseScreen title={de.screens.termin}>
         <Text variant="body">{de.result.missing}</Text>
+      </CaseScreen>
+    );
+  }
+
+  // Ein angefragter Termin wartet auf „Zahlungspflichtig buchen“ (Nr. 31): dieselbe Karte wie im
+  // Gespräch. Erst der Tap macht ihn verbindlich.
+  if (can(facts, 'zahlungspflichtig_buchen') && facts.bindingDue) {
+    const due = facts.bindingDue;
+    return (
+      <CaseScreen
+        title={de.screens.termin}
+        footer={
+          <>
+            {bind.toast ? <Toast message={bind.toast} style={styles.toast} /> : null}
+            <ActionBar meta={due.booking.slotLabel} sub={due.booking.provider.name}>
+              <Button label={t.requestPaid} onPress={() => bind.run(due.amount)} />
+            </ActionBar>
+          </>
+        }
+      >
+        <Text variant="h1" accessibilityRole="header">
+          {t.bindingTitle}
+        </Text>
+        <Text variant="bodyLg">{t.bindingAsk}</Text>
+        <BindingSummary due={due} partName={quote?.repair.partName} />
       </CaseScreen>
     );
   }
@@ -202,6 +243,7 @@ export default function Termin() {
         <FactList items={summary} ruled />
       </Card>
       {claimPending ? <InfoBox>{t.pending}</InfoBox> : null}
+      {later ? <Text variant="body">{t.pendingBinding(demoConfig.insurer.shortName)}</Text> : null}
       {!diagnosis && quote?.repair.partName ? (
         <Text variant="body">
           {t.ecoDesign(
@@ -214,6 +256,8 @@ export default function Termin() {
       <Text variant="meta">{t.shares(scopeList('weitergabe_betrieb'))}</Text>
       {/* Danach fragt das System nach Mitteilungen. Die Einwilligung speichert diesen Satz. */}
       {notify ? <Text variant="meta">{t.notificationsNotice}</Text> : null}
+      {/* Mit dem Tap gestempelt (lib/legalTexts.ts, verbindliche_buchung) */}
+      {paid && partner ? <Text variant="body">{t.bindingNotice(partner.name)}</Text> : null}
     </CaseScreen>
   );
 }

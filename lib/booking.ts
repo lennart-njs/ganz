@@ -3,7 +3,12 @@ import { demoConfig } from '@/config/demo.config';
 import { de } from '@/i18n/de';
 import { formatEuro } from '@/i18n/format';
 import { selectCaseFacts } from '@/model/policies/caseFacts';
-import { amountDue, bookingCosts, type BookingCosts } from '@/model/policies/payer';
+import {
+  amountDue,
+  bindsAfterApproval,
+  bookingCosts,
+  type BookingCosts,
+} from '@/model/policies/payer';
 import type { Result } from '@/model/result';
 import type { Booking, Id } from '@/model/types';
 import { notifications } from '@/services/notifications';
@@ -28,6 +33,15 @@ export function costsOf(
 /** Was die Nutzerin selbst zahlt: nichts, die Selbstbeteiligung oder die ganze Reparatur */
 export function amountToPay(s: AppData, caseId: Id, selfPay: boolean, diagnosis = false): number {
   return amountDue(costsOf(s, caseId, selfPay, diagnosis));
+}
+
+/**
+ * Bindest du dich erst nach der Freigabe (Entscheidung Nr. 31)? Während der Versicherer prüft und
+ * eine Selbstbeteiligung über 0 € fällig werden kann. Dann sagt die Zusammenfassung, dass die
+ * Anfrage unverbindlich ist und der verbindliche Schritt danach kommt.
+ */
+export function bindsLater(s: AppData, caseId: Id, selfPay: boolean, diagnosis = false): boolean {
+  return bindsAfterApproval(costsOf(s, caseId, selfPay, diagnosis));
 }
 
 /**

@@ -4,6 +4,7 @@ import { StyleSheet, View } from 'react-native';
 import type { KeyboardAwareScrollViewRef } from 'react-native-keyboard-controller';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { BindingSummary } from '@/components/app/BindingSummary';
 import { CallbackSheet } from '@/components/app/CallbackSheet';
 import { CaseFileCard } from '@/components/app/CaseFileCard';
 import { CaseScreen, useCaseId } from '@/components/app/CaseScreen';
@@ -34,7 +35,13 @@ import { useNotice } from '@/hooks/useNotice';
 import { de } from '@/i18n/de';
 import { formatDecimal, formatEuro } from '@/i18n/format';
 import { caseAppliance, hasGuides } from '@/lib/appliance';
-import { amountToPay, asksNotifications, costsLine, requestAppointment } from '@/lib/booking';
+import {
+  amountToPay,
+  asksNotifications,
+  bindsLater,
+  costsLine,
+  requestAppointment,
+} from '@/lib/booking';
 import { chatLimits } from '@/lib/chat/limits';
 import { scopeList } from '@/lib/consent';
 import { textStamp } from '@/lib/legalTexts';
@@ -49,7 +56,7 @@ import { CONSENT_SCOPES, scopedConsent } from '@/model/policies/consentScopes';
 import { hasProgress } from '@/model/policies/openCase';
 import { earlierRounds, isFinding } from '@/model/policies/rounds';
 import type { Result } from '@/model/result';
-import type { CaseEvent, Diagnosis } from '@/model/types';
+import type { CaseEvent, Cents, Diagnosis } from '@/model/types';
 import { services, type FindingOption, type PhotoMode, type QuestionAnswer } from '@/services';
 import {
   nextSimulationDue,
@@ -119,6 +126,8 @@ export default function FallGespraech() {
   const notify = asksNotifications(state, dialog);
   // Nach einem Widerruf: die Weitergabe noch einmal bestätigen (R-12)
   const renew = useCommand(() => useAppStore.getState().renewTransfer(caseId));
+  // „Zahlungspflichtig buchen“ im eigenen Schritt (Nr. 31), mit dem Betrag, den die Karte zeigt
+  const bind = useCommand((shown: Cents) => useAppStore.getState().bookBinding(caseId, shown));
   // Anleitung starten: Ein zweiter Tap öffnet sie nicht noch einmal
   const guide = useCommand(
     (guideId: string) => {
@@ -158,6 +167,7 @@ export default function FallGespraech() {
     claim.toast ??
     book.toast ??
     renew.toast ??
+    bind.toast ??
     guide.toast ??
     answer.toast ??
     finding.toast ??
@@ -596,6 +606,25 @@ export default function FallGespraech() {
       </BotSays>,
     );
   }
+  // Der eigene Schritt „Zahlungspflichtig buchen“ (Nr. 31). Beim Buchen mit bekanntem Preis
+  // steht der Tap schon in der Terminanfrage.
+  for (const e of of('zahlungspflichtig_gebucht')) {
+    if (!e.payload.separateStep) continue;
+    const partner = String(e.payload.partner);
+    add(e.at, e.id, <UserSaid text={de.appointment.requestPaid} />);
+    add(
+      e.at,
+      `${e.id}-a`,
+      <BotSays
+        lines={[de.appointment.booked]}
+        hint={
+          notificationsOn(state)
+            ? de.status.text.angefragt(partner)
+            : de.status.text.angefragtImFall(partner)
+        }
+      />,
+    );
+  }
   for (const e of of('freigabe_entschieden')) {
     const ok = e.payload.result === 'freigegeben';
     add(
@@ -934,6 +963,21 @@ export default function FallGespraech() {
     );
     reply('weitergabe-erneuern', t.renewShare, () => renew.run(), recipient);
     reply('status', de.status.caseFile, () => router.push(`/fall/${caseId}/fallakte`));
+  } else if (can(facts, 'zahlungspflichtig_buchen') && facts.bindingDue) {
+    // Nach der Freigabe: Erst dieser Tap macht die Anfrage verbindlich, vorher bestätigt der
+    // Betrieb nicht (Nr. 31). Die Karte zeigt, was der Store mit dem Tap stempelt.
+    const due = facts.bindingDue;
+    tail.push(
+      <BotSays
+        key="verbindlich"
+        lines={[de.appointment.bindingTitle]}
+        hint={de.appointment.bindingAsk}
+      >
+        <BindingSummary due={due} partName={quote?.repair.partName} />
+        {details('termin')}
+      </BotSays>,
+    );
+    reply('zahlungspflichtig', de.appointment.requestPaid, () => bind.run(due.amount));
   } else if (needsAppointment) {
     if (selfPay && quote) {
       tail.push(
@@ -984,6 +1028,10 @@ export default function FallGespraech() {
         for (const s of demoConfig.slots) reply(`zeit-${s}`, s, () => setSlot(s));
       } else {
         const address = state.household?.address;
+        // Steht fest, was du zahlst, ist der Tap verbindlich. Während der Prüfung mit
+        // Selbstbeteiligung kommt der verbindliche Schritt erst nach der Freigabe (Nr. 31).
+        const paid = amountToPay(state, caseId, selfPay, onSite) > 0;
+        const later = bindsLater(state, caseId, selfPay, onSite);
         tail.push(<UserSaid key="zeit" text={slot} onEdit={() => setSlot(undefined)} />);
         tail.push(
           <BotSays key="zusammenfassung" lines={[de.talk.claim.summary]}>
@@ -1012,6 +1060,7 @@ export default function FallGespraech() {
               </Card>
             </View>
             {facts.claim === 'in_pruefung' ? <InfoBox>{de.appointment.pending}</InfoBox> : null}
+            {later ? <Text variant="body">{de.appointment.pendingBinding(insurer)}</Text> : null}
             {!onSite ? (
               <Text variant="body">
                 {de.appointment.ecoDesign(a.finding.partAcc, demoConfig.ecoDesignDeliveryDays)}
@@ -1019,9 +1068,9 @@ export default function FallGespraech() {
             ) : null}
             <Text variant="meta">{de.appointment.shares(scopeList('weitergabe_betrieb'))}</Text>
             {notify ? <Text variant="meta">{de.appointment.notificationsNotice}</Text> : null}
+            {paid ? <Text variant="body">{de.appointment.bindingNotice(partner.name)}</Text> : null}
           </BotSays>,
         );
-        const paid = amountToPay(state, caseId, selfPay, onSite) > 0;
         reply('anfragen', paid ? de.appointment.requestPaid : de.appointment.request, request);
       }
     }

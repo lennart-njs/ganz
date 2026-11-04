@@ -67,6 +67,9 @@ export function statusView(s: AppData, c: Case): StatusView {
   if (booking) {
     const reached = (st: string[]) => st.includes(booking.status);
     byEvent('termin_angefragt', t.timeline.angefragt, true);
+    // Zahlungspflichtig gebucht, oder der Tap steht noch aus (Nr. 31)
+    if (booking.binding) done(t.timeline.gebucht, booking.binding.at);
+    else if (f?.bindingDue?.booking.id === booking.id) pending(t.timeline.buchen);
     byEvent(
       'termin_bestaetigt',
       t.timeline.bestaetigt,
@@ -103,6 +106,10 @@ export function statusView(s: AppData, c: Case): StatusView {
   } else if (f?.claim === 'in_pruefung') {
     headline = t.headline.pruefung(insurer);
     text = notify ? t.text.pruefung : t.text.pruefungImFall;
+  } else if (f?.bindingDue) {
+    // Der Termin wartet auf „Zahlungspflichtig buchen“ im Gespräch (Nr. 31)
+    headline = t.headline.freigegeben(insurer);
+    text = t.text.buchen(f.bindingDue.booking.provider.name);
   } else if (replacement && f?.claim === 'freigegeben') {
     headline = t.headline.ersatzgeraet(insurer);
   } else if (booking?.status === 'erledigt' && booking.kind === 'vor_ort_diagnose') {
