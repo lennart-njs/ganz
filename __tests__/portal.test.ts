@@ -2,10 +2,13 @@
  * @jest-environment node
  */
 import { fruendSettings } from '@/config/portal.demo';
+import { de } from '@/i18n/de';
 import { settingsSections } from '@/model/portal';
+import type { SharedPhoto } from '@/model/sharing';
 import { warrantyCheck } from '@/portal/lib/check';
 import { conversation } from '@/portal/lib/conversation';
 import { nextStep } from '@/portal/lib/next';
+import { photoLabel } from '@/portal/lib/photos';
 import { sectionFromForm } from '@/portal/lib/settingsForm';
 import { sla } from '@/portal/lib/sla';
 import { computeStats } from '@/portal/lib/stats';
@@ -89,6 +92,31 @@ describe('Händlerportal: Logik', () => {
     items.forEach((x, i) => {
       if (i > 0) expect(x.kind === 'system' && items[i - 1]!.kind === 'system').toBe(false);
     });
+  });
+
+  // Prüfung 1.1: In der App ist ein Foto für den Händler ein Foto zu einer Frage. Im Portal hieß es
+  // darum „Frage an den Assistenten“, obwohl es an den Händler ging.
+  test('Fotos: ein Foto zu einer Nachricht heißt nicht nach dem Assistenten', () => {
+    const at = '2026-11-04T15:59:00.000Z';
+    const sent: SharedPhoto = { id: 'ph_msg', takenAt: at, purpose: 'frage', source: 'demo' };
+    const plate: SharedPhoto = {
+      id: 'ph_tsl',
+      takenAt: at,
+      purpose: 'typenschild',
+      source: 'demo',
+    };
+    const file = {
+      messages: [{ id: 'm_1', at, text: 'Hier das Typenschild', photoId: sent.id }],
+    };
+    expect(photoLabel(file, sent)).toBe(de.portal.file.photoMessage);
+    expect(photoLabel(file, plate)).toBe(de.caseFile.photoPurpose.typenschild);
+    // Auch ohne Verweis aus einer Nachricht nie der Assistent
+    expect(photoLabel({}, sent)).toBe(de.portal.file.photoMessage);
+    const labels = [sent, plate].map((p) => photoLabel(file, p));
+    for (const label of labels) {
+      expect(label).not.toContain(de.caseFile.photoPurpose.frage);
+      expect(label).not.toMatch(/Assistent/);
+    }
   });
 
   test('Ungelesen nur, wenn die Kundschaft nach dem letzten Öffnen schrieb', () => {

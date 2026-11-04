@@ -15,6 +15,7 @@ import { warrantyCheck } from '../../../lib/check';
 import { conversation, type ConvItem } from '../../../lib/conversation';
 import { formatDate, formatEuro, formatWhen } from '../../../lib/format';
 import { nextStep } from '../../../lib/next';
+import { photoLabel } from '../../../lib/photos';
 import { sla } from '../../../lib/sla';
 import { decisionOf, member } from '../../../lib/view';
 import { compose, quick } from './actions';
@@ -46,8 +47,8 @@ function Facts({ items }: { items: [string, string | undefined][] }) {
   );
 }
 
-function Photo({ p, alt }: { p: SharedPhoto; alt: string }) {
-  const purpose = de.caseFile.photoPurpose[p.purpose] ?? p.purpose;
+/** Foto mit Bild, ein Beispielfoto ohne Bild mit Beschriftung und Zeitpunkt */
+function Photo({ p, label, alt }: { p: SharedPhoto; label: string; alt: string }) {
   return (
     <figure className="photo">
       {p.jpegBase64 ? (
@@ -55,7 +56,7 @@ function Photo({ p, alt }: { p: SharedPhoto; alt: string }) {
         <img src={`data:image/jpeg;base64,${p.jpegBase64}`} alt={alt} />
       ) : (
         <figcaption>
-          {purpose}
+          {label}
           <br />
           {formatWhen(p.takenAt)}
         </figcaption>
@@ -107,7 +108,13 @@ function Bubble({ x, customer }: { x: ConvItem; customer: string }) {
     return (
       <div className="msg them">
         <div className="bubble">
-          {x.photo ? <Photo p={x.photo} alt={f.photoAlt('', formatWhen(x.at))} /> : null}
+          {x.photo ? (
+            <Photo
+              p={x.photo}
+              label={f.photoMessage}
+              alt={f.photoAlt(f.photoMessage, formatWhen(x.at))}
+            />
+          ) : null}
           <p>{x.text}</p>
         </div>
         <span className="meta">
@@ -453,10 +460,8 @@ export default async function Fallakte({ params }: { params: Promise<{ id: strin
                       <Photo
                         key={p.id}
                         p={p}
-                        alt={f.photoAlt(
-                          de.caseFile.photoPurpose[p.purpose] ?? p.purpose,
-                          formatWhen(p.takenAt),
-                        )}
+                        label={photoLabel(file, p)}
+                        alt={f.photoAlt(photoLabel(file, p), formatWhen(p.takenAt))}
                       />
                     ))}
                   </div>

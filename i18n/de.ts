@@ -1560,6 +1560,8 @@ export const de = {
       booking: 'Termin',
       photos: 'Fotos',
       photoAlt: (purpose: string, date: string) => `Foto ${purpose}, ${date}`,
+      /** Foto, das die Kundschaft mit einer Nachricht geschickt hat */
+      photoMessage: 'Nachricht der Kundschaft',
       conversation: 'Gespräch',
       next: 'Als Nächstes',
       assignee: 'Zuständig',
