@@ -86,9 +86,6 @@ import {
 } from '@/store/appStore';
 
 const t = de.thread;
-// Text der Bestätigung „Fall an den Händler“, noch ohne Hash. PLAN Schritt 3.1 ersetzt das durch
-// Umfang und Stempel aus consentScopes (weitergabe_haendler).
-const SHARE_TEXT_VERSION = '2026-11-3';
 
 interface Item {
   at: string;
@@ -265,7 +262,7 @@ export default function FallGespraech() {
   );
   // „Ja, senden“: Ein Doppeltap sendet den Fall nicht zweimal an den Händler (Entscheidung 28)
   const dealerSend = useCommand(
-    () => useAppStore.getState().shareWithDealer(caseId, SHARE_TEXT_VERSION),
+    () => useAppStore.getState().shareWithDealer(caseId),
     () => setDealerConfirm(false),
   );
   // Lässt sich Telefon- oder Mail-App nicht öffnen, stehen Nummer oder Adresse im Hinweis
@@ -511,7 +508,7 @@ export default function FallGespraech() {
   const sendInput = () => {
     const toDealer = recipient === 'haendler';
     const text =
-      input.trim() || (photoToSend ? (toDealer ? de.chat.photoLabel : de.chat.photoDefault) : '');
+      input.trim() || (photoToSend ? (toDealer ? de.sharing.photoOnly : de.chat.photoDefault) : '');
     if (!text) return;
     if (text.length > chatLimits.chars) {
       setInputError(de.chat.tooLong(chatLimits.chars));
@@ -1236,22 +1233,16 @@ export default function FallGespraech() {
       reply(`haendler-antwort-${i}`, o, () => answerDealer(dealerQuestion, o));
     }
   } else if (dealerConfirm && dealerOffer && dealer) {
-    // Was der Händler sieht, steht vor dem Senden (wie beim Versicherer, B-53)
+    // Was der Händler sieht, steht vor dem Senden (wie beim Versicherer, B-53). Ein Satz mit den
+    // Kategorien aus dem Umfang der Bestätigung, dann was nicht dabei ist und die Grundlage. Das
+    // sind die gestempelten Teile von haendler_weitergabe (Entscheidung 20, R-14).
     tail.push(
       <View key="haendler" style={styles.stack}>
         <UserSaid text={de.sharing.offer(dealer.name)} onEdit={() => setDealerConfirm(false)} />
-        <BotSays lines={[de.sharing.confirmTitle(dealer.name)]}>
-          <View style={styles.full}>
-            <Card>
-              <View style={styles.items}>
-                {de.consentData.haendler.map((item) => (
-                  <Text key={item} variant="body">
-                    {de.help.item(item)}
-                  </Text>
-                ))}
-              </View>
-            </Card>
-          </View>
+        <BotSays lines={[]}>
+          <Text variant="bodyLg">
+            {de.sharing.dataSummary(dealer.name, scopeList('weitergabe_haendler'))}
+          </Text>
           <Text variant="body">{de.sharing.confirmText}</Text>
           <Text variant="meta">{de.sharing.legal}</Text>
         </BotSays>

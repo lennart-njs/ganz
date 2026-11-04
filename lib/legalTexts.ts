@@ -25,6 +25,8 @@ export interface TextNames {
   fachbetrieb: string;
   assistent: string;
   hersteller: string;
+  /** Händler, bei dem das Gerät gekauft wurde (Device.soldBy) */
+  haendler: string;
 }
 
 interface LegalText {
@@ -130,6 +132,21 @@ export const LEGAL_TEXTS = {
     version: '2026-11-1',
     parts: (n) => [de.appointment.bindingNotice(n.fachbetrieb), de.appointment.requestPaid],
   },
+  /**
+   * „Fall an … senden“ (lit. b, Entscheidung 28): ein Satz mit den Kategorien aus dem Umfang,
+   * dann was nicht dabei ist und die Grundlage (Entscheidung 20). 2026-11-4: Umfang und Stempel
+   * wie bei den anderen Weitergaben. Bis 2026-11-3 sechs Zeilen, gespeichert als Bezeichnungen
+   * ohne Hash (docs/ANNAHMEN.md, Übertragung U5).
+   */
+  haendler_weitergabe: {
+    version: '2026-11-4',
+    scope: 'weitergabe_haendler',
+    parts: (n) => [
+      de.sharing.dataSummary(n.haendler, scopeList('weitergabe_haendler')),
+      de.sharing.confirmText,
+      de.sharing.legal,
+    ],
+  },
   /** Profil: Einzelfälle an den Hersteller (lit. a) */
   hersteller_einzelfall: {
     version: '2026-11-1',
@@ -170,25 +187,30 @@ export function demoNames(): TextNames {
     fachbetrieb: partner?.name ?? '',
     assistent: demoConfig.assistant.name,
     hersteller: demoConfig.manufacturer.name,
+    haendler: demoConfig.dealers[0]?.name ?? '',
   };
 }
 
 /**
  * Die Namen, die der Screen im Fall zeigt: Versicherer aus dem Vertrag des Geräts, Fachkraft und
- * Betrieb aus lib/service.ts (beim Händler-Gerät sein Kundendienst, Entscheidung 16). So belegt der
- * Stempel denselben Text, den der Haushalt gesehen hat. Ohne Händler und mit dem Versicherer der
- * Konfiguration sind es dieselben Namen wie in demoNames().
+ * Betrieb aus lib/service.ts (beim Händler-Gerät sein Kundendienst, Entscheidung 16), Händler aus
+ * dem Gerät. So belegt der Stempel denselben Text, den der Haushalt gesehen hat. Ohne Händler und
+ * mit dem Versicherer der Konfiguration sind es dieselben Namen wie in demoNames(). Ohne Händler
+ * am Gerät gibt es keinen Text, der ihn nennt (an_haendler_senden).
  */
 export function caseNames(
   s: Pick<AppData, 'cases' | 'devices' | 'contracts'>,
   caseId: Id,
 ): TextNames {
   const { expert } = caseService(s, caseId);
+  const names = demoNames();
+  const device = s.devices.find((d) => d.id === s.cases[caseId]?.deviceId);
   return {
-    ...demoNames(),
+    ...names,
     versicherer: insurerShortName(s, caseId),
     fachkraft: expert.name,
     fachbetrieb: expert.partner.name,
+    haendler: device?.soldBy?.name ?? names.haendler,
   };
 }
 
@@ -199,6 +221,7 @@ export const PLACEHOLDER_NAMES: TextNames = {
   fachbetrieb: '{fachbetrieb}',
   assistent: '{assistent}',
   hersteller: '{hersteller}',
+  haendler: '{haendler}',
 };
 
 /** Die Teile, wie der Screen sie zeigt */

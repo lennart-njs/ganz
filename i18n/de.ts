@@ -150,22 +150,6 @@ export const de = {
   },
 
   /**
-   * Bezeichnungen, die die Bestätigung „Fall an den Händler“ noch speichert (2026-11-3, ohne Hash).
-   * Mit Schritt 3.1 der Übertragung kommen Umfang und Stempel aus consentScopes
-   * (weitergabe_haendler), wie bei allen anderen (docs/ANNAHMEN.md, Übertragung).
-   */
-  consentData: {
-    haendler: [
-      'Name und Adresse',
-      'Gerät, Typenschild und Kaufdatum',
-      'Problem und Fotos aus dem Fall',
-      'Ergebnis und Schritte der Anleitung',
-      'Befund, Kosten und Termin',
-      'Deine Nachrichten an den Händler',
-    ],
-  },
-
-  /**
    * Bezeichnungen der Datenkategorien aus model/policies/consentScopes.ts. Welche Kategorien eine
    * Weitergabe umfasst, steht nur dort (R-14). Die Bezeichnungen stehen in Listen und mitten im Satz.
    */
@@ -1377,7 +1361,11 @@ export const de = {
     },
     offer: (dealer: string) => `Fall an ${dealer} senden`,
     offerSub: 'Gewährleistung oder Kulanz',
-    confirmTitle: (dealer: string) => `Das sieht ${dealer}`,
+    /**
+     * Ein Satz vor dem Senden. data: die Kategorien aus consentScopes (weitergabe_haendler), mit
+     * de.common.list. Teil von haendler_weitergabe (lib/legalTexts.ts), nur mit neuer Version ändern.
+     */
+    dataSummary: (dealer: string, data: string) => `${dealer} sieht ${data}.`,
     confirmText:
       'Nur diesen Fall. Nicht dabei sind dein Gespräch mit dem Reparatur-Assistenten und deine Vertragsnummer.',
     legal:
@@ -1421,6 +1409,8 @@ export const de = {
     toAssistant: 'Assistent',
     placeholderDealer: (dealer: string) => `Nachricht an ${dealer}`,
     photoButtonDealer: (dealer: string) => `Foto für ${dealer} aufnehmen`,
+    /** Text einer Nachricht an den Händler, die nur ein Foto hat. Liest sich in App und Portal gleich. */
+    photoOnly: 'Foto',
     sentTo: (dealer: string) => `An ${dealer}`,
     eventDetail: {
       decision: {

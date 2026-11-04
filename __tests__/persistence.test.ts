@@ -6,10 +6,17 @@ import { demoConfig } from '@/config/demo.config';
 import { guides } from '@/data/guides';
 import { hasChatConsent, hasPhotoConsent } from '@/lib/chat/context';
 import { getGuide, resetCatalog } from '@/lib/guideCatalog';
-import { buildSharedCaseFile, dealerConsent } from '@/lib/sharing';
+import {
+  buildSharedCaseFile,
+  consentCategories,
+  dealerConsent,
+  LEGACY_DEALER_LABELS,
+} from '@/lib/sharing';
 import { can } from '@/model/policies/actions';
 import { selectCaseFacts } from '@/model/policies/caseFacts';
+import type { SharedCaseFile } from '@/model/sharing';
 import type { GuideCatalogEntry } from '@/model/types';
+import { services } from '@/services';
 import { createAppStore, initialData, useAppStore, type AppStore } from '@/store/appStore';
 import type { StoreEnv } from '@/store/env';
 import {
@@ -22,6 +29,7 @@ import {
 } from '@/store/persistence';
 import { parseStoredState } from '@/store/storedState';
 import { useHydrated } from '@/store/useHydrated';
+import { syncShare } from '@/store/useShareSync';
 import { unwrap } from '@/test/result';
 
 import storeMachsV1 from './fixtures/store-machs-v1.json';
@@ -181,7 +189,7 @@ function playThrough(store: AppStore) {
   });
   const d = s().createCase({ deviceId: bought.id, entry: 'freitext', problemLabel: 'Flusen' });
   unwrap(s().escalate(d.id));
-  unwrap(s().shareWithDealer(d.id, '2026-11-3'));
+  unwrap(s().shareWithDealer(d.id));
   s().updateShare(d.id, { token: 'token', syncedEvents: 1 });
   s().importRetailerEvents(d.id, [
     {
@@ -411,6 +419,67 @@ describe('Speicher laden', () => {
     // Foto fragt das Gespräch noch einmal (Kategorie gespraechsfotos)
     expect(hasChatConsent(s)).toBe(true);
     expect(hasPhotoConsent(s)).toBe(false);
+  });
+
+  // Übertragung 3.1, U5: Die Bestätigung von 67d2fd8 speichert sechs Bezeichnungen ohne Hash. Sie
+  // gilt weiter für genau diese Gruppen. Schutz, Verlauf, Bewertung und Notiz nannte sie nicht.
+  test('die Händler-Bestätigung aus dem mach’s-Stand gilt für ihre sechs Gruppen und gleicht weiter ab', async () => {
+    const store = await load(memoryStorage(JSON.stringify(storeMachsV1)));
+    const caseId = 'GS-24817';
+    const consent = dealerConsent(store.getState(), caseId)!;
+    expect(consent.textVersion).toBe('2026-11-3');
+    expect(consent.textHash).toBeUndefined();
+    // Die Bezeichnungen, die die Zuordnung kennt, sind genau die gespeicherten
+    expect(Object.keys(LEGACY_DEALER_LABELS)).toEqual(consent.dataCategories);
+    expect([...consentCategories(consent)].sort()).toEqual(
+      [
+        'name',
+        'adresse',
+        'geraet',
+        'typenschild',
+        'seriennummer',
+        'kaufdatum',
+        'problem',
+        'fotos',
+        'ergebnis',
+        'schritte',
+        'befund',
+        'kosten',
+        'termin',
+        'nachrichten_haendler',
+      ].sort(),
+    );
+
+    // Der Abgleich läuft weiter: Die Akte geht mit dem Token der ersten Weitergabe an Fründ
+    // Nur die Daten, die Aktionen gehören zum Store der App
+    useAppStore.setState(store.persist.getOptions().partialize!(store.getState()));
+    const backend = jest.mocked(services.backend);
+    backend.share.mockClear();
+    await act(async () => {
+      await syncShare(caseId, false);
+    });
+    expect(backend.share).toHaveBeenCalledTimes(1);
+    const [file, token] = backend.share.mock.calls[0]! as [SharedCaseFile, string];
+    expect(token).toBe('t');
+    expect(file).toMatchObject({
+      caseId,
+      consentId: consent.id,
+      customer: { name: storeMachsV1.state.persons[0]!.displayName },
+      device: { model: 'G 5833 SC', soldBy: { id: 'fruend' } },
+      case: { problemLabel: 'Wasser bleibt stehen' },
+    });
+    expect(file.customer.address).toBeDefined();
+    expect(file.guide?.title).toBeTruthy();
+    expect(file.answers.map((a) => a.answer)).toEqual(['Ja, als Foto', 'Di, 12–16 Uhr']);
+    expect(file.messages?.map((m) => m.text)).toEqual(['Hier der Kaufbeleg.']);
+    // Was die alte Bestätigung nicht nannte, geht nicht mit
+    expect(file.timeline).toEqual([]);
+    expect(file.guide?.note).toBeUndefined();
+    expect(file.protection).toBeUndefined();
+    expect(file.rating).toBeUndefined();
+    expect(useAppStore.getState().shares[caseId]?.syncedEvents).toBe(
+      useAppStore.getState().events.filter((e) => e.caseId === caseId).length,
+    );
   });
 
   test('erneut laden nach dem Fehler: einmal gesichert, mit heilem Speicher wieder geladen', async () => {

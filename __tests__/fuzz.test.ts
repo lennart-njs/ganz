@@ -141,7 +141,7 @@ function household(key: ActionKey, c: Case, f: CaseFacts, s: AppState): Step[] {
     case 'termin_diagnose':
       return booking('vor_ort_diagnose', false);
     case 'an_haendler_senden':
-      return [step(key, (x) => x.shareWithDealer(id, 'fuzz'))];
+      return [step(key, (x) => x.shareWithDealer(id))];
     case 'haendler_schreiben':
       return [
         step(key, (x) => x.messageDealer(id, 'Ist das Ersatzteil schon da?')),
@@ -212,7 +212,7 @@ function world(c: Case, f: CaseFacts, s: AppState): Step[] {
   if (
     s.consents.some((k) => k.caseId === id && k.purpose === 'weitergabe_haendler' && k.revokedAt)
   ) {
-    steps.push({ name: NOCHMAL_HAENDLER, caseId: id, run: (x) => x.shareWithDealer(id, 'fuzz') });
+    steps.push({ name: NOCHMAL_HAENDLER, caseId: id, run: (x) => x.shareWithDealer(id) });
   }
   return steps;
 }

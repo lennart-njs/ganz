@@ -46,11 +46,11 @@ Einstellbar je Händler im Portal (`DealerSettings` in `model/portal.ts`):
 
 ## Regeln, die das Backend durchsetzt
 
-- **Nur nach Bestätigung.** Die App sendet erst, wenn es einen `Consent` mit `purpose = 'weitergabe_haendler'` gibt. Die Akte trägt dessen Id.
+- **Nur nach Bestätigung.** Die App sendet erst, wenn es einen `Consent` mit `purpose = 'weitergabe_haendler'` gibt. Die Akte trägt dessen Id. Sie enthält nur, was die Kategorien dieser Bestätigung nennen (`lib/sharing.ts`, `consentCategories`).
 - **Nur dieser Händler.** Jede Abfrage im Portal ist an den Mandanten gebunden (`recipient.id`). Fremde Fälle gibt es als 404.
 - **Nur die App ändert die Akte.** Beim ersten Senden gibt das Backend ein Token zurück, gespeichert wird nur sein Hash. Ändern, Antworten lesen und Widerrufen gehen nur mit diesem Token.
 - **Widerruf löscht Personendaten.** Danach bleiben Fallnummer, Empfänger und Zeitpunkte. Das Portal zeigt „Weitergabe widerrufen“.
-- **Nicht in der Akte:** das Gespräch mit dem Reparatur-Assistenten samt den Notizen an die Fachkraft daraus, Fotos zu Fragen an ihn, die Vertragsnummer.
+- **Nicht in der Akte:** das Gespräch mit dem Reparatur-Assistenten samt den Notizen an die Fachkraft daraus, Fotos zu Fragen an ihn, die Vertragsnummer, verworfene Ergebnisse. Der Zeitstrahl nimmt nur Ereignisarten aus der Allow-List `TIMELINE_EVENTS` (`lib/sharing.ts`).
 - **Händler-Aktionen** werden `CaseEvent` mit `actor.kind = 'haendler'` und den Typen `haendler_angenommen`, `haendler_rueckfrage`, `haendler_entscheidung`, `haendler_betrieb`, `haendler_status`, `haendler_nachricht`, `haendler_termin`, `haendler_ersatzteil`. Die App übernimmt nur solche Ereignisse und nur für den richtigen Fall.
 - **Freier Chat** mit dem Händler (Entscheidung 32, ersetzt 29): Nachrichten des Haushalts stehen in der Akte (`messages`, mit Foto), Nachrichten des Händlers sind `haendler_nachricht`. Rückfragen haben weiter bis zu vier Antworten als Buttons, Terminvorschläge bis zu vier Zeitfenster.
 - **Interne Notizen und Zuweisung** kommen nie in der App an.
@@ -59,7 +59,7 @@ Einstellbar je Händler im Portal (`DealerSettings` in `model/portal.ts`):
 
 ## Was die Akte enthält
 
-`SharedCaseFile` in `model/sharing.ts`: Name und Adresse, Gerät mit Typenschild, Kaufdatum und Händler, zusätzlicher Schutz ohne Vertragsnummer, Fall und Status, Ergebnisse, Anleitung bis zum Abbruch mit Notiz, Befund, Kostenvoranschlag, Termin, Fotos (auf 800 px verkleinert, höchstens 12), Zeitstrahl wie in der App, Antworten auf Rückfragen, Nachrichten an den Händler, Bewertung nach der Reparatur.
+`SharedCaseFile` in `model/sharing.ts`: Name und Adresse, Gerät mit Typenschild, Kaufdatum und Händler, zusätzlicher Schutz ohne Vertragsnummer, Fall und Status, Ergebnisse, Anleitung bis zum Abbruch mit Notiz, Befund, Kostenvoranschlag, Termin, Fotos (auf 800 px verkleinert, höchstens 12), Zeitstrahl wie in der App, Antworten auf Rückfragen, Nachrichten an den Händler, Bewertung nach der Reparatur. Das ist der Umfang `weitergabe_haendler` (`model/policies/consentScopes.ts`), den der Satz vor „Ja, senden“ nennt. Fehlt eine Kategorie in der Bestätigung, bleiben ihre Felder leer. Fallnummer, Empfänger, Stand und Zeitpunkte des Falls und die Geräteart gehören zur Weitergabe selbst.
 
 ## Später (Anbieter entscheidet Lennart)
 

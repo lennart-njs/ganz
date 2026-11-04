@@ -1,4 +1,5 @@
-// Fallakte für den Händler bauen (Entscheidung 28). Nur nach deiner Bestätigung, nur dieser Fall.
+// Fallakte für den Händler bauen (Entscheidung 28). Nur nach deiner Bestätigung, nur dieser Fall,
+// nur die Kategorien, die die Bestätigung nennt (model/policies/consentScopes.ts, weitergabe_haendler).
 // Nicht dabei: das Gespräch mit dem Reparatur-Assistenten samt Notizen daraus, die Vertragsnummer,
 // Fotos zu Fragen an ihn.
 import { ImageManipulator, SaveFormat } from 'expo-image-manipulator';
@@ -11,9 +12,11 @@ import { caseStatusLabel, guideSummary, latestGuideRun } from '@/lib/caseView';
 import { isAssistantNote } from '@/lib/chat/note';
 import { getManufacturer } from '@/lib/devices';
 import { findCatalogEntry } from '@/lib/guideCatalog';
+import { selectCaseFacts } from '@/model/policies/caseFacts';
+import { DATA_CATEGORIES, type DataCategory } from '@/model/policies/consentScopes';
 import { SHARE_FORMAT_VERSION, type SharedCaseFile, type SharedPhoto } from '@/model/sharing';
-import type { CaseEvent, Id, Photo } from '@/model/types';
-import { activeBooking, type AppData } from '@/store/appStore';
+import type { CaseEvent, CaseEventType, Consent, Diagnosis, Id, Photo } from '@/model/types';
+import type { AppData } from '@/store/appStore';
 
 /** Die aktive Bestätigung „Fall an den Händler“ für diesen Fall */
 export function dealerConsent(s: AppData, caseId: Id) {
@@ -33,17 +36,91 @@ const actorName = (e: CaseEvent) =>
     system: de.app.name,
   }[e.actor.kind];
 
-/** Ereignisse, die nicht in den Zeitstrahl der Akte gehören. Nachrichten stehen eigens in `messages`. */
-const hidden: CaseEvent['type'][] = ['assistent_gefragt', 'nachricht_an_haendler'];
+/**
+ * Bezeichnungen, die Bestätigungen „Fall an den Händler“ bis Version 2026-11-3 statt Schlüsseln
+ * speicherten, und die Kategorien, die sie meinten (docs/ANNAHMEN.md, Übertragung U5). Die
+ * Seriennummer steht auf dem Typenschild. Gespeicherte Werte, kein Text der App: nie ändern.
+ */
+export const LEGACY_DEALER_LABELS: Readonly<Record<string, readonly DataCategory[]>> = {
+  'Name und Adresse': ['name', 'adresse'],
+  'Gerät, Typenschild und Kaufdatum': ['geraet', 'typenschild', 'seriennummer', 'kaufdatum'],
+  'Problem und Fotos aus dem Fall': ['problem', 'fotos'],
+  'Ergebnis und Schritte der Anleitung': ['ergebnis', 'schritte'],
+  'Befund, Kosten und Termin': ['befund', 'kosten', 'termin'],
+  'Deine Nachrichten an den Händler': ['nachrichten_haendler'],
+};
+
+const isCategory = (x: string): x is DataCategory =>
+  (DATA_CATEGORIES as readonly string[]).includes(x);
 
 /**
- * Gehört das Ereignis in den Zeitstrahl der Akte? Fotos zu Fragen nicht (Übertragung 1.1): Ein
- * Foto für den Assistenten geht den Händler nichts an, ein Foto für den Händler steht bei seiner
- * Nachricht. Eine Notiz an die Fachkraft aus dem Gespräch mit dem Assistenten auch nicht: Sie ist
- * eine Nachricht an den Assistenten, auf die keine Antwort kam.
+ * Die Kategorien, die eine Bestätigung erlaubt. Ältere Stände speichern Bezeichnungen, sie zählen
+ * mit den Kategorien aus LEGACY_DEALER_LABELS. Was keins von beiden ist, erlaubt nichts.
+ */
+export function consentCategories(consent: Pick<Consent, 'dataCategories'>): Set<DataCategory> {
+  return new Set(
+    consent.dataCategories.flatMap((x) => (isCategory(x) ? [x] : (LEGACY_DEALER_LABELS[x] ?? []))),
+  );
+}
+
+/**
+ * Ereignisse, die im Verlauf der Akte stehen dürfen (Allow-List): die Arten von 67d2fd8 ohne
+ * assistent_gefragt (Gespräch mit dem Assistenten) und nachricht_an_haendler (steht in
+ * `messages`). Eine neue Art geht erst an den Händler, wenn sie hier steht. preis_genannt,
+ * zahlungspflichtig_gebucht, nicht_gebucht, termin_abgesagt und nachbesserung_verlangt (ganz Nr. 31
+ * bis 34) kommen mit Schritt 5.2 der Übertragung oder bleiben draußen.
+ */
+export const TIMELINE_EVENTS: readonly CaseEventType[] = [
+  'fall_angelegt',
+  'foto_aufgenommen',
+  'ergebnis_erkannt',
+  'rueckfrage_gestellt',
+  'rueckfrage_beantwortet',
+  'anleitung_gestartet',
+  'schritt_erledigt',
+  'schritt_zurueck',
+  'schritt_geht_nicht',
+  'sicherheit_bestaetigt',
+  'anleitung_beendet',
+  'weitergabe_bestaetigt',
+  'einwilligung_widerrufen',
+  'videocall_angefragt',
+  'videocall_gestartet',
+  'videocall_beendet',
+  'befund_erstellt',
+  'angebot_erstellt',
+  'schaden_gemeldet',
+  'freigabe_entschieden',
+  'termin_angefragt',
+  'termin_bestaetigt',
+  'betrieb_unterwegs',
+  'reparatur_abgeschlossen',
+  'abschluss_bestaetigt',
+  'problem_besteht_weiter',
+  'bewertet',
+  'pausiert',
+  'fortgesetzt',
+  'abgebrochen',
+  'status_geaendert',
+  'haendler_angenommen',
+  'haendler_rueckfrage',
+  'haendler_entscheidung',
+  'haendler_betrieb',
+  'haendler_status',
+  'haendler_nachricht',
+  'haendler_termin',
+  'haendler_ersatzteil',
+];
+
+/**
+ * Darf das Ereignis in die Akte, als Zeile im Verlauf oder als Antwort? Nur Arten aus der
+ * Allow-List. Fotos zu Fragen nicht (Übertragung 1.1): Ein Foto für den Assistenten geht den
+ * Händler nichts an, ein Foto für den Händler steht bei seiner Nachricht. Eine Notiz an die
+ * Fachkraft aus dem Gespräch mit dem Assistenten auch nicht: Sie ist eine Nachricht an den
+ * Assistenten, auf die keine Antwort kam.
  */
 const inTimeline = (e: CaseEvent) =>
-  !hidden.includes(e.type) &&
+  TIMELINE_EVENTS.includes(e.type) &&
   !isAssistantNote(e) &&
   !(e.type === 'foto_aufgenommen' && e.payload.purpose === 'frage');
 
@@ -67,7 +144,12 @@ export async function photoForShare(photo: Photo): Promise<SharedPhoto> {
   }
 }
 
-/** Baut die Akte aus dem gespeicherten Fall. Fotos kommen fertig verkleinert dazu. */
+/**
+ * Baut die Akte aus dem gespeicherten Fall. Fotos kommen fertig verkleinert dazu. Ein Feld bekommt
+ * nur einen Wert, wenn seine Kategorie in der Bestätigung steht. Ohne Kategorie bleiben Pflichtfelder
+ * leer. Fallnummer, Empfänger, Stand und Zeitpunkte des Falls und die Geräteart gehören zur
+ * Weitergabe selbst: Sie bleiben auch nach dem Widerruf im Backend (server/backend/fileStore.ts).
+ */
 export function buildSharedCaseFile(
   s: AppData,
   caseId: Id,
@@ -77,19 +159,19 @@ export function buildSharedCaseFile(
   const c = s.cases[caseId];
   const consent = dealerConsent(s, caseId);
   const device = s.devices.find((d) => d.id === c?.deviceId);
-  if (!c || !consent || !device) return undefined;
+  const facts = selectCaseFacts(s, caseId);
+  if (!c || !consent || !device || !facts) return undefined;
+  const allowed = consentCategories(consent);
+  const has = (k: DataCategory) => allowed.has(k);
   const all = s.events.filter((e) => e.caseId === caseId);
   const rated = s.bookings.findLast((b) => b.caseId === caseId && b.rating)?.rating;
   const person = s.persons[0];
   const contract = s.contracts.find((k) => k.id === device.contractId);
-  const events = s.events.filter((e) => e.caseId === caseId && inTimeline(e));
+  const events = all.filter(inTimeline);
   const summary = guideSummary(s, c);
   const run = latestGuideRun(s, c);
-  const finding = [...s.diagnoses]
-    .reverse()
-    .find((d) => d.caseId === caseId && (d.source === 'fachkraft' || d.source === 'betrieb'));
-  const quote = s.quotes.find((q) => q.id === c.quoteId);
-  const booking = activeBooking(s, caseId);
+  // Befund, Kostenvoranschlag und Termin der laufenden Runde, wie die App sie zeigt
+  const { finding, quote, booking } = facts;
   return {
     version: SHARE_FORMAT_VERSION,
     caseId,
@@ -98,37 +180,42 @@ export function buildSharedCaseFile(
     sharedAt: consent.grantedAt,
     updatedAt: now,
     isExample: demoConfig.isExample,
-    customer: { name: person?.displayName ?? '', address: s.household?.address },
-    device: {
-      manufacturer: getManufacturer(device.manufacturerId).name,
-      model: device.model,
-      category: device.category,
-      categoryLabel: de.deviceCategory[device.category],
-      materialNumber: device.materialNumber,
-      serialNumber: device.serialNumber,
-      purchaseDate: device.purchaseDate,
-      soldBy: device.soldBy,
+    customer: {
+      name: has('name') ? (person?.displayName ?? '') : '',
+      address: has('adresse') ? s.household?.address : undefined,
     },
-    protection: contract
-      ? {
-          provider: contract.provider.name,
-          product: contract.productName,
-          validUntil: contract.validUntil,
-        }
-      : undefined,
+    device: {
+      manufacturer: has('geraet') ? getManufacturer(device.manufacturerId).name : '',
+      model: has('geraet') ? device.model : '',
+      category: device.category,
+      categoryLabel: has('geraet') ? de.deviceCategory[device.category] : '',
+      materialNumber: has('typenschild') ? device.materialNumber : undefined,
+      serialNumber: has('seriennummer') ? device.serialNumber : undefined,
+      purchaseDate: has('kaufdatum') ? device.purchaseDate : undefined,
+      soldBy: has('kaufdatum') ? device.soldBy : undefined,
+    },
+    protection:
+      contract && has('versicherung')
+        ? {
+            provider: contract.provider.name,
+            product: contract.productName,
+            validUntil: contract.validUntil,
+          }
+        : undefined,
     case: {
       status: c.status,
       statusLabel: caseStatusLabel(c.status),
       entry: c.entry,
-      problemLabel: c.problemLabel,
+      problemLabel: has('problem') ? c.problemLabel : '',
       createdAt: c.createdAt,
       updatedAt: c.updatedAt,
       closedAt: c.closedAt,
       resolution: c.resolution,
     },
-    results: c.diagnosisIds
+    // Ein verworfenes Ergebnis („Passt nicht“) geht nicht mit, wie an Assistent und Fachkraft
+    results: (has('ergebnis') ? c.diagnosisIds : [])
       .map((id) => s.diagnoses.find((d) => d.id === id))
-      .filter((d) => !!d)
+      .filter((d): d is Diagnosis => !!d && !d.discardedAt)
       .map((d) => ({
         component: d.component,
         displayMessage: d.displayMessage,
@@ -136,70 +223,77 @@ export function buildSharedCaseFile(
         source: d.source,
         at: d.createdAt,
       })),
-    guide: summary
-      ? {
-          title: summary.title,
-          source: findCatalogEntry(device)?.document.title ?? '',
-          total: summary.total,
-          completed: summary.completedTitles,
-          abortedAt: summary.aborted
-            ? { step: summary.aborted.step, title: summary.aborted.title }
-            : undefined,
-          note: summary.aborted?.note,
-          outcome: run?.outcome,
-        }
-      : undefined,
-    finding: finding
-      ? {
-          label:
-            finding.errorPattern === 'ersatzgeraet_noetig'
-              ? de.finding.options.ersatzgeraet
-              : appliance(device.category).finding.title,
-          by:
-            finding.source === 'fachkraft' ? de.sharing.actor.fachkraft : de.sharing.actor.betrieb,
-          at: finding.createdAt,
-        }
-      : undefined,
-    quote: quote
-      ? {
-          repair: quote.repair,
-          replacement: quote.replacement,
-          saving: quote.saving,
-          payer: quote.payer,
-          deductible: quote.deductible,
-          isExample: quote.isExample,
-        }
-      : undefined,
-    booking: booking
-      ? {
-          provider: booking.provider.name,
-          slotLabel: booking.slotLabel,
-          status: de.sharing.booking[booking.status],
-        }
-      : undefined,
-    photos,
-    timeline: events.map((e) => ({
+    guide:
+      summary && has('schritte')
+        ? {
+            title: summary.title,
+            source: findCatalogEntry(device)?.document.title ?? '',
+            total: summary.total,
+            completed: summary.completedTitles,
+            abortedAt: summary.aborted
+              ? { step: summary.aborted.step, title: summary.aborted.title }
+              : undefined,
+            note: has('notiz') ? summary.aborted?.note : undefined,
+            outcome: run?.outcome,
+          }
+        : undefined,
+    finding:
+      finding && has('befund')
+        ? {
+            label:
+              finding.errorPattern === 'ersatzgeraet_noetig'
+                ? de.finding.options.ersatzgeraet
+                : appliance(device.category).finding.title,
+            by:
+              finding.source === 'fachkraft'
+                ? de.sharing.actor.fachkraft
+                : de.sharing.actor.betrieb,
+            at: finding.createdAt,
+          }
+        : undefined,
+    quote:
+      quote && has('kosten')
+        ? {
+            repair: quote.repair,
+            replacement: quote.replacement,
+            saving: quote.saving,
+            payer: quote.payer,
+            deductible: quote.deductible,
+            isExample: quote.isExample,
+          }
+        : undefined,
+    booking:
+      booking && has('termin')
+        ? {
+            provider: booking.provider.name,
+            slotLabel: booking.slotLabel,
+            status: de.sharing.booking[booking.status],
+          }
+        : undefined,
+    photos: has('fotos') ? photos : [],
+    // Der Verlauf nennt die Ereignisse mit ihren Zeilen wie in der App
+    timeline: (has('verlauf') ? events : []).map((e) => ({
       at: e.at,
       type: e.type,
       label: eventLabel(e),
       actor: actorName(e),
     })),
-    answers: events
+    answers: (has('nachrichten_haendler') ? events : [])
       .filter((e) => e.type === 'rueckfrage_beantwortet' && e.payload.questionEventId)
       .map((e) => ({
         questionEventId: String(e.payload.questionEventId),
         answer: String(e.payload.answer),
         at: e.at,
       })),
-    messages: all
+    messages: (has('nachrichten_haendler') ? all : [])
       .filter((e) => e.type === 'nachricht_an_haendler')
       .map((e) => ({
         id: e.id,
         at: e.at,
         text: String(e.payload.text ?? ''),
-        ...(e.payload.photoId ? { photoId: String(e.payload.photoId) } : {}),
+        ...(e.payload.photoId && has('fotos') ? { photoId: String(e.payload.photoId) } : {}),
       })),
-    ...(rated ? { rating: rated.stars } : {}),
+    ...(rated && has('bewertung') ? { rating: rated.stars } : {}),
   };
 }
 

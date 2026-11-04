@@ -10,7 +10,7 @@ import { asksNotifications } from '@/lib/booking';
 import { chatContext } from '@/lib/chat/context';
 import type { ChatContext } from '@/lib/chat/prompt';
 import { categoryLabels, scopeLabels } from '@/lib/consent';
-import { legalParts, textStamp, type LegalTextKey } from '@/lib/legalTexts';
+import { caseNames, legalParts, textStamp, type LegalTextKey } from '@/lib/legalTexts';
 import { buildSharedCaseFile } from '@/lib/sharing';
 import { statusView } from '@/lib/statusView';
 import { CONSENT_SCOPES, DATA_CATEGORIES, type DataCategory } from '@/model/policies/consentScopes';
@@ -132,7 +132,9 @@ const dealer = demoConfig.dealers[0]!;
 
 /**
  * Jedes Feld der Fallakte an den Händler (lib/sharing.ts) und seine Kategorien. tsc prüft, dass
- * keins fehlt. null: Angaben zur Weitergabe selbst, keine Daten aus dem Fall.
+ * keins fehlt. null: Angaben zur Weitergabe selbst, keine Daten aus dem Fall. Im Fall sind das
+ * Stand und Zeitpunkte, das Problem gehört zu problem. Welche Angabe genau welche Kategorie braucht,
+ * prüft __tests__/sharing.test.tsx („Nur Erlaubtes in der Akte“).
  */
 const sharedFileCategory: Record<keyof SharedCaseFile, readonly DataCategory[] | null> = {
   version: null,
@@ -145,7 +147,7 @@ const sharedFileCategory: Record<keyof SharedCaseFile, readonly DataCategory[] |
   customer: ['name', 'adresse'],
   device: ['geraet', 'typenschild', 'seriennummer', 'kaufdatum'],
   protection: ['versicherung'],
-  case: ['problem', 'verlauf'],
+  case: ['problem'],
   results: ['ergebnis'],
   guide: ['schritte', 'notiz'],
   finding: ['befund'],
@@ -238,27 +240,35 @@ const flows: Record<ConsentPurpose, Record<string, () => Promise<void> | void>> 
       expect([...sent].sort()).toEqual([...scope].sort());
       // Die Akte, die heute gebaut wird, hat keine Felder außerhalb der Liste oben
       const id = dealerCase();
-      unwrap(useAppStore.getState().shareWithDealer(id, 'test'));
+      unwrap(useAppStore.getState().shareWithDealer(id));
       const file = buildSharedCaseFile(useAppStore.getState(), id, [], '2026-11-04T12:00:00Z')!;
       for (const key of Object.keys(file)) expect(Object.keys(sharedFileCategory)).toContain(key);
     },
-    // Bis Schritt 3.1 (PLAN der Übertragung) speichert die Bestätigung die sechs Bezeichnungen der
-    // Vorschau, ohne Hash. Dann kommen Umfang und Stempel wie bei den anderen Zwecken.
-    'Gespräch: die Vorschau zeigt die Bezeichnungen, die die Bestätigung speichert': async () => {
+    // Seit Schritt 3.1 (Übertragung): Umfang und Stempel wie bei den anderen Zwecken. Ein Satz nennt
+    // die Kategorien, keine Liste (Entscheidung 20).
+    'Gespräch: der Satz vor „Ja, senden“ nennt genau, was die Bestätigung speichert': async () => {
       const id = dealerCase();
       await renderRouter(APP, { initialUrl: `/fall/${id}` });
       await tap(new RegExp(`^${escapeRegExp(de.sharing.offer(dealer.name))}`));
-      for (const label of de.consentData.haendler) {
-        expect(screen.getAllByText(de.help.item(label)).length).toBeGreaterThan(0);
+      const summary = de.sharing.dataSummary(
+        dealer.name,
+        de.common.list(scopeLabels('weitergabe_haendler')),
+      );
+      expect(screen.getByText(summary)).toBeTruthy();
+      expectShown('haendler_weitergabe');
+      for (const key of DATA_CATEGORIES) {
+        expect(screen.queryAllByText(de.help.item(de.dataCategory[key]))).toEqual([]);
       }
       expect(consentsFor('weitergabe_haendler', id)).toEqual([]);
       await tap(de.sharing.send);
-      const scope = CONSENT_SCOPES.weitergabe_haendler;
-      expect(consentsFor('weitergabe_haendler', id).at(-1)).toMatchObject({
-        legalBasis: scope.legalBasis,
-        recipient: { id: dealer.id, kind: scope.recipientKind, name: dealer.name },
-        dataCategories: [...de.consentData.haendler],
-      });
+      const consent = expectStored('weitergabe_haendler', 'haendler_weitergabe', id);
+      expect(consent.recipient).toEqual({ id: dealer.id, kind: 'haendler', name: dealer.name });
+      expect(consent.textHash).toBe(
+        textStamp('haendler_weitergabe', caseNames(useAppStore.getState(), id)).textHash,
+      );
+      expect(
+        de.sharing.dataSummary(dealer.name, de.common.list(categoryLabels(consent.dataCategories))),
+      ).toBe(summary);
     },
   },
   screenshots_im_call: {

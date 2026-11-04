@@ -24,6 +24,7 @@ import {
   textStamp,
   type LegalTextKey,
 } from '@/lib/legalTexts';
+import { scopeList } from '@/lib/consent';
 import { CONSENT_SCOPES } from '@/model/policies/consentScopes';
 import { sha256Hex } from '@/model/sha256';
 import { useAppStore } from '@/store/appStore';
@@ -136,6 +137,27 @@ describe('Versionierte Texte', () => {
     const names = caseNames(useAppStore.getState(), policy.id);
     expect(names.versicherer).toBe(other.shortName);
     expect(legalText('schadenmeldung', names)).toContain(other.shortName);
+
+    // Gekauft bei einem anderen Händler: Sein Name steht im Satz vor „Ja, senden“ und im Hash
+    // (Übertragung 3.1). Ohne Händler am Gerät gibt es diesen Satz nicht.
+    const lindemann = demoConfig.dealers.find((d) => d.id === 'lindemann')!;
+    const elsewhere = s.addDevice({
+      manufacturerId: 'miele',
+      category: 'trockner',
+      model: 'TWB 140',
+      identifiedBy: 'katalog',
+    });
+    s.setDeviceDealer(elsewhere.id, lindemann.id);
+    const bought = s.createCase({ deviceId: elsewhere.id, entry: 'foto', problemLabel: 'x' });
+    const dealerNames = caseNames(useAppStore.getState(), bought.id);
+    expect(dealerNames.haendler).toBe(lindemann.name);
+    expect(legalParts('haendler_weitergabe', dealerNames)[0]).toBe(
+      de.sharing.dataSummary(lindemann.name, scopeList('weitergabe_haendler')),
+    );
+    expect(textStamp('haendler_weitergabe', dealerNames).textHash).not.toBe(
+      textStamp('haendler_weitergabe', caseNames(useAppStore.getState(), fruend.id)).textHash,
+    );
+    expect(legalText('haendler_weitergabe', PLACEHOLDER_NAMES)).toContain('{haendler}');
   });
 });
 

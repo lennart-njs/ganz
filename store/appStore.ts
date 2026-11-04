@@ -199,7 +199,7 @@ export interface AppActions {
    * Fall an den Händler: Bestätigung speichern (lit. b). Senden übernimmt useShareSync. Nur, wo die
    * Regel an_haendler_senden es erlaubt, sonst eine Ablehnung ohne Schreiben.
    */
-  shareWithDealer: (caseId: Id, textVersion: string) => Result<Consent>;
+  shareWithDealer: (caseId: Id) => Result<Consent>;
   updateShare: (caseId: Id, patch: Partial<CaseShare>) => void;
   /** Ereignisse des Händlers aus dem Backend in den Fall übernehmen, ohne Doppelte */
   importRetailerEvents: (caseId: Id, events: CaseEvent[]) => void;
@@ -653,22 +653,22 @@ export function createAppStore(storage: StateStorage = AsyncStorage, env: StoreE
 
           completeOnboarding: () => set({ onboardingDone: true }),
 
-          // Erst prüfen, dann in einem Schritt schreiben: Bestätigung, ihr Ereignis und die Weitergabe
-          shareWithDealer: (caseId, textVersion) => {
+          // Erst prüfen, dann in einem Schritt schreiben: Bestätigung, ihr Ereignis und die Weitergabe.
+          // Umfang aus CONSENT_SCOPES und Stempel des Satzes, der vor „Ja, senden“ stand (R-14).
+          shareWithDealer: (caseId) => {
             const c = get().cases[caseId];
             if (!c) return missingCase(caseId);
             const dealer = get().devices.find((d) => d.id === c.deviceId)?.soldBy;
             if (!dealer || !can(selectCaseFacts(get(), caseId), 'an_haendler_senden')) {
               return refuse({ code: 'regel', action: 'an_haendler_senden' });
             }
-            const { consent, events } = draftConsent({
-              caseId,
-              purpose: 'weitergabe_haendler',
-              legalBasis: 'vertrag',
-              recipient: dealer,
-              dataCategories: [...de.consentData.haendler],
-              textVersion,
-            });
+            const { consent, events } = draftConsent(
+              scopedConsent('weitergabe_haendler', {
+                caseId,
+                recipient: dealer,
+                text: textStamp('haendler_weitergabe', caseNames(get(), caseId)),
+              }),
+            );
             set((s) => ({
               consents: [...s.consents, consent],
               events: [...s.events, ...events],

@@ -67,7 +67,7 @@ function sharedCase(): { caseId: Id; deviceId: Id } {
   });
   const c = s.createCase({ deviceId: device.id, entry: 'symptom', problemLabel: 'Wasserablauf' });
   s.escalate(c.id);
-  unwrap(useAppStore.getState().shareWithDealer(c.id, 'test'));
+  unwrap(useAppStore.getState().shareWithDealer(c.id));
   useAppStore.getState().grantConsent(
     scopedConsent('chat_assistent', {
       recipient: {
@@ -208,8 +208,9 @@ describe('Foto bleibt beim gewählten Empfänger (Übertragung 1.1)', () => {
 
     await tap(de.chat.send);
     await flush();
+    // Ein Foto ohne Text geht mit dem neutralen Text „Foto“, nicht mit „Dein Foto“ (Übertragung 3.1)
     expect(toDealer().map((e) => e.payload)).toEqual([
-      { text: de.chat.photoLabel, photoId: photo.id },
+      { text: de.sharing.photoOnly, photoId: photo.id },
     ]);
     expect(photoMessages(photo.id)).toEqual([]);
     expect(fetchMock).not.toHaveBeenCalled();

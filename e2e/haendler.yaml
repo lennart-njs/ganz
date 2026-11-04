@@ -67,7 +67,7 @@ tags:
     timeout: 10000
 - tapOn:
     id: 'antwort-haendler'
-- assertVisible: 'Das sieht .*'
+- assertVisible: 'Nur diesen Fall\. .*'
 - assertNotVisible: 'Gesendet\. .* meldet sich hier im Gespräch\.'
 - takeScreenshot: haendler-2-vorschau
 - tapOn:

@@ -505,7 +505,7 @@ describe('Grenze von 40 Nachrichten (R-11)', () => {
     s.setDeviceDealer(s.cases[id]!.deviceId, dealer.id);
     // Den Fall gibt es für den Händler erst, wenn Hilfe nötig ist (an_haendler_senden)
     unwrap(s.escalate(id));
-    unwrap(useAppStore.getState().shareWithDealer(id, 'test'));
+    unwrap(useAppStore.getState().shareWithDealer(id));
     await renderRouter(APP, { initialUrl: `/fall/${id}` });
     expect(screen.getByText(t.full)).toBeTruthy();
     // Nur der Assistent ist gesperrt, der Händler bleibt erreichbar
