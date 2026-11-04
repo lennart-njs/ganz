@@ -129,11 +129,12 @@ const RULES: Record<ActionKey, Rule> = {
   bewerten: (f) => repairDone(f) && f.status !== 'abgebrochen',
 
   // Nach einem Widerruf hält der Fall an (R-12). Mit einem Tap geht es weiter, auch in der
-  // Reparatur, wo sich der Fall nicht abbrechen lässt. Sonst wäre das Gerät blockiert (Nr. 13).
+  // Reparatur. Abbrechen geht dort seit Nr. 34 auch, siehe abbrechen.
   weitergabe_erneuern: (f) => !!f.hold,
 
   pausieren: (f) => !f.closed,
-  // Nur wo die Status-Maschine es erlaubt, also nicht in der Reparatur und nicht danach (R-01)
+  // Nur wo die Status-Maschine es erlaubt: seit Nr. 34 auch in der Reparatur, nie in einem
+  // geschlossenen Fall (R-01). Der Betrieb bekommt die Absage, auch ohne gültige Weitergabe.
   abbrechen: (f) => canTransition(f.status, 'abbrechen'),
 };
 

@@ -119,6 +119,7 @@ export const de = {
     zahlungspflichtig_gebucht: 'Zahlungspflichtig gebucht',
     nicht_gebucht: 'Nicht gebucht',
     termin_bestaetigt: 'Termin bestätigt',
+    termin_abgesagt: 'Termin abgesagt',
     betrieb_unterwegs: 'Betrieb ist unterwegs',
     reparatur_abgeschlossen: 'Reparatur abgeschlossen',
     abschluss_bestaetigt: 'Läuft wieder',
@@ -1128,9 +1129,12 @@ export const de = {
     cancelled: 'Fall abgebrochen.',
     runningCase: (title: string) => `Für dieses Gerät läuft schon ein Fall: ${title}.`,
     runningCaseAsk: 'Willst du dort weitermachen oder ein neues Problem melden?',
-    /** Der laufende Fall lässt sich nicht abbrechen, z. B. in der Reparatur (Entscheidung Nr. 13) */
+    /**
+     * Der Betrieb hat für den laufenden Fall schon den Auftrag, z. B. in der Reparatur. Dann bricht
+     * „Neues Problem melden“ ihn nicht nebenbei ab (Entscheidungen Nr. 13 und Nr. 34).
+     */
     runningCaseOnlyContinue:
-      'Dieser Fall lässt sich gerade nicht abbrechen. Ein neues Problem meldest du, wenn er abgeschlossen ist.',
+      'Für diesen Fall hat ein Betrieb schon den Auftrag. Abbrechen kannst du ihn im Fall. Dort steht, was das für den Termin heißt.',
     continueCase: 'Weitermachen',
     newProblem: 'Neues Problem melden',
     newProblemReason: 'Neues Problem gemeldet',
@@ -1301,8 +1305,13 @@ export const de = {
     /** Erledigt oder abgebrochen: nichts mehr zu pausieren oder abzubrechen (R-01) */
     closedText: 'Der Fall ist abgeschlossen. Du findest ihn unter „Fälle“.',
     leave: 'Zur Übersicht',
-    /** Offen, aber nicht mehr abbrechbar, z. B. in der Reparatur */
-    noCancel: 'Abbrechen geht gerade nicht. Der Auftrag läuft schon.',
+    /** Mit einem Termin: Der Betrieb bekommt die Absage, auch in der Reparatur (Nr. 34) */
+    partnerNotice: (partner: string) => `${partner} bekommt die Absage.`,
+    /**
+     * Hat der Betrieb den Auftrag schon, sagt ganz nicht zu, dass keine Kosten entstehen
+     * (§ 648 BGB, Rechtsfrage 51). Nie „kostenlos“.
+     */
+    costsOpen: (partner: string) => `Ob schon Kosten entstanden sind, klärt ${partner} mit dir.`,
   },
 
   galerie: {

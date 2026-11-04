@@ -69,6 +69,7 @@ export function eventLabel(e: CaseEvent): string {
       detail = f.price(String(p.partner), formatEuro(Number(p.price)));
       break;
     case 'nicht_gebucht':
+    case 'termin_abgesagt':
       detail = f.booking(String(p.partner), String(p.slot));
       break;
     case 'bewertet':

@@ -6,16 +6,20 @@
 // Ein Termin, für den der Haushalt zahlt, läuft nur mit dem Tap „Zahlungspflichtig buchen“, und
 // diesen Tap gibt es nie, solange der Versicherer prüft (Entscheidung Nr. 31). Die Vor-Ort-Diagnose
 // läuft erst mit Preis und Tap, und „Nicht buchen“ beendet die Anfrage ohne Kosten (Nr. 33).
+// Abbrechen geht auch in der Reparatur. Danach läuft kein Termin mehr, jeder bekommt seine Absage,
+// und die Simulation macht keinen Schritt mehr (Nr. 34).
 import { array, assert, boolean, constantFrom, integer, nat, property } from 'fast-check';
 import type { StateStorage } from 'zustand/middleware';
 
 import { demoConfig } from '@/config/demo.config';
+import { isClosed } from '@/model/caseMachine';
 import { ALL_ACTIONS, availableActions, type ActionKey } from '@/model/policies/actions';
 import { selectCaseFacts, type CaseFacts } from '@/model/policies/caseFacts';
 import type { OpenCaseOptions } from '@/model/policies/openCase';
 import type { Booking, Case, CaseEntry, Claim } from '@/model/types';
 import {
   createAppStore,
+  nextSimulationDue,
   selectOpenCases,
   type AppState,
   type AppStore,
@@ -47,6 +51,8 @@ function testEnv(): StoreEnv {
 interface Step {
   /** ActionKey, wenn der Schritt eine Aktion des Haushalts ist */
   action?: ActionKey;
+  /** Der Fall, um den es geht, für Schritte der Welt draußen */
+  caseId?: string;
   name: string;
   run: (s: AppState) => unknown;
 }
@@ -156,7 +162,7 @@ function household(key: ActionKey, c: Case, f: CaseFacts, s: AppState): Step[] {
 /** Was außerhalb des Telefons passiert: Versicherer, Betrieb, Fachkraft, Widerruf in der Fallakte */
 function world(c: Case, f: CaseFacts, s: AppState): Step[] {
   const id = c.id;
-  const steps: Step[] = [{ name: 'simulation', run: (x) => x.simulateNext(id) }];
+  const steps: Step[] = [{ name: 'simulation', caseId: id, run: (x) => x.simulateNext(id) }];
   const v = f.lastVideoSession;
   if (v && !v.endedAt) {
     for (const change of ['verbunden', 'keine_fachkraft', 'beendet'] as const) {
@@ -384,11 +390,54 @@ function bindingDuringReview(before: AppState, after: AppState): string | undefi
   return undefined;
 }
 
+/** Ein Termin, der noch läuft */
+const RUNNING: Booking['status'][] = ['angefragt', 'bestaetigt', 'unterwegs'];
+
+/** Termine der laufenden Runde eines Falls (model/policies/rounds.ts) */
+const currentOf = (s: AppState, c: Case) => {
+  const earlier = (c.rounds ?? []).flatMap((r) => r.bookingIds);
+  return s.bookings.filter((b) => b.caseId === c.id && !earlier.includes(b.id));
+};
+
+/**
+ * Nr. 34: Ein abgebrochener Fall hat keinen laufenden Termin und keinen nächsten Schritt der
+ * Simulation. Wird ein Fall in diesem Schritt abgebrochen, ist jeder Termin, der vorher lief,
+ * storniert und hat seine Absage in der Fallakte. Dabei entsteht keine neue Weitergabe. Ein
+ * Schritt der Simulation in einem geschlossenen Fall schreibt nichts.
+ */
+function cancelViolation(before: AppState, after: AppState, step: Step): string | undefined {
+  for (const c of Object.values(after.cases)) {
+    if (c.status !== 'abgebrochen') continue;
+    if (currentOf(after, c).some((b) => RUNNING.includes(b.status)))
+      return `${c.id} abgebrochen mit laufendem Termin`;
+    if (nextSimulationDue(after, c.id) !== undefined)
+      return `${c.id} abgebrochen, die Simulation hat noch einen Schritt`;
+    const was = before.cases[c.id];
+    if (!was || was.status === 'abgebrochen') continue;
+    for (const b of currentOf(before, was).filter((x) => RUNNING.includes(x.status))) {
+      const notice = after.events.filter(
+        (e) => e.type === 'termin_abgesagt' && e.payload.bookingId === b.id,
+      );
+      if (notice.length !== 1) return `${b.id} ohne Absage abgebrochen`;
+    }
+    const shared = (s: AppState) =>
+      s.consents.filter((k) => k.caseId === c.id && k.purpose === 'weitergabe_betrieb').length;
+    if (shared(after) !== shared(before)) return `${c.id} Abbruch mit neuer Weitergabe`;
+  }
+  if (step.name === 'simulation' && step.caseId) {
+    const c = before.cases[step.caseId];
+    if (c && isClosed(c.status) && after !== before) return `${c.id} Simulation nach dem Abschluss`;
+  }
+  return undefined;
+}
+
 const isRefused = (r: unknown): boolean =>
   typeof r === 'object' && r !== null && 'ok' in r && (r as { ok: unknown }).ok === false;
 
 test('1.000 zufällige Folgen aus availableActions: keine Exception, je Gerät höchstens ein offener Fall', () => {
   const seen = new Set<ActionKey>();
+  /** Wege, die die Folgen erreichen müssen, damit die Invarianten etwas prüfen */
+  const reached = new Set<string>();
   let steps = 0;
   assert(
     property(
@@ -414,8 +463,15 @@ test('1.000 zufällige Folgen aus availableActions: keine Exception, je Gerät h
           const problem =
             isRefused(result) && after !== before
               ? `Ablehnung hat geschrieben: ${step.name}`
-              : (violation(after) ?? bindingViolation(after) ?? bindingDuringReview(before, after));
+              : (violation(after) ??
+                bindingViolation(after) ??
+                bindingDuringReview(before, after) ??
+                cancelViolation(before, after, step));
           if (problem) throw new Error(`${problem} nach ${trail.join(' → ')}`);
+          for (const c of Object.values(after.cases)) {
+            if (before.cases[c.id]?.status === 'in_reparatur' && c.status === 'abgebrochen')
+              reached.add('abbruch_in_reparatur');
+          }
         }
       },
     ),
@@ -424,4 +480,5 @@ test('1.000 zufällige Folgen aus availableActions: keine Exception, je Gerät h
   expect(steps).toBeGreaterThanOrEqual(RUNS * 10);
   // Die Folgen kommen überall hin: Jede Aktion des Haushalts lief mindestens einmal
   expect(ALL_ACTIONS.filter((a) => !seen.has(a))).toEqual([]);
+  expect([...reached].sort()).toEqual(['abbruch_in_reparatur']);
 });

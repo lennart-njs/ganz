@@ -4,9 +4,34 @@
 // Ablehnung kein Termin auf Kosten des Versicherers (R-09). Screens und Store fragen dasselbe.
 // Kein Import aus react, expo, i18n, config oder store (ZUKUNFTSPLAN 3.1).
 import { ok, refuse, type Result } from '../result';
-import type { Booking, Id } from '../types';
+import type { Booking, Case, Id } from '../types';
 import type { ActionKey } from './actions';
 import type { BookingKind, CaseFacts } from './caseFacts';
+import { currentBookings } from './rounds';
+
+/** Ein Termin, der noch läuft: angefragt, bestätigt oder unterwegs */
+const running = (b: Booking) =>
+  b.status === 'angefragt' || b.status === 'bestaetigt' || b.status === 'unterwegs';
+
+/**
+ * Hat der Betrieb den Auftrag schon (Entscheidung Nr. 34)? Ja, wenn er den Termin bestätigt hat,
+ * wenn du zahlungspflichtig gebucht hast oder wenn die Reparatur geplant ist. Dann sagt ganz beim
+ * Abbrechen nicht, dass keine Kosten entstehen (§ 648 BGB). Eine unverbindliche Anfrage ist kein
+ * Auftrag.
+ */
+export function isOrdered(c: Case, b: Booking): boolean {
+  if (!running(b)) return false;
+  return !!b.binding || b.status !== 'angefragt' || c.status === 'in_reparatur';
+}
+
+/**
+ * Termine, die ein Abbruch absagt (Nr. 34): jeder Termin der laufenden Runde, der noch läuft. Auch
+ * eine verfallene Anfrage vorbehaltlich Freigabe, damit nach dem Abbruch kein Termin offen bleibt.
+ * Der Betrieb bekommt nur die Absage. Dafür reicht die Weitergabe, mit der er den Termin bekam.
+ */
+export function bookingsToCancel(c: Case, bookings: readonly Booking[]): Booking[] {
+  return currentBookings(c, bookings).filter(running);
+}
 
 /** Termin-Regel: höchstens ein Termin je Art, der zählt. Ein erledigter zählt mit. */
 export function booked(f: CaseFacts, kind: BookingKind): boolean {

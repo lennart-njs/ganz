@@ -184,17 +184,67 @@ describe('Schließen-Sheet nach den Regeln (R-01)', () => {
     expect(useAppStore.getState().cases[done]?.pausedAt).toBeUndefined();
   });
 
-  test('in der Reparatur: später weitermachen ja, abbrechen nein, mit Hinweis', async () => {
+  // Seit Entscheidung Nr. 34 geht auch Abbrechen. Später weitermachen bleibt, wie es war.
+  test('in der Reparatur: später weitermachen ja, der Fall bleibt in der Reparatur', async () => {
     const { repair } = closedAndRepair();
     expect(useAppStore.getState().cases[repair]?.status).toBe('in_reparatur');
     const r = await renderRouter(APP, { initialUrl: `/fall/${repair}` });
     await openSheet();
-    expect(screen.queryByRole('button', { name: de.closeCase.cancel })).toBeNull();
-    expect(screen.getByText(de.closeCase.noCancel)).toBeTruthy();
+    expect(screen.getByRole('button', { name: de.closeCase.cancel })).toBeTruthy();
     await fireEvent.press(screen.getByRole('button', { name: de.closeCase.later }));
     expect(r.getPathname()).toBe('/');
     expect(useAppStore.getState().cases[repair]).toMatchObject({ status: 'in_reparatur' });
     expect(useAppStore.getState().cases[repair]?.pausedAt).toBeDefined();
+    expect(useAppStore.getState().bookings.find((b) => b.caseId === repair)?.status).toBe(
+      'angefragt',
+    );
+  });
+
+  test('in der Reparatur abbrechen (Nr. 34): erst die Absage an den Betrieb, dann mit Grund', async () => {
+    const { repair } = closedAndRepair();
+    const partner = demoConfig.partners[0]!.name;
+    const r = await renderRouter(APP, { initialUrl: `/fall/${repair}` });
+    await openSheet();
+    await fireEvent.press(screen.getByRole('button', { name: de.closeCase.cancel }));
+    expect(screen.getByText(de.closeCase.partnerNotice(partner))).toBeTruthy();
+    expect(screen.getByText(de.closeCase.costsOpen(partner))).toBeTruthy();
+    expect(screen.getByRole('button', { name: de.closeCase.confirmCancel })).toBeDisabled();
+    // „Weitermachen“ lässt alles, wie es war
+    await fireEvent.press(screen.getByRole('button', { name: de.closeCase.keep }));
+    expect(useAppStore.getState().cases[repair]?.status).toBe('in_reparatur');
+    await openSheet();
+    await fireEvent.press(screen.getByRole('button', { name: de.closeCase.cancel }));
+    await fireEvent.press(screen.getByRole('radio', { name: de.closeCase.reasons[0] }));
+    await fireEvent.press(screen.getByRole('button', { name: de.closeCase.confirmCancel }));
+    expect(r.getPathname()).toBe('/');
+    const s = useAppStore.getState();
+    expect(s.cases[repair]).toMatchObject({
+      status: 'abgebrochen',
+      cancelReason: de.closeCase.reasons[0],
+    });
+    expect(s.bookings.find((b) => b.caseId === repair)?.status).toBe('storniert');
+    // Im Gespräch steht danach die Absage, ohne Zusage, dass es nichts kostet
+    await act(async () => router.push(`/fall/${repair}`));
+    expect(screen.getByText(de.thread.cancelled)).toBeTruthy();
+    expect(screen.getByText(de.closeCase.partnerNotice(partner))).toBeTruthy();
+    expect(screen.getByText(de.closeCase.costsOpen(partner))).toBeTruthy();
+    expect(screen.queryByText(/kostenlos|kostenfrei/i)).toBeNull();
+  });
+
+  test('ohne Termin: Abbrechen ohne Satz zum Betrieb', async () => {
+    finishOnboarding();
+    const s = useAppStore.getState();
+    const c = s.createCase({
+      deviceId: s.devices[0]!.id,
+      entry: 'foto',
+      problemLabel: 'Wasserablauf',
+    });
+    s.escalate(c.id);
+    await renderRouter(APP, { initialUrl: `/fall/${c.id}` });
+    await openSheet();
+    await fireEvent.press(screen.getByRole('button', { name: de.closeCase.cancel }));
+    expect(screen.queryByText(de.closeCase.partnerNotice(demoConfig.partners[0]!.name))).toBeNull();
+    expect(screen.queryByText(de.closeCase.costsOpen(demoConfig.partners[0]!.name))).toBeNull();
   });
 
   test('dunkel und mit 200 % Schrift, Farben aus dem Theme, 44 pt', async () => {
@@ -214,7 +264,10 @@ describe('Schließen-Sheet nach den Regeln (R-01)', () => {
 
     await act(async () => router.push(`/fall/${repair}`));
     await openSheet();
-    expect(screen.getByText(de.closeCase.noCancel)).toHaveStyle({ color: colors.dark.textMuted });
+    await fireEvent.press(screen.getByRole('button', { name: de.closeCase.cancel }));
+    expect(screen.getByText(de.closeCase.costsOpen(demoConfig.partners[0]!.name))).toHaveStyle({
+      color: colors.dark.textBody,
+    });
     const sheet = screen.container.queryAll((x) => x.props.accessibilityViewIsModal === true)[0]!;
     for (const n of sheet.queryAll((x) => x.type === 'Text')) {
       expect(n.props.allowFontScaling).not.toBe(false);

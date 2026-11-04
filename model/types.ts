@@ -183,6 +183,7 @@ export type CaseEventType =
   | 'zahlungspflichtig_gebucht'
   | 'nicht_gebucht'
   | 'termin_bestaetigt'
+  | 'termin_abgesagt'
   | 'betrieb_unterwegs'
   | 'reparatur_abgeschlossen'
   | 'abschluss_bestaetigt'

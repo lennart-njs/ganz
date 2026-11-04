@@ -1,6 +1,6 @@
 import * as Notifications from 'expo-notifications';
 import { router } from 'expo-router';
-import { act, fireEvent, renderRouter, screen } from 'expo-router/testing-library';
+import { act, fireEvent, renderRouter, screen, within } from 'expo-router/testing-library';
 
 import { demoConfig } from '@/config/demo.config';
 import { de } from '@/i18n/de';
@@ -209,7 +209,8 @@ describe('Widerruf hält die Simulation an (R-12)', () => {
     expect(caseOf(id).claim?.decision?.result).toBe('freigegeben');
   });
 
-  test('in der Reparatur: kein Abbruch, aber erneut bestätigen, dann kommt der Betrieb', async () => {
+  // Seit Nr. 34 bietet der Halt in der Reparatur auch „Fall abbrechen“
+  test('in der Reparatur: erneut bestätigen oder abbrechen, nach dem Bestätigen kommt der Betrieb', async () => {
     const { id } = await bookedCase();
     await tap(de.status.demoNext);
     await tap(de.status.demoNext);
@@ -218,6 +219,7 @@ describe('Widerruf hält die Simulation an (R-12)', () => {
     const partner = bookingOf(id).provider.name;
     expect(screen.getByText(de.status.text.paused)).toBeTruthy();
     expect(screen.getByText(de.thread.renewAsk(partner))).toBeTruthy();
+    expect(screen.getByRole('button', { name: de.closeCase.cancel })).toBeTruthy();
     expect(screen.queryByRole('button', { name: de.status.demoNext })).toBeNull();
     await tap(new RegExp(`^${de.thread.renewShare}`));
     await act(async () => {});
@@ -227,6 +229,37 @@ describe('Widerruf hält die Simulation an (R-12)', () => {
     expect(renewed.map((c) => c.recipient.id)).toEqual([bookingOf(id).provider.id]);
     await tap(de.status.demoNext);
     expect(bookingOf(id).status).toBe('unterwegs');
+  });
+
+  test('nach dem Widerruf in der Reparatur abbrechen (Nr. 34): Absage, keine neue Weitergabe', async () => {
+    const { id, r } = await bookedCase();
+    await tap(de.status.demoNext);
+    await tap(de.status.demoNext);
+    expect(caseOf(id).status).toBe('in_reparatur');
+    await revoke('weitergabe_betrieb', id);
+    const partner = bookingOf(id).provider.name;
+    const consents = useAppStore.getState().consents.length;
+    await tap(de.closeCase.cancel);
+    // Das Sheet beginnt gleich mit dem Grund und nennt vorher die Absage an den Betrieb
+    expect(screen.getByRole('header', { name: de.closeCase.reasonTitle })).toBeTruthy();
+    expect(screen.getByText(de.closeCase.partnerNotice(partner))).toBeTruthy();
+    expect(screen.getByText(de.closeCase.costsOpen(partner))).toBeTruthy();
+    // Der Button im Sheet, nicht die Antwort im Gespräch dahinter
+    const sheet = within(
+      screen.container.queryAll((x) => x.props.accessibilityViewIsModal === true).at(-1)!,
+    );
+    await fireEvent.press(sheet.getByRole('radio', { name: de.closeCase.reasons[1] }));
+    await fireEvent.press(sheet.getByRole('button', { name: de.closeCase.confirmCancel }));
+    expect(r.getPathname()).toBe('/');
+    expect(caseOf(id)).toMatchObject({
+      status: 'abgebrochen',
+      cancelReason: de.closeCase.reasons[1],
+    });
+    expect(bookingOf(id).status).toBe('storniert');
+    expect(useAppStore.getState().consents).toHaveLength(consents);
+    expect(nextSimulationDue(useAppStore.getState(), id)).toBeUndefined();
+    await advance(demoConfig.timers.bookingStepMs * 3);
+    expect(bookingOf(id).status).toBe('storniert');
   });
 
   test('eine Bestätigung für einen anderen Betrieb zählt nicht', async () => {

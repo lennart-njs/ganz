@@ -2,6 +2,7 @@
 // Screens fragen can() und availableActions(), statt selbst den Status zu vergleichen.
 // Kein Import aus react, expo, i18n, config oder store (ZUKUNFTSPLAN 3.1).
 import { findActiveConsent, isClosed } from '../caseMachine';
+import { isOrdered } from './bookingRules';
 import { currentBookings, earlierRounds, isFinding } from './rounds';
 import type {
   Booking,
@@ -88,6 +89,13 @@ export interface CaseFacts {
   booking?: Booking;
   /** Dieser Termin ist noch nicht erledigt */
   bookingOpen: boolean;
+  /**
+   * Der Betrieb hat den Auftrag (Nr. 34, isOrdered in bookingRules.ts): Er hat den Termin
+   * bestätigt, du hast verbindlich gebucht, oder die Reparatur ist geplant. Brichst du ab, bekommt
+   * er die Absage, und ob schon Kosten entstanden sind, klärt er mit dir. Fehlt bei einer
+   * unverbindlichen Anfrage.
+   */
+  order?: Booking;
   /**
    * Der Termin wartet auf „Zahlungspflichtig buchen“ (Nr. 31, Nr. 33). Bis zu diesem Tap bestätigt
    * der Betrieb ihn nicht, auch nicht in der Simulation.
@@ -256,6 +264,7 @@ export function selectCaseFacts(s: CaseFactsSource, caseId: Id): CaseFacts | und
     bookings,
     booking,
     bookingOpen: !!booking && booking.status !== 'erledigt',
+    order: booking && isOrdered(c, booking) ? booking : undefined,
     bindingDue: bindingDueOf(c, claim, deductible, bookings),
     lastVideoSession: s.videoSessions.filter((v) => v.caseId === caseId).at(-1),
     activeConsents,

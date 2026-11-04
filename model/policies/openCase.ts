@@ -79,8 +79,9 @@ export type OpenCasePlan =
 /**
  * Entscheidung Nr. 13: ein offener Fall pro Gerät. Ein neuer Versuch ohne Fortschritt ersetzt den
  * offenen Fall. Mit Fortschritt fragt ganz „Weitermachen“ oder „Neues Problem melden“. Erst nach
- * „Neues Problem melden“ wird der alte Fall abgebrochen, und nur, wo die Regeln das erlauben.
- * Ein Fall in der Reparatur bekommt also nur „Weitermachen“. Wer das Problem des offenen Falls
+ * „Neues Problem melden“ wird der alte Fall abgebrochen, und nur, wo die Regeln das erlauben und
+ * der Betrieb noch keinen Auftrag hat (Nr. 34). Ein Fall in der Reparatur bekommt also nur
+ * „Weitermachen“, abbrechen lässt er sich im Fall selbst. Wer das Problem des offenen Falls
  * selbst ändert (aendern), behält den Fall, solange die Regeln das Ändern erlauben.
  */
 export function planOpenCase(
@@ -95,7 +96,9 @@ export function planOpenCase(
     return { art: 'ersetzt', caseId: open.id };
   }
   if (!hasProgress(s, open)) return { art: 'ersetzt', caseId: open.id };
-  const canCancel = can(facts, 'abbrechen');
+  // Hat der Betrieb schon den Auftrag, bricht „Neues Problem melden“ den Fall nicht nebenbei ab.
+  // Das geht nur im Fall mit „Fall abbrechen“, wo die Absage an den Betrieb dabeisteht (Nr. 34).
+  const canCancel = can(facts, 'abbrechen') && !facts?.order;
   if (options.neuesProblem && canCancel) return { art: 'neu', cancel: open.id };
   return { art: 'frage_weitermachen', caseId: open.id, canCancel };
 }

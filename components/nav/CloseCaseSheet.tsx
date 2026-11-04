@@ -14,14 +14,24 @@ interface CloseCaseSheetProps {
   caseId?: string;
   visible: boolean;
   onClose: () => void;
+  /** Gleich mit dem Grund fürs Abbrechen beginnen, z. B. im Gespräch nach einem Widerruf */
+  startCancelling?: boolean;
 }
 
 /**
  * X im Fall: später weitermachen oder abbrechen mit Grund (B-04). Beides nur, wo die Regeln es
- * erlauben (R-01). Ein abgeschlossener Fall führt nur noch zur Übersicht. Ohne Fall bleibt nur
+ * erlauben (R-01), Abbrechen seit Nr. 34 auch in der Reparatur. Läuft ein Termin, steht vor dem
+ * Abbrechen, dass der Betrieb die Absage bekommt. Hat er den Auftrag schon, steht dabei, dass er
+ * mit dir klärt, ob Kosten entstanden sind. ganz sagt nie zu, dass es nichts kostet (§ 648 BGB).
+ * Ein abgeschlossener Fall führt nur noch zur Übersicht. Ohne Fall bleibt nur
  * „Später weitermachen“, das dann nur den Fall verlässt.
  */
-export function CloseCaseSheet({ caseId, visible, onClose }: CloseCaseSheetProps) {
+export function CloseCaseSheet({
+  caseId,
+  visible,
+  onClose,
+  startCancelling = false,
+}: CloseCaseSheetProps) {
   const t = de.closeCase;
   const exists = useAppStore((s) => (caseId ? !!s.cases[caseId] : false));
   const canPause = useAppStore((s) =>
@@ -30,6 +40,12 @@ export function CloseCaseSheet({ caseId, visible, onClose }: CloseCaseSheetProps
   const canCancel = useAppStore((s) =>
     caseId ? can(selectCaseFacts(s, caseId), 'abbrechen') : false,
   );
+  // Der Betrieb des laufenden Termins, und ob er den Auftrag schon hat (caseFacts.order)
+  const partner = useAppStore((s) => {
+    const f = caseId ? selectCaseFacts(s, caseId) : undefined;
+    return f?.bookingOpen ? f.booking?.provider.name : undefined;
+  });
+  const ordered = useAppStore((s) => (caseId ? !!selectCaseFacts(s, caseId)?.order : false));
   const pauseCase = useAppStore((s) => s.pauseCase);
   const runCommand = useAppStore((s) => s.runCommand);
   const [cancelling, setCancelling] = useState(false);
@@ -64,15 +80,15 @@ export function CloseCaseSheet({ caseId, visible, onClose }: CloseCaseSheetProps
     if (caseId && canCancel && reason) abort.run(caseId, reason);
   };
 
+  const reasons = (cancelling || startCancelling) && canCancel;
+
   return (
-    <Sheet
-      visible={visible}
-      onClose={close}
-      title={cancelling && canCancel ? t.reasonTitle : t.title}
-    >
+    <Sheet visible={visible} onClose={close} title={reasons ? t.reasonTitle : t.title}>
       {abort.toast ? <Toast message={abort.toast} /> : null}
-      {cancelling && canCancel ? (
+      {reasons ? (
         <>
+          {partner ? <Text variant="body">{t.partnerNotice(partner)}</Text> : null}
+          {partner && ordered ? <Text variant="body">{t.costsOpen(partner)}</Text> : null}
           <View style={styles.chips} accessibilityRole="radiogroup">
             {t.reasons.map((r) => (
               <ChoiceChip key={r} label={r} selected={reason === r} onPress={() => setReason(r)} />
@@ -98,8 +114,6 @@ export function CloseCaseSheet({ caseId, visible, onClose }: CloseCaseSheetProps
               fullWidth
               onPress={() => setCancelling(true)}
             />
-          ) : exists ? (
-            <Text variant="meta">{t.noCancel}</Text>
           ) : null}
         </>
       ) : (

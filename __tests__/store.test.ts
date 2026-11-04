@@ -164,16 +164,29 @@ describe('openCaseFor: ein offener Fall pro Gerät (Entscheidung Nr. 13)', () =>
     expect(openOf(s, 'd-1').map((c) => c.id)).toEqual([r.caseId]);
   });
 
-  test('in der Reparatur: kein Abbruch, kein Absturz, nur die Frage', () => {
+  // Seit Nr. 34 lässt sich die Reparatur abbrechen, aber nur im Fall selbst, wo die Absage an den
+  // Betrieb dabeisteht. „Neues Problem melden“ bricht einen Auftrag nicht nebenbei ab.
+  test('in der Reparatur mit Auftrag: kein Abbruch nebenbei, kein Absturz, nur die Frage', () => {
     const { s } = setup();
     const first = unwrap(s().openCaseFor('d-1', 'symptom', 'Wäsche noch nass'));
-    s().runCommand(first.caseId, 'hilfe_holen');
-    s().runCommand(first.caseId, 'selbst_zahlen');
+    unwrap(s().runCommand(first.caseId, 'hilfe_holen'));
+    unwrap(s().setFinding(first.caseId, 'reparatur', 'fachkraft'));
+    const booking = unwrap(
+      s().requestBooking({
+        caseId: first.caseId,
+        kind: 'reparatur',
+        partnerId: demoConfig.partners[0]!.id,
+        slotLabel: demoConfig.slots[0],
+        selfPay: true,
+      }),
+    );
+    expect(selectCaseFacts(s(), first.caseId)?.order?.id).toBe(booking.id);
     const r = unwrap(
       s().openCaseFor('d-1', 'symptom', 'Tür geht nicht auf', { neuesProblem: true }),
     );
     expect(r).toEqual({ art: 'frage_weitermachen', caseId: first.caseId });
     expect(s().cases[first.caseId]?.status).toBe('in_reparatur');
+    expect(s().bookings.find((b) => b.id === booking.id)?.status).toBe('angefragt');
     expect(openOf(s, 'd-1')).toHaveLength(1);
   });
 
@@ -276,18 +289,21 @@ describe('Befehle ohne Absturz: Result statt Exception', () => {
     expect(s().cases).toEqual({});
   });
 
+  // Bis Nr. 34 war das Beispiel „abbrechen“ in der Reparatur. Jetzt ist es der erledigte Fall.
   test('ein verbotener Übergang wird abgelehnt, Fall und Akte bleiben', () => {
     const { s } = setup();
     const c = s().createCase({ deviceId: 'd-1', entry: 'foto', problemLabel: 'x' });
     unwrap(s().runCommand(c.id, 'hilfe_holen'));
     unwrap(s().runCommand(c.id, 'selbst_zahlen'));
-    const before = { case: s().cases[c.id], events: s().events.length };
+    unwrap(s().runCommand(c.id, 'repariert'));
+    const before = { case: s().cases[c.id], events: s().events.length, bookings: s().bookings };
     expect(s().runCommand(c.id, 'abbrechen', { cancelReason: 'x' })).toEqual({
       ok: false,
-      refusal: { code: 'uebergang', from: 'in_reparatur', command: 'abbrechen' },
+      refusal: { code: 'uebergang', from: 'erledigt', command: 'abbrechen' },
     });
     expect(s().cases[c.id]).toBe(before.case);
     expect(s().events).toHaveLength(before.events);
+    expect(s().bookings).toBe(before.bookings);
   });
 
   test('Hilfe holen gibt den neuen Stand zurück, ein zweites Mal wird abgelehnt', () => {
@@ -1237,7 +1253,8 @@ describe('Widerruf in der Reparatur: keine Sackgasse (R-12)', () => {
     const { s, id } = held();
     const facts = selectCaseFacts(s(), id)!;
     expect(facts).toMatchObject({ status: 'in_reparatur', hold: 'weitergabe_betrieb' });
-    expect(availableActions(facts)).toEqual(['weitergabe_erneuern', 'pausieren']);
+    // Seit Nr. 34 auch abbrechen, ohne neue Weitergabe
+    expect(availableActions(facts)).toEqual(['weitergabe_erneuern', 'pausieren', 'abbrechen']);
     expect(s().simulateNext(id)).toBe(false);
   });
 
@@ -1311,5 +1328,167 @@ describe('Widerruf in der Reparatur: keine Sackgasse (R-12)', () => {
     ).toEqual({ art: 'frage_weitermachen', caseId: id });
     // Dort steht jetzt ein Weg weiter
     expect(can(selectCaseFacts(s(), id), 'weitergabe_erneuern')).toBe(true);
+  });
+});
+
+describe('Abbrechen in der Reparatur (Entscheidung Nr. 34)', () => {
+  const partner = demoConfig.partners[0]!;
+  const setup = () => {
+    const store = createAppStore(memoryStorage(), testEnv());
+    const s = () => store.getState();
+    return { store, s };
+  };
+  /** Selbst gezahlt: in der Reparatur, der Termin ist zahlungspflichtig gebucht */
+  const inRepair = (s: ReturnType<typeof setup>['s']) => {
+    const c = s().createCase({ deviceId: 'd-1', entry: 'foto', problemLabel: 'x' });
+    unwrap(s().escalate(c.id));
+    unwrap(s().setFinding(c.id, 'reparatur', 'fachkraft'));
+    const booking = unwrap(
+      s().requestBooking({
+        caseId: c.id,
+        kind: 'reparatur',
+        partnerId: partner.id,
+        slotLabel: demoConfig.slots[0],
+        selfPay: true,
+      }),
+    );
+    return { id: c.id, booking };
+  };
+  const cancelled = (s: ReturnType<typeof setup>['s'], id: string) =>
+    s().events.filter((e) => e.caseId === id && e.type === 'termin_abgesagt');
+
+  test('der Fall ist abgebrochen, der Termin storniert, die Absage steht in der Fallakte', () => {
+    const { s } = setup();
+    const { id, booking } = inRepair(s);
+    expect(s().cases[id]?.status).toBe('in_reparatur');
+    expect(can(selectCaseFacts(s(), id), 'abbrechen')).toBe(true);
+    expect(
+      unwrap(s().runCommand(id, 'abbrechen', { cancelReason: 'Hat sich erledigt' })),
+    ).toMatchObject({
+      status: 'abgebrochen',
+      cancelReason: 'Hat sich erledigt',
+    });
+    expect(s().bookings.find((b) => b.id === booking.id)?.status).toBe('storniert');
+    expect(cancelled(s, id)).toMatchObject([
+      {
+        actor: { kind: 'haushalt' },
+        payload: {
+          bookingId: booking.id,
+          kind: 'reparatur',
+          partner: partner.name,
+          slot: demoConfig.slots[0],
+          ordered: true,
+        },
+      },
+    ]);
+    // Der Betrieb bekommt nur die Absage: keine neue Weitergabe
+    expect(s().consents.filter((c) => c.purpose === 'weitergabe_betrieb')).toHaveLength(1);
+  });
+
+  test('danach kein Schritt mehr, weder per Timer noch per „Nächster Schritt“', () => {
+    const { s } = setup();
+    const { id } = inRepair(s);
+    expect(nextSimulationDue(s(), id)).toBeDefined();
+    unwrap(s().runCommand(id, 'abbrechen', { cancelReason: 'x' }));
+    expect(nextSimulationDue(s(), id)).toBeUndefined();
+    const before = s();
+    expect(s().simulateNext(id)).toBe(false);
+    expect(s().bookings).toBe(before.bookings);
+    expect(s().events).toBe(before.events);
+    expect(availableActions(selectCaseFacts(s(), id))).toEqual([]);
+  });
+
+  test('auch mit dem Betrieb unterwegs: storniert, und kein Befund oder Abschluss danach', () => {
+    const { s } = setup();
+    const { id, booking } = inRepair(s);
+    expect(s().simulateNext(id)).toBe(true);
+    expect(s().simulateNext(id)).toBe(true);
+    expect(s().bookings.find((b) => b.id === booking.id)?.status).toBe('unterwegs');
+    unwrap(s().runCommand(id, 'abbrechen', { cancelReason: 'x' }));
+    expect(s().simulateNext(id)).toBe(false);
+    expect(s().bookings.find((b) => b.id === booking.id)?.status).toBe('storniert');
+    expect(s().events.some((e) => e.caseId === id && e.type === 'reparatur_abgeschlossen')).toBe(
+      false,
+    );
+  });
+
+  test('eine Vor-Ort-Diagnose, die der Betrieb bestätigt hat, endet mit dem Abbruch', () => {
+    const { s } = setup();
+    const c = s().createCase({ deviceId: 'd-1', entry: 'foto', problemLabel: 'x' });
+    unwrap(s().escalate(c.id));
+    const visit = unwrap(
+      s().requestBooking({
+        caseId: c.id,
+        kind: 'vor_ort_diagnose',
+        partnerId: partner.id,
+        slotLabel: demoConfig.slots[0],
+        selfPay: false,
+      }),
+    );
+    expect(s().simulateNext(c.id)).toBe(true);
+    unwrap(s().bookBinding(c.id, demoConfig.prices.diagnosis));
+    expect(s().simulateNext(c.id)).toBe(true);
+    expect(s().bookings.find((b) => b.id === visit.id)?.status).toBe('bestaetigt');
+    unwrap(s().runCommand(c.id, 'abbrechen', { cancelReason: 'x' }));
+    // Früher lief die Simulation hier weiter bis zum Befund
+    expect(s().simulateNext(c.id)).toBe(false);
+    expect(s().bookings.find((b) => b.id === visit.id)?.status).toBe('storniert');
+    expect(s().diagnoses.filter((d) => d.caseId === c.id && d.source === 'betrieb')).toEqual([]);
+    expect(cancelled(s, c.id)).toMatchObject([{ payload: { ordered: true } }]);
+  });
+
+  test('eine unverbindliche Anfrage wird abgesagt, ohne Auftrag', () => {
+    const { s } = setup();
+    const c = s().createCase({ deviceId: 'd-1', entry: 'foto', problemLabel: 'x' });
+    unwrap(s().escalate(c.id));
+    unwrap(
+      s().requestBooking({
+        caseId: c.id,
+        kind: 'vor_ort_diagnose',
+        partnerId: partner.id,
+        slotLabel: demoConfig.slots[0],
+        selfPay: false,
+      }),
+    );
+    expect(selectCaseFacts(s(), c.id)?.order).toBeUndefined();
+    unwrap(s().runCommand(c.id, 'abbrechen', { cancelReason: 'x' }));
+    expect(cancelled(s, c.id)).toMatchObject([{ payload: { ordered: false } }]);
+    expect(
+      s()
+        .bookings.filter((b) => b.caseId === c.id)
+        .map((b) => b.status),
+    ).toEqual(['storniert']);
+  });
+
+  // Vor Nr. 34 blieb der Termin beim Abbrechen stehen. Ein gespeicherter Stand kann das noch haben.
+  test('ein älterer Stand, abgebrochen mit laufendem Termin: kein Schritt mehr', () => {
+    const { store, s } = setup();
+    const { id, booking } = inRepair(s);
+    expect(s().simulateNext(id)).toBe(true);
+    store.setState((x) => ({
+      cases: { ...x.cases, [id]: { ...x.cases[id]!, status: 'abgebrochen' } },
+    }));
+    expect(s().bookings.find((b) => b.id === booking.id)?.status).toBe('bestaetigt');
+    expect(nextSimulationDue(s(), id)).toBeUndefined();
+    const before = s();
+    expect(s().simulateNext(id)).toBe(false);
+    expect(s()).toBe(before);
+  });
+
+  test('nach einem Widerruf: abbrechen geht, ohne neue Weitergabe an den Betrieb', () => {
+    const { s } = setup();
+    const { id, booking } = inRepair(s);
+    const consent = s().consents.find((c) => c.purpose === 'weitergabe_betrieb')!;
+    s().revokeConsent(consent.id);
+    const facts = selectCaseFacts(s(), id)!;
+    expect(facts.hold).toBe('weitergabe_betrieb');
+    expect(availableActions(facts)).toEqual(
+      expect.arrayContaining(['weitergabe_erneuern', 'abbrechen']),
+    );
+    unwrap(s().runCommand(id, 'abbrechen', { cancelReason: 'x' }));
+    expect(s().bookings.find((b) => b.id === booking.id)?.status).toBe('storniert');
+    expect(s().consents.filter((c) => c.purpose === 'weitergabe_betrieb' && !c.revokedAt)).toEqual(
+      [],
+    );
   });
 });

@@ -9,7 +9,15 @@ import {
   planOpenCase,
   type OpenCaseSource,
 } from '@/model/policies/openCase';
-import type { Case, CaseStatus, ChatMessage, GuideRun, VideoSession } from '@/model/types';
+import type {
+  Booking,
+  BookingStatus,
+  Case,
+  CaseStatus,
+  ChatMessage,
+  GuideRun,
+  VideoSession,
+} from '@/model/types';
 
 const NOW = '2026-11-03T10:00:00+01:00';
 const LATER = '2026-11-03T11:00:00+01:00';
@@ -68,6 +76,20 @@ const chat: ChatMessage = {
   at: NOW,
 };
 const video = { id: 'video-1', caseId: 'GS-1' } as VideoSession;
+
+/** Reparaturtermin des Falls GS-1 */
+function repairBooking(status: BookingStatus): Booking {
+  return {
+    id: 'termin-1',
+    caseId: 'GS-1',
+    kind: 'reparatur',
+    provider: { id: 'brandt', kind: 'betrieb', name: 'Hausgeräte Brandt', authorized: true },
+    slotLabel: 'Mo vormittags',
+    status,
+    subjectToApproval: false,
+    createdAt: NOW,
+  };
+}
 
 describe('findOpenCase', () => {
   test('ohne Fall für das Gerät: keiner', () => {
@@ -232,13 +254,39 @@ describe('planOpenCase (Entscheidung Nr. 13)', () => {
     );
   });
 
-  test('ein Fall in der Reparatur lässt sich nicht ersetzen, nur weitermachen', () => {
-    const s = source([makeCase({ status: 'in_reparatur' })]);
+  // Seit Nr. 34 lässt sich die Reparatur abbrechen. Mit Auftrag beim Betrieb geht das nur im Fall,
+  // wo die Absage dabeisteht, nicht nebenbei über „Neues Problem melden“.
+  test('ein Fall in der Reparatur mit Auftrag lässt sich nicht ersetzen, nur weitermachen', () => {
+    const s = source([makeCase({ status: 'in_reparatur' })], {
+      bookings: [repairBooking('angefragt')],
+    });
     expect(planOpenCase(s, 'geraet-1', { neuesProblem: true, aendern: 'GS-1' })).toEqual({
       art: 'frage_weitermachen',
       caseId: 'GS-1',
       canCancel: false,
     });
+  });
+
+  test('ein bestätigter oder verbindlich gebuchter Termin ist ein Auftrag, eine Anfrage nicht', () => {
+    const eskaliert = makeCase({ status: 'eskaliert', photoIds: ['foto-1'] });
+    const visit = (extra: Partial<Booking>) =>
+      source([eskaliert], {
+        bookings: [{ ...repairBooking('angefragt'), kind: 'vor_ort_diagnose', ...extra }],
+      });
+    expect(planOpenCase(visit({}), 'geraet-1', { neuesProblem: true })).toEqual({
+      art: 'neu',
+      cancel: 'GS-1',
+    });
+    for (const extra of [
+      { status: 'bestaetigt' as const },
+      { binding: { at: NOW, amount: 7900 } },
+    ]) {
+      expect(planOpenCase(visit(extra), 'geraet-1', { neuesProblem: true })).toEqual({
+        art: 'frage_weitermachen',
+        caseId: 'GS-1',
+        canCancel: false,
+      });
+    }
   });
 
   test('das Problem des offenen Falls ändern: derselbe Fall, auch mit Fortschritt', () => {

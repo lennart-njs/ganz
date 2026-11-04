@@ -12,6 +12,7 @@ import { BotSays, QuickReplies, Typing, UserSaid, type Reply } from '@/component
 import { CostCompare } from '@/components/app/CostCompare';
 import { DemoHint } from '@/components/app/DemoHint';
 import { ScopeItems } from '@/components/app/ScopeItems';
+import { CloseCaseSheet } from '@/components/nav/CloseCaseSheet';
 import { leaveCase } from '@/components/nav/leaveCase';
 import {
   Button,
@@ -101,6 +102,8 @@ export default function FallGespraech() {
   const [slot, setSlot] = useState<string>();
   /** Zeitfenster für den Rückruf, bis die Weitergabe bestätigt ist */
   const [callbackSlot, setCallbackSlot] = useState<string>();
+  /** „Fall abbrechen“ nach einem Widerruf: das Sheet gleich mit dem Grund (Nr. 34) */
+  const [cancelSheet, setCancelSheet] = useState(false);
   const [input, setInput] = useState('');
   const [inputError, setInputError] = useState<string>();
 
@@ -739,6 +742,19 @@ export default function FallGespraech() {
       />,
     );
   }
+  // Mit dem Abbruch bekommt der Betrieb die Absage. Hatte er den Auftrag, klärt er mit dir, ob
+  // schon Kosten entstanden sind (Nr. 34). Kein Versprechen, dass es nichts kostet.
+  for (const e of of('termin_abgesagt')) {
+    const partner = String(e.payload.partner);
+    add(
+      e.at,
+      e.id,
+      <BotSays
+        lines={[de.closeCase.partnerNotice(partner)]}
+        hint={e.payload.ordered ? de.closeCase.costsOpen(partner) : undefined}
+      />,
+    );
+  }
 
   // Gespräch mit dem Reparatur-Assistenten. Die erste Antwort sagt, dass ein Computerprogramm
   // antwortet und kein Mensch (Entscheidung Nr. 6, Art. 50 Abs. 1 KI-VO).
@@ -985,6 +1001,11 @@ export default function FallGespraech() {
       </BotSays>,
     );
     reply('weitergabe-erneuern', t.renewShare, () => renew.run(), recipient);
+    // Statt weiterzumachen den Fall abbrechen, auch in der Reparatur (Nr. 34). Das Sheet nennt
+    // die Absage an den Betrieb, bevor du abbrichst.
+    if (can(facts, 'abbrechen')) {
+      reply('abbrechen', de.closeCase.cancel, () => setCancelSheet(true));
+    }
     reply('status', de.status.caseFile, () => router.push(`/fall/${caseId}/fallakte`));
   } else if (can(facts, 'zahlungspflichtig_buchen') && facts.bindingDue) {
     // Nach der Freigabe oder nach dem Preis für die Vor-Ort-Diagnose: Erst dieser Tap macht die
@@ -1298,6 +1319,12 @@ export default function FallGespraech() {
         caseId={caseId}
         slot={callbackSlot}
         onClose={() => setCallbackSlot(undefined)}
+      />
+      <CloseCaseSheet
+        caseId={caseId}
+        visible={cancelSheet}
+        startCancelling
+        onClose={() => setCancelSheet(false)}
       />
     </CaseScreen>
   );

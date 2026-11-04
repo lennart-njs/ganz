@@ -2,12 +2,12 @@
 // Jeder Befund hat eine „Ausgangslage“, die heute grün ist, und einen Test mit dem erwarteten
 // Verhalten. Der ist als test.failing markiert, bis der Befund behoben ist. Mit der Behebung wird
 // er im selben Commit zu test.
-import { act, renderRouter, screen } from 'expo-router/testing-library';
+import { act, fireEvent, renderRouter, screen } from 'expo-router/testing-library';
 import { router } from 'expo-router';
 
 import { demoConfig } from '@/config/demo.config';
 import { de } from '@/i18n/de';
-import { useAppStore } from '@/store/appStore';
+import { nextSimulationDue, useAppStore } from '@/store/appStore';
 import { APP } from '@/test/app';
 import {
   addWasher,
@@ -15,6 +15,7 @@ import {
   caseInRepair,
   caseOf,
   consentsFor,
+  runningBookings,
   start,
   tap,
   tapIfOffered,
@@ -70,34 +71,73 @@ describe('R-01 „Fall abbrechen“ in jedem Status', () => {
   // components/nav/CloseCaseSheet.tsx:37 bietet „Fall abbrechen“ in jedem Status an. In
   // erledigt, in_reparatur und abgebrochen wirft der Tap auf „Fall abbrechen“ einen TransitionError.
   // Behoben: Das Sheet fragt can(facts, 'abbrechen') und can(facts, 'pausieren') (Schritt 22).
-  // Seit Schritt 24 lehnt der Store ab, statt zu werfen. Darum prüft der Test für jeden Status,
-  // dass der Button fehlt, und nicht nur, dass der Status gleich bleibt (Schritt 28).
+  // Seit Schritt 24 lehnt der Store ab, statt zu werfen. Darum prüft der Test für jeden Status die
+  // Buttons, und nicht nur, dass der Status gleich bleibt (Schritt 28).
+  // Seit Entscheidung Nr. 34 geht Abbrechen auch in der Reparatur. Dort prüft der Test die neue
+  // Regel: „Fall abbrechen“ steht da, vorher die Absage an den Betrieb und kein Versprechen, dass
+  // es nichts kostet. Der Tap wirft nicht, der Termin ist storniert, die Simulation steht. In
+  // erledigt und abgebrochen gibt es weiter weder Abbrechen noch Pausieren.
   test('R-01 „Fall abbrechen“ steht nur da, wo der Fall abbrechbar ist, und wirft nie', async () => {
     const { done, repair, cancelled } = closedAndRepairCases();
     const button = (name: string) => screen.queryByRole('button', { name });
+    const closedSheet = async (url: string) => {
+      await act(async () => router.replace(url));
+      await tap(de.a11y.close);
+      expect(screen.getByRole('header', { name: de.closeCase.title })).toBeTruthy();
+      expect(button(de.closeCase.cancel)).toBeNull();
+      expect(button(de.closeCase.later)).toBeNull();
+      expect(button(de.closeCase.leave)).toBeTruthy();
+    };
     await openSheetInCaseFile(done);
     expect(button(de.closeCase.cancel)).toBeNull();
     expect(button(de.closeCase.later)).toBeNull();
     expect(button(de.closeCase.leave)).toBeTruthy();
 
-    // In der Reparatur: Später weitermachen ja, Abbrechen nein, mit einem Satz dazu
+    // In der Reparatur: Später weitermachen und Abbrechen. Vor dem Abbrechen steht die Absage.
+    const partner = useAppStore.getState().bookings.find((b) => b.caseId === repair)!.provider.name;
+    expect(runningBookings(repair)).toHaveLength(1);
     await act(async () => router.replace(`/fall/${repair}`));
     await tap(de.a11y.close);
     expect(screen.getByRole('header', { name: de.closeCase.title })).toBeTruthy();
-    expect(button(de.closeCase.cancel)).toBeNull();
     expect(button(de.closeCase.later)).toBeTruthy();
-    expect(screen.getByText(de.closeCase.noCancel)).toBeTruthy();
+    await tap(de.closeCase.cancel);
+    expect(screen.getByRole('header', { name: de.closeCase.reasonTitle })).toBeTruthy();
+    expect(screen.getByText(de.closeCase.partnerNotice(partner))).toBeTruthy();
+    expect(screen.getByText(de.closeCase.costsOpen(partner))).toBeTruthy();
+    const sheet = screen.container.queryAll((x) => x.props.accessibilityViewIsModal === true)[0]!;
+    for (const n of sheet.queryAll((x) => x.type === 'Text')) {
+      expect(String(n.props.children)).not.toMatch(/kostenlos|kostenfrei|keine Kosten|nichts/i);
+    }
+    await fireEvent.press(screen.getByRole('radio', { name: de.closeCase.reasons[1] }));
+    await tap(de.closeCase.confirmCancel);
+    expect(caseOf(repair)).toMatchObject({
+      status: 'abgebrochen',
+      cancelReason: de.closeCase.reasons[1],
+    });
+    // Kein Termin läuft mehr, die Absage steht in der Fallakte, und es kommt kein Schritt mehr
+    expect(runningBookings(repair)).toEqual([]);
+    const s = useAppStore.getState();
+    expect(s.bookings.filter((b) => b.caseId === repair).map((b) => b.status)).toEqual([
+      'storniert',
+    ]);
+    expect(
+      s.events.filter((e) => e.caseId === repair && e.type === 'termin_abgesagt'),
+    ).toMatchObject([{ payload: { partner, ordered: true } }]);
+    expect(nextSimulationDue(s, repair)).toBeUndefined();
+    let stepped = true;
+    await act(async () => {
+      stepped = useAppStore.getState().simulateNext(repair);
+    });
+    expect(stepped).toBe(false);
+    expect(useAppStore.getState().bookings.find((b) => b.caseId === repair)?.status).toBe(
+      'storniert',
+    );
 
-    // Abgebrochen: nur noch zur Übersicht
-    await act(async () => router.replace(`/fall/${cancelled}/fallakte`));
-    await tap(de.a11y.close);
-    expect(screen.getByRole('header', { name: de.closeCase.title })).toBeTruthy();
-    expect(button(de.closeCase.cancel)).toBeNull();
-    expect(button(de.closeCase.later)).toBeNull();
-    expect(button(de.closeCase.leave)).toBeTruthy();
+    // Danach ist der Fall abgeschlossen: nur noch zur Übersicht, wie jeder abgebrochene
+    await closedSheet(`/fall/${repair}/fallakte`);
+    await closedSheet(`/fall/${cancelled}/fallakte`);
 
     expect(caseOf(done).status).toBe('erledigt');
-    expect(caseOf(repair).status).toBe('in_reparatur');
     expect(caseOf(cancelled)).toMatchObject({
       status: 'abgebrochen',
       cancelReason: de.closeCase.reasons[0],
@@ -159,11 +199,15 @@ describe('R-03 „Neues Problem melden“ bei einem Fall in der Reparatur', () =
   // TransitionError, sobald du nach „Neues Problem melden“ ein Problem wählst.
   // Behoben: Problem melden fragt planOpenCase (model/policies/openCase.ts) und öffnet den Fall
   // nur über openCaseFor. „Neues Problem melden“ gibt es nur bei can(facts, 'abbrechen').
-  test('R-03 ein Fall, der sich nicht abbrechen lässt, bietet nur „Weitermachen“', async () => {
+  // Seit Nr. 34 lässt sich die Reparatur abbrechen, aber nur im Fall, wo die Absage an den Betrieb
+  // dabeisteht. Hat der Betrieb den Auftrag, gibt es hier weiter nur „Weitermachen“.
+  test('R-03 ein Fall mit Auftrag beim Betrieb bietet nur „Weitermachen“', async () => {
     const { id } = await reportWhileInRepair();
     expect(screen.queryByRole('button', { name: de.thread.newProblem })).toBeNull();
+    expect(screen.getByText(de.thread.runningCaseOnlyContinue)).toBeTruthy();
     expect(screen.getByRole('button', { name: de.thread.continueCase })).toBeTruthy();
     expect(caseOf(id).status).toBe('in_reparatur');
+    expect(runningBookings(id)).toHaveLength(1);
   });
 });
 

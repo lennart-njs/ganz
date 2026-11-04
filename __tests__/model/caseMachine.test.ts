@@ -199,11 +199,21 @@ describe('Befehle ohne Exception (tryApplyCommand)', () => {
     );
   });
 
+  // Bis Nr. 34 war das Beispiel „abbrechen“ in der Reparatur, das geht jetzt
   test('eine Ablehnung ändert den Fall nicht', () => {
-    const c = makeCase('in_reparatur');
+    const c = makeCase('erledigt');
     const before = structuredClone(c);
-    tryApplyCommand(c, 'abbrechen', ctx());
+    expect(tryApplyCommand(c, 'abbrechen', ctx())).toEqual({
+      ok: false,
+      refusal: { code: 'uebergang', from: 'erledigt', command: 'abbrechen' },
+    });
     expect(c).toEqual(before);
+  });
+
+  test('abbrechen in der Reparatur (Nr. 34): abgebrochen, mit Grund und Ereignis', () => {
+    const r = applyCommand(makeCase('in_reparatur'), 'abbrechen', ctx({ cancelReason: 'x' }));
+    expect(r.case).toMatchObject({ status: 'abgebrochen', cancelReason: 'x', closedAt: NOW });
+    expect(r.events.map((e) => e.type)).toEqual(['abgebrochen', 'status_geaendert']);
   });
 });
 

@@ -24,7 +24,7 @@ import {
   type CommandResult,
 } from '@/model/caseMachine';
 import { can } from '@/model/policies/actions';
-import { planBooking } from '@/model/policies/bookingRules';
+import { bookingsToCancel, isOrdered, planBooking } from '@/model/policies/bookingRules';
 import { selectCaseFacts, type BindingReason, type HoldPurpose } from '@/model/policies/caseFacts';
 import { scopedConsent } from '@/model/policies/consentScopes';
 import {
@@ -526,6 +526,31 @@ export function createAppStore(storage: StateStorage = AsyncStorage, env: StoreE
           at: env.now(),
         });
 
+        /**
+         * Die Absage an den Betrieb beim Abbrechen (Entscheidung Nr. 34), ohne zu schreiben: Jeder
+         * Termin, der noch läuft, wird storniert, mit dem Ereignis termin_abgesagt. ordered sagt, ob
+         * der Betrieb den Auftrag schon hatte. Dann klärt er mit dir, ob Kosten entstanden sind.
+         * Weitergegeben wird nur die Absage, dafür reicht die Weitergabe, mit der er den Termin bekam.
+         */
+        const draftCancelBookings = (c: Case) => {
+          const bookings = bookingsToCancel(c, get().bookings);
+          const events = bookings.map((b) =>
+            draftEvent({
+              caseId: c.id,
+              type: 'termin_abgesagt',
+              actor: householdActor(),
+              payload: {
+                bookingId: b.id,
+                kind: b.kind,
+                partner: b.provider.name,
+                slot: b.slotLabel,
+                ordered: isOrdered(c, b),
+              },
+            }),
+          );
+          return { bookings, events };
+        };
+
         return {
           ...initialData,
 
@@ -675,7 +700,21 @@ export function createAppStore(storage: StateStorage = AsyncStorage, env: StoreE
             if (!c) return missingCase(caseId);
             const result = draftCommand(c, command, options);
             if (!result.ok) return result;
-            commit(result.value);
+            // Mit dem Abbruch bekommt der Betrieb die Absage (Nr. 34). Danach läuft kein Termin
+            // mehr, und die Simulation hat keinen Schritt mehr.
+            const cancelled = command === 'abbrechen' ? draftCancelBookings(c) : undefined;
+            if (!cancelled?.bookings.length) {
+              commit(result.value);
+              return ok(result.value.case);
+            }
+            const ids = cancelled.bookings.map((b) => b.id);
+            set((s) => ({
+              cases: { ...s.cases, [caseId]: result.value.case },
+              bookings: s.bookings.map((b) =>
+                ids.includes(b.id) ? { ...b, status: 'storniert' as const } : b,
+              ),
+              events: [...s.events, ...result.value.events, ...cancelled.events],
+            }));
             return ok(result.value.case);
           },
 
@@ -1350,6 +1389,8 @@ export function createAppStore(storage: StateStorage = AsyncStorage, env: StoreE
             const cfg = demoConfig;
             const c = get().cases[caseId];
             if (!c) return false;
+            // Ein geschlossener Fall hat keinen nächsten Schritt, auch nicht nach dem Abbruch (Nr. 34)
+            if (isClosed(c.status)) return false;
             // Widerrufene Weitergabe: Versicherer und Betrieb machen nicht weiter (R-12)
             if (simulationHold(get(), caseId)) return false;
             const booking = activeBooking(get(), caseId);
@@ -1730,7 +1771,7 @@ export function simulationHold(s: AppData, caseId: Id): ConsentPurpose | undefin
 /** Wann der nächste simulierte Schritt fällig ist (ms seit 1970). Ohne nächsten Schritt: undefined. */
 export function nextSimulationDue(s: AppData, caseId: Id): number | undefined {
   const c = s.cases[caseId];
-  if (!c) return undefined;
+  if (!c || isClosed(c.status)) return undefined;
   if (simulationHold(s, caseId)) return undefined;
   // Wartet auf „Zahlungspflichtig buchen“: Hier passiert nichts ohne deinen Tap (Nr. 31)
   if (selectCaseFacts(s, caseId)?.bindingDue) return undefined;

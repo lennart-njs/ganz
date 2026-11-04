@@ -47,7 +47,12 @@ export const TRANSITIONS: Record<CaseStatus, Partial<Record<CaseCommand, CaseSta
   },
   freigegeben: { termin_bestaetigt: 'in_reparatur', abbrechen: 'abgebrochen' },
   abgelehnt: { selbst_zahlen: 'in_reparatur', abbrechen: 'abgebrochen' },
-  in_reparatur: { repariert: 'erledigt', problem_besteht_weiter: 'eskaliert' },
+  // Abbrechen auch in der Reparatur (Entscheidung Nr. 34): Der Betrieb bekommt die Absage
+  in_reparatur: {
+    repariert: 'erledigt',
+    problem_besteht_weiter: 'eskaliert',
+    abbrechen: 'abgebrochen',
+  },
   erledigt: { problem_besteht_weiter: 'eskaliert' },
   abgebrochen: {},
 };

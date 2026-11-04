@@ -119,7 +119,12 @@ const table: [CaseStatus, Partial<CaseFacts>, ActionKey[]][] = [
     { ...withContract, claim: 'abgelehnt' },
     ['selbst_zahlen_nach_ablehnung', 'termin_selbst', 'pausieren', 'abbrechen'],
   ],
-  ['in_reparatur', { quote, payer: 'haushalt', ...repair('bestaetigt') }, ['pausieren']],
+  // Seit Nr. 34 auch abbrechen: Der Betrieb bekommt die Absage
+  [
+    'in_reparatur',
+    { quote, payer: 'haushalt', ...repair('bestaetigt') },
+    ['pausieren', 'abbrechen'],
+  ],
   ['erledigt', {}, ['problem_besteht_weiter']],
   ['abgebrochen', { ...withContract }, []],
 ];
@@ -166,10 +171,18 @@ describe('Status-Maschine', () => {
 });
 
 describe('Abbrechen und Später weitermachen (R-01)', () => {
-  test.each(['in_reparatur', 'erledigt', 'abgebrochen'] as const)(
-    '%s: kein Abbrechen',
+  test.each(['erledigt', 'abgebrochen'] as const)('%s: kein Abbrechen', (status) => {
+    expect(can(facts(status), 'abbrechen')).toBe(false);
+  });
+
+  // Entscheidung Nr. 34: Abbrechen geht auch in der Reparatur, mit jedem Termin und ohne gültige
+  // Weitergabe. Der Betrieb bekommt nur die Absage.
+  test.each(['angefragt', 'bestaetigt', 'unterwegs', 'erledigt'] as const)(
+    'in der Reparatur mit Termin %s: Abbrechen geht',
     (status) => {
-      expect(can(facts(status), 'abbrechen')).toBe(false);
+      const f = facts('in_reparatur', { quote, payer: 'haushalt', ...repair(status) });
+      expect(can(f, 'abbrechen')).toBe(true);
+      expect(can({ ...f, hold: 'weitergabe_betrieb' }, 'abbrechen')).toBe(true);
     },
   );
 
@@ -377,7 +390,8 @@ describe('Nach einem Widerruf (R-12)', () => {
       ...repair('bestaetigt'),
       hold: 'weitergabe_betrieb',
     });
-    expect(availableActions(repairing)).toEqual(['weitergabe_erneuern', 'pausieren']);
+    // Seit Nr. 34 auch abbrechen: Der Betrieb bekommt nur die Absage
+    expect(availableActions(repairing)).toEqual(['weitergabe_erneuern', 'pausieren', 'abbrechen']);
     const reviewing = facts('freigabe_noetig', {
       ...withContract,
       claim: 'in_pruefung',
