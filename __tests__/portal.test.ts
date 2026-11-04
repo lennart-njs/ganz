@@ -4,6 +4,8 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
+import * as ts from 'typescript';
+
 import { fruendSettings, messagePreview, portalSeed } from '@/config/portal.demo';
 import { de } from '@/i18n/de';
 import { fillTemplate, settingsSections } from '@/model/portal';
@@ -194,17 +196,54 @@ describe('Händlerportal: erfundene Werte', () => {
       .filter((f) => /\.tsx?$/.test(f))
       .map((f) => path.join(sub, f)),
   );
+  const people = [...portalSeed.customers, ...s.team.map((m) => m.name), messagePreview.customer];
+  const firstNames = [...new Set(people.map((n) => n.split(' ')[0]!))];
+  const invented = new RegExp(`\\b(?:${firstNames.join('|')})\\b|\\bGS-\\d`);
+
+  /**
+   * Text im Code: Strings, Template-Strings und JSX-Text, gelesen mit dem Parser von TypeScript.
+   * Ein Name zählt überall im Text, nicht nur am Anfang. Kommentare und Bezeichner zählen nicht.
+   */
+  function inventedTexts(file: string, code: string): string[] {
+    const source = ts.createSourceFile(file, code, ts.ScriptTarget.Latest, true);
+    const hits: string[] = [];
+    const visit = (node: ts.Node) => {
+      if (
+        ts.isStringLiteralLike(node) ||
+        ts.isTemplateHead(node) ||
+        ts.isTemplateMiddle(node) ||
+        ts.isTemplateTail(node) ||
+        ts.isJsxText(node)
+      ) {
+        if (invented.test(node.text)) {
+          const { line } = source.getLineAndCharacterOfPosition(node.getStart(source));
+          hits.push(`${file}:${line + 1}: ${node.text.trim()}`);
+        }
+      }
+      ts.forEachChild(node, visit);
+    };
+    visit(source);
+    return hits;
+  }
+
+  test('die Suche findet Namen und Fallnummern auch mitten im Text', () => {
+    const probe = [
+      "const a = { kunde: 'Robin', fall: 'GS-24816' };",
+      "const b = { kunde: 'Kundin Robin', fall: 'Fall GS-24816' };",
+      'const c = `Fall GS-24816 für ${name}`;',
+      'const d = `Hallo ${name}, hier ist Sandra`;',
+      'const e = <legend>{t.messages.templates} Robin GS-24816</legend>;',
+      'const f = <Feld label="Ansprechpartner Markus" />;',
+      '// Robin und GS-24816 im Kommentar zählen nicht',
+      'const Robinson = robin;',
+    ].join('\n');
+    expect(inventedTexts('probe.tsx', probe).map((h) => Number(h.split(':')[1]))).toEqual([
+      1, 1, 2, 2, 3, 4, 5, 6,
+    ]);
+  });
 
   test('kein Vorname aus der Demo und keine Fallnummer als Text im Code', () => {
-    const people = [...portalSeed.customers, ...s.team.map((m) => m.name), messagePreview.customer];
-    const firstNames = [...new Set(people.map((n) => n.split(' ')[0]!))];
-    const literal = new RegExp(`['"\`](?:${firstNames.join('|')})\\b|['"\`]GS-\\d`);
-    const hits = files.flatMap((f) =>
-      fs
-        .readFileSync(path.join(dir, f), 'utf8')
-        .split('\n')
-        .flatMap((line, i) => (literal.test(line) ? [`${f}:${i + 1}: ${line.trim()}`] : [])),
-    );
+    const hits = files.flatMap((f) => inventedTexts(f, fs.readFileSync(path.join(dir, f), 'utf8')));
     expect(files.length).toBeGreaterThan(20);
     expect(firstNames).toEqual(expect.arrayContaining(['Robin', 'Sandra', 'Markus']));
     expect(hits).toEqual([]);
