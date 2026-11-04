@@ -162,6 +162,6 @@ Eine Gegenprüfung hat die Umsetzung von Schritt 28 noch einmal durchgesehen. Ei
 | W-F4 | niedrig | Die R-08-Tests und der Test zum Zurücksetzen blieben ohne ihre Behebung grün | behoben: neue Tests, die genau die Regel treffen | 874a803 | siehe R-08 oben und Nr. 13 |
 | W-F5 | niedrig | Die Textregel übersah Text in JSX-Props wie `text=` und galt nicht für `.js` und `.jsx` | behoben | 5419466 | `lint.test.ts`, describe „Lücken aus der Gegenprüfung“ |
 | W-F6 | niedrig | Die Statusregel übersah `has`, `Object.is`, Arrays, `??`, spätere Zuweisungen und Selektoren | behoben. Ein Status aus einer eigenen Funktion fällt weiter nicht auf | 5419466 | `lint.test.ts`: „Status über has, Object.is, ein Array, ??, eine spätere Zuweisung und einen Selektor“ |
-| W-F7 | niedrig | BEFUNDE nannte nicht für jeden Befund einen Test | behoben für B-01, B-46, Nr. 9 und Nr. 11. Ohne Test bleiben Nr. 12 (nur Doku) und die Tabelle P2 (nur Stand) | dieser Commit | `navigation.test.tsx` (B-01), `glossary.test.ts` (B-46), `build/ciAndJest.test.ts` (Nr. 9, 11) |
+| W-F7 | niedrig | BEFUNDE nannte nicht für jeden Befund einen Test | behoben für B-01, B-46, Nr. 9 und Nr. 11. Ohne Test bleiben Nr. 12 (nur Doku) und die Tabelle P2 (nur Stand) | 3e735b9 | `navigation.test.tsx` (B-01), `glossary.test.ts` (B-46), `build/ciAndJest.test.ts` (Nr. 9, 11) |
 
 F2, R2 aus der Prüfung der Regeln und F2 aus der Prüfung der Wahrheit sind derselbe Befund. Er steht oben als F2.
