@@ -49,8 +49,17 @@ describe('Händlerportal im Prüfskript und in CI', () => {
   /**
    * scripts/ci-checks.sh in einem leeren Ordner. npm, gitleaks und osv-scanner sind Attrappen, die
    * nur ihre Argumente mitschreiben. So zeigt der Test, was das Script aufruft und in welcher Reihenfolge.
+   * Mit `failOn` endet genau dieser Aufruf mit Fehler, wie ein roter Typecheck oder Build.
    */
-  function run({ ci, portalModules }: { ci: boolean; portalModules: boolean }) {
+  function run({
+    ci,
+    portalModules,
+    failOn = '',
+  }: {
+    ci: boolean;
+    portalModules: boolean;
+    failOn?: string;
+  }) {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'machs-ci-checks-'));
     try {
       fs.mkdirSync(path.join(dir, 'scripts'));
@@ -65,7 +74,11 @@ describe('Händlerportal im Prüfskript und in CI', () => {
       const log = path.join(dir, 'aufrufe.log');
       for (const name of ['npm', 'gitleaks', 'osv-scanner']) {
         const file = path.join(dir, 'bin', name);
-        fs.writeFileSync(file, `#!/usr/bin/env bash\necho "${name} $*" >> "${log}"\n`);
+        fs.writeFileSync(
+          file,
+          `#!/usr/bin/env bash\necho "${name} $*" >> "${log}"\n` +
+            `if [ "${name} $*" = "$FAIL_ON" ]; then exit 3; fi\n`,
+        );
         fs.chmodSync(file, 0o755);
       }
       const result = spawnSync('bash', [path.join(dir, 'scripts', 'ci-checks.sh')], {
@@ -73,6 +86,7 @@ describe('Händlerportal im Prüfskript und in CI', () => {
           ...process.env,
           PATH: `${path.join(dir, 'bin')}${path.delimiter}${process.env.PATH ?? ''}`,
           CI: ci ? 'true' : '',
+          FAIL_ON: failOn,
           BASH_ENV: '',
         },
         encoding: 'utf8',
@@ -121,6 +135,38 @@ describe('Händlerportal im Prüfskript und in CI', () => {
       ...after,
     ]);
     expect(r.stdout).not.toContain('Hinweis: next build');
+  });
+
+  // Die Garantie des Schritts: Ein roter Schritt im Portal macht das Prüfskript rot, und danach
+  // läuft nichts mehr. commit-if-green.sh und CI verlassen sich auf den Exit-Code.
+  test.each([
+    {
+      fall: 'npm ci im Portal scheitert',
+      ci: false,
+      portalModules: false,
+      failOn: 'npm --prefix portal ci',
+      calls: ['npm --prefix portal ci'],
+    },
+    {
+      fall: 'der Typecheck des Portals ist rot',
+      ci: false,
+      portalModules: true,
+      failOn: 'npm --prefix portal run typecheck',
+      calls: ['npm --prefix portal run typecheck'],
+    },
+    {
+      fall: 'next build in CI ist rot',
+      ci: true,
+      portalModules: true,
+      failOn: 'npm --prefix portal run build',
+      calls: ['npm --prefix portal run typecheck', 'npm --prefix portal run build'],
+    },
+  ])('$fall: das Prüfskript ist rot, gitleaks und osv-scanner laufen nicht mehr', (c) => {
+    const r = run(c);
+    expect(r.status).not.toBe(0);
+    expect(r.status).not.toBeNull();
+    expect(r.calls).toEqual([...before, ...c.calls]);
+    expect(r.stdout).not.toContain('Alle Prüfungen grün.');
   });
 
   test('der Typecheck läuft im Ordner portal/ mit dessen tsconfig, nicht über npm exec', () => {
