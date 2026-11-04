@@ -14,6 +14,8 @@ interface NavRowProps {
   tone?: 'white' | 'muted';
   leading?: ReactNode;
   accessibilityHint?: string;
+  /** Fester Name für die Maestro-Flows in e2e/ */
+  testID?: string;
 }
 
 /** Listenzeile mit Chevron. */
@@ -24,10 +26,12 @@ export function NavRow({
   tone = 'white',
   leading,
   accessibilityHint,
+  testID,
 }: NavRowProps) {
   const theme = useTheme();
   return (
     <Pressable
+      testID={testID}
       accessibilityRole="button"
       accessibilityLabel={de.a11y.withSub(title, sub)}
       accessibilityHint={accessibilityHint}

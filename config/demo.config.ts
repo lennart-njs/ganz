@@ -120,6 +120,17 @@ export const demoConfig = {
     typePlate: { materialNumber: '11 450 120', serialNumber: '000/94512873' },
   },
 
+  /**
+   * Demo-Startstand für den Händler-Weg (store/demoStart.ts): das Gerät aus dem Katalog, gekauft
+   * beim ersten Händler aus `dealers`, ohne Versicherung. Das Kaufdatum ist ein Beispielwert,
+   * weniger als 24 Monate vor `demo.startAt`. Das Onboarding fragt nicht danach.
+   */
+  dealerDemo: {
+    catalogId: 'miele-g5833sc',
+    purchaseDate: '2025-06-14T00:00:00+02:00',
+    isExample: true,
+  },
+
   household: {
     displayName: 'Sam',
     address: { street: 'Beispielstraße 12', zip: '32549', city: 'Bad Oeynhausen' },

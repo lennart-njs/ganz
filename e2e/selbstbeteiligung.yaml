@@ -13,7 +13,7 @@ name: Selbstbeteiligung
 tags:
   - pitch
 ---
-- runFlow: common/demo-startstand.yaml
+- runFlow: common/demo-startstand-versicherung.yaml
 
 # Demo-Steuerung: Selbstbeteiligung 50 €. Der Startstand setzt sie auf 0 €, darum erst danach.
 - tapOn: 'Profil.*'

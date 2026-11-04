@@ -15,7 +15,7 @@ name: Gewährleistung
 tags:
   - pitch
 ---
-- runFlow: common/demo-startstand.yaml
+- runFlow: common/demo-startstand-versicherung.yaml
 
 # Foto und Intelligente Fehlererkennung
 - tapOn: "Was ist kaputt\\?.*"

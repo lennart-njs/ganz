@@ -66,7 +66,7 @@ import type {
   VideoSession,
 } from '@/model/types';
 
-import { contractFromConfig, demoStartData } from './demoStart';
+import { contractFromConfig, dealerRef, demoStartData, type DemoStartKind } from './demoStart';
 import { defaultEnv, type StoreEnv } from './env';
 import {
   createLoadState,
@@ -363,8 +363,11 @@ export interface AppActions {
   addEvent: (event: Omit<CaseEvent, 'id' | 'at'>) => CaseEvent;
   /** Nur Demo: alles auf den Anfang */
   reset: () => void;
-  /** Demo-Steuerung: der feste Startstand für den Pitch, siehe store/demoStart.ts */
-  loadDemoStart: () => void;
+  /**
+   * Demo-Steuerung: ein fester Startstand für den Pitch, siehe store/demoStart.ts. Ohne Angabe
+   * der Stand für die Demo mit dem Händler, 'versicherung' der mit Schutz bei Kranich.
+   */
+  loadDemoStart: (kind?: DemoStartKind) => void;
 }
 
 export type AppState = AppData & AppActions;
@@ -792,18 +795,9 @@ export function createAppStore(storage: StateStorage = AsyncStorage, env: StoreE
           },
 
           setDeviceDealer: (deviceId, dealerId) => {
-            const dealer = demoConfig.dealers.find((d) => d.id === dealerId);
+            const soldBy = dealerRef(dealerId);
             set((s) => ({
-              devices: s.devices.map((d) =>
-                d.id === deviceId
-                  ? {
-                      ...d,
-                      soldBy: dealer
-                        ? { id: dealer.id, kind: 'haendler', name: dealer.name }
-                        : undefined,
-                    }
-                  : d,
-              ),
+              devices: s.devices.map((d) => (d.id === deviceId ? { ...d, soldBy } : d)),
             }));
           },
 
@@ -1961,8 +1955,8 @@ export function createAppStore(storage: StateStorage = AsyncStorage, env: StoreE
           },
 
           // Der Startstand hat keine Einwilligung in den Assistenten, also auch keine Installations-ID
-          loadDemoStart: () => {
-            set({ ...demoStartData(initialData), appearance: get().appearance });
+          loadDemoStart: (kind) => {
+            set({ ...demoStartData(initialData, kind), appearance: get().appearance });
             void deleteInstallationId();
           },
         };

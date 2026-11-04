@@ -1,8 +1,12 @@
-# Teil-Flow für alle Flows in e2e/: frisch starten, Onboarding überspringen, Demo-Startstand
-# laden. Danach steht die App auf der Startseite: Schutz verknüpft, Waschmaschine, kein Fall.
-# Wie Schritt 3 im Ablauf von docs/PITCH_CHECK.md.
+# Teil-Flow für die Flows mit Versicherung: frisch starten, Onboarding überspringen,
+# „Demo-Startstand Versicherung“ laden. Danach steht die App auf der Startseite: Schutz verknüpft,
+# Waschmaschine aus dem Vertrag, kein Händler, kein Fall. Wie die monatlichen Prüfungen mit
+# Versicherung in docs/PITCH_CHECK.md.
 #
-# Nicht gelaufen: In der Sandbox von Schritt 29 gibt es weder Simulator noch Maestro.
+# Onboarding wie in Entscheidung 31: Zuerst kommt das Gerät, „Später hinzufügen“ überspringt es
+# und damit auch Händler und Versicherung.
+#
+# Nicht gelaufen: Es gibt hier weder Simulator noch Maestro.
 # __tests__/build/e2eFlows.test.ts prüft die Selektoren gegen i18n/de.ts und den Code.
 appId: io.machs.app.pitch
 ---
@@ -14,7 +18,6 @@ appId: io.machs.app.pitch
       camera: deny
       notifications: deny
 - tapOn: 'Los geht’s'
-- tapOn: 'Später'
 - tapOn: 'Später hinzufügen'
 - tapOn: 'Profil.*'
 - scrollUntilVisible:
@@ -27,6 +30,6 @@ appId: io.machs.app.pitch
     delay: 100
 - scrollUntilVisible:
     element:
-      text: 'Demo-Startstand laden'
-- tapOn: 'Demo-Startstand laden'
+      text: 'Demo-Startstand Versicherung'
+- tapOn: 'Demo-Startstand Versicherung'
 - assertVisible: "Was ist kaputt\\?.*"

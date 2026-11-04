@@ -3,10 +3,12 @@ import { useState, type ReactNode } from 'react';
 import { StyleSheet, View } from 'react-native';
 
 import { Button, Checkbox, SegmentedControl, Sheet, Text } from '@/components/ds';
+import { demoConfig } from '@/config/demo.config';
 import { de } from '@/i18n/de';
 import { formatEuro } from '@/i18n/format';
 import { isClosed } from '@/model/caseMachine';
 import { useAppStore, type DemoSettings } from '@/store/appStore';
+import type { DemoStartKind } from '@/store/demoStart';
 
 const t = de.demoControl;
 
@@ -21,7 +23,7 @@ function Row({ label, children }: { label: string; children: ReactNode }) {
   );
 }
 
-/** Demo-Steuerung: Szenarien, Selbstbeteiligung, Hinweise, Status weiter, Galerie, Startstand, Zurücksetzen */
+/** Demo-Steuerung: Szenarien, Selbstbeteiligung, Hinweise, Status weiter, Galerie, Startstände, Zurücksetzen */
 export function DemoControlSheet({ visible, onClose }: { visible: boolean; onClose: () => void }) {
   const demo = useAppStore((s) => s.demo);
   const setDemo = useAppStore((s) => s.setDemo);
@@ -30,6 +32,12 @@ export function DemoControlSheet({ visible, onClose }: { visible: boolean; onClo
     <K extends keyof DemoSettings>(key: K) =>
     (value: DemoSettings[K]) =>
       setDemo({ [key]: value });
+
+  const loadStart = (kind: DemoStartKind) => {
+    onClose();
+    useAppStore.getState().loadDemoStart(kind);
+    router.navigate('/');
+  };
 
   const advance = () => {
     const s = useAppStore.getState();
@@ -129,12 +137,15 @@ export function DemoControlSheet({ visible, onClose }: { visible: boolean; onClo
         label={t.demoStart}
         variant="secondary"
         fullWidth
-        accessibilityHint={t.demoStartHint}
-        onPress={() => {
-          onClose();
-          useAppStore.getState().loadDemoStart();
-          router.navigate('/');
-        }}
+        accessibilityHint={t.demoStartHint(demoConfig.dealers[0]!.name)}
+        onPress={() => loadStart('haendler')}
+      />
+      <Button
+        label={t.demoStartInsurance}
+        variant="secondary"
+        fullWidth
+        accessibilityHint={t.demoStartInsuranceHint}
+        onPress={() => loadStart('versicherung')}
       />
       <Button
         label={t.reset}

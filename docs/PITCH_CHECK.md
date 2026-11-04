@@ -1,18 +1,18 @@
 # Pitch-Check
 
-Stand: 04.11.2026 · gehört zum Pitch-Gate in `docs/ZUKUNFTSPLAN.md` (Abschnitt 0 und Grundsatz 1)
+Stand: 04.11.2026 (Übertragung 2.1) · gehört zum Pitch-Gate in `docs/ZUKUNFTSPLAN.md` (Abschnitt 0 und Grundsatz 1)
 
 Diese Prüfungen laufen vor jedem Pitch-Tag, also mindestens einmal pro Woche und vor jedem wichtigen Termin. Du prüfst auf dem Pitch-Telefon, mit dem Commit, der den Tag bekommt. Was ein Test im Repo schon abdeckt, steht hier nicht. Hier steht, was nur auf dem Gerät sichtbar wird.
 
 ## Ablauf
 
 1. Alles ist committet, der Arbeitsbaum ist sauber.
-2. Die App läuft auf dem Pitch-Telefon. Heute über Expo Go und `npx expo start`, ab Phase 2 als eigener Pitch-Build.
-3. Demo-Startstand laden: Profil → 7-mal auf die Versionsnummer tippen → „Demo-Startstand laden“. Danach ist der Schutz verknüpft, die Waschmaschine ist da, und es gibt keinen Fall.
+2. App und Portal laufen wie in `docs/ABLAEUFE.md` → „Starten“: `npx expo start` für App und Backend, das Portal mit `npm run build` und `npm start`. Die App läuft auf dem Pitch-Telefon, heute über Expo Go, ab Phase 2 als eigener Pitch-Build.
+3. Demo-Startstand laden: Profil → 7-mal auf die Versionsnummer tippen → „Demo-Startstand laden“. Danach ist der Geschirrspüler da, gekauft bei Fründ, ohne Versicherung, und es gibt keinen Fall. Dann `.data/ganz-backend.json` löschen, denn der erste Fall bekommt wieder die erste Fallnummer.
 4. Die sieben Prüfungen unten durchgehen. Je Prüfung Datum, Commit, Gerät und Ergebnis in die Tabelle „Stand“ eintragen.
 5. Die Tabelle committen. Der Commit ändert nur diese Datei.
 6. `scripts/pitch-tag.sh` ausführen. Es bricht ab, solange ein regelbrechender Befund offen ist (R-07, R-12, R-13, R-16, R-17). Danach läuft `scripts/ci-checks.sh`. Ist alles grün, setzt es den lokalen Tag `pitch-JJJJ-Wxx`.
-7. Vor wichtigen Terminen gilt danach ein Merge-Freeze von 48 Stunden.
+7. Am Vortag einer Demo gilt ab 18 Uhr ein Feature-Freeze. Danach nur noch Doku oder der Rückweg auf den letzten guten Stand (`docs/ANNAHMEN.md`, Übertragung, U13).
 
 Scheitert eine Prüfung, gibt es keinen Tag. Trag den Fehler in `docs/BEFUNDE.md` ein, wenn möglich mit einem Test. Welche Tags es gibt: `git tag -l 'pitch-*' -n1`.
 
@@ -20,36 +20,55 @@ Scheitert eine Prüfung, gibt es keinen Tag. Trag den Fehler in `docs/BEFUNDE.md
 
 ### 1. Golden Path
 
-Vom Demo-Startstand aus die Schritte 2 bis 8 aus „Golden Path für den Pitch“ im `README.md`: Foto, Ergebnis, Anleitung, Hilfe holen, Videocall, Befund, Kosten, Schadenfall melden, Termin, Reparatur, Abschluss.
+Der Ablauf aus `docs/ABLAEUFE.md` → „Demo“, vom Demo-Startstand aus. Telefon und Portal stehen nebeneinander.
+
+1. Am Telefon: „Was ist kaputt?“ → „Wasser bleibt stehen“. Fünf Schritte „Erledigt“, im Schritt „Ablaufpumpe reinigen“ „Geht nicht“ → „Hilfe holen“.
+2. „Fall an Fründ Elektrogeräte AG senden“ → die Vorschau lesen → „Ja, senden“.
+3. Im Portal anmelden (`demo@fruend.example`, `demo`). Den Fall öffnen, „Annehmen“, „Gewährleistung bestätigen“. Dann eine Nachricht und einen Terminvorschlag senden.
+4. Am Telefon ein Zeitfenster wählen.
+5. Im Portal Auswertung und Einstellungen → Schnittstellen zeigen.
 
 Bestanden, wenn:
 - jeder Schritt ohne Hänger, Fehlermeldung oder leere Fläche läuft,
 - der Fall die erste Fallnummer aus `config/demo.config.ts` trägt,
+- vor „Ja, senden“ steht, was Fründ sieht, und erst der Tap den Fall sendet,
+- nach dem Tap „Gesendet. Fründ Elektrogeräte AG meldet sich hier im Gespräch.“ steht, danach die Begrüßung mit Kontaktkarte und „Hast du den Kaufbeleg noch?“,
+- im Portal der Hinweis „Neuer Fall“ mit der Fallnummer kommt,
+- die Prüfung im Portal mit dem Kaufdatum aus dem Startstand „Gewährleistung“ vorschlägt,
+- jede Antwort aus dem Portal nach höchstens 5 Sekunden in der App steht,
+- vor einer Freigabe nirgends eine Kostenzusage steht.
+
+Den Weg in der App bis „Ja, senden“ geht auch der Flow `e2e/haendler.yaml`, mit dem Onboarding statt des Startstands.
+
+Einmal im Monat zusätzlich mit „Alles zurücksetzen“ und dem Onboarding nach Entscheidung 31: „Los geht’s“ → „G 5833“ → „Miele G 5833 SC“ → „Fründ Elektrogeräte AG“ → „Weiter“ → „Nein, keine Versicherung“. Danach `.data/ganz-backend.json` löschen. Ohne Kaufdatum zeigt die Prüfung im Portal „Abgelaufen“ mit „Ablehnen“. „Gewährleistung bestätigen“ dann über „Anders entscheiden“.
+
+Einmal im Monat zusätzlich der Golden Path mit Versicherung, wie im Flow `e2e/golden-path.yaml`: Demo-Steuerung → „Demo-Startstand Versicherung“, dann die Schritte 2 bis 8 aus „Golden Path für den Pitch“ im `README.md`: Foto, Ergebnis, Anleitung, Hilfe holen, Videocall, Befund, Kosten, Schadenfall melden, Termin, Reparatur, Abschluss. Bestanden, wenn:
+- jeder Schritt ohne Hänger, Fehlermeldung oder leere Fläche läuft,
 - vor der Freigabe nirgends eine Kostenzusage steht,
 - vor jeder Weitergabe steht, wer welche Daten bekommt, und erst der Tap sie auslöst,
 - der Schadenfall erst nach dem Tap auf „Schadenfall melden“ entsteht,
 - der Fall am Ende im Tab „Fälle“ steht.
 
-Einmal im Monat zusätzlich mit „Alles zurücksetzen“ und dem Onboarding aus Schritt 1.
+Die drei Prüfungen danach starten ebenso aus „Demo-Startstand Versicherung“.
 
-Einmal im Monat zusätzlich mit 50 € Selbstbeteiligung (Demo-Steuerung, nach dem Demo-Startstand), wie im Flow `e2e/selbstbeteiligung.yaml` (Entscheidung Nr. 31). Bestanden, wenn:
+Einmal im Monat zusätzlich mit 50 € Selbstbeteiligung (Demo-Steuerung, nach dem Demo-Startstand Versicherung), wie im Flow `e2e/selbstbeteiligung.yaml` (ganz Nr. 31). Bestanden, wenn:
 - während der Prüfung nur „Termin anfragen“ steht, mit „Die Anfrage ist unverbindlich“, und nirgends „Zahlungspflichtig buchen“,
 - nach der Freigabe die Zusammenfassung mit Betrieb, Zeitfenster, Auftrag und „Selbstbeteiligung 50 €“ steht,
 - „Nächster Schritt (Demo)“ erst nach „Zahlungspflichtig buchen“ wieder da ist und der Betrieb erst dann bestätigt,
 - die Fallakte „Zahlungspflichtig gebucht“ mit Betrieb, Zeitfenster und 50 € zeigt.
 
-Einmal im Monat zusätzlich die misslungene Reparatur, wie im Flow `e2e/gewaehrleistung.yaml` (Entscheidung Nr. 32): in Schritt 8 „Problem besteht weiter“. Bestanden, wenn:
+Einmal im Monat zusätzlich die misslungene Reparatur, wie im Flow `e2e/gewaehrleistung.yaml` (ganz Nr. 32): in Schritt 8 „Problem besteht weiter“. Bestanden, wenn:
 - „Die Reparatur ist noch in der Gewährleistung.“ steht, mit „… muss die Reparatur nachbessern. Für die Nachbesserung zahlst du nichts Neues.“,
 - es weder „Schadenfall melden“ noch „Zahlungspflichtig buchen“ noch einen Betrag gibt und die Zusammenfassung „Keine neuen Kosten für dich, Gewährleistung“ nennt,
 - der Betrieb nach „Nachbesserung anfragen“ ohne weiteren Tap bestätigt und die Fallakte „Nachbesserung in der Gewährleistung“ zeigt,
 - nach einem zweiten „Problem besteht weiter“ „Auch die Nachbesserung hat nicht geholfen.“ und wieder Hilfe holen kommt,
 - mit „Reparatur liegt länger zurück“ (Demo-Steuerung, vor Schritt 8) gleich „Die Gewährleistung für die Reparatur ist vorbei.“ und eine neue Runde kommt.
 
-Dazu einmal Abbrechen in der Reparatur (Entscheidung Nr. 34): nach „Termin anfragen“ zweimal „Nächster Schritt (Demo)“, bis „Termin steht“, dann X → „Fall abbrechen“. Bestanden, wenn vor dem Grund „… bekommt die Absage.“ und „Ob schon Kosten entstanden sind, klärt … mit dir.“ steht, nirgends „kostenlos“, und nach dem Abbruch kein „Nächster Schritt (Demo)“ mehr kommt.
+Dazu einmal Abbrechen in der Reparatur (ganz Nr. 34): nach „Termin anfragen“ zweimal „Nächster Schritt (Demo)“, bis „Termin steht“, dann X → „Fall abbrechen“. Bestanden, wenn vor dem Grund „… bekommt die Absage.“ und „Ob schon Kosten entstanden sind, klärt … mit dir.“ steht, nirgends „kostenlos“, und nach dem Abbruch kein „Nächster Schritt (Demo)“ mehr kommt.
 
 ### 2. Dark Mode
 
-Profil → „Darstellung“ → „Dunkel“. Dann Start, Gespräch, Ergebnis, Anleitung, Kosten, Termin, Status, Fallakte und Profil ansehen. Danach „Wie System“ wählen und das System im Kontrollzentrum auf dunkel stellen.
+Profil → „Darstellung“ → „Dunkel“. Dann Start, Gespräch, Ergebnis, Anleitung, Vorschau vor „Ja, senden“, Gespräch mit Fründ, Kosten, Termin, Status, Fallakte und Profil ansehen. Danach „Wie System“ wählen und das System im Kontrollzentrum auf dunkel stellen.
 
 Bestanden, wenn alle Texte lesbar sind, keine hellen Flächen aufblitzen, Fotos und Icons sichtbar sind und die Statusleiste zum Hintergrund passt.
 

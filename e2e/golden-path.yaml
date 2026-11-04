@@ -1,5 +1,6 @@
-# Golden Path für den Pitch (README, Schritte 2 bis 8), als Maestro-Flow.
-# Pflicht vor jedem Pitch-Tag (docs/PITCH_CHECK.md, Prüfung 1), nachts auf iOS, einmal pro
+# Golden Path mit Versicherung (README, „Golden Path für den Pitch“, Schritte 2 bis 8), als
+# Maestro-Flow. Start aus „Demo-Startstand Versicherung“. Der Händler-Weg für die Demo steht in
+# e2e/haendler.yaml. Einmal im Monat (docs/PITCH_CHECK.md, Prüfung 1), nachts auf iOS, einmal pro
 # Woche im Android-Emulator.
 #
 # Nicht gelaufen: In der Sandbox von Schritt 29 gibt es weder Simulator noch Maestro. Den ersten
@@ -17,7 +18,7 @@ name: Golden Path
 tags:
   - pitch
 ---
-- runFlow: common/demo-startstand.yaml
+- runFlow: common/demo-startstand-versicherung.yaml
 
 # Foto und Intelligente Fehlererkennung
 - tapOn: "Was ist kaputt\\?.*"

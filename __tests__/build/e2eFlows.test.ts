@@ -6,6 +6,7 @@ import path from 'path';
 
 import { VARIANTS } from '@/app.config';
 import { demoConfig } from '@/config/demo.config';
+import { catalog } from '@/data/catalog';
 import { guides } from '@/data/guides';
 import { de } from '@/i18n/de';
 
@@ -19,7 +20,9 @@ const FLOWS = [
   'dark-200.yaml',
   'selbstbeteiligung.yaml',
   'gewaehrleistung.yaml',
+  'haendler.yaml',
 ];
+const COMMON = ['common/demo-startstand-versicherung.yaml'];
 
 function yamlFiles(dir: string): string[] {
   return fs.readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
@@ -109,12 +112,17 @@ const sources = {
   problem: read(path.join(root, 'app/fall/neu.tsx')),
   replies: read(path.join(root, 'components/app/Conversation.tsx')),
   demo: read(path.join(root, 'components/app/DemoControlSheet.tsx')),
+  setup: read(path.join(root, 'components/app/DeviceSetup.tsx')),
   segments: read(path.join(root, 'components/ds/SegmentedControl.tsx')),
 };
 
+/** Einstiege aus der Gebrauchsanweisung: „Problem melden“ nimmt ihren Schlüssel als Antwort */
+const catalogProblems = new Set(catalog.flatMap((m) => (m.problems ?? []).map((p) => p.id)));
+
 /**
- * antwort-<Schlüssel>, details-<Ziel> und demo-<Gruppe>-<Wert> (Demo-Steuerung): Gibt es den
- * Schlüssel im Code?
+ * antwort-<Schlüssel>, details-<Ziel>, demo-<Gruppe>-<Wert> (Demo-Steuerung) und beim Anlegen
+ * des Geräts geraet-katalog-<Katalog-Schlüssel> und geraet-haendler-<Händler>: Gibt es den
+ * Schlüssel im Code oder in Katalog und Konfiguration?
  */
 function idInCode(id: string): boolean {
   const demo = /^demo-(.+)-([^-]+)$/.exec(id);
@@ -122,9 +130,20 @@ function idInCode(id: string): boolean {
     return (
       sources.demo.includes(`testID="demo-${demo[1]}"`) && sources.demo.includes(`'${demo[2]}'`)
     );
+  const setup = /^geraet-(katalog|haendler)-(.+)$/.exec(id);
+  if (setup) {
+    const [, list, key] = setup;
+    const known =
+      list === 'katalog'
+        ? catalog.some((m) => m.id === key)
+        : demoConfig.dealers.some((d) => d.id === key);
+    const template = list === 'katalog' ? '`geraet-katalog-${m.id}`' : '`geraet-haendler-${d.id}`';
+    return known && sources.setup.includes(`testID={${template}}`);
+  }
   const [, prefix, key] = /^(antwort|details)-(.+)$/.exec(id) ?? [];
   if (!prefix || !key) return false;
   if (prefix === 'details') return sources.thread.includes(`details('${key}')`);
+  if (sources.problem.includes('key: p.id') && catalogProblems.has(key)) return true;
   const replyCode = sources.thread + sources.problem;
   if (key.endsWith('.*')) return replyCode.includes(`\`${key.slice(0, -2)}\${`);
   return replyCode.includes(`'${key}'`);
@@ -133,9 +152,7 @@ function idInCode(id: string): boolean {
 describe('Maestro-Flows in e2e/', () => {
   test('die Flows und ihr Teil-Flow sind da', () => {
     for (const flow of FLOWS) expect(fs.existsSync(path.join(e2e, flow))).toBe(true);
-    expect(files.map(rel).sort()).toEqual(
-      ['e2e/common/demo-startstand.yaml', ...FLOWS.map((f) => `e2e/${f}`)].sort(),
-    );
+    expect(files.map(rel).sort()).toEqual([...COMMON, ...FLOWS].map((f) => `e2e/${f}`).sort());
   });
 
   test.each(files.map(rel))('%s: App-ID des Pitch-Builds, Hinweis „Nicht gelaufen“', (file) => {
@@ -174,6 +191,11 @@ describe('Maestro-Flows in e2e/', () => {
       demoConfig.expert.name,
       demoConfig.contract.number,
       ...demoConfig.partners.map((p) => p.name),
+      ...demoConfig.dealers.flatMap((d) => [
+        d.name,
+        d.shortName,
+        ...('service' in d && d.service ? [d.service.name, d.service.expert] : []),
+      ]),
       ...demoConfig.slots,
     ];
     const hits = files.flatMap((file) =>
@@ -186,5 +208,21 @@ describe('Maestro-Flows in e2e/', () => {
     expect(sources.replies).toContain('testID={`antwort-${r.key}`}');
     expect(sources.thread).toContain('testID={`details-${path}`}');
     expect(sources.segments).toContain('testID={testID ? `${testID}-${o.value}` : undefined}');
+  });
+
+  test('Katalog-Zeilen und Händler-Karten geben ihre ID weiter', () => {
+    for (const file of ['components/ds/NavRow.tsx', 'components/ds/SelectCard.tsx']) {
+      expect(read(path.join(root, file))).toContain('testID={testID}');
+    }
+  });
+
+  test('der Händler-Weg nimmt das Gerät und den Händler des Demo-Startstands', () => {
+    const flow = read(path.join(e2e, 'haendler.yaml'));
+    expect(flow).toContain(`id: 'geraet-katalog-${demoConfig.dealerDemo.catalogId}'`);
+    expect(flow).toContain(`id: 'geraet-haendler-${demoConfig.dealers[0]!.id}'`);
+    // Der Einstieg „antwort-<Schlüssel>“ gehört zu genau diesem Gerät
+    const model = catalog.find((m) => m.id === demoConfig.dealerDemo.catalogId)!;
+    const [, problem] = /id: 'antwort-(gs_[a-z]+)'/.exec(flow) ?? [];
+    expect(model.problems?.map((p) => p.id)).toContain(problem);
   });
 });

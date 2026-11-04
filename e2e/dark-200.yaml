@@ -19,7 +19,7 @@ tags:
   - pitch
   - a11y
 ---
-- runFlow: common/demo-startstand.yaml
+- runFlow: common/demo-startstand-versicherung.yaml
 - takeScreenshot: dark200-01-start
 
 - tapOn: "Was ist kaputt\\?.*"

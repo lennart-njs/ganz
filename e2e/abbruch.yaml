@@ -11,7 +11,7 @@ name: Abbruch
 tags:
   - pitch
 ---
-- runFlow: common/demo-startstand.yaml
+- runFlow: common/demo-startstand-versicherung.yaml
 
 # Ein Fall mit Fortschritt: Foto und Ergebnis
 - tapOn: "Was ist kaputt\\?.*"

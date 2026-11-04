@@ -1903,7 +1903,10 @@ export const de = {
       n === 1 ? '1 Fall weitergeschaltet.' : `${n} Fälle weitergeschaltet.`,
     gallery: 'Komponenten ansehen',
     demoStart: 'Demo-Startstand laden',
-    demoStartHint:
+    demoStartHint: (dealer: string) =>
+      `Ersetzt Geräte, Fälle und Einwilligungen. Danach ist ein Gerät da, gekauft bei ${dealer}, ohne Versicherung und ohne Fall.`,
+    demoStartInsurance: 'Demo-Startstand Versicherung',
+    demoStartInsuranceHint:
       'Ersetzt Geräte, Fälle und Einwilligungen. Danach ist der Schutz verknüpft, ein Gerät da und kein Fall offen.',
     reset: 'Alles zurücksetzen',
     resetHint: 'Löscht Geräte, Fälle und Einwilligungen und startet das Onboarding neu.',

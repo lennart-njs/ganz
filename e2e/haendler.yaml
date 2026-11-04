@@ -1,0 +1,78 @@
+# Händler-Weg für die Demo (docs/ABLAEUFE.md, „Demo“, Schritt 3), als Maestro-Flow. Prüfung 1 in
+# docs/PITCH_CHECK.md, hier mit dem Onboarding statt des Demo-Startstands.
+#
+# Onboarding wie in Entscheidung 31: Gerät aus dem Katalog, dann „Wo hast du es gekauft?“, dann
+# „Zusätzlich eine Versicherung?“ mit „Nein, keine Versicherung“. Danach ein Fall mit „Geht nicht“,
+# „Hilfe holen“ und dem Angebot, den Fall an den Händler zu senden. Vorher steht, was er sieht.
+# Erst „Ja, senden“ gibt den Fall weiter.
+#
+# Nicht gelaufen: Es gibt hier weder Simulator noch Maestro. __tests__/build/e2eFlows.test.ts
+# prüft bis dahin, dass jeder Text in i18n/de.ts oder data/guides.ts steht und jede ID im Code
+# vorkommt.
+#
+# Vorher: Das Backend der Demo läuft (npx expo start, im Pitch-Build EXPO_PUBLIC_API_URL), und
+# .data/ganz-backend.json ist frisch. Sonst trifft die erste Fallnummer auf einen alten Fall.
+#
+# Lauf: maestro test e2e/haendler.yaml
+# Gerät und Händler tragen die IDs geraet-katalog-<Katalog-Schlüssel> und
+# geraet-haendler-<Händler>, Antworten im Gespräch antwort-<Schlüssel>. So steht hier kein Name
+# aus config/demo.config.ts.
+appId: io.machs.app.pitch
+name: Händler
+tags:
+  - pitch
+---
+# Ohne Kamera und ohne Mitteilungen, wie die anderen Flows
+- launchApp:
+    clearState: true
+    permissions:
+      camera: deny
+      notifications: deny
+- tapOn: 'Los geht’s'
+
+# Gerät aus dem Katalog
+- tapOn: 'Hersteller oder Modell, z\. B\. G 5833'
+- inputText: 'G 5833'
+- tapOn:
+    id: 'geraet-katalog-miele-g5833sc'
+
+# Wo gekauft, dann ohne Versicherung
+- assertVisible: "Wo hast du es gekauft\\?"
+- tapOn:
+    id: 'geraet-haendler-fruend'
+- tapOn: 'Weiter'
+- assertVisible: "Zusätzlich eine Versicherung\\?"
+- tapOn: 'Nein, keine Versicherung'
+- assertVisible: "Was ist kaputt\\?.*"
+- takeScreenshot: haendler-1-start
+
+# Problem aus der Gebrauchsanweisung, die Anleitung läuft im Gespräch
+- tapOn: "Was ist kaputt\\?.*"
+- tapOn:
+    id: 'antwort-gs_wasser'
+- repeat:
+    times: 5
+    commands:
+      - tapOn: 'Erledigt'
+      - waitForAnimationToEnd
+- assertVisible: 'Ablaufpumpe reinigen'
+- tapOn: 'Geht nicht'
+- assertVisible: "Was klappt nicht\\?"
+- tapOn: 'Hilfe holen'
+
+# Fall an den Händler: Vorher steht, was er sieht. Erst der Tap gibt den Fall weiter.
+- extendedWaitUntil:
+    visible:
+      id: 'antwort-haendler'
+    timeout: 10000
+- tapOn:
+    id: 'antwort-haendler'
+- assertVisible: 'Das sieht .*'
+- assertNotVisible: 'Gesendet\. .* meldet sich hier im Gespräch\.'
+- takeScreenshot: haendler-2-vorschau
+- tapOn:
+    id: 'antwort-haendler-senden'
+- extendedWaitUntil:
+    visible: 'Gesendet\. .* meldet sich hier im Gespräch\.'
+    timeout: 10000
+- takeScreenshot: haendler-3-gesendet

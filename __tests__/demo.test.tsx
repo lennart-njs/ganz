@@ -4,6 +4,7 @@ import { act, fireEvent, renderRouter, screen } from 'expo-router/testing-librar
 
 import { demoConfig } from '@/config/demo.config';
 import { de } from '@/i18n/de';
+import { catalog } from '@/data/catalog';
 import { deviceTitle } from '@/lib/devices';
 import { defaultDemoSettings, initialData, useAppStore, type AppData } from '@/store/appStore';
 import { DEMO_START_IDS, demoStartData } from '@/store/demoStart';
@@ -206,28 +207,145 @@ describe('Demo-Startstand', () => {
     for (let i = 0; i < 7; i++) await fireEvent.press(version);
     return r;
   };
+  const dealer = demoConfig.dealers[0]!;
+  const fruendModel = catalog.find((m) => m.id === demoConfig.dealerDemo.catalogId)!;
+  /** Ganze Monate zwischen zwei Zeitpunkten, wie die Prüfung im Portal (portal/lib/check.ts) */
+  const monthsBetween = (from: string, to: string) =>
+    Math.floor((Date.parse(to) - Date.parse(from)) / (30.44 * 86_400_000));
+  /** Gespeicherter Stand mit den festen IDs und Zeiten des Startstands */
+  const withStartIds = (s: AppData, times: string[]): AppData => {
+    const ids = DEMO_START_IDS;
+    const at = demoConfig.demo.startAt;
+    const replace: [string, string][] = [
+      [s.persons[0]!.id, ids.person],
+      [s.household!.id, ids.household],
+      [s.devices[0]!.id, ids.device],
+      ...(s.contracts[0] ? ([[s.contracts[0].id, ids.contract]] as [string, string][]) : []),
+      ...times.map((t): [string, string] => [t, at]),
+    ];
+    const json = replace.reduce((j, [from, to]) => j.split(from).join(to), JSON.stringify(s));
+    return JSON.parse(json) as AppData;
+  };
 
   // Die Darstellung übersteht Zurücksetzen und Startstand. Der erste Test stellt sie auf dunkel.
   afterEach(() => act(() => useAppStore.getState().setAppearance('system')));
 
-  test('jedes Laden ergibt denselben Stand, egal was vorher war', () => {
-    const { caseId } = goldenCase();
-    const s = useAppStore.getState();
-    s.reportClaim(caseId);
-    s.setDemo({ claimScenario: 'ablehnen', deductible: 5000, hints: false });
-    s.setAppearance('dunkel');
-    s.loadDemoStart();
-    const afterCase = data();
+  test.each(['haendler', 'versicherung'] as const)(
+    'jedes Laden ergibt denselben Stand, egal was vorher war (%s)',
+    (kind) => {
+      const { caseId } = goldenCase();
+      const s = useAppStore.getState();
+      s.reportClaim(caseId);
+      s.setDemo({ claimScenario: 'ablehnen', deductible: 5000, hints: false });
+      s.setAppearance('dunkel');
+      s.loadDemoStart(kind);
+      const afterCase = data();
 
-    useAppStore.getState().reset();
-    useAppStore.getState().loadDemoStart();
-    expect(data()).toEqual(afterCase);
-    expect(afterCase).toEqual({ ...demoStartData(initialData), appearance: 'dunkel' });
-  });
+      useAppStore.getState().reset();
+      useAppStore.getState().loadDemoStart(kind);
+      expect(data()).toEqual(afterCase);
+      expect(afterCase).toEqual({ ...demoStartData(initialData, kind), appearance: 'dunkel' });
+    },
+  );
 
-  test('Schutz verknüpft, das Gerät aus dem Vertrag, kein Fall', () => {
+  test('ohne Angabe lädt der Store den Startstand mit dem Händler', () => {
     goldenCase();
     useAppStore.getState().loadDemoStart();
+    expect(data()).toEqual(demoStartData(initialData, 'haendler'));
+    expect(demoStartData(initialData)).toEqual(demoStartData(initialData, 'haendler'));
+  });
+
+  test('Demo-Startstand: Fründ, keine Versicherung, Kaufdatum im Beispielwert', () => {
+    goldenCase();
+    useAppStore.getState().loadDemoStart();
+    const s = data();
+    const ids = DEMO_START_IDS;
+
+    expect(s.onboardingDone).toBe(true);
+    expect(s.appearance).toBe('system');
+    expect(s.demo).toEqual(defaultDemoSettings);
+    expect(s.notifications).toBe('offen');
+    expect(s.nextCaseNumber).toBe(demoConfig.caseNumber.start);
+    expect(s.persons).toEqual([
+      {
+        id: ids.person,
+        displayName: demoConfig.household.displayName,
+        role: 'versicherungsnehmer',
+      },
+    ]);
+    expect(s.household).toMatchObject({ id: ids.household, members: s.persons });
+
+    // Keine Versicherung: kein Vertrag, das Gerät hängt an keinem
+    expect(s.contracts).toEqual([]);
+    expect(s.devices).toEqual([
+      {
+        id: ids.device,
+        householdId: ids.household,
+        manufacturerId: fruendModel.manufacturerId,
+        category: fruendModel.category,
+        model: fruendModel.model,
+        identifiedBy: 'katalog',
+        soldBy: { id: dealer.id, kind: 'haendler', name: dealer.name },
+        purchaseDate: demoConfig.dealerDemo.purchaseDate,
+        createdAt: demoConfig.demo.startAt,
+      },
+    ]);
+    expect(dealer.id).toBe('fruend');
+    expect(fruendModel.model).toBe('G 5833 SC');
+
+    // Das Kaufdatum ist ein Beispielwert, weniger als 24 Monate vor dem Startstand
+    expect(demoConfig.dealerDemo.isExample).toBe(true);
+    const months = monthsBetween(demoConfig.dealerDemo.purchaseDate, demoConfig.demo.startAt);
+    expect(months).toBeGreaterThanOrEqual(0);
+    expect(months).toBeLessThan(24);
+
+    expect(s.cases).toEqual({});
+    expect(s.guideRuns).toEqual({});
+    for (const list of [
+      s.events,
+      s.photos,
+      s.diagnoses,
+      s.consents,
+      s.quotes,
+      s.bookings,
+      s.videoSessions,
+      s.chatMessages,
+    ]) {
+      expect(list).toEqual([]);
+    }
+    // Ein gültiger gespeicherter Stand: nach einem Neustart lädt er ohne Hinweis.
+    expect(() => parseStoredState(s)).not.toThrow();
+  });
+
+  test('gleicht dem Stand nach dem Onboarding mit Fründ (Entscheidung 31), bis auf das Kaufdatum', async () => {
+    useAppStore.getState().reset();
+    const r = await renderRouter(APP, { initialUrl: '/' });
+    await tap(de.onboarding.start);
+    await fireEvent.changeText(
+      screen.getByPlaceholderText(de.setup.searchPlaceholder),
+      fruendModel.model,
+    );
+    await tap(new RegExp(`^${deviceTitle(fruendModel)}`));
+    expect(screen.getByRole('header', { name: de.setup.dealerTitle })).toBeTruthy();
+    await fireEvent.press(screen.getByRole('radio', { name: new RegExp(`^${dealer.name}`) }));
+    await tap(de.setup.saveDealer);
+    expect(screen.getByRole('header', { name: de.setup.coverageTitle })).toBeTruthy();
+    await tap(de.setup.notInsured);
+    await act(async () => {});
+    expect(r.getPathname()).toBe('/');
+
+    const s = data();
+    const fromOnboarding = withStartIds(s, [s.household!.createdAt, s.devices[0]!.createdAt]);
+    // Nach dem Kaufdatum fragt das Onboarding nicht. Im Startstand ist es ein Beispielwert.
+    const start = demoStartData(initialData);
+    const device = { ...start.devices[0]! };
+    delete device.purchaseDate;
+    expect(fromOnboarding).toEqual({ ...start, devices: [device] });
+  });
+
+  test('Demo-Startstand Versicherung: Schutz verknüpft, das Gerät aus dem Vertrag, kein Fall', () => {
+    goldenCase();
+    useAppStore.getState().loadDemoStart('versicherung');
     const s = data();
     const ids = DEMO_START_IDS;
 
@@ -266,6 +384,7 @@ describe('Demo-Startstand', () => {
       contractId: ids.contract,
       identifiedBy: 'vertrag',
     });
+    expect(s.devices[0]!.soldBy).toBeUndefined();
 
     expect(s.cases).toEqual({});
     expect(s.guideRuns).toEqual({});
@@ -285,7 +404,7 @@ describe('Demo-Startstand', () => {
     expect(() => parseStoredState(s)).not.toThrow();
   });
 
-  test('gleicht dem Stand nach dem Onboarding im Golden Path', async () => {
+  test('Demo-Startstand Versicherung gleicht dem Stand nach dem Onboarding der ganz-Linie', async () => {
     useAppStore.getState().reset();
     const r = await renderRouter(APP, { initialUrl: '/schutz' });
     await fireEvent.changeText(
@@ -299,24 +418,35 @@ describe('Demo-Startstand', () => {
 
     // IDs und Zeiten sind im Startstand fest, sonst muss alles gleich sein.
     const s = data();
-    const at = demoConfig.demo.startAt;
-    const replace: [string, string][] = [
-      [s.persons[0]!.id, DEMO_START_IDS.person],
-      [s.household!.id, DEMO_START_IDS.household],
-      [s.contracts[0]!.id, DEMO_START_IDS.contract],
-      [s.devices[0]!.id, DEMO_START_IDS.device],
-      [s.household!.createdAt, at],
-      [s.contracts[0]!.linkedAt, at],
-      [s.devices[0]!.createdAt, at],
-    ];
-    const json = replace.reduce((j, [from, to]) => j.split(from).join(to), JSON.stringify(s));
-    expect(JSON.parse(json)).toEqual(demoStartData(initialData));
+    const fromOnboarding = withStartIds(s, [
+      s.household!.createdAt,
+      s.contracts[0]!.linkedAt,
+      s.devices[0]!.createdAt,
+    ]);
+    expect(fromOnboarding).toEqual(demoStartData(initialData, 'versicherung'));
   });
 
-  test('„Demo-Startstand laden“ in der Demo-Steuerung führt zur Startseite', async () => {
+  test('„Demo-Startstand laden“ in der Demo-Steuerung führt zur Startseite, mit dem Gerät von Fründ', async () => {
     const { caseId } = goldenCase();
     const r = await openDemoControl();
+    expect(
+      screen.getByRole('button', { name: de.demoControl.demoStart }).props.accessibilityHint,
+    ).toBe(de.demoControl.demoStartHint(dealer.name));
     await tap(de.demoControl.demoStart);
+    await act(async () => {});
+
+    expect(r.getPathname()).toBe('/');
+    expect(screen.getByRole('header', { name: de.home.myDevices })).toBeTruthy();
+    expect(screen.getByText(deviceTitle(fruendModel))).toBeTruthy();
+    expect(screen.queryByText(de.demoControl.title)).toBeNull();
+    expect(useAppStore.getState().cases[caseId]).toBeUndefined();
+    expect(data()).toEqual(demoStartData(initialData, 'haendler'));
+  });
+
+  test('„Demo-Startstand Versicherung“ in der Demo-Steuerung führt zur Startseite', async () => {
+    const { caseId } = goldenCase();
+    const r = await openDemoControl();
+    await tap(de.demoControl.demoStartInsurance);
     await act(async () => {});
 
     expect(r.getPathname()).toBe('/');
@@ -325,6 +455,33 @@ describe('Demo-Startstand', () => {
     expect(screen.getByText(deviceTitle(device))).toBeTruthy();
     expect(screen.queryByText(de.demoControl.title)).toBeNull();
     expect(useAppStore.getState().cases[caseId]).toBeUndefined();
-    expect(data()).toEqual(demoStartData(initialData));
+    expect(data()).toEqual(demoStartData(initialData, 'versicherung'));
+  });
+
+  test('nach „Demo-Startstand laden“ bietet ein Fall mit „Geht nicht“ „Fall an Fründ senden“ an', async () => {
+    goldenCase();
+    const r = await openDemoControl();
+    await tap(de.demoControl.demoStart);
+    await act(async () => {});
+    expect(r.getPathname()).toBe('/');
+
+    await tap(new RegExp(`^${de.home.searchTitle}`));
+    const problem = fruendModel.problems![0]!;
+    await tap(new RegExp(`^${problem.label}`));
+    await act(async () => {});
+    const c = Object.values(useAppStore.getState().cases)[0]!;
+    expect(c.id).toBe(`${demoConfig.caseNumber.prefix}${demoConfig.caseNumber.start}`);
+    expect(r.getPathname()).toBe(`/fall/${c.id}`);
+
+    await tap(de.guide.notWorking);
+    await tap(de.guide.getHelp);
+    await act(async () => {});
+    // Das Angebot nennt den Händler aus dem Startstand, noch ist nichts gesendet
+    expect(
+      screen.getByRole('button', { name: new RegExp(`^${de.sharing.offer(dealer.name)}`) }),
+    ).toBeTruthy();
+    expect(useAppStore.getState().consents.some((k) => k.purpose === 'weitergabe_haendler')).toBe(
+      false,
+    );
   });
 });

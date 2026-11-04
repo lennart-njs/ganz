@@ -49,7 +49,8 @@ Der Demo-Modus ist in `config/demo.config.ts` eingeschaltet (`demo.enabled`).
 - **Dort einstellen:** Ergebnis der Intelligenten Fehlererkennung (Standard, unsicher, unscharf), Typenschild erkannt oder nicht, Fachkraft frei oder nicht, Freigabe oder Ablehnung, Selbstbeteiligung 0 € oder 50 €, „Reparatur liegt länger zurück“ (Gewährleistung der Reparatur vorbei, ganz Nr. 32).
 - **Hinweise an/aus:** Standard ist aus (Entscheidung 21): keine Demo-Spur in der App, Freigabe und Termin laufen per Timer. An zeigt schließbare Tipps, „Wartezeit überspringen“, „Nächster Schritt (Demo)“ und die Kennzeichnung „Beispielwerte“.
 - **Offene Fälle einen Schritt weiter:** schaltet Freigabe, Termin, unterwegs, repariert. Ohne Tap läuft das per Timer (Freigabe 10 s, danach je 5 s). Wartet ein Termin auf „Zahlungspflichtig buchen“, geht es erst nach deinem Tap im Gespräch weiter, auch per Timer nicht (ganz Nr. 31, ganz Nr. 33).
-- **Demo-Startstand laden:** der feste Stand nach dem Onboarding im Golden Path der ganz-Linie (`store/demoStart.ts`): Schutz verknüpft, die Waschmaschine aus dem Vertrag, kein Fall, keine Einwilligung, feste Zeit `demo.startAt`. Er ersetzt den Stand ohne Rückfrage, die Darstellung bleibt. Danach steht die App auf der Startseite. Das Gerät hat noch keinen Händler: Für die Demo mit Fründ nicht nutzen.
+- **Demo-Startstand laden:** der feste Stand nach dem Onboarding der Demo mit Fründ (`store/demoStart.ts`, Entscheidung 31): Miele G 5833 SC aus dem Katalog, gekauft bei Fründ, „Nein, keine Versicherung“. Dazu ein Kaufdatum als Beispielwert (`dealerDemo` in `config/demo.config.ts`), nach dem das Onboarding nicht fragt. Kein Fall, keine Einwilligung, feste Zeit `demo.startAt`. Er ersetzt den Stand ohne Rückfrage, die Darstellung bleibt. Danach steht die App auf der Startseite, und ein Fall mit „Geht nicht“ bietet „Fall an Fründ senden“ an. Der erste Fall bekommt wieder die erste Fallnummer: Danach `.data/ganz-backend.json` löschen, wie nach „Alles zurücksetzen“.
+- **Demo-Startstand Versicherung:** der Stand nach dem Onboarding der ganz-Linie: Schutz bei Kranich über die Vertragsnummer verknüpft, die Waschmaschine aus dem Vertrag, ohne Händler, kein Fall. Für den Golden Path mit Versicherung unten und die Maestro-Flows mit Versicherung.
 - **Alles zurücksetzen:** löscht Geräte, Fälle, Einwilligungen und die Installations-ID und startet das Onboarding neu. Die Darstellung bleibt. Danach `.data/ganz-backend.json` löschen (`docs/ABLAEUFE.md` → Demo), sonst trifft die neue Fallnummer im Portal auf die alte.
 
 - **Hell oder dunkel:** Profil → „Darstellung“: Wie System, Hell, Dunkel.
@@ -64,6 +65,8 @@ Der Demo-Modus ist in `config/demo.config.ts` eingeschaltet (`demo.enabled`).
 5. „Videocall starten“ → Markus T. vom Fründ Kundendienst → Auflegen → Befund → „Passt, weiter“.
 6. „Weiter zum Termin“ → Fründ Kundendienst → Zeitfenster → „Zahlungspflichtig buchen“.
 7. Weiter wie unten ab Schritt 7.
+
+Statt Schritt 1 und 2 geht auch „Demo-Startstand laden“ in der Demo-Steuerung. Als Maestro-Flow bis „Ja, senden“: `e2e/haendler.yaml`.
 
 Weitere Geräte im Katalog: Bosch SMI4EAS24E (Geschirrspüler), Miele WQ 1000 WPS (Waschmaschine), Miele WKB 130 (erste Demo).
 
@@ -197,7 +200,7 @@ Alle Tests in `ui` laufen mit Fake Timers. Die Zeit läuft nur weiter, wenn ein 
 - `lib/guideCatalog.ts` – Katalog der Anleitungen, `server/guides/` – freigegebene Einträge und Entwürfe
 - `i18n/de.ts` – alle Texte
 - `docs/` – Stand (`STAND.md`), Abläufe (`ABLAEUFE.md`), Backend (`BACKEND.md`), Review, Bauplan, Zukunftsplan, Entscheidungen, Annahmen, Befunde, Datenmodell, Pitch-Check, Review-Checkliste, Kosten (`KOSTEN.md`), Releases (`RELEASES.md`)
-- `e2e/` – Maestro-Flows für Golden Path, Abbruch, dunkel und 200 %, Selbstbeteiligung 50 €, Gewährleistung. Noch nicht gelaufen, das kommt mit dem Pitch-Build (Schritt 30). `__tests__/build/e2eFlows.test.ts` hält sie bis dahin mit Texten und Code im Einklang
+- `e2e/` – Maestro-Flows für den Händler-Weg bis „Ja, senden“, Golden Path, Abbruch, dunkel und 200 %, Selbstbeteiligung 50 €, Gewährleistung. Noch nicht gelaufen, das kommt mit dem Pitch-Build (Schritt 30). `__tests__/build/e2eFlows.test.ts` hält sie bis dahin mit Texten und Code im Einklang
 - `docs/recht/` – offene Rechtsfragen mit Frist je Frage
 - `__tests__/` – Tests der drei Jest-Projekte, `__tests__/regressions/` mit R-01 bis R-18. `test/` hält gemeinsame Helfer
 - `scripts/` – Prüfungen (`ci-checks.sh`, `commit-if-green.sh`, `lint-changed.js`), Pitch-Tag, Import und Freigabe der Anleitungen und Abgleich mit der Demo

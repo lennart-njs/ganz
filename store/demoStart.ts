@@ -1,11 +1,27 @@
-// Demo-Startstand für den Pitch (ZUKUNFTSPLAN Phase 0, Pitch-Rhythmus): der Stand nach dem
-// Onboarding im Golden Path. Schutz über die Vertragsnummer verknüpft, das Gerät aus dem Vertrag,
-// kein Fall. Feste IDs und eine feste Zeit, damit jedes Laden denselben Stand ergibt.
-// linkContract und „Ja, das ist es“ im Onboarding bauen Vertrag und Gerät mit denselben Funktionen.
+// Demo-Startstände für den Pitch (ZUKUNFTSPLAN Phase 0, Pitch-Rhythmus). Feste IDs und eine feste
+// Zeit, damit jedes Laden denselben Stand ergibt. Kein Fall, keine Einwilligung.
+// - 'haendler' („Demo-Startstand laden“): der Stand nach dem Onboarding der Demo mit Fründ
+//   (Entscheidung 31): Gerät aus dem Katalog, gekauft beim Händler, „Nein, keine Versicherung“.
+//   Dazu das Kaufdatum als Beispielwert, nach dem das Onboarding nicht fragt.
+// - 'versicherung' („Demo-Startstand Versicherung“): der Stand nach dem Onboarding der ganz-Linie.
+//   Schutz über die Vertragsnummer verknüpft, das Gerät aus dem Vertrag, ohne Händler.
+// Das Onboarding baut Gerät, Händler und Vertrag mit denselben Funktionen.
 import { demoConfig } from '@/config/demo.config';
-import type { Cents, Contract, Device, Household, Id, ISODateTime, Person } from '@/model/types';
+import { catalog, type CatalogModel } from '@/data/catalog';
+import type {
+  Cents,
+  Contract,
+  Device,
+  Household,
+  Id,
+  ISODateTime,
+  PartnerRef,
+  Person,
+} from '@/model/types';
 
 import type { AppData, NewDevice } from './appStore';
+
+export type DemoStartKind = 'haendler' | 'versicherung';
 
 /** Feste IDs im Startstand. Neue IDs aus env.newId tragen immer eine Zeit, sie kollidieren nicht. */
 export const DEMO_START_IDS = {
@@ -57,12 +73,40 @@ export function contractDevice(contractId: Id | undefined): NewDevice {
   };
 }
 
+/** Ein Gerät aus dem Katalog, so wie „Gerät suchen“ es anlegt (components/app/DeviceSetup.tsx). */
+export function catalogDevice(model: CatalogModel): NewDevice {
+  return {
+    manufacturerId: model.manufacturerId,
+    category: model.category,
+    model: model.model,
+    identifiedBy: 'katalog',
+  };
+}
+
+/** Der Händler aus der Liste, so wie „Wo hast du es gekauft?“ ihn ans Gerät schreibt. */
+export function dealerRef(dealerId: string | undefined): PartnerRef | undefined {
+  const dealer = demoConfig.dealers.find((d) => d.id === dealerId);
+  return dealer ? { id: dealer.id, kind: 'haendler', name: dealer.name } : undefined;
+}
+
+/** Gerät der Demo mit dem Händler: Katalog-Eintrag aus `dealerDemo`, erster Händler der Liste */
+function dealerDemoDevice(): NewDevice {
+  const cfg = demoConfig;
+  const model = catalog.find((m) => m.id === cfg.dealerDemo.catalogId);
+  if (!model) throw new Error(`Katalog-Eintrag fehlt: ${cfg.dealerDemo.catalogId}`);
+  return {
+    ...catalogDevice(model),
+    purchaseDate: cfg.dealerDemo.purchaseDate,
+    soldBy: dealerRef(cfg.dealers[0]!.id),
+  };
+}
+
 /**
  * Der Startstand auf Basis des Anfangsstands: Demo-Einstellungen, Mitteilungen und Fallnummer
- * wie nach „Alles zurücksetzen“, dazu Haushalt, Vertrag und Gerät. Die Darstellung setzt der
- * Aufrufer, sie ist eine Einstellung des Telefons.
+ * wie nach „Alles zurücksetzen“, dazu Haushalt und Gerät, beim Startstand mit Versicherung auch
+ * der Vertrag. Die Darstellung setzt der Aufrufer, sie ist eine Einstellung des Telefons.
  */
-export function demoStartData(initial: AppData): AppData {
+export function demoStartData(initial: AppData, kind: DemoStartKind = 'haendler'): AppData {
   const cfg = demoConfig;
   const at = cfg.demo.startAt;
   const ids = DEMO_START_IDS;
@@ -77,6 +121,17 @@ export function demoStartData(initial: AppData): AppData {
     address: { ...cfg.household.address },
     createdAt: at,
   };
+  const base = { ...initial, onboardingDone: true, household, persons: [person] };
+  const device = (input: NewDevice): Device => ({
+    ...input,
+    id: ids.device,
+    householdId: household.id,
+    createdAt: at,
+  });
+
+  if (kind === 'haendler') {
+    return { ...base, contracts: [], devices: [device(dealerDemoDevice())] };
+  }
   const contract = contractFromConfig({
     id: ids.contract,
     householdId: household.id,
@@ -86,18 +141,5 @@ export function demoStartData(initial: AppData): AppData {
     linkedAt: at,
     coveredDeviceIds: [ids.device],
   });
-  const device: Device = {
-    ...contractDevice(contract.id),
-    id: ids.device,
-    householdId: household.id,
-    createdAt: at,
-  };
-  return {
-    ...initial,
-    onboardingDone: true,
-    household,
-    persons: [person],
-    contracts: [contract],
-    devices: [device],
-  };
+  return { ...base, contracts: [contract], devices: [device(contractDevice(contract.id))] };
 }

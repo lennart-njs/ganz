@@ -13,13 +13,16 @@ interface SelectCardProps {
   selected: boolean;
   onPress: () => void;
   media?: ReactNode;
+  /** Fester Name für die Maestro-Flows in e2e/ */
+  testID?: string;
 }
 
 /** Auswahlkarte mit Radio-Semantik und Häkchen (B-30). */
-export function SelectCard({ title, sub, selected, onPress, media }: SelectCardProps) {
+export function SelectCard({ title, sub, selected, onPress, media, testID }: SelectCardProps) {
   const theme = useTheme();
   return (
     <Pressable
+      testID={testID}
       accessibilityRole="radio"
       accessibilityLabel={de.a11y.withSub(title, sub)}
       accessibilityState={{ checked: selected }}

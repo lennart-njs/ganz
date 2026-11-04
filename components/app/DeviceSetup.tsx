@@ -17,6 +17,7 @@ import { de } from '@/i18n/de';
 import { deviceTitle } from '@/lib/devices';
 import type { Device, Id } from '@/model/types';
 import { useAppStore } from '@/store/appStore';
+import { catalogDevice } from '@/store/demoStart';
 
 import { DeviceScan } from './DeviceScan';
 
@@ -72,12 +73,8 @@ export function DeviceSetup({ onBack, onDone, deviceId, onSkip }: DeviceSetupPro
   };
 
   const pickModel = (m: CatalogModel) => {
-    const d = addDevice({
-      manufacturerId: m.manufacturerId,
-      category: m.category,
-      model: m.model,
-      identifiedBy: 'katalog',
-    });
+    // Dasselbe Gerät steht im Demo-Startstand (store/demoStart.ts)
+    const d = addDevice(catalogDevice(m));
     setDevice(d);
     go('dealer');
   };
@@ -149,6 +146,8 @@ export function DeviceSetup({ onBack, onDone, deviceId, onSkip }: DeviceSetupPro
           {found.map((m) => (
             <NavRow
               key={m.id}
+              // Für e2e/haendler.yaml: geraet-katalog-<Katalog-Schlüssel>
+              testID={`geraet-katalog-${m.id}`}
               title={deviceTitle(m)}
               sub={t.catalogSub(de.deviceCategory[m.category])}
               onPress={() => pickModel(m)}
@@ -256,6 +255,8 @@ export function DeviceSetup({ onBack, onDone, deviceId, onSkip }: DeviceSetupPro
         {dealers.map((d) => (
           <SelectCard
             key={d.id}
+            // Für e2e/haendler.yaml: geraet-haendler-<Händler aus config/demo.config.ts>
+            testID={`geraet-haendler-${d.id}`}
             title={d.name}
             sub={'service' in d && d.service ? t.dealerService(d.place, d.service.name) : d.place}
             selected={dealerId === d.id}
