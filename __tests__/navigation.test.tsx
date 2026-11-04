@@ -9,6 +9,7 @@ import { router } from 'expo-router';
 import FallLayout from '@/app/fall/_layout';
 import { demoConfig } from '@/config/demo.config';
 import { de } from '@/i18n/de';
+import { deviceTitle } from '@/lib/devices';
 import { useAppStore } from '@/store/appStore';
 import { APP } from '@/test/app';
 import { colors } from '@/theme/colors';
@@ -73,6 +74,24 @@ describe('Tabs', () => {
     expect(r.getPathname()).toBe('/profil');
     await fireEvent.press(screen.getByRole('button', { name: new RegExp(`^${de.tabs.devices}`) }));
     expect(r.getPathname()).toBe('/');
+  });
+});
+
+describe('Startseite (B-01)', () => {
+  test('die Gerätekarte öffnet das Gerätedetail, die Suchpille „Problem melden“', async () => {
+    finishOnboarding();
+    const device = useAppStore.getState().devices[0]!;
+    const r = await renderRouter(APP, { initialUrl: '/' });
+    await fireEvent.press(
+      screen.getByRole('button', { name: new RegExp(`^${deviceTitle(device)}`) }),
+    );
+    expect(r.getPathname()).toBe(`/geraet/${device.id}`);
+    await act(async () => router.back());
+    expect(r.getPathname()).toBe('/');
+    await fireEvent.press(
+      screen.getByRole('button', { name: new RegExp(`^${de.home.searchTitle}`) }),
+    );
+    expect(r.getPathname()).toBe('/fall/neu');
   });
 });
 

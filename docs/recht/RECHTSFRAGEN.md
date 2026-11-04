@@ -1,6 +1,6 @@
 # Rechtsfragen und ungeprüfte Annahmen
 
-Stand: 03.11.2026 · Startbestand aus `docs/ZUKUNFTSPLAN.md` Abschnitt 10, Nr. 46 aus Schritt 28
+Stand: 04.11.2026 · Startbestand aus `docs/ZUKUNFTSPLAN.md` Abschnitt 10, Nr. 46 aus Schritt 28, Nr. 47 aus seiner Gegenprüfung
 
 Diese Liste geht an Anwalt und Datenschutzbeauftragte (DSB). Den ersten Termin mit beiden buchst du für Woche 2 (KW 46). Danach gibt es feste Termine im Monat. Bis eine Antwort da ist, baut ihr die strengere Variante (ZUKUNFTSPLAN Grundsatz 5). Die Antwort kann dann nur lockern.
 
@@ -93,6 +93,7 @@ Die Frist nennt die Phase oder das Gate, vor dem die Antwort da sein muss. Phase
 | 37 | Wer haftet, wenn eine Anleitung oder ein Befund zu einem Schaden führt? Was dürfen die Nutzungsbedingungen begrenzen? Welche Versicherung braucht ganz vor dem Pilot? (Nr. 26) | RA | vor Pilot-Gate | offen | – |
 | 38 | Lizenz der Anleitungstexte des Herstellers (Nr. 26) | RA | vor Gate externe Tests | offen | – |
 | 46 | Selbstbeteiligung bei einem Termin vorbehaltlich Freigabe (Nr. 4, Nr. 5): Die App bucht heute mit „Zahlungspflichtig buchen“ und nennt die Selbstbeteiligung „falls Kranich freigibt“. Reicht das? Oder muss die Anfrage während der Prüfung unverbindlich sein und nach der Freigabe ein eigener Schritt mit Zusammenfassung und „Zahlungspflichtig buchen“ folgen? Folgt die Pflicht zur Selbstbeteiligung aus dem Versicherungsvertrag oder aus dem Auftrag an den Betrieb? (Nachtrag aus Schritt 28) | RA | vor Gate externe Tests | offen | – |
+| 47 | Misslungene Reparatur: Nach „Problem besteht weiter“ beginnt in der App eine neue Runde mit neuem Befund, neuer Meldung an Kranich und neuem Termin, jeweils mit eigenem Tap. Ist das richtig, oder ist es Nachbesserung des Betriebs (§ 634 Nr. 1, § 635 BGB) ohne neue Kosten und ohne neue Schadenmeldung? Wer zahlt die zweite Reparatur, und darf die App dafür einen zweiten Schadenfall anlegen? (Nachtrag aus der Gegenprüfung zu Schritt 28) | RA | vor Gate externe Tests | offen | – |
 
 ## App Store
 
