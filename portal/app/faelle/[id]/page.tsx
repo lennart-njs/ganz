@@ -12,8 +12,9 @@ import { DecisionButton } from '../../../components/Decide';
 import { Nav } from '../../../components/Nav';
 import { AutoSelect, OpenComposer, ScrollBox } from '../../../components/Small';
 import { Submit } from '../../../components/Submit';
-import { getCase, getSettings } from '../../../lib/api';
+import { getCase, getSettings, listCases } from '../../../lib/api';
 import { allowedDecisions, warrantyCheck } from '../../../lib/check';
+import { previousRepair } from '../../../lib/rework';
 import { conversation, type ConvItem } from '../../../lib/conversation';
 import { formatDate, formatEuro, formatWhen } from '../../../lib/format';
 import { nextStep } from '../../../lib/next';
@@ -165,7 +166,11 @@ function Bubble({ x, customer, day }: { x: ConvItem; customer: string; day: bool
 
 export default async function Fallakte({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const [data, { settings }] = await Promise.all([getCase(id), getSettings()]);
+  const [data, { settings }, { cases }] = await Promise.all([
+    getCase(id),
+    getSettings(),
+    listCases(),
+  ]);
   if (!data) notFound();
   const { tenant, record } = data;
   const file = record.file;
@@ -173,9 +178,10 @@ export default async function Fallakte({ params }: { params: Promise<{ id: strin
   const status = revoked ? 'erledigt' : (record.workflow?.status ?? 'neu');
   const due = sla(record, settings.rules);
   const who = member(settings, record.workflow?.assigneeId);
-  const check = warrantyCheck(file, settings.rules, record);
+  const rework = previousRepair(record, cases);
+  const check = warrantyCheck(file, settings.rules, record, rework);
   const decided = decisionOf(record);
-  const next = nextStep(record, settings);
+  const next = nextStep(record, settings, rework);
   // Schon nach dem Kaufbeleg gefragt (von Hand oder automatisch beim Eingang)?
   const proofQuestion = settings.messages.questions.find((q) => q.id === 'beleg')?.question;
   const askedProof = record.retailerEvents.some(
@@ -333,22 +339,35 @@ export default async function Fallakte({ params }: { params: Promise<{ id: strin
                   <span className={`chip ${check.proof ? 'ok' : 'warn'}`}>
                     {t.check.proof} {check.proof ? t.check.proofYes : t.check.proofNo}
                   </span>
+                  {check.rework ? <span className="chip ok">{t.check.reworkChip}</span> : null}
                 </div>
+                {check.rework ? (
+                  <p className="row-sub">
+                    <Link href={`/faelle/${encodeURIComponent(check.rework.caseId)}`}>
+                      {t.check.reworkOf(check.rework.caseId, formatDate(check.rework.doneAt))}
+                    </Link>
+                  </p>
+                ) : null}
                 <Facts
                   items={[
                     [
                       t.check.basis,
-                      check.until === undefined
-                        ? t.check.basisLine.open(settings.profile.shortName)
-                        : check.inWarranty
-                          ? t.check.basisLine.in(
-                              settings.profile.shortName,
-                              formatDate(check.until),
-                            )
-                          : t.check.basisLine.ended(
-                              settings.profile.shortName,
-                              formatDate(check.until),
-                            ),
+                      check.rework
+                        ? t.check.basisLine.rework(
+                            settings.profile.shortName,
+                            formatDate(check.rework.until),
+                          )
+                        : check.until === undefined
+                          ? t.check.basisLine.open(settings.profile.shortName)
+                          : check.inWarranty
+                            ? t.check.basisLine.in(
+                                settings.profile.shortName,
+                                formatDate(check.until),
+                              )
+                            : t.check.basisLine.ended(
+                                settings.profile.shortName,
+                                formatDate(check.until),
+                              ),
                     ],
                     [
                       f.purchased,

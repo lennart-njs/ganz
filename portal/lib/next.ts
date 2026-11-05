@@ -3,6 +3,7 @@ import type { DealerSettings } from '@/model/portal';
 import type { SharedCaseRecord } from '@/model/sharing';
 
 import { warrantyCheck, type Verdict } from './check';
+import type { PreviousRepair } from './rework';
 import { decisionOf } from './view';
 
 export type NextStep =
@@ -31,7 +32,11 @@ export function appointmentOf(r: SharedCaseRecord): { partner?: string; slot?: s
   };
 }
 
-export function nextStep(r: SharedCaseRecord, s: DealerSettings): NextStep | undefined {
+export function nextStep(
+  r: SharedCaseRecord,
+  s: DealerSettings,
+  rework?: PreviousRepair,
+): NextStep | undefined {
   if (r.revokedAt) return undefined;
   if (r.file.case.status === 'abgebrochen') return { kind: 'abgebrochen' };
   const status = r.workflow?.status ?? 'neu';
@@ -39,7 +44,7 @@ export function nextStep(r: SharedCaseRecord, s: DealerSettings): NextStep | und
   if (status === 'neu') return { kind: 'annehmen' };
   const decision = decisionOf(r);
   if (!decision)
-    return { kind: 'entscheiden', decision: warrantyCheck(r.file, s.rules, r).verdict };
+    return { kind: 'entscheiden', decision: warrantyCheck(r.file, s.rules, r, rework).verdict };
   if (status === 'termin') return { kind: 'termin_steht', ...appointmentOf(r) };
   const lastOurs = r.retailerEvents.filter((e) => !e.payload.auto).at(-1)?.at ?? '';
   const lastTheirs = r.workflow?.lastCustomerAt ?? '';

@@ -19,6 +19,8 @@ import {
   type SharedCaseRecord,
 } from '@/model/sharing';
 
+import type { PreviousRepair } from './rework';
+
 /** Ohne lesbares Kaufdatum schlägt die Prüfung nichts vor: offen */
 export type Verdict = RetailerDecision | 'offen';
 
@@ -33,6 +35,8 @@ export interface WarrantyCheck {
   inWarranty?: boolean;
   /** Versicherung am Stichtag gültig */
   insured: boolean;
+  /** Nachbesserung: eine frühere Reparatur am selben Gerät, deren Gewährleistung noch läuft */
+  rework?: PreviousRepair;
 }
 
 /** Gesetzliche Frist auf den Kauf, gleich mit der App */
@@ -43,7 +47,21 @@ export function fullMonths(purchase: string, asOf: string): number | undefined {
   return fullCalendarMonths(purchase, asOf);
 }
 
+/**
+ * Prüfung eines Falls. Mit rework (portal/lib/rework.ts) ist er eine Nachbesserung: Gewährleistung
+ * auf die frühere Reparatur, gleich wie die Frist auf den Kauf steht.
+ */
 export function warrantyCheck(
+  file: SharedCaseFile,
+  rules: DealerSettings['rules'],
+  record?: Pick<SharedCaseRecord, 'proofPhotoId'>,
+  rework?: PreviousRepair,
+): WarrantyCheck {
+  const c = purchaseCheck(file, rules, record);
+  return rework ? { ...c, verdict: 'gewaehrleistung', inWarranty: true, rework } : c;
+}
+
+function purchaseCheck(
   file: SharedCaseFile,
   rules: DealerSettings['rules'],
   record?: Pick<SharedCaseRecord, 'proofPhotoId'>,

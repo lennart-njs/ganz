@@ -303,6 +303,7 @@ export function Worklist({
                           cancelled={r.cancelled}
                         />
                         <SlaChip sla={r.sla} />
+                        {r.rework ? <span className="chip ok">{t.list.rework}</span> : null}
                       </span>
                     </Link>
                   </li>

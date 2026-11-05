@@ -6,8 +6,9 @@ import { de } from '@/i18n/de';
 import { parseOptions, workflowStatuses, type WorkflowStatus } from '@/model/portal';
 import type { PartStatus, RetailerDecision } from '@/model/sharing';
 
-import { getCase, getSettings, sendAction, sendWorkflow } from '../../../lib/api';
+import { getCase, getSettings, listCases, sendAction, sendWorkflow } from '../../../lib/api';
 import { allowedDecisions, warrantyCheck } from '../../../lib/check';
+import { previousRepair } from '../../../lib/rework';
 
 const t = de.portal.composer;
 const text = (form: FormData, key: string) => String(form.get(key) ?? '').trim();
@@ -83,9 +84,20 @@ export async function quick(id: string, form: FormData) {
     // Eine Ablehnung nur mit Grund, der Grund steht in der App unter der Absage
     const note = text(form, 'note') || undefined;
     // Nur, was die Regel zulässt (wie die Liste in der Fallakte)
-    const [found, { settings }] = await Promise.all([getCase(id), getSettings()]);
+    const [found, { settings }, { cases }] = await Promise.all([
+      getCase(id),
+      getSettings(),
+      listCases(),
+    ]);
     const allowed = found
-      ? allowedDecisions(warrantyCheck(found.record.file, settings.rules, found.record))
+      ? allowedDecisions(
+          warrantyCheck(
+            found.record.file,
+            settings.rules,
+            found.record,
+            previousRepair(found.record, cases),
+          ),
+        )
       : [];
     // Kulanz mit Betrag: bis zur eigenen Grenze und nicht über den Voranschlag
     const total = found?.record.file.quote?.repair.total;

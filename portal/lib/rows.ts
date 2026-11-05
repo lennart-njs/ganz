@@ -6,6 +6,7 @@ import type { DealerSettings, WorkflowStatus } from '@/model/portal';
 import type { SharedCaseRecord } from '@/model/sharing';
 
 import { formatWhen } from './format';
+import { previousRepair } from './rework';
 import { sla, type SlaTone } from './sla';
 import { decisionOf, lastMessage, member, unread } from './view';
 
@@ -20,6 +21,8 @@ export interface Row {
   revoked: boolean;
   /** Die Kundschaft hat den Fall in der App abgebrochen (Nr. 34) */
   cancelled: boolean;
+  /** Nachbesserung: frühere Reparatur am selben Gerät in der Frist (portal/lib/rework.ts) */
+  rework: boolean;
   assignee?: { id: string; name: string };
   sla?: { tone: SlaTone; label: string; left: number };
   unread: boolean;
@@ -48,6 +51,7 @@ export function toRows(cases: SharedCaseRecord[], s: DealerSettings): Row[] {
       status: revoked ? 'erledigt' : (r.workflow?.status ?? 'neu'),
       revoked,
       cancelled: f.case.status === 'abgebrochen',
+      rework: !!previousRepair(r, cases),
       assignee: who ? { id: who.id, name: who.name } : undefined,
       sla: due ? { tone: due.tone, label: due.label, left: due.left } : undefined,
       unread: unread(r),

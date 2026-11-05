@@ -1496,6 +1496,7 @@ export const de = {
       bulkState: 'Stand',
       bulkClear: 'Auswahl aufheben',
       bulkDone: (n: number) => (n === 1 ? '1 Fall geändert' : `${n} Fälle geändert`),
+      rework: 'Nachbesserung',
       /** Tafel: Verschieben mit der Tastatur */
       moveCase: (id: string) => `Fall ${id} verschieben`,
       columns: {
@@ -1631,7 +1632,12 @@ export const de = {
         in: (who: string, until: string) => `${who} · Gewährleistung bis ${until}`,
         ended: (who: string, until: string) => `${who} · Gewährleistung endete am ${until}`,
         open: (who: string) => `${who} · Gewährleistung, Kaufdatum fehlt`,
+        rework: (who: string, until: string) =>
+          `${who} · Nachbesserung, Gewährleistung auf die Reparatur bis ${until}`,
       },
+      /** Nachbesserung: dasselbe Gerät, frühere Reparatur in der Frist (Nr. 32) */
+      reworkChip: 'Nachbesserung, keine neuen Kosten',
+      reworkOf: (id: string, date: string) => `Reparatur ${id} vom ${date}`,
       insured: (provider: string, product: string, until: string) =>
         `${provider} · ${product} bis ${until}`,
       decided: 'Entschieden',
