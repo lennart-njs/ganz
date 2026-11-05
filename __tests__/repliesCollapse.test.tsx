@@ -27,10 +27,23 @@ describe('nextCollapsed', () => {
     }
   });
 
-  test('unten angekommen oder ohne Scrollen sind die Antworten immer da', () => {
-    expect(nextCollapsed(true, move(-50, NEAR_END))).toBe(false);
-    expect(nextCollapsed(true, move(-50, 0))).toBe(false);
-    expect(nextCollapsed(true, move(-50, far, false))).toBe(false);
+  test('langsam runter bis ans Ende zeigt die Antworten', () => {
+    expect(nextCollapsed(true, move(1, NEAR_END))).toBe(false);
+    expect(nextCollapsed(true, move(1, 0))).toBe(false);
+  });
+
+  test('ganz unten oder ohne Scrollen klappt hoch nichts ein', () => {
+    expect(nextCollapsed(false, move(-50, NEAR_END))).toBe(false);
+    expect(nextCollapsed(false, move(-50, far, false))).toBe(false);
+  });
+
+  // Klappt die Liste ein, wird der Inhalt höher, und man ist plötzlich „unten“. Der Browser meldet
+  // dazu ein Scrollen ohne Bewegung. Gefunden im Browser: Die Liste sprang sofort wieder auf.
+  test('ein Scrollen ohne Bewegung ändert nichts, auch nah am Ende', () => {
+    for (const collapsed of [false, true]) {
+      expect(nextCollapsed(collapsed, move(0, 0))).toBe(collapsed);
+      expect(nextCollapsed(collapsed, move(0, 10, false))).toBe(collapsed);
+    }
   });
 });
 

@@ -24,15 +24,17 @@ export const SCROLL_STEP = 12;
 export const NEAR_END = 48;
 
 /**
- * Neuer Zustand aus einer Scroll-Bewegung. Hoch (dy < 0) klappt ein, runter oder unten
- * angekommen zeigt wieder. Ohne deutliche Bewegung bleibt es, wie es ist.
+ * Neuer Zustand aus einer Scroll-Bewegung. Hoch (dy < 0), solange man nicht ganz unten ist,
+ * klappt ein. Runter zeigt wieder, auch langsames Runterscrollen bis ans Ende. Ohne deutliche
+ * Bewegung bleibt es, wie es ist: Klappt die Liste ein, wird der Inhalt höher, und der Browser
+ * meldet ein Scrollen ohne Bewegung. Das darf sie nicht gleich wieder aufklappen.
  */
 export function nextCollapsed(
   collapsed: boolean,
   move: { dy: number; fromEnd: number; canScroll: boolean },
 ): boolean {
-  if (!move.canScroll || move.fromEnd <= NEAR_END) return false;
-  if (move.dy <= -SCROLL_STEP) return true;
+  if (move.dy <= -SCROLL_STEP) return move.canScroll && move.fromEnd > NEAR_END ? true : collapsed;
   if (move.dy >= SCROLL_STEP) return false;
+  if (move.dy > 0 && move.fromEnd <= NEAR_END) return false;
   return collapsed;
 }
