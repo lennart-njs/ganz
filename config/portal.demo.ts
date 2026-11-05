@@ -197,6 +197,7 @@ export const portalSeed = {
   anonymous: 168,
   /** Zeitraum in Tagen */
   days: 84,
+  /** Ein Name je Fall, keiner doppelt */
   customers: [
     'Robin K.',
     'Alex M.',
@@ -222,6 +223,24 @@ export const portalSeed = {
     'Leon Y.',
     'Nora C.',
     'Jan A.',
+    'Greta W.',
+    'Theo K.',
+    'Frieda L.',
+    'Mats B.',
+    'Ronja S.',
+    'Jakob H.',
+    'Wiebke R.',
+    'Henri P.',
+    'Malte F.',
+    'Merle T.',
+    'Ole D.',
+    'Paula Z.',
+    'Fiete O.',
+    'Lotta U.',
+    'Carla N.',
+    'Moritz E.',
+    'Smilla G.',
+    'Hauke M.',
   ],
   streets: [
     'Lindenweg',
@@ -239,6 +258,8 @@ export const portalSeed = {
     { zip: '32423', city: 'Minden' },
     { zip: '32052', city: 'Herford' },
   ],
+  /** Wann die Kundschaft in den Beispielfällen schreibt. Fründ antwortet in seinen Öffnungszeiten. */
+  customerHours: { days: [1, 2, 3, 4, 5, 6, 7], from: '07:00', to: '22:30' },
   /** Geräte ohne Anleitung im Katalog */
   otherDevices: [
     {
@@ -254,25 +275,194 @@ export const portalSeed = {
       problem: 'Wäsche bleibt feucht',
     },
   ],
-  /** Nachrichten in den Beispielfällen */
-  dealerMessages: [
-    'Danke für die Fotos. Das sieht nach der Laugenpumpe aus. Wir prüfen die Gewährleistung.',
-    'Wir haben den Fall an unseren Kundendienst gegeben.',
-    'Das Ersatzteil ist heute angekommen. Passt dir einer der Termine?',
-    'Kurze Frage: Ist das Gerät fest eingebaut oder freistehend?',
+  /**
+   * Probleme in den Beispielfällen. labels: das Problem, wie es in der App heißt. ablauf: der
+   * Wasserablauf, dazu gibt es die Anleitung aus dem Katalog. weight: wie oft je Gerät. finding:
+   * Der Befund aus dem Videocall (de.appliance) passt dazu. details: was die Kundschaft dazu schreibt.
+   */
+  issues: [
+    {
+      key: 'ablauf',
+      labels: ['Wasser bleibt stehen', 'Wasser bleibt in der Trommel'],
+      ablauf: true,
+      weight: 4,
+      part: 'Laugenpumpe',
+      finding: true,
+      details: [
+        'Das Wasser steht seit gestern Abend im Gerät.',
+        'Man hört die Pumpe kurz brummen, dann passiert nichts mehr.',
+        'Das ist diese Woche schon das zweite Mal.',
+      ],
+    },
+    {
+      key: 'elektronik',
+      labels: [
+        'Bedienfeld bleibt dunkel',
+        'Alle Anzeigen leuchten oder blinken',
+        'Maschine startet nicht',
+      ],
+      weight: 1,
+      part: 'Elektronikmodul',
+      details: [
+        'Die Sicherung habe ich geprüft, die ist in Ordnung.',
+        'Stecker ziehen und wieder einstecken hilft nicht.',
+      ],
+    },
+    {
+      key: 'zulauf',
+      labels: ['Maschine zieht kein Wasser'],
+      weight: 2,
+      part: 'Zulaufschlauch mit Waterproof',
+      details: [
+        'Der Wasserhahn ist offen. Trotzdem kommt kein Wasser.',
+        'Das Programm bricht nach ein paar Minuten ab.',
+      ],
+    },
+    {
+      key: 'dichtung',
+      labels: ['Wasser am Laugenfilter'],
+      weight: 2,
+      part: 'Dichtung am Laugenfilter',
+      details: [
+        'Nach jeder Wäsche steht eine kleine Pfütze vor der Maschine.',
+        'Den Filter habe ich fest zugedreht. Es tropft trotzdem.',
+      ],
+    },
+    {
+      key: 'verriegelung',
+      labels: ['Tür geht nicht auf'],
+      weight: 2,
+      part: 'Türverriegelung',
+      details: [
+        'Die Wäsche ist seit gestern in der Maschine.',
+        'Das Programm ist durch, die Tür bleibt trotzdem zu.',
+      ],
+    },
+    {
+      key: 'stossdaempfer',
+      labels: ['Maschine wackelt oder wandert'],
+      weight: 1,
+      part: 'Stoßdämpfer',
+      details: [
+        'Beim Schleudern wandert sie fast zehn Zentimeter.',
+        'Ausgerichtet ist sie, die Füße sind fest.',
+      ],
+    },
+    {
+      key: 'fuehler',
+      labels: ['Kühlt nicht mehr richtig'],
+      weight: 4,
+      part: 'Temperaturfühler',
+      finding: true,
+      details: [
+        'Im Kühlteil sind es nur noch 12 Grad.',
+        'Die Milch ist nach einem Tag sauer.',
+        'Das Gefrierteil ist kalt, nur oben wird es warm.',
+      ],
+    },
+    {
+      key: 'luefter',
+      labels: ['Brummt oder klackt laut'],
+      weight: 2,
+      part: 'Lüfter',
+      details: [
+        'Das Klacken kommt etwa alle zehn Minuten, auch nachts.',
+        'Das Brummen ist seit zwei Tagen deutlich lauter.',
+      ],
+    },
+    {
+      key: 'abtau',
+      labels: ['Eis an der Rückwand'],
+      weight: 1,
+      part: 'Abtauheizung',
+      details: [
+        'Die Eisschicht ist schon fast zwei Zentimeter dick.',
+        'Abgetaut habe ich vor einer Woche. Jetzt ist das Eis wieder da.',
+      ],
+    },
+    {
+      key: 'kondensat',
+      labels: ['Wäsche bleibt feucht', 'Programm bricht ab'],
+      weight: 2,
+      part: 'Kondensatpumpe',
+      finding: true,
+      details: [
+        'Der Wasserbehälter bleibt leer, die Wäsche ist danach noch nass.',
+        'Nach einer halben Stunde bricht das Programm ab.',
+      ],
+    },
+    {
+      key: 'heizung',
+      labels: ['Trockner wird nicht warm'],
+      weight: 2,
+      part: 'Heizelement',
+      details: [
+        'Die Trommel dreht sich, aber die Luft bleibt kalt.',
+        'Nach zwei Stunden ist die Wäsche noch genauso nass.',
+      ],
+    },
   ],
-  customerMessages: [
-    'Danke, ich warte auf eure Nachricht.',
-    'Das Gerät ist freistehend.',
-    'Der Kaufbeleg kommt gleich als Foto.',
-    'Dienstag passt gut, ich bin den ganzen Tag da.',
-    'Es läuft wieder, danke.',
+  /** Gespräche in den Beispielfällen. Fründ duzt die Kundschaft, wie in der App. */
+  talk: {
+    /** Antwort, wenn der Kaufbeleg fehlt. branch: Filiale */
+    noProof: (branch: string) =>
+      `Der Beleg ist leider weg. Gekauft habe ich das Gerät bei euch in ${branch}.`,
+    /** Kein Zeitfenster passt */
+    otherTime: 'Die Zeiten passen bei mir leider nicht. Geht es auch Donnerstag nach 16 Uhr?',
+    /** Nach „Das können wir leider nicht übernehmen.“ */
+    cost: 'Schade. Was würde eine Reparatur ungefähr kosten?',
+    /** Das Ersatzteil ist überfällig */
+    partLate: 'Gibt es schon etwas Neues zum Ersatzteil?',
+    /** Nach „Das läuft über deine Versicherung.“ */
+    insurer: 'Muss ich mich selbst bei der Versicherung melden?',
+    /** Für den Einsatz des Kundendienstes */
+    builtIn: {
+      question: 'Ist das Gerät eingebaut oder freistehend?',
+      options: ['Eingebaut', 'Freistehend'],
+    },
+    /** Mit dem Terminvorschlag, wenn das Ersatzteil da ist */
+    partWithTech: 'Unser Techniker bringt das Teil mit. Der Einbau dauert etwa eine Stunde.',
+    /** Nach einer Ablehnung */
+    offerOrNew: {
+      question: 'Sollen wir dir ein Angebot für die Reparatur machen oder ein neues Gerät zeigen?',
+      options: ['Angebot für die Reparatur', 'Neues Gerät'],
+    },
+    newDevice:
+      'Gern. Komm einfach in einer unserer Filialen vorbei. Das alte Gerät nehmen wir bei der Lieferung mit.',
+    /** Nach der Bestätigung des Termins. day: Wochentag des Termins, z. B. „Montag“ */
+    afterBooking: [
+      (day: string) => `Danke, dann bis ${day}.`,
+      (_day: string) => 'Bitte vorher kurz anrufen. Die Klingel geht nicht.',
+      (day: string) => `${day} passt gut, ich bin den ganzen Tag da.`,
+    ],
+    /** Nach der Reparatur */
+    works: [
+      'Läuft wieder, danke.',
+      'Alles wieder gut. Danke für die schnelle Hilfe.',
+      'Funktioniert wieder einwandfrei.',
+    ],
+    /** Nach der Weitergabe an die Versicherung */
+    ok: ['Alles klar, danke.', 'Okay, danke für die Info.', 'Gut, dann warte ich auf den Anruf.'],
+  },
+  /** Interne Notizen in den Beispielfällen */
+  notes: {
+    kulanz: 'Kulanz mit Thomas abgestimmt.',
+    sap: 'Kaufbeleg in SAP gefunden, Beleg-Nr. passt.',
+    part: (days: number) =>
+      `Teil beim Hersteller bestellt, Lieferzeit laut Großhandel ${days} Tage.`,
+    called: 'Hat schon zweimal angerufen, bitte heute melden.',
+    bell: 'Klingel defekt, vor dem Termin anrufen.',
+    insurer: 'Schaden an die Versicherung gemeldet.',
+  },
+  /** Ersatzteile zur Auswahl im Portal */
+  parts: [
+    'Laugenpumpe',
+    'Türdichtung',
+    'Zulaufschlauch mit Waterproof',
+    'Heizelement',
+    'Kondensatpumpe',
+    'Temperaturfühler',
+    'Türverriegelung',
+    'Elektronikmodul',
   ],
-  notes: [
-    'Kunde bereits zweimal angerufen, bitte zügig melden.',
-    'Kaufbeleg in SAP gefunden, Beleg-Nr. passt.',
-    'Teil beim Hersteller bestellt, Lieferzeit laut Großhandel 3 Tage.',
-    'Kulanz mit Thomas abgestimmt.',
-  ],
-  parts: ['Laugenpumpe', 'Türdichtung', 'Zulaufschlauch mit Waterproof', 'Heizelement'],
 };

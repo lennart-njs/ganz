@@ -6,9 +6,18 @@ import path from 'node:path';
 
 import * as ts from 'typescript';
 
+import { demoConfig } from '@/config/demo.config';
 import { fruendSettings, messagePreview, portalSeed } from '@/config/portal.demo';
+import { catalog } from '@/data/catalog';
 import { de } from '@/i18n/de';
-import { fillTemplate, formatOptions, parseOptions, settingsSections } from '@/model/portal';
+import { getGuide } from '@/lib/guideCatalog';
+import {
+  fillTemplate,
+  formatOptions,
+  inServiceHours,
+  parseOptions,
+  settingsSections,
+} from '@/model/portal';
 import type { SharedPhoto } from '@/model/sharing';
 import { PURCHASE_WARRANTY_MONTHS, fullMonths, warrantyCheck } from '@/portal/lib/check';
 import { DEFAULT_REGULATOR_RULES } from '@/model/policies/regulator';
@@ -18,7 +27,7 @@ import { photoLabel } from '@/portal/lib/photos';
 import { sectionFromForm } from '@/portal/lib/settingsForm';
 import { sla } from '@/portal/lib/sla';
 import { computeStats } from '@/portal/lib/stats';
-import { unread } from '@/portal/lib/view';
+import { decisionOf, lastMessage, unread } from '@/portal/lib/view';
 import { seedAnonymous, seedRecords } from '@/server/backend/seed';
 import { parseSettingsSection } from '@/server/backend/validate';
 
@@ -319,6 +328,120 @@ describe('Händlerportal: Browser-Komponenten ohne Server-Code', () => {
       expect(src).not.toMatch(/from ['"][^'"]*Wordmark['"]/);
     },
   );
+});
+
+// Im Portal gesehen (05.11.2026): Zwei Zeilen oben in der Liste endeten mit derselben Nachricht
+// „Dienstag passt gut …“, ohne Terminvorschlag davor. Und die letzte Woche der Auswertung war fast
+// doppelt so hoch wie die anderen, weil alle offenen Beispielfälle in den letzten Tagen lagen.
+describe('Beispielfälle: wie echte Fälle', () => {
+  const open = records.filter((r) => r.workflow?.status !== 'erledigt');
+  const beleg = s.messages.questions.find((q) => q.id === 'beleg')!;
+  const days = ['Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag', 'Sonntag'];
+
+  test('Die ersten offenen Fälle der Liste zeigen verschiedene letzte Nachrichten', () => {
+    // Sortiert wie die Arbeitsliste: Fristen zuerst, dann die neuesten
+    const left = (r: (typeof records)[number]) => sla(r, s.rules, NOW)?.left ?? Infinity;
+    const list = [...open].sort(
+      (a, b) => left(a) - left(b) || b.file.sharedAt.localeCompare(a.file.sharedAt),
+    );
+    const previews = list.slice(0, 15).flatMap((r) => lastMessage(r)?.text ?? []);
+    expect(previews.length).toBeGreaterThanOrEqual(12);
+    expect(new Set(previews).size).toBe(previews.length);
+    expect(new Set(open.map((r) => r.file.customer.name)).size).toBe(open.length);
+  });
+
+  test('Antworten nur auf Fragen, ein Wochentag erst nach dem Terminvorschlag', () => {
+    for (const r of records) {
+      for (const a of r.file.answers) {
+        const q = r.retailerEvents.find((e) => e.id === a.questionEventId);
+        expect(q && q.at <= a.at).toBe(true);
+        expect((q?.payload.options ?? q?.payload.slots) as string[]).toContain(a.answer);
+      }
+      for (const m of r.file.messages ?? []) {
+        const day = days.find((d) => m.text.includes(d));
+        if (!day) continue;
+        const before = r.retailerEvents.filter((e) => e.at < m.at);
+        expect(before.some((e) => e.type === 'haendler_termin')).toBe(true);
+        const booked = before.findLast((e) => e.type === 'haendler_betrieb' && e.payload.slot);
+        if (booked) expect(String(booked.payload.slot).slice(0, 2)).toBe(day.slice(0, 2));
+      }
+    }
+  });
+
+  test('Kaufbeleg: Die Frage kommt nur ohne Beleg, die Antwort passt zum Foto', () => {
+    for (const r of records) {
+      const asked = r.retailerEvents.find((e) => e.payload.question === beleg.question);
+      const proof = r.file.photos.some((p) => p.purpose === 'kaufbeleg');
+      const answer = r.file.answers.find((a) => a.questionEventId === asked?.id)?.answer;
+      expect(proof).toBe(!asked || answer === beleg.options[0]);
+      if ((r.file.messages ?? []).some((m) => m.text.includes('Beleg'))) expect(proof).toBe(false);
+      // Beispielfotos haben kein Bild: nur der Kaufbeleg, keine leere Kachel „Display“
+      expect(r.file.photos.every((p) => p.purpose === 'kaufbeleg')).toBe(true);
+    }
+  });
+
+  test('Der Stand passt zum Gespräch', () => {
+    for (const r of open) {
+      const wf = r.workflow!;
+      const own = r.retailerEvents.filter((e) => !e.payload.auto);
+      if (wf.status === 'neu') expect(own).toEqual([]);
+      else expect(own[0]?.type).toBe('haendler_angenommen');
+      if (wf.status === 'wartet_uns') expect(lastMessage(r)?.fromCustomer).toBe(true);
+      if (wf.status === 'wartet_kunde') expect(own.at(-1)!.at > wf.lastCustomerAt!).toBe(true);
+      if (wf.status === 'termin') {
+        expect(decisionOf(r)).toBeDefined();
+        expect(r.retailerEvents.some((e) => e.type === 'haendler_betrieb' && e.payload.slot)).toBe(
+          true,
+        );
+      }
+    }
+  });
+
+  test('Fründ handelt in den Öffnungszeiten, zu jeder Uhrzeit des Starts', () => {
+    // Freitag 10 Uhr, Sonntag 21:30 Uhr, Montag 7:30 Uhr
+    for (const now of [
+      NOW,
+      Date.parse('2026-11-08T20:30:00Z'),
+      Date.parse('2026-11-09T06:30:00Z'),
+    ]) {
+      const late: string[] = [];
+      for (const r of seedRecords(now)) {
+        for (const e of r.retailerEvents)
+          if (!e.payload.auto && !inServiceHours(s.profile.hours, new Date(e.at)))
+            late.push(`${r.file.caseId} ${e.type} ${e.at}`);
+        for (const n of r.notes ?? [])
+          if (!inServiceHours(s.profile.hours, new Date(n.at)))
+            late.push(`${r.file.caseId} ${n.at}`);
+      }
+      expect(late).toEqual([]);
+    }
+  });
+
+  test('Neue Beispielfälle sehen nicht aus wie der Fall aus der Live-Demo, Nummern darunter', () => {
+    const live = catalog.find((m) => m.id === demoConfig.dealerDemo.catalogId)!;
+    const drain = getGuide(live.patterns.ablauf)!.title;
+    expect(
+      open.filter(
+        (r) => r.file.device.model === live.model && /Wasser/.test(r.file.case.problemLabel),
+      ),
+    ).toEqual([]);
+    expect(open.some((r) => r.file.case.problemLabel === drain)).toBe(false);
+    for (const r of records)
+      expect(Number(r.file.caseId.replace(/\D/g, ''))).toBeLessThan(demoConfig.caseNumber.start);
+  });
+
+  test('Auswertung: Die letzte Woche sticht nicht heraus', () => {
+    const st = computeStats(records, seedAnonymous(NOW).fruend!, s, NOW);
+    const totals = st.weeks.map((w) => w.total);
+    const before = totals.slice(0, -1);
+    const last = st.weeks.at(-1)!;
+    expect(last.total).toBeLessThanOrEqual(Math.max(...before));
+    expect(last.counts.haendler / last.total).toBeLessThan(0.5);
+    // Etwa so viele Fälle wie vorher, gut die Hälfte ohne Einsatz gelöst
+    expect(st.total).toBeGreaterThanOrEqual(190);
+    expect(st.total).toBeLessThanOrEqual(230);
+    expect(st.selfShare).toBeGreaterThan(0.45);
+  });
 });
 
 describe('Händlerportal: erfundene Werte', () => {
