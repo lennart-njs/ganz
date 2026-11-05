@@ -176,7 +176,7 @@ export default async function Fallakte({ params }: { params: Promise<{ id: strin
   const file = record.file;
   const revoked = !!record.revokedAt;
   const status = revoked ? 'erledigt' : (record.workflow?.status ?? 'neu');
-  const due = sla(record, settings.rules);
+  const due = sla(record, settings.rules, Date.now(), settings.profile.hours);
   const who = member(settings, record.workflow?.assigneeId);
   const rework = previousRepair(record, cases);
   const check = warrantyCheck(file, settings.rules, record, rework);

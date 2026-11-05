@@ -1510,6 +1510,8 @@ export const de = {
     sla: {
       overdue: (d: string) => `${d} überfällig`,
       left: (d: string) => `noch ${d}`,
+      /** Außerhalb der Servicezeit ruht die Frist */
+      paused: (text: string) => `${text}, ruht`,
       label: 'Frist',
     },
     duration: {

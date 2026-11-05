@@ -38,7 +38,7 @@ export function toRows(cases: SharedCaseRecord[], s: DealerSettings): Row[] {
     const f = r.file;
     const revoked = !!r.revokedAt;
     const who = member(s, r.workflow?.assigneeId);
-    const due = sla(r, s.rules, now);
+    const due = sla(r, s.rules, now, s.profile.hours);
     const last = lastMessage(r);
     const decision = decisionOf(r);
     return {
