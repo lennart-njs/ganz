@@ -24,6 +24,7 @@ import { createRateLimiter } from '@/lib/chat/guard';
 import type { DealerSettings } from '@/model/portal';
 import type { SharedCaseFile } from '@/model/sharing';
 import { isLocalHost, secureCookie } from '@/portal/lib/cookie';
+import { securityHeaders } from '@/portal/lib/securityHeaders';
 import { sectionFromForm } from '@/portal/lib/settingsForm';
 import { getCaseStore, setCaseStore } from '@/server/backend';
 import { demoPassword } from '@/server/backend/auth';
@@ -544,5 +545,54 @@ describe('Portal: Sitzungs-Cookie', () => {
     const source = fs.readFileSync(path.join(__dirname, '../portal/lib/session.ts'), 'utf8');
     expect(source).toMatch(/httpOnly: true/);
     expect(source).toMatch(/sameSite: 'lax'/);
+  });
+});
+
+describe('Portal: Sicherheits-Header', () => {
+  const header = (dev: boolean, key: string) =>
+    securityHeaders(dev).find((h) => h.key === key)?.value ?? '';
+  const directives = (dev: boolean) =>
+    Object.fromEntries(
+      header(dev, 'Content-Security-Policy')
+        .split(';')
+        .map((d) => d.trim().split(/\s+/))
+        .map(([name, ...values]) => [name!, values]),
+    );
+
+  test('CSP: nur eigene Quellen, kein Einbetten, keine Plugins', () => {
+    const csp = directives(false);
+    expect(csp['default-src']).toEqual(["'self'"]);
+    expect(csp['frame-ancestors']).toEqual(["'none'"]);
+    expect(csp['object-src']).toEqual(["'none'"]);
+    expect(csp['base-uri']).toEqual(["'self'"]);
+    expect(csp['form-action']).toEqual(["'self'"]);
+    // Fotos der Fallakte als data:, das Layout mit <style>
+    expect(csp['img-src']).toEqual(["'self'", 'data:']);
+    expect(csp['style-src']).toContain("'unsafe-inline'");
+    // Keine fremden Hosts, kein eval im Build
+    const all = Object.values(csp).flat();
+    expect(all.filter((v) => /^https?:|\*/.test(v))).toEqual([]);
+    expect(all).not.toContain("'unsafe-eval'");
+  });
+
+  test('next dev darf eval und WebSocket, der Build nicht', () => {
+    expect(directives(true)['script-src']).toContain("'unsafe-eval'");
+    expect(directives(true)['connect-src']).toContain('ws:');
+    expect(directives(false)['connect-src']).toEqual(["'self'"]);
+  });
+
+  test('Rahmen, MIME, Referrer, Kamera und Mikrofon', () => {
+    expect(header(false, 'X-Frame-Options')).toBe('DENY');
+    expect(header(false, 'X-Content-Type-Options')).toBe('nosniff');
+    // no-referrer schickte „Origin: null“ mit Formularen, Server Actions gingen dann nicht
+    expect(header(false, 'Referrer-Policy')).toBe('same-origin');
+    expect(header(false, 'Permissions-Policy')).toMatch(/camera=\(\)/);
+    expect(header(false, 'Permissions-Policy')).toMatch(/microphone=\(\)/);
+  });
+
+  test('next.config.ts setzt sie für jede Seite', () => {
+    const source = fs.readFileSync(path.join(__dirname, '../portal/next.config.ts'), 'utf8');
+    expect(source).toMatch(/source: '\/:path\*'/);
+    expect(source).toMatch(/securityHeaders\(process\.env\.NODE_ENV !== 'production'\)/);
   });
 });
