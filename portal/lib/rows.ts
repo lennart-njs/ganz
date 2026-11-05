@@ -18,7 +18,8 @@ export interface Row {
   problem: string;
   status: WorkflowStatus;
   revoked: boolean;
-  example: boolean;
+  /** Die Kundschaft hat den Fall in der App abgebrochen (Nr. 34) */
+  cancelled: boolean;
   assignee?: { id: string; name: string };
   sla?: { tone: SlaTone; label: string; left: number };
   unread: boolean;
@@ -46,7 +47,7 @@ export function toRows(cases: SharedCaseRecord[], s: DealerSettings): Row[] {
       problem: revoked ? '' : f.case.problemLabel,
       status: revoked ? 'erledigt' : (r.workflow?.status ?? 'neu'),
       revoked,
-      example: f.isExample,
+      cancelled: f.case.status === 'abgebrochen',
       assignee: who ? { id: who.id, name: who.name } : undefined,
       sla: due ? { tone: due.tone, label: due.label, left: due.left } : undefined,
       unread: unread(r),

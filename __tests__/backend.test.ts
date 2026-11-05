@@ -539,3 +539,44 @@ describe('Aktionen des Händlers: nichts doppelt', () => {
     expect(repeated([], msg)).toBeUndefined();
   });
 });
+
+// Portal-Prüfung 05.11.: Ein Kaufbeleg aus dem Chat zählte nie, und ein in der App abgebrochener
+// Fall (Nr. 34) blieb im Portal offen, die Frist lief weiter.
+describe('Kaufbeleg aus dem Chat und Abbruch durch die Kundschaft', () => {
+  const mark = async (id: string, json: unknown) =>
+    (
+      await work(
+        req(`/api/v1/portal/faelle/${id}/bearbeitung`, {
+          method: 'POST',
+          headers: await authed(),
+          json,
+        }),
+        { id },
+      )
+    ).status;
+
+  test('ein Foto des Falls lässt sich als Kaufbeleg markieren, ein fremdes nicht', async () => {
+    const photo = {
+      id: 'ph_chat',
+      takenAt: '2026-11-05T10:00:00.000Z',
+      purpose: 'frage' as const,
+      source: 'demo' as const,
+    };
+    await shareFile(file({ photos: [photo] }));
+    expect(await mark('GS-30001', { type: 'kaufbeleg', photoId: 'gibt-es-nicht' })).not.toBe(200);
+    expect((await record('GS-30001')).proofPhotoId).toBeUndefined();
+    expect(await mark('GS-30001', { type: 'kaufbeleg', photoId: 'ph_chat' })).toBe(200);
+    expect((await record('GS-30001')).proofPhotoId).toBe('ph_chat');
+  });
+
+  test('in der App abgebrochen: im Portal erledigt', async () => {
+    const { body } = await shareFile(file());
+    const before = await record('GS-30001');
+    expect(before.workflow?.status).toBe('neu');
+    const cancelled = file({
+      case: { ...file().case, status: 'abgebrochen', updatedAt: '2026-11-05T11:00:00.000Z' },
+    });
+    expect((await shareFile(cancelled, body.token)).status).toBe(200);
+    expect((await record('GS-30001')).workflow?.status).toBe('erledigt');
+  });
+});

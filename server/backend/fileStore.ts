@@ -318,7 +318,10 @@ export class FileCaseStore implements CaseStore {
       events.push(ev);
       setStatus(record, 'termin');
     }
-    if (file.case.status === 'erledigt') setStatus(record, 'erledigt');
+    // Erledigt oder von der Kundschaft abgebrochen (Nr. 34): Im Portal ist der Fall dann zu, die
+    // Frist läuft nicht weiter
+    if (file.case.status === 'erledigt' || file.case.status === 'abgebrochen')
+      setStatus(record, 'erledigt');
     return events;
   }
 
@@ -434,6 +437,9 @@ export class FileCaseStore implements CaseStore {
         ...(r.notes ?? []),
         { id: newId('note'), at: now(), by: tenant.userName, text: action.text },
       ];
+    } else if (action.type === 'kaufbeleg') {
+      if (!r.file.photos.some((p) => p.id === action.photoId)) return false;
+      r.proofPhotoId = action.photoId;
     } else if (action.type === 'zuweisen') {
       r.workflow = {
         ...(r.workflow ?? { status: 'neu', since: now() }),

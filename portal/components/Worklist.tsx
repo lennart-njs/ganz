@@ -281,7 +281,11 @@ export function Worklist({
                         <span className="row-sub">{r.assignee?.name ?? t.list.unassigned}</span>
                       </span>
                       <span className="row-state">
-                        <WorkflowChip status={r.status} revoked={r.revoked} />
+                        <WorkflowChip
+                          status={r.status}
+                          revoked={r.revoked}
+                          cancelled={r.cancelled}
+                        />
                         <SlaChip sla={r.sla} />
                       </span>
                     </Link>

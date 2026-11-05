@@ -74,8 +74,15 @@ export async function quick(id: string, form: FormData) {
   if (kind === 'annehmen') await sendAction(id, { type: 'annehmen' });
   if (kind === 'entscheidung') {
     const decision = text(form, 'decision') as RetailerDecision;
-    if (['gewaehrleistung', 'kulanz', 'an_versicherer', 'abgelehnt'].includes(decision))
-      await sendAction(id, { type: 'entscheidung', decision });
+    // Eine Ablehnung nur mit Grund, der Grund steht in der App unter der Absage
+    const note = text(form, 'note') || undefined;
+    const valid = ['gewaehrleistung', 'kulanz', 'an_versicherer', 'abgelehnt'].includes(decision);
+    if (valid && (decision !== 'abgelehnt' || note))
+      await sendAction(id, { type: 'entscheidung', decision, note });
+  }
+  if (kind === 'kaufbeleg') {
+    const photoId = text(form, 'photoId');
+    if (photoId) await sendWorkflow(id, { type: 'kaufbeleg', photoId });
   }
   if (kind === 'abschliessen') await sendAction(id, { type: 'status', status: 'abgeschlossen' });
   if (kind === 'zuweisen') {

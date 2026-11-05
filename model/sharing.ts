@@ -136,7 +136,9 @@ export const retailerEventType = {
 export type WorkflowAction =
   | { type: 'notiz'; text: string }
   | { type: 'zuweisen'; assigneeId: string | null }
-  | { type: 'stand'; status: WorkflowStatus };
+  | { type: 'stand'; status: WorkflowStatus }
+  /** Ein Foto aus dem Fall gilt als Kaufbeleg, etwa eins aus dem Chat (Portal-Prüfung 05.11.) */
+  | { type: 'kaufbeleg'; photoId: string };
 
 /** Ein Fall im Backend: die geteilte Akte, die Ereignisse des Händlers und der Widerruf */
 export interface SharedCaseRecord {
@@ -150,6 +152,8 @@ export interface SharedCaseRecord {
   notes?: InternalNote[];
   /** Zugriffsprotokoll */
   access?: AccessEntry[];
+  /** Foto, das das Team als Kaufbeleg markiert hat */
+  proofPhotoId?: string;
 }
 
 const ACTION_TEXT_MAX = 500;
@@ -247,6 +251,9 @@ export function parseWorkflowAction(body: unknown): WorkflowAction | null {
     case 'stand':
       if (!isWorkflowStatus(o.status)) return null;
       return { type: 'stand', status: o.status };
+    case 'kaufbeleg':
+      if (typeof o.photoId !== 'string' || !o.photoId || o.photoId.length > 80) return null;
+      return { type: 'kaufbeleg', photoId: o.photoId };
     default:
       return null;
   }

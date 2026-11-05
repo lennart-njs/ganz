@@ -109,7 +109,8 @@ export function sectionFromForm(section: SettingsSection, f: FormData, s: Dealer
             const id = str(f, `assign.${category}`);
             return id ? [{ category: category as DeviceCategory, assigneeId: id }] : [];
           }),
-        warrantyMonths: int(f, 'warrantyMonths', s.rules.warrantyMonths),
+        // Gesetzlich, nicht einstellbar: bleibt, wie es ist
+        warrantyMonths: s.rules.warrantyMonths,
         goodwillMonths: int(f, 'goodwillMonths', s.rules.goodwillMonths),
         goodwillMaxCents: cents(f, 'goodwillMax', s.rules.goodwillMaxCents),
         slaFirstHours: int(f, 'slaFirstHours', s.rules.slaFirstHours),

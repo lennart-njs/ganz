@@ -143,6 +143,21 @@ function startOfBerlinDay({ y, m, d }: Day): number {
   return wall - berlinOffset(wall - berlinOffset(wall));
 }
 
+/**
+ * Volle Kalendermonate vom Kauftag bis zum Stichtag, beide als Tag in Berlin. Kauf am 01.02.2024,
+ * Stichtag 01.02.2026: 24, am 31.01.2026: 23. Für die Anzeige („16 Monate“), die Frist selbst
+ * entscheidet withinPurchaseWarranty. Ohne lesbares Datum undefined, vor dem Kauf 0.
+ */
+export function fullCalendarMonths(purchase: ISODateTime, asOf: ISODateTime): number | undefined {
+  const from = time(purchase);
+  const to = time(asOf);
+  if (from === undefined || to === undefined || from < FIRST_PURCHASE) return undefined;
+  const a = berlinDay(from);
+  const b = berlinDay(to);
+  const months = (b.y - a.y) * 12 + (b.m - a.m) - (b.d < a.d ? 1 : 0);
+  return Math.max(0, months);
+}
+
 /** Tag plus Monate. Fehlt der Tag im Zielmonat, gilt dessen letzter Tag (§ 188 Abs. 3 BGB). */
 function addCalendarMonths({ y, m, d }: Day, months: number): Day {
   const target = new Date(Date.UTC(y, m - 1 + months, 1));

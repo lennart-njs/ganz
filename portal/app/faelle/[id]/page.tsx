@@ -8,6 +8,7 @@ import type { RetailerDecision, SharedPhoto } from '@/model/sharing';
 
 import { Avatar, SlaChip, WorkflowChip } from '../../../components/Chips';
 import { Composer } from '../../../components/Composer';
+import { DecisionButton } from '../../../components/Decide';
 import { Nav } from '../../../components/Nav';
 import { AutoSelect, OpenComposer, ScrollBox } from '../../../components/Small';
 import { Submit } from '../../../components/Submit';
@@ -167,9 +168,14 @@ export default async function Fallakte({ params }: { params: Promise<{ id: strin
   const status = revoked ? 'erledigt' : (record.workflow?.status ?? 'neu');
   const due = sla(record, settings.rules);
   const who = member(settings, record.workflow?.assigneeId);
-  const check = warrantyCheck(file, settings.rules);
+  const check = warrantyCheck(file, settings.rules, record);
   const decided = decisionOf(record);
   const next = nextStep(record, settings);
+  // Schon nach dem Kaufbeleg gefragt (von Hand oder automatisch beim Eingang)?
+  const proofQuestion = settings.messages.questions.find((q) => q.id === 'beleg')?.question;
+  const askedProof = record.retailerEvents.some(
+    (e) => e.type === 'haendler_rueckfrage' && e.payload.question === proofQuestion,
+  );
   const items = conversation(record);
   const first = file.customer.name.split(' ')[0] ?? file.customer.name;
   const values = {
@@ -211,7 +217,7 @@ export default async function Fallakte({ params }: { params: Promise<{ id: strin
             </div>
           ) : (
             <div className="chips">
-              <WorkflowChip status={status} />
+              <WorkflowChip status={status} cancelled={file.case.status === 'abgebrochen'} />
               <SlaChip sla={due} />
               <span className="chip">{file.customer.name}</span>
               <span className="chip">
@@ -270,22 +276,40 @@ export default async function Fallakte({ params }: { params: Promise<{ id: strin
                       <Submit className="btn btn-block">{t.next.accept}</Submit>
                     </form>
                   ) : next.kind === 'entscheiden' ? (
-                    <form action={act}>
-                      <input type="hidden" name="kind" value="entscheidung" />
-                      <input type="hidden" name="decision" value={next.decision} />
-                      <Submit className="btn btn-block">{t.check.confirm[next.decision]}</Submit>
-                    </form>
+                    next.decision === 'offen' ? (
+                      // Ohne Kaufdatum kein Vorschlag: erst den Kaufbeleg, entschieden wird unten
+                      askedProof ? (
+                        <p className="h2">{t.next.awaitProof}</p>
+                      ) : (
+                        <OpenComposer what="rueckfrage" label={t.next.askProof} />
+                      )
+                    ) : (
+                      <DecisionButton action={act} decision={next.decision} big />
+                    )
                   ) : next.kind === 'antworten' ? (
                     <OpenComposer what="antworten" label={t.next.reply} />
                   ) : next.kind === 'termin' ? (
                     <OpenComposer what="termin" label={t.next.termin} />
-                  ) : next.kind === 'abschliessen' ? (
-                    <form action={act}>
-                      <input type="hidden" name="kind" value="abschliessen" />
-                      <Submit className="btn btn-block">{t.next.close}</Submit>
-                    </form>
+                  ) : next.kind === 'termin_steht' ? (
+                    <>
+                      <p className="h2">{t.next.booked}</p>
+                      {next.slot ? (
+                        <p>{[next.partner, next.slot].filter(Boolean).join(' · ')}</p>
+                      ) : null}
+                      {/* Abschließen erst nach der Reparatur, darum klein */}
+                      <form action={act}>
+                        <input type="hidden" name="kind" value="abschliessen" />
+                        <Submit className="btn btn-2 btn-sm">{t.next.close}</Submit>
+                      </form>
+                    </>
                   ) : (
-                    <p className="h2">{next.kind === 'warten' ? t.next.waiting : t.next.done}</p>
+                    <p className="h2">
+                      {next.kind === 'warten'
+                        ? t.next.waiting
+                        : next.kind === 'abgebrochen'
+                          ? t.next.cancelled
+                          : t.next.done}
+                    </p>
                   )}
                 </section>
               ) : null}
@@ -324,18 +348,16 @@ export default async function Fallakte({ params }: { params: Promise<{ id: strin
                     ],
                   ]}
                 />
-                {decided ? null : (
-                  <details className="more-actions">
-                    <summary>{t.check.other}</summary>
+                {revoked || next?.kind === 'abgebrochen' ? null : (
+                  // Ohne Vorschlag offen, sonst eingeklappt. Nach einer Entscheidung lässt sie sich
+                  // ändern, die Kundschaft bekommt dann die neue (Portal-Prüfung 05.11.).
+                  <details className="more-actions" open={!decided && check.verdict === 'offen'}>
+                    <summary>{decided ? t.check.change : t.check.other}</summary>
                     <div className="choices">
                       {decisions
-                        .filter((d) => d !== check.verdict)
+                        .filter((d) => d !== (decided ?? check.verdict))
                         .map((d) => (
-                          <form key={d} action={act}>
-                            <input type="hidden" name="kind" value="entscheidung" />
-                            <input type="hidden" name="decision" value={d} />
-                            <Submit className="btn btn-2 btn-sm">{t.check.confirm[d]}</Submit>
-                          </form>
+                          <DecisionButton key={d} action={act} decision={d} />
                         ))}
                     </div>
                   </details>
@@ -463,12 +485,23 @@ export default async function Fallakte({ params }: { params: Promise<{ id: strin
                   <h2 className="h3">{f.photos}</h2>
                   <div className="photos">
                     {file.photos.map((p) => (
-                      <Photo
-                        key={p.id}
-                        p={p}
-                        label={photoLabel(file, p)}
-                        alt={f.photoAlt(photoLabel(file, p), formatWhen(p.takenAt))}
-                      />
+                      <div key={p.id} className="photo-item">
+                        <Photo
+                          p={p}
+                          label={photoLabel(file, p)}
+                          alt={f.photoAlt(photoLabel(file, p), formatWhen(p.takenAt))}
+                        />
+                        {/* Ein Beleg aus dem Chat zählt, sobald das Team ihn markiert */}
+                        {p.purpose === 'kaufbeleg' || record.proofPhotoId === p.id ? (
+                          <span className="chip ok">{t.check.proof}</span>
+                        ) : revoked || check.proof ? null : (
+                          <form action={act}>
+                            <input type="hidden" name="kind" value="kaufbeleg" />
+                            <input type="hidden" name="photoId" value={p.id} />
+                            <Submit className="btn btn-2 btn-sm">{f.markProof}</Submit>
+                          </form>
+                        )}
+                      </div>
                     ))}
                   </div>
                 </section>

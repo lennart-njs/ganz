@@ -14,8 +14,17 @@ const tone: Record<WorkflowStatus, string> = {
   erledigt: 'muted',
 };
 
-export function WorkflowChip({ status, revoked }: { status: WorkflowStatus; revoked?: boolean }) {
+export function WorkflowChip({
+  status,
+  revoked,
+  cancelled,
+}: {
+  status: WorkflowStatus;
+  revoked?: boolean;
+  cancelled?: boolean;
+}) {
   if (revoked) return <span className="chip muted">{t.revoked}</span>;
+  if (cancelled) return <span className="chip muted">{t.cancelled}</span>;
   return (
     <span className={`chip ${tone[status]}`}>
       {status === 'neu' ? <span className="dot" aria-hidden /> : null}

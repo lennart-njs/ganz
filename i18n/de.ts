@@ -1372,7 +1372,8 @@ export const de = {
     decision: {
       gewaehrleistung: 'Das ist ein Fall für die Gewährleistung. Wir kümmern uns um die Reparatur.',
       kulanz: 'Wir übernehmen das aus Kulanz und kümmern uns um die Reparatur.',
-      an_versicherer: 'Das läuft über deine Versicherung. Wir geben den Fall dorthin weiter.',
+      // Kein Versprechen einer Weitergabe: Die Daten gehen nur mit deinem Tap an den Versicherer
+      an_versicherer: 'Das läuft über deine Versicherung. Bitte melde den Schaden dort.',
       abgelehnt: 'Das können wir leider nicht übernehmen.',
     },
     partner: (partner: string, slot?: string) =>
@@ -1411,7 +1412,7 @@ export const de = {
       decision: {
         gewaehrleistung: 'Gewährleistung',
         kulanz: 'Kulanz',
-        an_versicherer: 'An den Versicherer',
+        an_versicherer: 'Versicherung',
         abgelehnt: 'Abgelehnt',
       },
       status: {
@@ -1459,6 +1460,8 @@ export const de = {
       erledigt: 'Erledigt',
     },
     revoked: 'Widerrufen',
+    /** Fall, den die Kundschaft in der App abgebrochen hat (Nr. 34) */
+    cancelled: 'Abgebrochen',
     list: {
       title: 'Fälle',
       empty: 'Keine Fälle.',
@@ -1567,6 +1570,7 @@ export const de = {
       rating: (n: number) => `${n} von 5 Sternen`,
       address: 'Adresse',
       shared: 'Gesendet',
+      markProof: 'Als Kaufbeleg markieren',
     },
     /** Gewährleistungsprüfung aus Kaufdatum und Regeln */
     check: {
@@ -1576,14 +1580,28 @@ export const de = {
         kulanz: 'Kulanz möglich',
         an_versicherer: 'Versicherung',
         abgelehnt: 'Abgelaufen',
+        offen: 'Kaufdatum fehlt',
       },
       confirm: {
         gewaehrleistung: 'Gewährleistung bestätigen',
         kulanz: 'Kulanz gewähren',
-        an_versicherer: 'An Versicherer geben',
+        an_versicherer: 'Auf Versicherung verweisen',
         abgelehnt: 'Ablehnen',
       },
-      purchased: (date: string, months: number) => `${date} · ${months} Monate`,
+      purchased: (date: string, months: number) =>
+        `${date} · ${months === 1 ? '1 Monat' : `${months} Monate`}`,
+      /** Ablehnen in zwei Schritten, mit Grund. Die Gründe liest die Kundschaft in der App. */
+      rejectReason: 'Grund',
+      rejectPick: 'Grund wählen',
+      rejectReasons: [
+        'Die Frist für die Gewährleistung ist abgelaufen.',
+        'Der Schaden kommt nicht von einem Mangel beim Kauf.',
+        'Wir konnten keinen Mangel feststellen.',
+        'Das Gerät wurde nicht bei uns gekauft.',
+      ],
+      rejectSend: 'Ablehnung senden',
+      rejectCancel: 'Abbrechen',
+      change: 'Entscheidung ändern',
       unknown: 'Kaufdatum fehlt',
       proof: 'Kaufbeleg',
       proofYes: 'liegt vor',
@@ -1640,11 +1658,15 @@ export const de = {
       close: 'Fall abschließen',
       waiting: 'Wartet auf Kundschaft',
       done: 'Erledigt',
+      askProof: 'Kaufbeleg anfordern',
+      awaitProof: 'Wartet auf den Kaufbeleg',
+      booked: 'Termin steht',
+      cancelled: 'Von der Kundschaft abgebrochen',
     },
     decisions: {
       gewaehrleistung: 'Gewährleistung',
       kulanz: 'Kulanz',
-      an_versicherer: 'An Versicherer',
+      an_versicherer: 'Versicherung',
       abgelehnt: 'Abgelehnt',
     },
     statuses: {
@@ -1759,7 +1781,9 @@ export const de = {
         requestProof: 'Kaufbeleg anfordern, wenn er fehlt',
         autoAssign: 'Automatisch zuweisen',
         warranty: 'Gewährleistung und Kulanz',
-        warrantyMonths: 'Gewährleistung, Monate',
+        warrantyMonths: 'Gewährleistung',
+        /** Gesetzlich, gleich mit der App, nicht einstellbar */
+        warrantyFixed: (months: number) => `${months} Monate ab Kauf, gesetzlich`,
         goodwillMonths: 'Kulanz danach, Monate',
         goodwillMax: 'Kulanz bis, Euro',
         sla: 'Fristen',

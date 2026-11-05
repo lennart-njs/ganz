@@ -40,7 +40,7 @@ Bestanden, wenn:
 
 Den Weg in der App bis „Ja, senden“ geht auch der Flow `e2e/haendler.yaml`, mit dem Onboarding statt des Startstands.
 
-Einmal im Monat zusätzlich mit „Alles zurücksetzen“ und dem Onboarding nach Entscheidung 31: „Los geht’s“ → „G 5833“ → „Miele G 5833 SC“ → „Fründ Elektrogeräte AG“ → „Weiter“ → „Nein, keine Versicherung“. Danach `.data/ganz-backend.json` löschen. Ohne Kaufdatum zeigt die Prüfung im Portal „Abgelaufen“ mit „Ablehnen“. „Gewährleistung bestätigen“ dann über „Anders entscheiden“.
+Einmal im Monat zusätzlich mit „Alles zurücksetzen“ und dem Onboarding nach Entscheidung 31: „Los geht’s“ → „G 5833“ → „Miele G 5833 SC“ → „Fründ Elektrogeräte AG“ → „Weiter“ → „Nein, keine Versicherung“. Danach `.data/ganz-backend.json` löschen. Ohne Kaufdatum zeigt die Prüfung im Portal „Kaufdatum fehlt“ ohne Vorschlag. „Gewährleistung bestätigen“ steht in der offenen Kachel darunter.
 
 Einmal im Monat zusätzlich der Golden Path mit Versicherung, wie im Flow `e2e/golden-path.yaml`: Demo-Steuerung → „Demo-Startstand Versicherung“, dann die Schritte 2 bis 8 aus „Golden Path für den Pitch“ im `README.md`: Foto, Ergebnis, Anleitung, Hilfe holen, Videocall, Befund, Kosten, Schadenfall melden, Termin, Reparatur, Abschluss. Bestanden, wenn:
 - jeder Schritt ohne Hänger, Fehlermeldung oder leere Fläche läuft,

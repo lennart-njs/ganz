@@ -16,6 +16,7 @@ import { Nav } from '../../../components/Nav';
 import { SettingsForm } from '../../../components/SettingsForm';
 import { getSettings, listCases } from '../../../lib/api';
 import { formatDate, formatWhen } from '../../../lib/format';
+import { PURCHASE_WARRANTY_MONTHS } from '../../../lib/check';
 import { integrationGroups, integrations } from '../../../lib/integrations';
 import { sectionSlugs } from '../../../lib/settingsForm';
 import { initials } from '../../../lib/view';
@@ -321,12 +322,11 @@ function Rules({ s }: { s: DealerSettings }) {
       <fieldset>
         <legend>{t.rules.warranty}</legend>
         <div className="fgrid">
-          <Text
-            name="warrantyMonths"
-            label={t.rules.warrantyMonths}
-            value={r.warrantyMonths}
-            type="number"
-          />
+          {/* Gesetzlich und gleich mit der App: nicht einstellbar (Portal-Prüfung 05.11.) */}
+          <div className="field">
+            <span className="flabel">{t.rules.warrantyMonths}</span>
+            <p className="fvalue">{t.rules.warrantyFixed(PURCHASE_WARRANTY_MONTHS)}</p>
+          </div>
           <Text
             name="goodwillMonths"
             label={t.rules.goodwillMonths}

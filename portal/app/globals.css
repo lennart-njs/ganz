@@ -1935,3 +1935,38 @@ details.card > summary:focus-visible {
   outline-offset: 4px;
   border-radius: 8px;
 }
+
+/* Ohne Kaufdatum: kein Vorschlag */
+.chip.verdict.offen {
+  background: var(--warn-soft);
+  color: var(--warn);
+}
+/* Ablehnen mit Grund (Decide.tsx) */
+.reject {
+  display: grid;
+  gap: 10px;
+}
+.reject .field {
+  display: grid;
+  gap: 6px;
+  font: 600 13px/1.3 var(--sg);
+  color: var(--muted);
+}
+.reject-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+/* Foto mit „Als Kaufbeleg markieren“ */
+.photo-item {
+  display: grid;
+  gap: 6px;
+  justify-items: start;
+}
+/* Fester Wert in den Einstellungen, z. B. die gesetzliche Gewährleistung */
+.fvalue {
+  min-height: 48px;
+  display: flex;
+  align-items: center;
+  color: var(--ink);
+}

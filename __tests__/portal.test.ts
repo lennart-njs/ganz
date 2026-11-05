@@ -10,7 +10,8 @@ import { fruendSettings, messagePreview, portalSeed } from '@/config/portal.demo
 import { de } from '@/i18n/de';
 import { fillTemplate, formatOptions, parseOptions, settingsSections } from '@/model/portal';
 import type { SharedPhoto } from '@/model/sharing';
-import { warrantyCheck } from '@/portal/lib/check';
+import { PURCHASE_WARRANTY_MONTHS, fullMonths, warrantyCheck } from '@/portal/lib/check';
+import { DEFAULT_REGULATOR_RULES } from '@/model/policies/regulator';
 import { conversation } from '@/portal/lib/conversation';
 import { nextStep } from '@/portal/lib/next';
 import { photoLabel } from '@/portal/lib/photos';
@@ -42,48 +43,105 @@ describe('Händlerportal: Logik', () => {
     expect(sla(done, s.rules, NOW)).toBeNull();
   });
 
-  test('Gewährleistungsprüfung: Alter, Kulanz, Versicherung, Kaufbeleg', () => {
+  test('Gewährleistungsprüfung: Alter, Versicherung, Kulanz, Kaufbeleg', () => {
     const base = records[0]!.file;
-    const bought = (months: number) => ({
+    const asOf = '2026-11-05T10:00:00.000Z';
+    const bought = (purchaseDate: string | undefined) => ({
       ...base,
-      case: { ...base.case, createdAt: new Date(NOW).toISOString() },
-      device: {
-        ...base.device,
-        purchaseDate: new Date(NOW - months * 30.5 * 24 * H).toISOString(),
-      },
+      case: { ...base.case, createdAt: asOf },
+      device: { ...base.device, purchaseDate },
       quote: undefined,
       protection: undefined,
+      photos: [],
     });
-    expect(warrantyCheck(bought(10), s.rules)).toMatchObject({
+    expect(warrantyCheck(bought('2025-06-14T00:00:00+02:00'), s.rules)).toMatchObject({
       verdict: 'gewaehrleistung',
-      months: 10,
+      months: 16,
+      until: '2027-06-14T21:59:59.999Z',
     });
-    expect(warrantyCheck(bought(27), s.rules).verdict).toBe('kulanz');
-    expect(warrantyCheck(bought(40), s.rules).verdict).toBe('abgelehnt');
-    expect(
-      warrantyCheck(
-        { ...bought(40), protection: { provider: 'X', product: 'Y', validUntil: base.sharedAt } },
-        s.rules,
-      ).verdict,
-    ).toBe('an_versicherer');
+    // 27 und 40 Monate: Kulanz innerhalb der Regel des Händlers, danach abgelaufen
+    expect(warrantyCheck(bought('2024-08-05T12:00:00+02:00'), s.rules).verdict).toBe('kulanz');
+    expect(warrantyCheck(bought('2023-07-05T12:00:00+02:00'), s.rules).verdict).toBe('abgelehnt');
+    const insured = (validUntil: string) => ({
+      ...bought('2023-07-05T12:00:00+02:00'),
+      protection: { provider: 'X', product: 'Y', validUntil },
+    });
+    expect(warrantyCheck(insured('2027-01-01T00:00:00Z'), s.rules).verdict).toBe('an_versicherer');
+    // Abgelaufene Versicherung: kein Verweis auf sie
+    expect(warrantyCheck(insured('2026-01-01T00:00:00Z'), s.rules).verdict).toBe('abgelehnt');
+    // Versicherung vor Kulanz (U10)
     expect(
       warrantyCheck(
         {
-          ...bought(10),
-          photos: [{ id: 'p', takenAt: base.sharedAt, purpose: 'kaufbeleg', source: 'demo' }],
+          ...bought('2024-08-05T12:00:00+02:00'),
+          protection: { provider: 'X', product: 'Y', validUntil: '2027-01-01T00:00:00Z' },
         },
+        s.rules,
+      ).verdict,
+    ).toBe('an_versicherer');
+    const photo = { id: 'p', takenAt: asOf, purpose: 'frage' as const, source: 'demo' as const };
+    expect(
+      warrantyCheck(
+        { ...bought(undefined), photos: [{ ...photo, purpose: 'kaufbeleg' as const }] },
         s.rules,
       ).proof,
     ).toBe(true);
+    // Ein Foto aus dem Chat zählt, sobald das Team es als Kaufbeleg markiert
+    const chat = { ...bought(undefined), photos: [photo] };
+    expect(warrantyCheck(chat, s.rules).proof).toBe(false);
+    expect(warrantyCheck(chat, s.rules, { proofPhotoId: 'p' }).proof).toBe(true);
+    expect(warrantyCheck(chat, s.rules, { proofPhotoId: 'anderes' }).proof).toBe(false);
   });
 
-  test('Als Nächstes: annehmen, entscheiden, abschließen', () => {
+  // Portal-Prüfung 05.11.: Ohne Kaufdatum schlug das Portal „Abgelaufen“ und „Ablehnen“ vor,
+  // die App sagt zum selben Fall „Fründ prüft“.
+  test('ohne Kaufdatum: kein Vorschlag, also kein „Ablehnen“ als nächster Schritt', () => {
+    const neu = records.find((x) => x.workflow?.status === 'neu')!;
+    const file = { ...neu.file, device: { ...neu.file.device, purchaseDate: undefined } };
+    const r = { ...neu, file, workflow: { ...neu.workflow!, status: 'wartet_uns' as const } };
+    expect(warrantyCheck(file, s.rules)).toMatchObject({ verdict: 'offen' });
+    expect(warrantyCheck(file, s.rules).months).toBeUndefined();
+    expect(nextStep(r, s)).toEqual({ kind: 'entscheiden', decision: 'offen' });
+    expect(
+      warrantyCheck({ ...file, device: { ...file.device, purchaseDate: 'kaputt' } }, s.rules)
+        .verdict,
+    ).toBe('offen');
+  });
+
+  // Gleich mit der App (model/policies/regulator.ts): Kalendermonate, Ende des Tages in Berlin
+  test('Frist wie in der App: am letzten Tag noch, am Tag danach nicht mehr', () => {
+    const base = records[0]!.file;
+    const at = (createdAt: string) => ({
+      ...base,
+      case: { ...base.case, createdAt },
+      device: { ...base.device, purchaseDate: '2024-02-01T09:00:00+01:00' },
+      quote: undefined,
+      protection: undefined,
+    });
+    // Mit 30,44-Tage-Monaten war das schon Kulanz
+    expect(warrantyCheck(at('2026-02-01T10:00:00+01:00'), s.rules).verdict).toBe('gewaehrleistung');
+    expect(warrantyCheck(at('2026-02-01T23:59:59+01:00'), s.rules).verdict).toBe('gewaehrleistung');
+    expect(warrantyCheck(at('2026-02-02T00:00:00+01:00'), s.rules).verdict).toBe('kulanz');
+    expect(PURCHASE_WARRANTY_MONTHS).toBe(DEFAULT_REGULATOR_RULES.purchaseWarrantyMonths);
+    expect(fullMonths('2024-02-01T09:00:00+01:00', '2026-02-01T10:00:00+01:00')).toBe(24);
+    expect(fullMonths('2024-02-01T09:00:00+01:00', '2026-02-02T10:00:00+01:00')).toBe(24);
+    expect(fullMonths('2024-02-01T09:00:00+01:00', '2026-01-31T10:00:00+01:00')).toBe(23);
+  });
+
+  test('Als Nächstes: annehmen, entscheiden, Termin steht, abgebrochen', () => {
     const neu = records.find((x) => x.workflow?.status === 'neu')!;
     expect(nextStep(neu, s)?.kind).toBe('annehmen');
+    // Termin: kein großer „Fall abschließen“-Knopf vor der Reparatur
     const termin = records.find((x) => x.workflow?.status === 'termin')!;
-    expect(nextStep(termin, s)?.kind).toBe('abschliessen');
+    expect(nextStep(termin, s)?.kind).toBe('termin_steht');
     const undecided = { ...neu, workflow: { ...neu.workflow!, status: 'wartet_uns' as const } };
     expect(nextStep(undecided, s)?.kind).toBe('entscheiden');
+    // In der App abgebrochen (Nr. 34)
+    const cancelled = {
+      ...undecided,
+      file: { ...undecided.file, case: { ...undecided.file.case, status: 'abgebrochen' as const } },
+    };
+    expect(nextStep(cancelled, s)).toEqual({ kind: 'abgebrochen' });
   });
 
   test('Gespräch: Kundschaft, Händler wie in der App, Notizen, Systemzeilen zusammengefasst', () => {
