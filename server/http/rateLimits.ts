@@ -2,6 +2,11 @@
 // wie die Chat-Route (lib/chat/guard.ts), im Speicher des Prozesses. Expo bündelt jede Route
 // einzeln, darum hat jede Route ihre eigenen Zähler.
 //
+// Der Dev-Server von Expo (`npx expo start`) wertet das Bündel einer Route bei jeder Anfrage neu
+// aus (ssrImportApiRoute in @expo/cli: „TODO: Cache the evaluated function“). Zähler, die nur im
+// Modul stehen, fingen dann jedes Mal bei null an. Darum hängen diese an globalThis, einmal je
+// Prozess. Gemessen am Dev-Server: ohne das ging der 26. neue Fall in einer Minute noch durch.
+//
 // Ohne vertrauten Proxy (CHAT_TRUSTED_PROXY_HOPS) sieht die Route keine IP-Adresse. Dann zählen
 // alle Anfragen als eine Adresse („unbekannt“), die Grenzen gelten also für alle zusammen. Bei der
 // Anmeldung ist der Absender ohnehin der Server des Portals, nicht der Browser. Die Werte lassen
@@ -9,6 +14,15 @@
 import { createRateLimiter, type RateLimitConfig } from '@/lib/chat/guard';
 
 const NONE = Number.MAX_SAFE_INTEGER;
+
+type Limiter = ReturnType<typeof createRateLimiter>;
+
+/** Ein Rate-Limit je Name und Prozess, auch wenn der Dev-Server das Modul neu auswertet */
+function perProcess(name: string): Limiter {
+  const store = globalThis as unknown as Record<symbol, Limiter | undefined>;
+  const key = Symbol.for(`machs.rateLimit.${name}`);
+  return (store[key] ??= createRateLimiter());
+}
 
 /** Neue Fälle aus der App (ohne X-Share-Token). Begrenzt, wie viele Fälle jemand im Netz anlegt. */
 export const shareCreateRate: RateLimitConfig = {
@@ -27,8 +41,8 @@ export const shareUpdateRate: RateLimitConfig = {
 };
 
 export const shareRateLimits = {
-  create: createRateLimiter(),
-  update: createRateLimiter(),
+  create: perProcess('share.create'),
+  update: perProcess('share.update'),
 };
 
 /**
@@ -43,4 +57,4 @@ export const loginRate: RateLimitConfig = {
   dailyTotal: NONE,
 };
 
-export const loginFailures = createRateLimiter();
+export const loginFailures = perProcess('login');

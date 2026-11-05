@@ -161,6 +161,19 @@ describe('Fälle aus der App: POST /api/v1/faelle', () => {
 });
 
 describe('Rate-Limit: prüfen ohne zu zählen', () => {
+  test('die Zähler überleben, wenn der Dev-Server die Route neu auswertet', () => {
+    shareRateLimits.create.record(['ip:test'], shareCreateRate);
+    let again: typeof import('@/server/http/rateLimits') | undefined;
+    jest.isolateModules(() => {
+      // Wie `npx expo start`: das Modul noch einmal laden, im selben Prozess
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      again = require('@/server/http/rateLimits');
+    });
+    expect(again!.shareRateLimits.create).toBe(shareRateLimits.create);
+    expect(again!.loginFailures).toBe(loginFailures);
+    expect(again!.shareRateLimits.update).not.toBe(shareRateLimits.create);
+  });
+
   const config = { perWindow: 2, windowMs: 60_000, perDay: 100, dailyTotal: 100 };
 
   test('check zählt nicht, record zählt, take prüft und zählt', () => {
