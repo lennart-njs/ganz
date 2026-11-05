@@ -27,6 +27,7 @@ export { useReduceMotion } from './useReduceMotion';
 export { useScreenReader } from './useScreenReader';
 export { useScrollCollapse } from './scrollCollapse';
 export { ExpandChevron } from './ExpandChevron';
+export { ExpandToggle } from './ExpandToggle';
 export { Rise } from './Rise';
 export { animateLayout } from './animateLayout';
 export { Wordmark } from './Wordmark';

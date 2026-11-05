@@ -5,7 +5,7 @@ import { de } from '@/i18n/de';
 import { useTheme } from '@/theme';
 
 import { animateLayout } from './animateLayout';
-import { ExpandChevron } from './ExpandChevron';
+import { ExpandToggle } from './ExpandToggle';
 import { Text } from './Text';
 
 interface SectionProps {
@@ -18,14 +18,20 @@ interface SectionProps {
 }
 
 /**
- * Abschnitt einer Übersichtsseite (Gerät, Profil, Fälle, Fallakte). Eingeklappt sieht man nur
- * Titel und eine Zeile Zusammenfassung, ein Tap öffnet den Inhalt.
+ * Abschnitt einer Übersichtsseite (Gerät, Profil, Fälle, Fallakte). Eine Kachel mit grauem Rahmen
+ * (Entscheidung 38). Eingeklappt sieht man Titel, eine Zeile Zusammenfassung und ein Plus, ein Tap
+ * auf die Kopfzeile öffnet den Inhalt in derselben Kachel.
  */
 export function Section({ title, summary, initiallyOpen = false, children }: SectionProps) {
   const theme = useTheme();
   const [open, setOpen] = useState(initiallyOpen);
   return (
-    <View style={styles.wrap}>
+    <View
+      style={[
+        styles.tile,
+        { borderColor: theme.colors.borderDefault, borderRadius: theme.radius.group },
+      ]}
+    >
       <Pressable
         accessibilityRole="button"
         accessibilityLabel={summary ? de.a11y.withSub(title, summary) : title}
@@ -50,7 +56,7 @@ export function Section({ title, summary, initiallyOpen = false, children }: Sec
           </Text>
           {summary && !open ? <Text variant="meta">{summary}</Text> : null}
         </View>
-        <ExpandChevron open={open} size={22} />
+        <ExpandToggle open={open} />
       </Pressable>
       {open ? <View style={styles.body}>{children}</View> : null}
     </View>
@@ -58,8 +64,14 @@ export function Section({ title, summary, initiallyOpen = false, children }: Sec
 }
 
 const styles = StyleSheet.create({
-  wrap: {},
-  head: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 8 },
+  tile: { borderWidth: 1, overflow: 'hidden' },
+  head: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+  },
   text: { flex: 1, gap: 2 },
-  body: { gap: 12, paddingTop: 4, paddingBottom: 8 },
+  body: { gap: 12, paddingTop: 4, paddingBottom: 16, paddingHorizontal: 16 },
 });

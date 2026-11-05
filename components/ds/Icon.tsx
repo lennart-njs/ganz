@@ -11,6 +11,7 @@ import {
   Mic,
   MicOff,
   Pencil,
+  Minus,
   PhoneOff,
   Plus,
   Search,
@@ -29,6 +30,9 @@ const icons = {
   back: ChevronLeft,
   forward: ChevronRight,
   expand: ChevronDown,
+  /** Aufklappen und Zuklappen einer Kachel (Entscheidung 38) */
+  open: Plus,
+  shut: Minus,
   close: X,
   check: Check,
   warning: TriangleAlert,

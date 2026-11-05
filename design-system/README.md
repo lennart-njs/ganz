@@ -92,6 +92,8 @@ Jeder Screen sieht aus wie ein guter Beleg: wenige Posten, klar gerechnet, unten
 - **Keine Deko-Icons.** Keine Icons in farbigen Kreisen oder Kacheln, keine Icon-Zeile über jedem Abschnitt. Icons nur, wo sie bedienen: Zurück, Schließen, Suche, Tabs, Häkchen.
 - **Keine Effekte.** Keine Verläufe, kein Glas, kein Glühen, keine farbigen Schatten, keine Karten mit farbigem Rand links.
 - **Native Muster.** Was iOS schon hat (Liste mit Häkchen, Sheet, großer Titel, Zurück mit Name), wird nicht neu erfunden.
+- **Aufklappen.** Was sich auf- und zuklappen lässt (`Section`, `Disclosure`), ist eine Kachel mit grauem Rahmen (`border-default`, `radius-group`). Rechts im Kopf steht Plus, solange sie zu ist, Minus, wenn sie offen ist. Nie der Pfeil „>“: Der steht für Weitergehen. Der Inhalt öffnet sich in derselben Kachel (Entscheidung 38).
+- **Antworten unten im Gespräch** klappen beim Hochscrollen zu einer Zeile ein und kommen beim Herunterscrollen wieder. Mit Screenreader bleiben sie offen (Entscheidung 38).
 
 Die Beispiel-Screens unter Komponenten (Startseite, Anleitungsschritt, Kosten) zeigen diese Regeln zusammen.
 
@@ -119,6 +121,7 @@ mach’s fühlt sich an wie eine gute iPhone-App, nicht wie ein Baumarkt.
 - Icons stehen neben Text. Ein Icon allein braucht ein Label.
 - Keine Funken, keine Zauberstäbe, keine Emojis, keine Werkzeug-Deko.
 - Icons sind `ink` oder `muted`. Nur der aktive Tab ist `accent`.
+- Lucide-Set der Web-Referenz (`components/ds/Icon.tsx`): Pfeile für Zurück, Weiter und Aufklappen im Gespräch, Plus und Minus für Kacheln, Schließen, Häkchen, Warnung, Tabs, Kamera, Mikrofon, Video, Auflegen, Suche, Stift, Senden.
 - **Logo:** Die Wortmarke „mach’s“ liegt als Pfade unter **Assets › Logos** (Schwarz, Weiß, Blau). Nutze immer diese Dateien, setz die Wortmarke nicht neu aus der Schrift.
 - **Zeichen und App-Icon:** „m’“, das „m“ in `ink`, der Apostroph in `accent`. Das App-Icon steht auf weißem Grund. Der Apostroph ist das Markenzeichen und das einzige farbige Teil.
 - Kein weißes „m“ auf blauem Quadrat: zu nah an bestehenden Marken.
