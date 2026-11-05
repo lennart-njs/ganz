@@ -191,9 +191,7 @@ export function Composer({
                   <input type="checkbox" name="slot" value={s} defaultChecked={i < 3} />
                   <span>
                     {s}
-                    {load[partner]?.[s] ? (
-                      <span className="n">{t.booked(load[partner][s])}</span>
-                    ) : null}
+                    {load[partner]?.[s] ? <small>{t.booked(load[partner][s])}</small> : null}
                   </span>
                 </label>
               ))}

@@ -859,6 +859,10 @@ dialog.keys::backdrop {
   .file {
     grid-template-columns: 1fr;
   }
+  /* Einspaltig klebt das Gespräch nicht: Es lag sonst über der Seitenspalte (D-Probe 05.11.) */
+  .convcard {
+    position: static;
+  }
 }
 .stack {
   display: grid;
@@ -1295,9 +1299,10 @@ fieldset {
   border-width: 0 2px 2px 0;
   transform: rotate(45deg);
 }
-.choice .n {
+.choice small {
+  margin-left: 6px;
+  font: inherit;
   font-weight: 500;
-  white-space: pre;
 }
 .choice input:focus-visible + span {
   outline: 2px solid var(--accent);

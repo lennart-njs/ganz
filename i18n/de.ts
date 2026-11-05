@@ -1692,7 +1692,7 @@ export const de = {
       /** Eigener Kundendienst, Adresse außerhalb seines Gebiets (Postleitzahl) */
       outsideArea: (name: string) => `${name} · außerhalb des Gebiets`,
       /** Schon bestätigte Termine im Zeitfenster */
-      booked: (n: number) => ` · ${n} gebucht`,
+      booked: (n: number) => `· ${n} gebucht`,
       slots: 'Zeitfenster',
       photo: 'Foto anfordern',
       video: 'Videocall',
