@@ -2011,6 +2011,15 @@ details.card > summary:focus-visible {
   color: var(--ink);
 }
 /* „Vorschau“ an Einstellungen ohne Wirkung */
+/* Herstelleranfrage: Text zum Kopieren */
+.copytext .input {
+  height: auto;
+  padding: 12px 16px;
+  font-size: 14px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  resize: vertical;
+}
 .shead {
   display: flex;
   flex-wrap: wrap;

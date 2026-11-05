@@ -1543,6 +1543,20 @@ export const de = {
         ['?', 'Tastenkürzel'],
       ] as [string, string][],
     },
+    /** Herstelleranfrage, vorausgefüllt, noch ohne Anbindung (Vorschau) */
+    claim: {
+      title: 'Herstelleranfrage',
+      subject: (id: string) => `Anfrage zu Fall ${id}`,
+      manufacturer: 'Hersteller',
+      bought: (date: string, dealer: string) => `${date} bei ${dealer}`,
+      fault: 'Fehler',
+      display: 'Anzeige',
+      component: 'Bauteil',
+      part: 'Ersatzteil',
+      copy: 'Text kopieren',
+      copied: 'Kopiert',
+      selected: 'Markiert. Mit Strg oder Cmd und C kopieren.',
+    },
     file: {
       back: 'Fälle',
       case: (id: string) => `Fall ${id}`,

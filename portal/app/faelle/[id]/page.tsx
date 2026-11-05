@@ -16,6 +16,8 @@ import { getCase, getSettings, listCases } from '../../../lib/api';
 import { allowedDecisions, warrantyCheck } from '../../../lib/check';
 import { previousRepair } from '../../../lib/rework';
 import { partnerOptions, slotLoad } from '../../../lib/schedule';
+import { manufacturerClaim } from '../../../lib/claim';
+import { CopyText } from '../../../components/CopyText';
 import { conversation, type ConvItem } from '../../../lib/conversation';
 import { formatDate, formatEuro, formatWhen } from '../../../lib/format';
 import { nextStep } from '../../../lib/next';
@@ -201,6 +203,7 @@ export default async function Fallakte({ params }: { params: Promise<{ id: strin
   // Betrieb nach Postleitzahl, belegte Zeitfenster aus den offenen Fällen (Portal-Idee 4)
   const partners = partnerOptions(settings, file.customer.address?.zip);
   const load = slotLoad(cases);
+  const claim = manufacturerClaim(record, check, settings.profile.name);
   const team = settings.team.filter((m) => m.active && m.role !== 'lesen');
   const act = quick.bind(null, file.caseId);
   const g = file.guide;
@@ -550,6 +553,15 @@ export default async function Fallakte({ params }: { params: Promise<{ id: strin
                   </div>
                 </section>
               ) : null}
+
+              {revoked ? null : (
+                <details className="card">
+                  <summary className="h3">
+                    {t.claim.title} <span className="chip muted preview">{t.settings.preview}</span>
+                  </summary>
+                  <CopyText text={claim.text} label={t.claim.title} />
+                </details>
+              )}
 
               {record.access?.length ? (
                 <details className="card">
