@@ -23,6 +23,7 @@ import { de } from '@/i18n/de';
 import { createRateLimiter } from '@/lib/chat/guard';
 import type { DealerSettings } from '@/model/portal';
 import type { SharedCaseFile } from '@/model/sharing';
+import { isLocalHost, secureCookie } from '@/portal/lib/cookie';
 import { sectionFromForm } from '@/portal/lib/settingsForm';
 import { getCaseStore, setCaseStore } from '@/server/backend';
 import { demoPassword } from '@/server/backend/auth';
@@ -480,5 +481,55 @@ describe('Einstellungen: Zahlen in Grenzen', () => {
       goodwillMaxCents: fruendSettings.rules.goodwillMaxCents,
     });
     expect(check('rules', value)).toBe(true);
+  });
+});
+
+describe('Portal: Sitzungs-Cookie', () => {
+  const prod = { nodeEnv: 'production' };
+
+  test('Secure bei HTTPS, auch hinter einem Proxy', () => {
+    expect(secureCookie({ proto: 'https', host: 'localhost:3000', nodeEnv: 'development' })).toBe(
+      true,
+    );
+    expect(secureCookie({ proto: 'https, http', host: 'portal.machs.io', nodeEnv: 'test' })).toBe(
+      true,
+    );
+  });
+
+  test('in Produktion Secure für jede Adresse außerhalb des eigenen Netzes, auch ohne Header', () => {
+    expect(secureCookie({ ...prod, proto: null, host: 'portal.machs.io' })).toBe(true);
+    expect(secureCookie({ ...prod, proto: 'http', host: 'portal.machs.io' })).toBe(true);
+    expect(secureCookie({ ...prod, proto: null, host: '203.0.113.7:3000' })).toBe(true);
+    expect(secureCookie({ ...prod, proto: null, host: null })).toBe(true);
+  });
+
+  test('die Demo: next start auf http://localhost und im WLAN bleibt ohne Secure', () => {
+    for (const host of [
+      'localhost:3000',
+      '127.0.0.1:3000',
+      '[::1]:3000',
+      '192.168.178.20:3000',
+      '10.0.0.5:3000',
+      '172.20.1.2:3000',
+      'lennarts-macbook.local:3000',
+      'lennarts-macbook:3000',
+    ]) {
+      expect([host, secureCookie({ ...prod, proto: 'http', host })]).toEqual([host, false]);
+    }
+    // Öffentliche Adressen, die nur ähnlich aussehen
+    expect(isLocalHost('172.32.0.1')).toBe(false);
+    expect(isLocalHost('192.169.0.1')).toBe(false);
+    expect(isLocalHost('localhost.machs.io')).toBe(false);
+  });
+
+  test('PORTAL_HTTPS erzwingt oder schaltet ab', () => {
+    expect(secureCookie({ ...prod, proto: null, host: 'localhost', override: '1' })).toBe(true);
+    expect(secureCookie({ ...prod, proto: 'https', host: 'x.de', override: '0' })).toBe(false);
+  });
+
+  test('HttpOnly und SameSite=Lax', () => {
+    const source = fs.readFileSync(path.join(__dirname, '../portal/lib/session.ts'), 'utf8');
+    expect(source).toMatch(/httpOnly: true/);
+    expect(source).toMatch(/sameSite: 'lax'/);
   });
 });

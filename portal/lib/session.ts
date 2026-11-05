@@ -1,5 +1,9 @@
 // Sitzung im Portal: Token vom Backend in einem httpOnly-Cookie. Nur auf dem Server lesbar.
+// SameSite=Lax: Fremde Seiten können kein Formular mit dem Cookie absenden (Server Actions,
+// /abmelden), ein Link aus einer E-Mail ins Portal geht trotzdem. Strict würde den brechen.
 import { cookies, headers } from 'next/headers';
+
+import { secureCookie } from './cookie';
 
 export const SESSION_COOKIE = 'machs_portal';
 
@@ -8,13 +12,16 @@ export async function sessionToken(): Promise<string | undefined> {
 }
 
 export async function setSession(token: string) {
-  // Secure, sobald das Portal über HTTPS läuft (z. B. portal.machs.io). Lokal in der Demo: HTTP.
   const h = await headers();
-  const https = h.get('x-forwarded-proto') === 'https' || process.env.PORTAL_HTTPS === '1';
   (await cookies()).set(SESSION_COOKIE, token, {
     httpOnly: true,
     sameSite: 'lax',
-    secure: https,
+    secure: secureCookie({
+      proto: h.get('x-forwarded-proto'),
+      host: h.get('host'),
+      nodeEnv: process.env.NODE_ENV,
+      override: process.env.PORTAL_HTTPS,
+    }),
     path: '/',
     maxAge: 8 * 3600,
   });
