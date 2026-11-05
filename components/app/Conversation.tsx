@@ -12,7 +12,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { Icon, Text, type IconName } from '@/components/ds';
+import { ExpandChevron, Icon, Text, useScrollCollapse, type IconName } from '@/components/ds';
 import { de } from '@/i18n/de';
 import { useTheme } from '@/theme';
 
@@ -175,7 +175,9 @@ export interface Reply {
 
 /**
  * Antwort-Buttons als Liste am unteren Rand. Lange Listen scrollen in sich,
- * damit das Gespräch darüber sichtbar bleibt.
+ * damit das Gespräch darüber sichtbar bleibt. Beim Hochscrollen im Gespräch klappt die Liste zu
+ * einer Zeile ein, beim Herunterscrollen oder mit einem Tap darauf kommt sie wieder
+ * (Entscheidung 38). Das Eingabefeld darunter bleibt.
  */
 export function QuickReplies({
   replies,
@@ -194,6 +196,7 @@ export function QuickReplies({
   const theme = useTheme();
   const insets = useSafeAreaInsets();
   const { height } = useWindowDimensions();
+  const { collapsed, expand } = useScrollCollapse();
   return (
     <View
       style={[
@@ -205,38 +208,61 @@ export function QuickReplies({
         },
       ]}
     >
-      <ScrollView
-        style={{ maxHeight: height * 0.5 }}
-        contentContainerStyle={{ paddingHorizontal: theme.gutter, gap: 8, paddingBottom: 8 }}
-        bounces={false}
-        accessibilityRole="list"
-        accessibilityLabel={label}
-      >
-        {replies.map((r) => (
+      {collapsed ? (
+        <View style={{ paddingHorizontal: theme.gutter, paddingBottom: 8 }}>
           <Pressable
-            key={r.key}
-            // Fester Name für die Maestro-Flows in e2e/, unabhängig vom Text der Antwort
-            testID={`antwort-${r.key}`}
+            testID="antworten-eingeklappt"
             accessibilityRole="button"
-            accessibilityLabel={r.sub ? de.a11y.withSub(r.label, r.sub) : r.label}
-            onPress={() => onPick(r.key)}
+            accessibilityLabel={t.repliesShow(replies.length)}
+            accessibilityState={{ expanded: false }}
+            onPress={expand}
             style={({ pressed }) => [
-              styles.reply,
+              styles.collapsed,
               {
-                paddingHorizontal: 16,
-                borderRadius: theme.radius.group,
+                minHeight: theme.size.hitMin,
+                borderRadius: theme.radius.pill,
                 backgroundColor: pressed ? theme.colors.borderSubtle : theme.colors.surfaceCard,
               },
             ]}
           >
-            <View style={styles.replyText}>
-              <Text variant="labelStrong">{r.label}</Text>
-              {r.sub ? <Text variant="meta">{r.sub}</Text> : null}
-            </View>
-            <Icon name="forward" size={18} color="actionPrimary" />
+            <Text variant="labelStrong">{t.repliesCollapsed(replies.length)}</Text>
+            <ExpandChevron open size={18} color="actionPrimary" />
           </Pressable>
-        ))}
-      </ScrollView>
+        </View>
+      ) : (
+        <ScrollView
+          style={{ maxHeight: height * 0.5 }}
+          contentContainerStyle={{ paddingHorizontal: theme.gutter, gap: 8, paddingBottom: 8 }}
+          bounces={false}
+          accessibilityRole="list"
+          accessibilityLabel={label}
+        >
+          {replies.map((r) => (
+            <Pressable
+              key={r.key}
+              // Fester Name für die Maestro-Flows in e2e/, unabhängig vom Text der Antwort
+              testID={`antwort-${r.key}`}
+              accessibilityRole="button"
+              accessibilityLabel={r.sub ? de.a11y.withSub(r.label, r.sub) : r.label}
+              onPress={() => onPick(r.key)}
+              style={({ pressed }) => [
+                styles.reply,
+                {
+                  paddingHorizontal: 16,
+                  borderRadius: theme.radius.group,
+                  backgroundColor: pressed ? theme.colors.borderSubtle : theme.colors.surfaceCard,
+                },
+              ]}
+            >
+              <View style={styles.replyText}>
+                <Text variant="labelStrong">{r.label}</Text>
+                {r.sub ? <Text variant="meta">{r.sub}</Text> : null}
+              </View>
+              <Icon name="forward" size={18} color="actionPrimary" />
+            </Pressable>
+          ))}
+        </ScrollView>
+      )}
       {footer}
     </View>
   );
@@ -264,4 +290,12 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
   },
   replyText: { flex: 1, gap: 2 },
+  collapsed: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    alignSelf: 'center',
+    gap: 8,
+    paddingHorizontal: 20,
+  },
 });

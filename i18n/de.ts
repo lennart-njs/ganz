@@ -1139,6 +1139,9 @@ export const de = {
   /** Gespräche: mach’s fragt, Antworten stehen unten */
   talk: {
     replies: 'Antworten',
+    /** Eingeklappte Antworten beim Hochscrollen (Entscheidung 38): ein Tap zeigt sie wieder */
+    repliesCollapsed: (n: number) => (n === 1 ? '1 Antwort' : `${n} Antworten`),
+    repliesShow: (n: number) => (n === 1 ? '1 Antwort zeigen' : `${n} Antworten zeigen`),
     edit: (answer: string) => `Antwort ändern: ${answer}`,
     problem: {
       whichDevice: 'Hallo. Für welches Gerät meldest du ein Problem?',
