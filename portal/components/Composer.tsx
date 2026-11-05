@@ -10,6 +10,7 @@ import { de } from '@/i18n/de';
 import { formatOptions, type MessageTemplate, type QuestionTemplate } from '@/model/portal';
 
 import type { ComposerState } from '../app/faelle/[id]/actions';
+import type { PartnerOption } from '../lib/schedule';
 
 const t = de.portal.composer;
 type Panel = 'rueckfrage' | 'termin' | 'ersatzteil';
@@ -25,6 +26,7 @@ export function Composer({
   questions,
   slots,
   partners,
+  load,
   parts,
   photoText,
   videoHref,
@@ -34,7 +36,10 @@ export function Composer({
   templates: MessageTemplate[];
   questions: QuestionTemplate[];
   slots: string[];
-  partners: string[];
+  /** Nach Postleitzahl sortiert (portal/lib/schedule.ts) */
+  partners: PartnerOption[];
+  /** Bestätigte Termine je Betrieb und Zeitfenster */
+  load: Record<string, Record<string, number>>;
   parts: string[];
   photoText?: string;
   videoHref: string;
@@ -44,6 +49,7 @@ export function Composer({
   const [text, setText] = useState('');
   const [question, setQuestion] = useState('');
   const [options, setOptions] = useState('');
+  const [partner, setPartner] = useState(partners[0]?.name ?? '');
   const area = useRef<HTMLTextAreaElement>(null);
   const form = useRef<HTMLFormElement>(null);
 
@@ -163,9 +169,17 @@ export function Composer({
         <div className="panelbox">
           <div className="field">
             <label htmlFor="c-partner">{t.partner}</label>
-            <select id="c-partner" name="partner" className="input">
+            <select
+              id="c-partner"
+              name="partner"
+              className="input"
+              value={partner}
+              onChange={(e) => setPartner(e.target.value)}
+            >
               {partners.map((p) => (
-                <option key={p}>{p}</option>
+                <option key={p.name} value={p.name}>
+                  {p.inArea === false ? t.outsideArea(p.name) : p.name}
+                </option>
               ))}
             </select>
           </div>
@@ -175,7 +189,12 @@ export function Composer({
               {slots.map((s, i) => (
                 <label key={s} className="choice">
                   <input type="checkbox" name="slot" value={s} defaultChecked={i < 3} />
-                  <span>{s}</span>
+                  <span>
+                    {s}
+                    {load[partner]?.[s] ? (
+                      <span className="n">{t.booked(load[partner][s])}</span>
+                    ) : null}
+                  </span>
                 </label>
               ))}
             </div>

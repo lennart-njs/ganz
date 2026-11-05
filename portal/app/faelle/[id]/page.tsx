@@ -15,6 +15,7 @@ import { Submit } from '../../../components/Submit';
 import { getCase, getSettings, listCases } from '../../../lib/api';
 import { allowedDecisions, warrantyCheck } from '../../../lib/check';
 import { previousRepair } from '../../../lib/rework';
+import { partnerOptions, slotLoad } from '../../../lib/schedule';
 import { conversation, type ConvItem } from '../../../lib/conversation';
 import { formatDate, formatEuro, formatWhen } from '../../../lib/format';
 import { nextStep } from '../../../lib/next';
@@ -197,10 +198,9 @@ export default async function Fallakte({ params }: { params: Promise<{ id: strin
     ...x,
     text: fillTemplate(x.text, values),
   }));
-  const partners = [
-    ...(settings.service.ownService ? [settings.service.serviceName] : []),
-    ...settings.service.partners.map((p) => p.name),
-  ];
+  // Betrieb nach Postleitzahl, belegte Zeitfenster aus den offenen Fällen (Portal-Idee 4)
+  const partners = partnerOptions(settings, file.customer.address?.zip);
+  const load = slotLoad(cases);
   const team = settings.team.filter((m) => m.active && m.role !== 'lesen');
   const act = quick.bind(null, file.caseId);
   const g = file.guide;
@@ -269,6 +269,7 @@ export default async function Fallakte({ params }: { params: Promise<{ id: strin
                 questions={settings.messages.questions}
                 slots={settings.service.slots}
                 partners={partners}
+                load={load}
                 parts={portalSeed.parts}
                 photoText={templates.find((x) => x.id === 'foto')?.text}
                 videoHref={`/faelle/${encodeURIComponent(file.caseId)}/videocall`}
