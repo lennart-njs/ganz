@@ -1013,7 +1013,8 @@ Je Schritt ein Commit. Die Nummern stehen unten bei den Annahmen.
 - **Mit Versicherung und Händler** zeigt der Kosten-Schritt wie heute den Versicherer (U10), auch wenn die Fakten den Händler zuerst nennen. „Fall an … senden“ steht wie bisher unten.
 - **Ohne Händler** bleibt der Kosten-Schritt, wie er war: „Weiter zum Termin“, dann der Preis vor „Zahlungspflichtig buchen“.
 - **Details „Kosten“.** Solange der Zahler offen ist, fehlen die Zeile „Das zahlt“ und der Satz „Du zahlst die Reparatur selbst“. Wie im Gespräch steht zuerst „Fall an … senden“, dann „Reparatur selbst zahlen (189 €)“. „Fall an … senden“ führt zurück ins Gespräch, gleich zu dem, was der Händler sieht, und zu „Ja, senden“ (Parameter `senden=haendler`). Gesendet wird nur dort, nach dieser Vorschau. Ist der Fall schon beim Händler, bleibt nur Selbstzahlen mit Preis.
-- **Nicht geändert.** Der Kostenvoranschlag speichert weiter `payer: haushalt` (`setFinding`). Die App zeigt das nicht, es geht aber in die Akte an den Händler. Die Geräteseite sagt ohne Schutz weiter „Reparaturen zahlst du selbst.“, und das Ergebnis ohne Anleitung „Ohne Schutz zahlst du selbst.“, auch bei einem Gerät vom Händler. Beides liegt außerhalb des Kosten-Schritts und folgt mit Schritt 5.
+- **Nicht geändert.** Der Kostenvoranschlag speichert weiter `payer: haushalt` (`setFinding`). Die App zeigt das nicht, es geht aber in die Akte an den Händler.
+- **Außerhalb des Kosten-Schritts.** Bei einem Gerät vom Händler sagt die Geräteseite unter „Schutz“ nur „Kein Schutz verknüpft“ und wo es gekauft ist, nicht mehr „Reparaturen zahlst du selbst.“. Das Ergebnis ohne Anleitung sagt dann „Brauchst du Hilfe, siehst du den Preis vorher.“ statt „Ohne Schutz zahlst du selbst.“. Die Geräteseite fragt dafür `device.soldBy`: Ein Gerät vom Händler hat ihn immer als Regulierer (Gewährleistung oder Kulanz). Ohne Händler bleiben beide Sätze.
 
 ## Bekannt bis Schritt 5
 

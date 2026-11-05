@@ -131,7 +131,9 @@ export default function GeraetDetail() {
         ) : (
           <>
             <Text variant="labelStrong">{t.noProtection}</Text>
-            <Text variant="body">{t.noProtectionText}</Text>
+            {/* Gekauft beim Händler: Er kann die Kosten übernehmen (Gewährleistung oder Kulanz,
+                model/policies/regulator.ts). Dann kein „zahlst du selbst“ (Übertragung 4.1). */}
+            {device.soldBy ? null : <Text variant="body">{t.noProtectionText}</Text>}
             <Card>
               <FactList
                 items={[[de.coverage.dealer, device.soldBy?.name ?? de.coverage.dealerUnknown]]}

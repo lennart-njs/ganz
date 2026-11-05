@@ -136,10 +136,14 @@ export default function Ergebnis() {
             ]}
           />
         </Card>
+        {/* Kann ohne Schutz etwa der Händler die Kosten übernehmen (Regulierer), steht noch nicht
+            fest, wer zahlt: dann kein „zahlst du selbst“ (Übertragung 4.1) */}
         <InfoBox>
           {contract
             ? de.help.costNote(insurerShortName(state, caseId), formatEuro(state.demo.deductible))
-            : de.help.costNoteNoContract}
+            : caseFacts?.regulator
+              ? de.result.costNoteNoContract
+              : de.help.costNoteNoContract}
         </InfoBox>
         <Button label={de.chat.entry} variant="link" onPress={() => backToThread(caseId)} />
       </CaseScreen>

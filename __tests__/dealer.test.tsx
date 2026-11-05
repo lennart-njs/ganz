@@ -1,6 +1,7 @@
 import { router } from 'expo-router';
 import { act, fireEvent, renderRouter, screen, within } from 'expo-router/testing-library';
 
+import { openAll } from '../test/sections';
 import { demoConfig } from '@/config/demo.config';
 import { de } from '@/i18n/de';
 import { formatEuro } from '@/i18n/format';
@@ -388,6 +389,64 @@ describe('Kosten beim Händler-Gerät: kein „Du zahlst“ vor der Wahl (Übert
     expect(screen.queryByText(de.talk.claim.askDealer(SERVICE))).toBeNull();
     expect(screen.getByRole('button', { name: re(selfPay()) })).toBeTruthy();
     expect(screen.queryByRole('button', { name: re(de.costs.toAppointment) })).toBeNull();
+  });
+
+  test('außerhalb des Kosten-Schritts: Ergebnis und Geräteseite sagen nicht „zahlst du selbst“', async () => {
+    const deviceId = setup();
+    const s = useAppStore.getState();
+    const c = s.createCase({ deviceId, entry: 'foto', problemLabel: 'Foto' });
+    s.addDiagnosis({
+      caseId: c.id,
+      photoIds: [],
+      mode: 'display',
+      errorPattern: 'ohne_anleitung',
+      confidence: 'unsicher',
+      confidenceScore: 0,
+      source: 'fehlererkennung',
+    });
+    await renderRouter(APP, { initialUrl: `/fall/${c.id}/ergebnis` });
+    await flush();
+    expect(screen.getByText(de.result.noGuideTitle)).toBeTruthy();
+    expect(screen.getByText(de.result.costNoteNoContract)).toBeTruthy();
+    expect(tree()).not.toMatch(SAYS_PAY);
+
+    await act(async () => router.push(`/geraet/${deviceId}`));
+    await flush();
+    await openAll();
+    expect(screen.getByText(de.device.noProtection)).toBeTruthy();
+    expect(screen.getAllByText(dealer.name).length).toBeGreaterThan(0);
+    expect(screen.queryByText(de.device.noProtectionText)).toBeNull();
+    expect(tree()).not.toMatch(SAYS_PAY);
+  });
+
+  test('ohne Händler sagen Ergebnis und Geräteseite weiter, dass du selbst zahlst', async () => {
+    const s = useAppStore.getState();
+    s.reset();
+    useAppStore.setState({ onboardingDone: true });
+    const deviceId = s.addDevice({
+      manufacturerId: 'miele',
+      category: 'geschirrspueler',
+      model: 'G 5833 SC',
+      identifiedBy: 'katalog',
+    }).id;
+    const c = s.createCase({ deviceId, entry: 'foto', problemLabel: 'Foto' });
+    s.addDiagnosis({
+      caseId: c.id,
+      photoIds: [],
+      mode: 'display',
+      errorPattern: 'ohne_anleitung',
+      confidence: 'unsicher',
+      confidenceScore: 0,
+      source: 'fehlererkennung',
+    });
+    await renderRouter(APP, { initialUrl: `/fall/${c.id}/ergebnis` });
+    await flush();
+    expect(screen.getByText(de.help.costNoteNoContract)).toBeTruthy();
+
+    await act(async () => router.push(`/geraet/${deviceId}`));
+    await flush();
+    await openAll();
+    expect(screen.getByText(de.device.noProtectionText)).toBeTruthy();
   });
 
   test('ohne Händler bleibt der Kosten-Schritt, wie er war', async () => {
