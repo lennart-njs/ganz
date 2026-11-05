@@ -549,6 +549,8 @@ module.exports = defineConfig([
       'portal/*',
       'website/*',
       'expo-env.d.ts',
+      // Arbeitskopien von Claude Code (Werkzeug, nicht Teil der App)
+      '.claude/*',
     ],
   },
   {

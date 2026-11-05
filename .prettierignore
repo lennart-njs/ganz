@@ -13,3 +13,4 @@ portal/.next/
 portal/next-env.d.ts
 portal/*.tsbuildinfo
 website/
+.claude/

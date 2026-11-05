@@ -16,3 +16,6 @@ coverage/
 /android
 .data/
 portal/AGENTS.md
+
+# Arbeitskopien von Claude Code
+.claude/worktrees/

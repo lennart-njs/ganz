@@ -230,6 +230,39 @@ describe('Händlerportal: Logik', () => {
   });
 });
 
+// Im Portal-Build gefunden (05.11.): Die Fehlerseite läuft im Browser und lud die Wortmarke, die
+// ihre Datei mit node:fs liest. Der Build brach ab, tsc und jest merkten nichts.
+describe('Händlerportal: Browser-Komponenten ohne Server-Code', () => {
+  const root = path.join(__dirname, '..', 'portal');
+  const files = (dir: string): string[] =>
+    fs
+      .readdirSync(dir, { withFileTypes: true })
+      .filter((e) => !e.name.startsWith('.') && e.name !== 'node_modules')
+      .flatMap((e) =>
+        e.isDirectory()
+          ? files(path.join(dir, e.name))
+          : /\.tsx?$/.test(e.name)
+            ? [path.join(dir, e.name)]
+            : [],
+      );
+  const client = ['app', 'components']
+    .flatMap((d) => files(path.join(root, d)))
+    .filter((f) => /^['"]use client['"]/.test(fs.readFileSync(f, 'utf8').trimStart()));
+
+  test('es gibt Browser-Komponenten', () => {
+    expect(client.length).toBeGreaterThan(3);
+  });
+
+  test.each(client.map((f) => [path.relative(root, f), f]))(
+    '%s lädt kein node:* und keine Wortmarke',
+    (_, f) => {
+      const src = fs.readFileSync(f, 'utf8');
+      expect(src).not.toMatch(/from ['"]node:/);
+      expect(src).not.toMatch(/from ['"][^'"]*Wordmark['"]/);
+    },
+  );
+});
+
 describe('Händlerportal: erfundene Werte', () => {
   // Fiktive Namen und Nummern stehen in config/portal.demo.ts (CLAUDE.md), nicht im Code des Portals
   const dir = path.resolve(__dirname, '..', 'portal');
