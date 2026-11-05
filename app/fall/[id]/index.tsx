@@ -363,6 +363,8 @@ export default function FallGespraech() {
     onSite,
     partnerId,
     slot,
+    // „Fall an … senden“: deine Antwort steht unten über „Ja, senden“
+    dealerConfirm,
     reduceMotion,
   ]);
 
