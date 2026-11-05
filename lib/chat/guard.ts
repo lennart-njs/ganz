@@ -2,7 +2,8 @@
 // Tagesgrenze. Läuft nur auf dem Server (app/api/chat+api.ts), im Speicher des Prozesses.
 // Das begrenzt Missbrauch, ist aber kein Schutz: Der Token steckt in der App und lässt sich
 // auslesen, die Installations-ID lässt sich wechseln, eine Adresse hinter einem Proxy auch. Ab
-// Phase 5 gibt es Anmeldung.
+// Phase 5 gibt es Anmeldung. Das Rate-Limit und die IP-Adresse nutzen auch die Routen für Fälle
+// aus der App und für die Anmeldung im Portal (server/http/rateLimits.ts).
 import { CHAT_HEADERS, INSTALLATION_ID } from './protocol';
 
 // ---------- Pitch-Token ----------
@@ -57,6 +58,19 @@ export function clientKeys(
   request: Request,
   env: Record<string, string | undefined> = process.env,
 ): string[] | null {
+  const installation = request.headers.get(CHAT_HEADERS.installation)?.trim();
+  if (installation && !INSTALLATION_ID.test(installation)) return null;
+  return [
+    `ip:${clientIp(request, env)}`,
+    ...(installation ? [`installation:${installation}`] : []),
+  ];
+}
+
+/** Die IP-Adresse wie bei clientKeys, ohne Installation. Ohne vertrauten Proxy: „unbekannt“. */
+export function clientIp(
+  request: Request,
+  env: Record<string, string | undefined> = process.env,
+): string {
   const hops = trustedProxyHops(env);
   const forwarded = hops
     ? request.headers
@@ -66,10 +80,7 @@ export function clientKeys(
         .at(-hops)
     : undefined;
   const real = hops ? request.headers.get('x-real-ip')?.trim() : undefined;
-  const ip = (forwarded || real || 'unbekannt').slice(0, 64);
-  const installation = request.headers.get(CHAT_HEADERS.installation)?.trim();
-  if (installation && !INSTALLATION_ID.test(installation)) return null;
-  return [`ip:${ip}`, ...(installation ? [`installation:${installation}`] : [])];
+  return (forwarded || real || 'unbekannt').slice(0, 64);
 }
 
 // ---------- Rate-Limit ----------
@@ -127,7 +138,8 @@ export function createRateLimiter(now: () => number = () => Date.now()) {
   const hits = new Map<string, Hits>();
   let total = { day: '', count: 0 };
 
-  function take(keys: string[], config: RateLimitConfig = rateConfig()): RateDecision {
+  /** Stand der Schlüssel jetzt und ob eine weitere Anfrage durchginge. Zählt nichts. */
+  function evaluate(keys: string[], config: RateLimitConfig) {
     const t = now();
     const day = dayOf(t);
     const from = t - config.windowMs;
@@ -137,32 +149,54 @@ export function createRateLimiter(now: () => number = () => Date.now()) {
         if (h.day !== day && h.recent.every((x) => x <= from)) hits.delete(key);
       }
     }
-    if (total.count >= config.dailyTotal) {
-      return { ok: false, reason: 'tagesgrenze', retryAfterS: untilTomorrow(t) };
-    }
     const current = keys.map((key): [string, Hits] => {
       const h = hits.get(key);
       const recent = (h?.recent ?? []).filter((x) => x > from);
       return [key, h?.day === day ? { ...h, recent } : { day, today: 0, recent }];
     });
-    for (const [, h] of current) {
-      if (h.today >= config.perDay) {
+    const decide = (): RateDecision => {
+      if (total.count >= config.dailyTotal) {
         return { ok: false, reason: 'tagesgrenze', retryAfterS: untilTomorrow(t) };
       }
-      if (h.recent.length >= config.perWindow) {
-        const retry = Math.ceil((h.recent[0]! + config.windowMs - t) / 1000);
-        return { ok: false, reason: 'zu_viele', retryAfterS: Math.max(1, retry) };
+      for (const [, h] of current) {
+        if (h.today >= config.perDay) {
+          return { ok: false, reason: 'tagesgrenze', retryAfterS: untilTomorrow(t) };
+        }
+        if (h.recent.length >= config.perWindow) {
+          const retry = Math.ceil((h.recent[0]! + config.windowMs - t) / 1000);
+          return { ok: false, reason: 'zu_viele', retryAfterS: Math.max(1, retry) };
+        }
       }
-    }
-    for (const [key, h] of current) {
-      hits.set(key, { day, today: h.today + 1, recent: [...h.recent, t] });
-    }
-    total.count += 1;
-    return { ok: true };
+      return { ok: true };
+    };
+    const count = () => {
+      for (const [key, h] of current) {
+        hits.set(key, { day, today: h.today + 1, recent: [...h.recent, t] });
+      }
+      total.count += 1;
+    };
+    return { decision: decide(), count };
+  }
+
+  /** Prüft und zählt die Anfrage, wenn sie durchgeht */
+  function take(keys: string[], config: RateLimitConfig = rateConfig()): RateDecision {
+    const { decision, count } = evaluate(keys, config);
+    if (decision.ok) count();
+    return decision;
   }
 
   return {
     take,
+    /**
+     * Nur prüfen, nichts zählen. Mit record zusammen für Grenzen, die nur Fehlschläge zählen
+     * (Anmeldung im Portal): erst check, nach einem Fehlschlag record.
+     */
+    check: (keys: string[], config: RateLimitConfig = rateConfig()) =>
+      evaluate(keys, config).decision,
+    /** Zählt eine Anfrage, ohne zu prüfen */
+    record: (keys: string[], config: RateLimitConfig = rateConfig()) => {
+      evaluate(keys, config).count();
+    },
     /** Für Tests: alles vergessen */
     reset: () => {
       hits.clear();

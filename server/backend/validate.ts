@@ -1,4 +1,5 @@
 // Prüft eine geteilte Fallakte aus der App und Einstellungen aus dem Portal, bevor sie gespeichert werden.
+import { demoConfig } from '@/config/demo.config';
 import { fruendSettings } from '@/config/portal.demo';
 import { settingsSections, type DealerSettings, type SettingsSection } from '@/model/portal';
 import { SHARE_FORMAT_VERSION, type SharedCaseFile } from '@/model/sharing';
@@ -51,6 +52,15 @@ export function parseSharedCaseFile(body: unknown): SharedCaseFile | null {
   if (f.rating !== undefined && !(Number.isInteger(f.rating) && f.rating >= 1 && f.rating <= 5))
     return null;
   return f;
+}
+
+/**
+ * Geht der Fall an einen Händler, den das Backend kennt? Heute die Händler aus der Demo
+ * (config/demo.config.ts), später die Händler mit Konto. Sonst sähe ihn niemand, und jeder im
+ * Netz könnte unter beliebigen Namen Fälle anlegen.
+ */
+export function knownRecipient(recipient: SharedCaseFile['recipient']): boolean {
+  return demoConfig.dealers.some((d) => d.id === recipient.id);
 }
 
 // ---------- Einstellungen des Händlers ----------

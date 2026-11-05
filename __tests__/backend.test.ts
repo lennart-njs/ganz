@@ -23,6 +23,7 @@ import type { CaseEvent } from '@/model/types';
 import { setCaseStore } from '@/server/backend';
 import { FileCaseStore, repeated } from '@/server/backend/fileStore';
 import { seedAnonymous, seedRecords } from '@/server/backend/seed';
+import { shareRateLimits } from '@/server/http/rateLimits';
 
 const req = (url: string, init: RequestInit & { json?: unknown } = {}) =>
   new Request(`http://localhost${url}`, {
@@ -36,6 +37,8 @@ const file = (over: Partial<SharedCaseFile> = {}): SharedCaseFile => {
   return {
     ...base,
     caseId: 'GS-30001',
+    // Eine Bestätigung gehört zu genau einem Fall (fileStore.ts), auch nicht zum Beispielfall
+    consentId: `consent-${over.caseId ?? 'GS-30001'}`,
     isExample: false,
     customer: {
       name: 'Sam Beispiel',
@@ -98,6 +101,8 @@ beforeEach(() => {
   dir = fs.mkdtempSync(path.join(os.tmpdir(), 'ganz-backend-'));
   dbFile = path.join(dir, 'db.json');
   setCaseStore(new FileCaseStore(dbFile));
+  // Jeder Test legt Fälle an. Das Rate-Limit für neue Fälle prüft __tests__/security.test.ts.
+  shareRateLimits.create.reset();
 });
 afterEach(() => setCaseStore(undefined));
 

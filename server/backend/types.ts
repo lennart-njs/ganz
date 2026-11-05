@@ -20,8 +20,13 @@ export interface Tenant {
   memberId?: string;
 }
 
+/**
+ * token: Fallnummer vergeben, aber ohne passendes Token (oder für einen anderen Händler).
+ * widerrufen: Die Weitergabe ist widerrufen. doppelt: Die Bestätigung gehört schon zu einem Fall.
+ */
 export type ShareResult =
-  { ok: true; token: string; events: CaseEvent[] } | { ok: false; reason: 'token' | 'widerrufen' };
+  | { ok: true; token: string; events: CaseEvent[] }
+  | { ok: false; reason: 'token' | 'widerrufen' | 'doppelt' };
 
 /** Massenaktion in der Arbeitsliste */
 export type BulkAction =
@@ -32,6 +37,7 @@ export type BulkAction =
 export interface CaseStore {
   /**
    * App: Fallakte nach Bestätigung anlegen oder aktualisieren. Ohne passendes Token: Fehler.
+   * Eine Bestätigung (consentId) gehört zu genau einem Fall, der Empfänger bleibt derselbe.
    * Beim ersten Mal greifen die Regeln des Händlers (Begrüßung, annehmen, zuweisen, Kaufbeleg).
    * Die dabei entstandenen Ereignisse kommen gleich mit zurück.
    */

@@ -333,12 +333,19 @@ export class FileCaseStore implements CaseStore {
       if (!token || !sameHash(existing.tokenHash, hash(token)))
         return { ok: false, reason: 'token' };
       if (existing.record.revokedAt) return { ok: false, reason: 'widerrufen' };
+      // Das Token gilt für den Händler, dem die Kundschaft den Fall gegeben hat, für keinen anderen
+      if (existing.record.file.recipient.id !== file.recipient.id)
+        return { ok: false, reason: 'token' };
       const before = existing.record.file;
       existing.record.file = file;
       const events = this.onCustomerUpdate(db, existing.record, before);
       this.save(db);
       return { ok: true, token, events };
     }
+    // Eine Bestätigung gilt für genau einen Fall. Kommt sie mit einer neuen Fallnummer noch einmal,
+    // ist das kein neuer Fall.
+    if (Object.values(db.shares).some((s) => s.record.file.consentId === file.consentId))
+      return { ok: false, reason: 'doppelt' };
     const fresh = crypto.randomBytes(24).toString('base64url');
     const record: SharedCaseRecord = { file, retailerEvents: [], notes: [], access: [] };
     const events = this.onNewCase(db, record);
