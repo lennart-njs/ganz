@@ -18,13 +18,16 @@ import { GET as detail } from '@/app/api/v1/portal/faelle/[id]+api';
 import { POST as act } from '@/app/api/v1/portal/faelle/[id]/aktionen+api';
 import { POST as work } from '@/app/api/v1/portal/faelle/[id]/bearbeitung+api';
 import { POST as bulk } from '@/app/api/v1/portal/sammelaktion+api';
-import { portalLogin } from '@/config/portal.demo';
+import { fruendSettings, portalLogin } from '@/config/portal.demo';
 import { de } from '@/i18n/de';
 import { createRateLimiter } from '@/lib/chat/guard';
+import type { DealerSettings } from '@/model/portal';
 import type { SharedCaseFile } from '@/model/sharing';
+import { sectionFromForm } from '@/portal/lib/settingsForm';
 import { getCaseStore, setCaseStore } from '@/server/backend';
 import { demoPassword } from '@/server/backend/auth';
 import { FileCaseStore } from '@/server/backend/fileStore';
+import { parseSettingsSection, settingsNumberBounds } from '@/server/backend/validate';
 import { seedRecords } from '@/server/backend/seed';
 import {
   loginFailures,
@@ -392,5 +395,90 @@ describe('Anmeldung: Rate-Limit für Fehlversuche', () => {
   test('der Text für das Portal: ruhig, Sie-Form, ohne Ausrufezeichen', () => {
     expect(de.portal.login.tooMany).toMatch(/\bSie\b/);
     expect(de.portal.login.tooMany).not.toMatch(/!/);
+  });
+});
+
+describe('Einstellungen: Zahlen in Grenzen', () => {
+  /** Pfade aller Zahlen in den Standardeinstellungen, wie validate.ts sie nennt */
+  function numberPaths(x: unknown, at: string): [string, number][] {
+    if (typeof x === 'number') return [[at, x]];
+    if (Array.isArray(x)) return x.flatMap((y) => numberPaths(y, `${at}[]`));
+    if (x && typeof x === 'object')
+      return Object.entries(x).flatMap(([k, v]) => numberPaths(v, at ? `${at}.${k}` : k));
+    return [];
+  }
+
+  test('jede Zahl der Einstellungen hat Grenzen, und die Standardwerte liegen darin', () => {
+    const found = numberPaths(fruendSettings, '');
+    const paths = [...new Set(found.map(([p]) => p))].sort();
+    expect(paths).toEqual(Object.keys(settingsNumberBounds).sort());
+    for (const [p, value] of found) {
+      const [min, max] = settingsNumberBounds[p]!;
+      expect([p, value >= min && value <= max]).toEqual([p, true]);
+    }
+  });
+
+  const rules = (over: Partial<DealerSettings['rules']>) => ({ ...fruendSettings.rules, ...over });
+  const service = (prices: Partial<DealerSettings['service']['prices']>) => ({
+    ...fruendSettings.service,
+    prices: { ...fruendSettings.service.prices, ...prices },
+  });
+  const hours = (days: unknown[]) => ({
+    ...fruendSettings.profile,
+    hours: { ...fruendSettings.profile.hours, days },
+  });
+  const check = (section: string, value: unknown) =>
+    parseSettingsSection(section, value, fruendSettings) !== null;
+
+  test('Werte außerhalb, Brüche und Text sind ungültig, die Grenzen selbst gültig', () => {
+    expect(check('rules', rules({ warrantyMonths: 1 }))).toBe(true);
+    expect(check('rules', rules({ warrantyMonths: 120 }))).toBe(true);
+    expect(check('rules', rules({ goodwillMonths: 0 }))).toBe(true);
+    for (const bad of [0, 121, -1, 24.5, 1e9, '24', null]) {
+      expect([bad, check('rules', rules({ warrantyMonths: bad as number }))]).toEqual([bad, false]);
+    }
+    expect(check('rules', rules({ slaFirstHours: 0 }))).toBe(false);
+    expect(check('rules', rules({ slaReplyHours: 10_000 }))).toBe(false);
+    expect(check('rules', rules({ goodwillMaxCents: 1e12 }))).toBe(false);
+    expect(check('service', service({ travelCents: -100 }))).toBe(false);
+    expect(check('service', service({ hourCents: 100_001 }))).toBe(false);
+    expect(check('privacy', { ...fruendSettings.privacy, retentionMonths: 0 })).toBe(false);
+    expect(check('profile', hours([1, 7]))).toBe(true);
+    expect(check('profile', hours([0]))).toBe(false);
+    expect(check('profile', hours([8]))).toBe(false);
+    expect(check('profile', hours([1.5]))).toBe(false);
+  });
+
+  test('über die Route: 400, gespeichert bleibt der alte Wert', async () => {
+    const headers = await bearer();
+    const put = (value: unknown) =>
+      putSettings(
+        req('/api/v1/portal/einstellungen', {
+          method: 'PUT',
+          headers,
+          json: { section: 'rules', value },
+        }),
+      );
+    expect((await put(rules({ warrantyMonths: 100_000 }))).status).toBe(400);
+    expect((await put(rules({ slaFirstHours: -4 }))).status).toBe(400);
+    const res = await getSettings(req('/api/v1/portal/einstellungen', { headers }));
+    const { settings } = (await res.json()) as { settings: DealerSettings };
+    expect(settings.rules.warrantyMonths).toBe(fruendSettings.rules.warrantyMonths);
+    expect(settings.rules.slaFirstHours).toBe(fruendSettings.rules.slaFirstHours);
+    expect((await put(rules({ warrantyMonths: 36 }))).status).toBe(200);
+  });
+
+  test('ein leeres Zahlenfeld im Formular behält den bisherigen Wert', () => {
+    const form = new FormData();
+    form.set('warrantyMonths', '');
+    form.set('slaFirstHours', ' ');
+    form.set('goodwillMax', '');
+    const value = sectionFromForm('rules', form, fruendSettings) as DealerSettings['rules'];
+    expect(value).toMatchObject({
+      warrantyMonths: fruendSettings.rules.warrantyMonths,
+      slaFirstHours: fruendSettings.rules.slaFirstHours,
+      goodwillMaxCents: fruendSettings.rules.goodwillMaxCents,
+    });
+    expect(check('rules', value)).toBe(true);
   });
 });

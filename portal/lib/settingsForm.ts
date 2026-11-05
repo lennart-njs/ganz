@@ -4,13 +4,17 @@ import type { DeviceCategory } from '@/model/types';
 
 const str = (f: FormData, k: string) => String(f.get(k) ?? '').trim();
 const on = (f: FormData, k: string) => f.get(k) === 'on';
+// Ein leeres Feld behält den bisherigen Wert. Number('') wäre 0, und 0 Monate Gewährleistung oder
+// 0 Stunden Frist lehnt das Backend ab (settingsNumberBounds in server/backend/validate.ts).
 const int = (f: FormData, k: string, fallback: number) => {
-  const n = Number(str(f, k).replace(',', '.'));
-  return Number.isFinite(n) && n >= 0 ? Math.round(n) : fallback;
+  const raw = str(f, k);
+  const n = Number(raw.replace(',', '.'));
+  return raw && Number.isFinite(n) && n >= 0 ? Math.round(n) : fallback;
 };
 const cents = (f: FormData, k: string, fallback: number) => {
-  const n = Number(str(f, k).replace(/\./g, '').replace(',', '.'));
-  return Number.isFinite(n) && n >= 0 ? Math.round(n * 100) : fallback;
+  const raw = str(f, k);
+  const n = Number(raw.replace(/\./g, '').replace(',', '.'));
+  return raw && Number.isFinite(n) && n >= 0 ? Math.round(n * 100) : fallback;
 };
 const slug = (s: string) =>
   s

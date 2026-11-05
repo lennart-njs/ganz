@@ -70,20 +70,50 @@ const OPTIONAL = new Set(['branchId', 'avvSignedAt']);
 const LIST_MAX = 100;
 
 /**
- * Prüft einen Wert gegen die Form der Vorlage (Standardeinstellungen): gleiche Schlüssel, gleiche
- * Typen, Texte bis 2000 Zeichen, Listen bis 100 Einträge. Unbekannte Schlüssel fallen weg.
+ * Grenzen für jede Zahl in den Einstellungen, beide eingeschlossen. Alle Zahlen sind ganze Zahlen:
+ * Monate, Stunden, Cent, Wochentage. Eine Zahl ohne Eintrag hier lehnt das Backend ab, damit eine
+ * neue Einstellung nicht ohne Grenzen durchrutscht (__tests__/security.test.ts prüft das).
  */
-function shaped(value: unknown, template: unknown): unknown {
+export const settingsNumberBounds: Readonly<Record<string, readonly [min: number, max: number]>> = {
+  /** 1 = Montag … 7 = Sonntag */
+  'profile.hours.days[]': [1, 7],
+  /** Gewährleistung: bis zehn Jahre */
+  'rules.warrantyMonths': [1, 120],
+  'rules.goodwillMonths': [0, 60],
+  /** Kulanz bis 10.000 € */
+  'rules.goodwillMaxCents': [0, 1_000_000],
+  /** Fristen: erste Reaktion bis eine Woche, Antwort bis zwei Wochen */
+  'rules.slaFirstHours': [1, 168],
+  'rules.slaReplyHours': [1, 336],
+  /** Preise und Ersparnis je Einsatz bis 1.000 € */
+  'service.prices.travelCents': [0, 100_000],
+  'service.prices.hourCents': [0, 100_000],
+  'service.savings.visitCents': [0, 100_000],
+  'service.savings.returnCents': [0, 100_000],
+  /** Löschfrist: bis zehn Jahre */
+  'privacy.retentionMonths': [1, 120],
+};
+
+function number(value: unknown, at: string): number | undefined {
+  const bounds = settingsNumberBounds[at];
+  if (!bounds || typeof value !== 'number' || !Number.isInteger(value)) return undefined;
+  return value >= bounds[0] && value <= bounds[1] ? value : undefined;
+}
+
+/**
+ * Prüft einen Wert gegen die Form der Vorlage (Standardeinstellungen): gleiche Schlüssel, gleiche
+ * Typen, Texte bis 2000 Zeichen, Listen bis 100 Einträge, Zahlen in ihren Grenzen
+ * (settingsNumberBounds). Unbekannte Schlüssel fallen weg. at: Pfad des Werts, etwa
+ * „rules.warrantyMonths“, Einträge einer Liste mit „[]“.
+ */
+function shaped(value: unknown, template: unknown, at: string): unknown {
   if (typeof template === 'string') return str(value) ? (value as string) : undefined;
-  if (typeof template === 'number')
-    return typeof value === 'number' && Number.isFinite(value) && value >= 0 && value <= 1e9
-      ? value
-      : undefined;
+  if (typeof template === 'number') return number(value, at);
   if (typeof template === 'boolean') return typeof value === 'boolean' ? value : undefined;
   if (Array.isArray(template)) {
     if (!Array.isArray(value) || value.length > LIST_MAX) return undefined;
     const item = template[0] ?? '';
-    const out = value.map((v) => shaped(v, item));
+    const out = value.map((v) => shaped(v, item, `${at}[]`));
     return out.every((v) => v !== undefined) ? out : undefined;
   }
   if (template && typeof template === 'object') {
@@ -92,7 +122,7 @@ function shaped(value: unknown, template: unknown): unknown {
     for (const [k, t] of Object.entries(template)) {
       const v = (value as Record<string, unknown>)[k];
       if (v === undefined && OPTIONAL.has(k)) continue;
-      const x = shaped(v, t);
+      const x = shaped(v, t, `${at}.${k}`);
       if (x === undefined) return undefined;
       out[k] = x;
     }
@@ -125,6 +155,6 @@ export function parseSettingsSection(
     );
     return ok ? { ...current, integrations: value as DealerSettings['integrations'] } : null;
   }
-  const next = shaped(value, fruendSettings[key]);
+  const next = shaped(value, fruendSettings[key], key);
   return next === undefined ? null : { ...current, [key]: next };
 }
