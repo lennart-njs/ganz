@@ -247,15 +247,17 @@ export function Worklist({
                       />
                       <span className="sr">{t.list.select(r.id)}</span>
                     </label>
+                    {/* Kein aria-label: Screenreader lesen die ganze Zeile, Kundschaft, Problem,
+                        Stand und Frist, nicht nur „Fall … öffnen“ */}
                     <Link
                       className="row-link"
                       href={`/faelle/${encodeURIComponent(r.id)}`}
-                      aria-label={t.list.open(r.id)}
                       onFocus={() => setFocus(i)}
                     >
+                      <span className="sr">{t.list.open(r.id)}: </span>
                       <span>
                         <span className="row-id num">
-                          {r.unread ? <span className="unread" title={t.list.unread} /> : null}
+                          {r.unread ? <Unread /> : null}
                           {r.id}
                         </span>
                         <span className="row-when">{r.when}</span>
@@ -314,13 +316,11 @@ export function Worklist({
                         onDragStart={(e) => e.dataTransfer.setData('text/plain', r.id)}
                         className={`kcard${r.revoked ? ' off' : ''}`}
                       >
-                        <Link
-                          href={`/faelle/${encodeURIComponent(r.id)}`}
-                          aria-label={t.list.open(r.id)}
-                        >
+                        <Link href={`/faelle/${encodeURIComponent(r.id)}`}>
+                          <span className="sr">{t.list.open(r.id)}: </span>
                           <span className="kline">
                             <span className="row-id num">
-                              {r.unread ? <span className="unread" title={t.list.unread} /> : null}
+                              {r.unread ? <Unread /> : null}
                               {r.id}
                             </span>
                             <Avatar name={r.assignee?.name} size="sm" />
@@ -419,6 +419,16 @@ export function Worklist({
           {flash}
         </p>
       ) : null}
+    </>
+  );
+}
+
+/** Punkt für eine neue Nachricht, für Screenreader mit Wort */
+function Unread() {
+  return (
+    <>
+      <span className="unread" title={t.list.unread} aria-hidden />
+      <span className="sr">{t.list.unread}, </span>
     </>
   );
 }

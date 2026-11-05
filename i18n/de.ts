@@ -1426,13 +1426,22 @@ export const de = {
   portal: {
     brand: 'machs.io',
     title: 'Händlerportal',
-    example: 'Beispiel',
+    /** Fehler-, 404- und Ladeseiten (portal/app/error.tsx, not-found.tsx, loading.tsx) */
+    problem: {
+      title: 'Das hat gerade nicht geklappt.',
+      text: 'Die Daten lassen sich im Moment nicht laden.',
+      retry: 'Erneut versuchen',
+      missingTitle: 'Diese Seite gibt es nicht.',
+      missingText: 'Der Fall ist nicht mehr freigegeben, oder die Adresse stimmt nicht.',
+      toCases: 'Zu den Fällen',
+      loading: 'Wird geladen',
+    },
     login: {
       email: 'E-Mail',
       password: 'Passwort',
       submit: 'Anmelden',
       failed: 'E-Mail oder Passwort falsch.',
-      offline: 'Backend nicht erreichbar.',
+      offline: 'Die Verbindung zum Server fehlt. Bitte gleich noch einmal versuchen.',
     },
     nav: {
       cases: 'Fälle',
@@ -1591,7 +1600,7 @@ export const de = {
       chosen: (slot: string) => `Gewählt: ${slot}`,
       empty: 'Noch keine Nachrichten.',
       contact: 'Kontaktkarte',
-      more: (n: number) => (n === 1 ? '1 weiterer Schritt' : `${n} weitere Schritte`),
+      more: (n: number) => (n === 1 ? '1 weiterer Eintrag' : `${n} weitere Einträge`),
     },
     composer: {
       label: 'Antwort',
@@ -1605,7 +1614,7 @@ export const de = {
       tools: 'Weitere Aktionen',
       question: 'Rückfrage',
       questionText: 'Frage',
-      questionOptions: 'Antworten, mit Komma getrennt',
+      questionOptions: 'Antworten, eine pro Zeile',
       termin: 'Termin vorschlagen',
       part: 'Ersatzteil',
       partName: 'Teil',

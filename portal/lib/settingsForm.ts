@@ -1,5 +1,5 @@
 // Formulare der Einstellungen → Abschnitt der Einstellungen. Das Backend prüft danach noch einmal.
-import type { DealerSettings, SettingsSection } from '@/model/portal';
+import { parseOptions, type DealerSettings, type SettingsSection } from '@/model/portal';
 import type { DeviceCategory } from '@/model/types';
 
 const str = (f: FormData, k: string) => String(f.get(k) ?? '').trim();
@@ -81,11 +81,7 @@ export function sectionFromForm(section: SettingsSection, f: FormData, s: Dealer
           .map((r) => ({
             id: r.id || slug(r.question!),
             question: r.question!,
-            options: (r.options ?? '')
-              .split(',')
-              .map((x) => x.trim())
-              .filter(Boolean)
-              .slice(0, 4),
+            options: parseOptions(r.options ?? ''),
           })),
       };
     case 'team':

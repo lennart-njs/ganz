@@ -5,6 +5,7 @@ import { messagePreview } from '@/config/portal.demo';
 import { de } from '@/i18n/de';
 import {
   fillTemplate,
+  formatOptions,
   settingsSections,
   type DealerSettings,
   type SettingsSection,
@@ -51,6 +52,16 @@ function Text({
         defaultValue={value}
         inputMode={type === 'number' ? 'decimal' : undefined}
       />
+    </div>
+  );
+}
+
+/** Mehrere Werte, einer pro Zeile (z. B. Antworten auf eine Rückfrage) */
+function Lines({ name, label, value }: { name: string; label: string; value: string }) {
+  return (
+    <div className="field">
+      <label htmlFor={`s-${name}`}>{label}</label>
+      <textarea id={`s-${name}`} name={name} className="input" rows={3} defaultValue={value} />
     </div>
   );
 }
@@ -199,10 +210,10 @@ function Messages({ s }: { s: DealerSettings }) {
           <div key={x?.id ?? 'neu'} className="rowform two">
             <input type="hidden" name={`question.${i}.id`} defaultValue={x?.id ?? ''} />
             <Text name={`question.${i}.question`} label={t.messages.question} value={x?.question} />
-            <Text
+            <Lines
               name={`question.${i}.options`}
               label={t.messages.options}
-              value={x?.options.join(', ')}
+              value={x ? formatOptions(x.options) : ''}
             />
             {x ? (
               <Remove name={`question.${i}.remove`} />

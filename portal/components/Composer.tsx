@@ -7,7 +7,7 @@ import Link from 'next/link';
 import { useActionState, useEffect, useRef, useState } from 'react';
 
 import { de } from '@/i18n/de';
-import type { MessageTemplate, QuestionTemplate } from '@/model/portal';
+import { formatOptions, type MessageTemplate, type QuestionTemplate } from '@/model/portal';
 
 import type { ComposerState } from '../app/faelle/[id]/actions';
 
@@ -133,7 +133,7 @@ export function Composer({
               onChange={(e) => {
                 setQuestion(e.target.value);
                 const tpl = questions.find((q) => q.question === e.target.value);
-                if (tpl) setOptions(tpl.options.join(', '));
+                if (tpl) setOptions(formatOptions(tpl.options));
               }}
             />
             <datalist id="c-questions">
@@ -144,10 +144,11 @@ export function Composer({
           </div>
           <div className="field">
             <label htmlFor="c-options">{t.questionOptions}</label>
-            <input
+            <textarea
               id="c-options"
               name="options"
               className="input"
+              rows={3}
               value={options}
               maxLength={200}
               onChange={(e) => setOptions(e.target.value)}

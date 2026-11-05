@@ -8,7 +8,7 @@ import * as ts from 'typescript';
 
 import { fruendSettings, messagePreview, portalSeed } from '@/config/portal.demo';
 import { de } from '@/i18n/de';
-import { fillTemplate, settingsSections } from '@/model/portal';
+import { fillTemplate, formatOptions, parseOptions, settingsSections } from '@/model/portal';
 import type { SharedPhoto } from '@/model/sharing';
 import { warrantyCheck } from '@/portal/lib/check';
 import { conversation } from '@/portal/lib/conversation';
@@ -99,6 +99,26 @@ describe('Händlerportal: Logik', () => {
     });
   });
 
+  // Im Browser gefunden (Portal-Rundgang 05.11.): Was der Händler tat, kam mit dem Abgleich als
+  // Systemzeile zurück und stand vor seiner eigenen Nachricht noch einmal.
+  test('Gespräch: eigene Nachrichten des Händlers stehen nicht noch einmal als Systemzeile', () => {
+    const r = records.find((x) => x.retailerEvents.length > 0)!;
+    const echo = r.retailerEvents.map((e) => ({
+      type: e.type,
+      at: e.at,
+      label: `Echo ${e.id}`,
+      actor: 'haendler',
+    }));
+    const withEcho = { ...r, file: { ...r.file, timeline: [...r.file.timeline, ...echo] } };
+    const texts = conversation(withEcho)
+      .filter((x) => x.kind === 'system')
+      .flatMap((x) => (x.kind === 'system' ? x.texts.map((t) => t.text) : []));
+    for (const e of echo) expect(texts).not.toContain(e.label);
+    expect(conversation(withEcho).filter((x) => x.kind === 'dealer')).toHaveLength(
+      r.retailerEvents.length,
+    );
+  });
+
   // Prüfung 1.1: In der App ist ein Foto für den Händler ein Foto zu einer Frage. Im Portal hieß es
   // darum „Frage an den Assistenten“, obwohl es an den Händler ging.
   test('Fotos: ein Foto zu einer Nachricht heißt nicht nach dem Assistenten', () => {
@@ -140,6 +160,29 @@ describe('Händlerportal: Logik', () => {
     );
     expect(st.ratingAvg).toBeGreaterThanOrEqual(3);
     expect(st.top[0]!.count).toBeGreaterThanOrEqual(st.top.at(-1)!.count);
+  });
+
+  // Im Portal-Rundgang gefunden: Ein Komma trennte Antworten, „Ja, ich schicke ein Foto“ zerfiel
+  // beim Speichern und in der Rückfrage in „Ja“ und „ich schicke ein Foto“.
+  test('Antworten auf Rückfragen: eine pro Zeile, ein Komma bleibt in der Antwort', () => {
+    const beleg = fruendSettings.messages.questions.find((q) => q.id === 'beleg')!;
+    expect(beleg.options.some((o) => o.includes(','))).toBe(true);
+    expect(parseOptions(formatOptions(beleg.options))).toEqual(beleg.options);
+    expect(parseOptions('Ja, ich schicke ein Foto\r\n\n Nein \nA\nB\nC')).toEqual([
+      'Ja, ich schicke ein Foto',
+      'Nein',
+      'A',
+      'B',
+    ]);
+    // Speichern ohne Änderung lässt die Antworten, wie sie sind
+    const form = new FormData();
+    form.set('question.0.id', beleg.id);
+    form.set('question.0.question', beleg.question);
+    form.set('question.0.options', formatOptions(beleg.options));
+    const saved = sectionFromForm('messages', form, fruendSettings) as {
+      questions: { options: string[] }[];
+    };
+    expect(saved.questions[0]!.options).toEqual(beleg.options);
   });
 
   test('Einstellungen: jedes Formular ergibt einen gültigen Abschnitt', () => {

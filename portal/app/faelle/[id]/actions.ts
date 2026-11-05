@@ -3,7 +3,7 @@
 import { revalidatePath } from 'next/cache';
 
 import { de } from '@/i18n/de';
-import { workflowStatuses, type WorkflowStatus } from '@/model/portal';
+import { parseOptions, workflowStatuses, type WorkflowStatus } from '@/model/portal';
 import type { PartStatus, RetailerDecision } from '@/model/sharing';
 
 import { sendAction, sendWorkflow } from '../../../lib/api';
@@ -37,11 +37,7 @@ export async function compose(
       ok = await sendAction(id, {
         type: 'rueckfrage',
         question: text(form, 'question'),
-        options: text(form, 'options')
-          .split(',')
-          .map((x) => x.trim())
-          .filter(Boolean)
-          .slice(0, 4),
+        options: parseOptions(text(form, 'options')),
       });
       break;
     case 'termin':

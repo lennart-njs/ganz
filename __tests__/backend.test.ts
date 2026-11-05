@@ -21,7 +21,7 @@ import type { DealerSettings } from '@/model/portal';
 import type { SharedCaseFile, SharedCaseRecord } from '@/model/sharing';
 import type { CaseEvent } from '@/model/types';
 import { setCaseStore } from '@/server/backend';
-import { FileCaseStore } from '@/server/backend/fileStore';
+import { FileCaseStore, repeated } from '@/server/backend/fileStore';
 import { seedAnonymous, seedRecords } from '@/server/backend/seed';
 
 const req = (url: string, init: RequestInit & { json?: unknown } = {}) =>
@@ -504,5 +504,38 @@ describe('Beispielfälle (Entscheidung 37)', () => {
     fs.writeFileSync(dbFile, old);
     const after = newestShared(await store.listForTenant(tenant));
     expect(Math.abs(after - newest)).toBeLessThan(5 * 60_000);
+  });
+});
+
+// Portal-Prüfung 05.11.: Ein Doppelklick auf „Fall annehmen“ schickte die Nachricht zweimal.
+describe('Aktionen des Händlers: nichts doppelt', () => {
+  const ev = (
+    type: CaseEvent['type'],
+    at: string,
+    payload: Record<string, unknown>,
+  ): CaseEvent => ({
+    id: `hev-${type}-${at}`,
+    caseId: 'GS-1',
+    type,
+    at,
+    actor: { kind: 'haendler', id: 'fruend', name: 'Fründ' },
+    payload,
+  });
+
+  test('angenommen ist ein Fall nur einmal, auch Minuten später', () => {
+    const first = ev('haendler_angenommen', '2026-11-05T10:00:00.000Z', { by: 'Sandra K.' });
+    const again = ev('haendler_angenommen', '2026-11-05T10:05:00.000Z', { by: 'Sandra K.' });
+    expect(repeated([first], again)).toBe(first);
+  });
+
+  test('dieselbe Nachricht kurz danach gilt als dieselbe, später oder anders nicht', () => {
+    const msg = ev('haendler_nachricht', '2026-11-05T10:00:00.000Z', { text: 'Hallo', by: 'S' });
+    const soon = ev('haendler_nachricht', '2026-11-05T10:00:03.000Z', { text: 'Hallo', by: 'S' });
+    const later = ev('haendler_nachricht', '2026-11-05T10:01:00.000Z', { text: 'Hallo', by: 'S' });
+    const other = ev('haendler_nachricht', '2026-11-05T10:00:03.000Z', { text: 'Hi', by: 'S' });
+    expect(repeated([msg], soon)).toBe(msg);
+    expect(repeated([msg], later)).toBeUndefined();
+    expect(repeated([msg], other)).toBeUndefined();
+    expect(repeated([], msg)).toBeUndefined();
   });
 });

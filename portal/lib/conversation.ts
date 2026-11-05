@@ -59,13 +59,19 @@ export function dealerText(e: CaseEvent, dealerShort: string): string {
 /** Zeitstrahl-Einträge, die im Gespräch schon anders stehen */
 const skip: CaseEvent['type'][] = ['rueckfrage_beantwortet', 'nachricht_an_haendler'];
 
+/**
+ * Was der Händler selbst tat (haendler_*), kommt mit dem Abgleich als Ereignis in den Zeitstrahl
+ * der App zurück. Im Portal steht es schon als seine Nachricht, eine Systemzeile davor wäre doppelt.
+ */
+const ownEcho = (type: CaseEvent['type']) => type.startsWith('haendler_');
+
 export function conversation(r: SharedCaseRecord): ConvItem[] {
   const f = r.file;
   const short =
     demoConfig.dealers.find((d) => d.id === f.recipient.id)?.shortName ?? f.recipient.name;
   const items: ConvItem[] = [];
   for (const x of f.timeline) {
-    if (skip.includes(x.type)) continue;
+    if (skip.includes(x.type) || ownEcho(x.type)) continue;
     items.push({ kind: 'system', at: x.at, texts: [{ at: x.at, text: x.label }] });
   }
   for (const m of f.messages ?? []) {

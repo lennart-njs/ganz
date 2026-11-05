@@ -114,6 +114,22 @@ function setStatus(record: SharedCaseRecord, status: WorkflowStatus, at = now())
   else record.workflow = wf;
 }
 
+/** Zeit, in der dieselbe Aktion noch einmal als Doppelklick gilt */
+const REPEAT_MS = 15_000;
+
+/**
+ * Die schon gespeicherte Aktion, wenn event sie nur wiederholt: „annehmen“ immer, alles andere,
+ * wenn das letzte Ereignis derselben Art innerhalb von REPEAT_MS denselben Inhalt hat.
+ */
+export function repeated(events: readonly CaseEvent[], event: CaseEvent): CaseEvent | undefined {
+  const sameType = events.filter((e) => e.type === event.type);
+  if (event.type === 'haendler_angenommen') return sameType[0];
+  const last = sameType.at(-1);
+  if (!last) return undefined;
+  const close = Date.parse(event.at) - Date.parse(last.at) < REPEAT_MS;
+  return close && JSON.stringify(last.payload) === JSON.stringify(event.payload) ? last : undefined;
+}
+
 export class FileCaseStore implements CaseStore {
   constructor(private readonly file: string) {}
 
@@ -388,6 +404,10 @@ export class FileCaseStore implements CaseStore {
     const s = db.shares[caseId];
     if (!s || s.record.file.recipient.id !== tenant.id || s.record.revokedAt) return null;
     const event = this.event(caseId, tenant, action, tenant.userName);
+    // Ein Doppelklick oder ein zweiter Tab löst nichts doppelt aus: Angenommen ist ein Fall nur
+    // einmal, und dieselbe Aktion kurz nach der letzten gilt als dieselbe.
+    const same = repeated(s.record.retailerEvents, event);
+    if (same) return same;
     s.record.retailerEvents.push(event);
     s.record.file = { ...s.record.file, updatedAt: event.at };
     const next =

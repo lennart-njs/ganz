@@ -162,6 +162,23 @@ export const settingsSections: SettingsSection[] = [
 ];
 
 /** Platzhalter in Nachrichten: {kunde}, {fall}, {haendler}, {telefon} */
+/**
+ * Antworten auf eine Rückfrage, eine pro Zeile, höchstens vier. Ein Komma trennt nicht: „Ja, ich
+ * schicke ein Foto“ ist eine Antwort (im Portal-Rundgang zerfiel sie in zwei).
+ */
+export function parseOptions(raw: string): string[] {
+  return raw
+    .split(/\r?\n/)
+    .map((x) => x.trim())
+    .filter(Boolean)
+    .slice(0, 4);
+}
+
+/** Gegenstück zu parseOptions: für das Eingabefeld */
+export function formatOptions(options: readonly string[]): string {
+  return options.join('\n');
+}
+
 export function fillTemplate(
   text: string,
   values: { kunde?: string; fall?: string; haendler?: string; telefon?: string },

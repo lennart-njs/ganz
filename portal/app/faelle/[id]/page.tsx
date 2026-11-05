@@ -10,6 +10,7 @@ import { Avatar, SlaChip, WorkflowChip } from '../../../components/Chips';
 import { Composer } from '../../../components/Composer';
 import { Nav } from '../../../components/Nav';
 import { AutoSelect, OpenComposer, ScrollBox } from '../../../components/Small';
+import { Submit } from '../../../components/Submit';
 import { getCase, getSettings } from '../../../lib/api';
 import { warrantyCheck } from '../../../lib/check';
 import { conversation, type ConvItem } from '../../../lib/conversation';
@@ -65,7 +66,10 @@ function Photo({ p, label, alt }: { p: SharedPhoto; label: string; alt: string }
   );
 }
 
-function Bubble({ x, customer }: { x: ConvItem; customer: string }) {
+/** Tag einer Zeile im Verlauf, z. B. „Do., 05.11.“ */
+const dayOf = (at: string) => formatWhen(at).split(' · ')[0];
+
+function Bubble({ x, customer, day }: { x: ConvItem; customer: string; day: boolean }) {
   if (x.kind === 'system') {
     const lines = x.texts;
     const show = (l: { at: string; text: string }, i: number) => (
@@ -75,16 +79,20 @@ function Bubble({ x, customer }: { x: ConvItem; customer: string }) {
     );
     return (
       <div className="sys">
-        <span className="sys-day">{formatWhen(lines[0]!.at).split(' · ')[0]}</span>
+        {/* Der Tag nur, wenn er sich gegenüber dem Eintrag davor ändert */}
+        {day ? <span className="sys-day">{dayOf(lines[0]!.at)}</span> : null}
         {lines.length > 4 ? (
-          <details>
-            <summary>
-              <ul>{lines.slice(0, 2).map(show)}</ul>
-              <span className="more">{t.conversation.more(lines.length - 3)}</span>
-            </summary>
-            <ul>{lines.slice(2, -1).map((l, i) => show(l, i + 2))}</ul>
+          <>
+            {/* Eingeklappt: die ersten zwei und die letzte Zeile, dazwischen die Zahl */}
+            <details>
+              <summary>
+                <ul>{lines.slice(0, 2).map(show)}</ul>
+                <span className="more">{t.conversation.more(lines.length - 3)}</span>
+              </summary>
+              <ul>{lines.slice(2, -1).map((l, i) => show(l, i + 2))}</ul>
+            </details>
             <ul>{show(lines.at(-1)!, lines.length - 1)}</ul>
-          </details>
+          </>
         ) : (
           <ul>{lines.map(show)}</ul>
         )}
@@ -214,7 +222,6 @@ export default async function Fallakte({ params }: { params: Promise<{ id: strin
                   <Avatar name={who.name} size="sm" /> {who.name}
                 </span>
               ) : null}
-              {file.isExample ? <span className="chip muted">{t.example}</span> : null}
             </div>
           )}
         </div>
@@ -228,7 +235,14 @@ export default async function Fallakte({ params }: { params: Promise<{ id: strin
             <section className="card convcard" aria-label={f.conversation}>
               <ScrollBox count={items.length} label={f.conversation}>
                 {items.length ? (
-                  items.map((x, i) => <Bubble key={i} x={x} customer={file.customer.name} />)
+                  items.map((x, i) => (
+                    <Bubble
+                      key={i}
+                      x={x}
+                      customer={file.customer.name}
+                      day={i === 0 || dayOf(items[i - 1]!.at) !== dayOf(x.at)}
+                    />
+                  ))
                 ) : (
                   <p className="empty">{t.conversation.empty}</p>
                 )}
@@ -253,17 +267,13 @@ export default async function Fallakte({ params }: { params: Promise<{ id: strin
                   {next.kind === 'annehmen' ? (
                     <form action={act}>
                       <input type="hidden" name="kind" value="annehmen" />
-                      <button className="btn btn-block" type="submit">
-                        {t.next.accept}
-                      </button>
+                      <Submit className="btn btn-block">{t.next.accept}</Submit>
                     </form>
                   ) : next.kind === 'entscheiden' ? (
                     <form action={act}>
                       <input type="hidden" name="kind" value="entscheidung" />
                       <input type="hidden" name="decision" value={next.decision} />
-                      <button className="btn btn-block" type="submit">
-                        {t.check.confirm[next.decision]}
-                      </button>
+                      <Submit className="btn btn-block">{t.check.confirm[next.decision]}</Submit>
                     </form>
                   ) : next.kind === 'antworten' ? (
                     <OpenComposer what="antworten" label={t.next.reply} />
@@ -272,9 +282,7 @@ export default async function Fallakte({ params }: { params: Promise<{ id: strin
                   ) : next.kind === 'abschliessen' ? (
                     <form action={act}>
                       <input type="hidden" name="kind" value="abschliessen" />
-                      <button className="btn btn-block" type="submit">
-                        {t.next.close}
-                      </button>
+                      <Submit className="btn btn-block">{t.next.close}</Submit>
                     </form>
                   ) : (
                     <p className="h2">{next.kind === 'warten' ? t.next.waiting : t.next.done}</p>
@@ -326,9 +334,7 @@ export default async function Fallakte({ params }: { params: Promise<{ id: strin
                           <form key={d} action={act}>
                             <input type="hidden" name="kind" value="entscheidung" />
                             <input type="hidden" name="decision" value={d} />
-                            <button className="btn btn-2 btn-sm" type="submit">
-                              {t.check.confirm[d]}
-                            </button>
+                            <Submit className="btn btn-2 btn-sm">{t.check.confirm[d]}</Submit>
                           </form>
                         ))}
                     </div>
