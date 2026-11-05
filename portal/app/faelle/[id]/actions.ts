@@ -4,12 +4,18 @@ import { revalidatePath } from 'next/cache';
 
 import { de } from '@/i18n/de';
 import { parseOptions, workflowStatuses, type WorkflowStatus } from '@/model/portal';
-import { retailerDecisions, type PartStatus, type RetailerDecision } from '@/model/sharing';
+import type { PartStatus, RetailerDecision } from '@/model/sharing';
 
-import { sendAction, sendWorkflow } from '../../../lib/api';
+import { getCase, getSettings, sendAction, sendWorkflow } from '../../../lib/api';
+import { allowedDecisions, warrantyCheck } from '../../../lib/check';
 
 const t = de.portal.composer;
 const text = (form: FormData, key: string) => String(form.get(key) ?? '').trim();
+/** Euro aus dem Zahlenfeld („180“, „180.5“ oder „180,50“) in Cent, sonst undefined */
+const cents = (s: string) => {
+  const n = Number(s.replace(',', '.'));
+  return s && Number.isFinite(n) && n >= 0 ? Math.round(n * 100) : undefined;
+};
 
 export interface ComposerState {
   ok?: boolean;
@@ -76,9 +82,24 @@ export async function quick(id: string, form: FormData) {
     const decision = text(form, 'decision') as RetailerDecision;
     // Eine Ablehnung nur mit Grund, der Grund steht in der App unter der Absage
     const note = text(form, 'note') || undefined;
-    const valid = (retailerDecisions as readonly string[]).includes(decision);
-    if (valid && (decision !== 'abgelehnt' || note))
-      await sendAction(id, { type: 'entscheidung', decision, note });
+    // Nur, was die Regel zulässt (wie die Liste in der Fallakte)
+    const [found, { settings }] = await Promise.all([getCase(id), getSettings()]);
+    const allowed = found
+      ? allowedDecisions(warrantyCheck(found.record.file, settings.rules, found.record))
+      : [];
+    // Kulanz mit Betrag: bis zur eigenen Grenze und nicht über den Voranschlag
+    const total = found?.record.file.quote?.repair.total;
+    const cover = decision === 'kulanz' ? cents(text(form, 'cover')) : undefined;
+    const cap = Math.min(settings.rules.goodwillMaxCents, total ?? Infinity);
+    const coverOk = decision !== 'kulanz' || (cover !== undefined && cover <= cap);
+    if (allowed.includes(decision) && coverOk && (decision !== 'abgelehnt' || note))
+      await sendAction(id, {
+        type: 'entscheidung',
+        decision,
+        note,
+        ...(cover !== undefined ? { coverCents: cover } : {}),
+        ...(cover !== undefined && total !== undefined ? { totalCents: total } : {}),
+      });
   }
   if (kind === 'kaufbeleg') {
     const photoId = text(form, 'photoId');

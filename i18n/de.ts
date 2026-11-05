@@ -1101,6 +1101,8 @@ export const de = {
         nachbesserung_gescheitert: 'Nachbesserung hat nicht geholfen',
       },
       stars: (n: number) => `${n} von 5 Sternen`,
+      /** Kulanz mit Betrag aus dem Portal */
+      goodwill: (cover: string) => `${cover} übernommen`,
       answer: (q: string, a: string) => `${q} ${a}`,
       note: (note: string) => `Notiz: ${note}`,
       reason: (reason: string) => `Grund: ${reason}`,
@@ -1369,6 +1371,12 @@ export const de = {
     cancel: 'Doch nicht',
     sent: (dealer: string) => `Gesendet. ${dealer} meldet sich hier im Gespräch.`,
     accepted: (dealer: string) => `${dealer} hat deinen Fall angenommen.`,
+    /** Kulanz mit Betrag aus dem Portal, wie ein Beleg */
+    goodwill: {
+      split: (dealer: string, cover: string, rest: string) =>
+        `${dealer} übernimmt ${cover}, du zahlst ${rest}.`,
+      upTo: (dealer: string, cover: string) => `${dealer} übernimmt bis zu ${cover}.`,
+    },
     decision: {
       gewaehrleistung: 'Das ist ein Fall für die Gewährleistung. Wir kümmern uns um die Reparatur.',
       kulanz: 'Wir übernehmen das aus Kulanz und kümmern uns um die Reparatur.',
@@ -1605,6 +1613,11 @@ export const de = {
         'Das Gerät wurde nicht bei uns gekauft.',
       ],
       rejectSend: 'Ablehnung senden',
+      /** Kulanz mit Betrag */
+      cover: 'Wir übernehmen (€)',
+      quote: (eur: string) => `Kostenvoranschlag ${eur}`,
+      customerPays: (eur: string) => `Kundschaft zahlt ${eur}`,
+      coverSend: 'Kulanz senden',
       rejectCancel: 'Abbrechen',
       change: 'Entscheidung ändern',
       unknown: 'Kaufdatum fehlt',
@@ -1612,6 +1625,15 @@ export const de = {
       proofYes: 'liegt vor',
       proofNo: 'fehlt',
       goodwillMax: (eur: string) => `bis ${eur}`,
+      /** Wer entscheidet und worauf, gleich mit der App (Regulierer) */
+      basis: 'Grundlage',
+      basisLine: {
+        in: (who: string, until: string) => `${who} · Gewährleistung bis ${until}`,
+        ended: (who: string, until: string) => `${who} · Gewährleistung endete am ${until}`,
+        open: (who: string) => `${who} · Gewährleistung, Kaufdatum fehlt`,
+      },
+      insured: (provider: string, product: string, until: string) =>
+        `${provider} · ${product} bis ${until}`,
       decided: 'Entschieden',
       other: 'Anders entscheiden',
     },

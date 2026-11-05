@@ -1,6 +1,7 @@
 // Gespräch in der Fallakte: Nachrichten der Kundschaft, Antworten des Händlers (so, wie sie in der
 // App stehen), Notizen des Teams und die Schritte aus der App als Systemzeilen.
 import { de } from '@/i18n/de';
+import { goodwillLine } from '@/lib/goodwill';
 import type {
   PartStatus,
   RetailerDecision,
@@ -44,8 +45,12 @@ export function dealerText(e: CaseEvent, dealerShort: string): string {
       );
     case 'haendler_angenommen':
       return de.sharing.accepted(dealerShort);
-    case 'haendler_entscheidung':
-      return de.sharing.decision[p.decision as RetailerDecision] ?? '';
+    case 'haendler_entscheidung': {
+      // Mit Betrag bei Kulanz, wie die Kundschaft es liest
+      const text = de.sharing.decision[p.decision as RetailerDecision] ?? '';
+      const share = goodwillLine(dealerShort, p);
+      return share ? `${text}\n${share}` : text;
+    }
     case 'haendler_betrieb':
       return de.sharing.partner(String(p.partnerName ?? ''), p.slot ? String(p.slot) : undefined);
     case 'haendler_status':

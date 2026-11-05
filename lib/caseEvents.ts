@@ -3,6 +3,7 @@ import { demoConfig } from '@/config/demo.config';
 import { getGuide } from '@/lib/guideCatalog';
 import { de } from '@/i18n/de';
 import { formatDate, formatEuro } from '@/i18n/format';
+import { goodwillShare } from '@/model/sharing';
 import type { CaseEvent, CaseStatus, PhotoPurpose } from '@/model/types';
 
 import { caseStatusLabel } from './caseView';
@@ -108,10 +109,13 @@ export function eventLabel(e: CaseEvent): string {
     case 'haendler_rueckfrage':
       detail = String(p.question ?? '');
       break;
-    case 'haendler_entscheidung':
-      detail =
+    case 'haendler_entscheidung': {
+      const decision =
         de.sharing.eventDetail.decision[p.decision as keyof typeof de.sharing.eventDetail.decision];
+      const share = goodwillShare(p);
+      detail = share ? `${decision} · ${f.goodwill(formatEuro(share.cover))}` : decision;
       break;
+    }
     case 'haendler_betrieb':
       detail = [String(p.partnerName ?? ''), p.slot ? String(p.slot) : '']
         .filter(Boolean)

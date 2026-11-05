@@ -12,7 +12,12 @@ import {
   purchaseWarrantyUntil,
   withinPurchaseWarranty,
 } from '@/model/policies/regulator';
-import type { RetailerDecision, SharedCaseFile, SharedCaseRecord } from '@/model/sharing';
+import {
+  retailerDecisions,
+  type RetailerDecision,
+  type SharedCaseFile,
+  type SharedCaseRecord,
+} from '@/model/sharing';
 
 /** Ohne lesbares Kaufdatum schlägt die Prüfung nichts vor: offen */
 export type Verdict = RetailerDecision | 'offen';
@@ -24,6 +29,10 @@ export interface WarrantyCheck {
   /** Ende der Gewährleistung auf den Kauf */
   until?: string;
   proof: boolean;
+  /** Gewährleistung auf den Kauf am Stichtag. Ohne lesbares Kaufdatum undefined. */
+  inWarranty?: boolean;
+  /** Versicherung am Stichtag gültig */
+  insured: boolean;
 }
 
 /** Gesetzliche Frist auf den Kauf, gleich mit der App */
@@ -43,18 +52,32 @@ export function warrantyCheck(
     file.photos.some((p) => p.purpose === 'kaufbeleg') ||
     (!!record?.proofPhotoId && file.photos.some((p) => p.id === record.proofPhotoId));
   const asOf = file.case.createdAt;
+  const insured = !!file.protection && Date.parse(file.protection.validUntil) >= Date.parse(asOf);
   const purchase = file.device.purchaseDate;
   const months = purchase ? fullMonths(purchase, asOf) : undefined;
-  if (!purchase || months === undefined) return { verdict: 'offen', proof };
+  if (!purchase || months === undefined) return { verdict: 'offen', proof, insured };
   const until = purchaseWarrantyUntil(purchase, PURCHASE_WARRANTY_MONTHS);
+  const base = { months, until, proof, insured };
   if (withinPurchaseWarranty(purchase, asOf, PURCHASE_WARRANTY_MONTHS))
-    return { verdict: 'gewaehrleistung', months, until, proof };
-  const at = Date.parse(asOf);
-  const insured = !!file.protection && Date.parse(file.protection.validUntil) >= at;
-  if (insured) return { verdict: 'an_versicherer', months, until, proof };
+    return { verdict: 'gewaehrleistung', ...base, inWarranty: true };
+  if (insured) return { verdict: 'an_versicherer', ...base, inWarranty: false };
   const cost = file.quote?.repair.total;
   const goodwill =
     months < PURCHASE_WARRANTY_MONTHS + rules.goodwillMonths &&
     (cost === undefined || cost <= rules.goodwillMaxCents);
-  return { verdict: goodwill ? 'kulanz' : 'abgelehnt', months, until, proof };
+  return { verdict: goodwill ? 'kulanz' : 'abgelehnt', ...base, inWarranty: false };
+}
+
+/**
+ * Was die Regel zulässt, gleich mit der App (regulatorOptions): In der Gewährleistung keine Kulanz,
+ * danach keine Gewährleistung, die Versicherung nur mit gültigem Vertrag. Ohne Kaufdatum
+ * entscheidet der Händler nach dem Beleg. Ablehnen geht immer, mit Grund.
+ */
+export function allowedDecisions(c: Pick<WarrantyCheck, 'inWarranty' | 'insured'>) {
+  return retailerDecisions.filter((d) => {
+    if (d === 'gewaehrleistung') return c.inWarranty !== false;
+    if (d === 'kulanz') return c.inWarranty !== true;
+    if (d === 'an_versicherer') return c.insured;
+    return true;
+  });
 }

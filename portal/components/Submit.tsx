@@ -4,10 +4,18 @@
 // schickt nichts doppelt an die Kundschaft (Portal-Prüfung 05.11.).
 import { useFormStatus } from 'react-dom';
 
-export function Submit({ className, children }: { className: string; children: React.ReactNode }) {
+export function Submit({
+  className,
+  children,
+  disabled,
+}: {
+  className: string;
+  children: React.ReactNode;
+  disabled?: boolean;
+}) {
   const { pending } = useFormStatus();
   return (
-    <button className={className} type="submit" disabled={pending} aria-busy={pending}>
+    <button className={className} type="submit" disabled={pending || disabled} aria-busy={pending}>
       {children}
     </button>
   );

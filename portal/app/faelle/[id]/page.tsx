@@ -4,7 +4,7 @@ import { notFound } from 'next/navigation';
 import { portalSeed } from '@/config/portal.demo';
 import { de } from '@/i18n/de';
 import { fillTemplate, templateValues, workflowStatuses } from '@/model/portal';
-import { retailerDecisions, type SharedPhoto } from '@/model/sharing';
+import type { SharedPhoto } from '@/model/sharing';
 
 import { Avatar, SlaChip, WorkflowChip } from '../../../components/Chips';
 import { Composer } from '../../../components/Composer';
@@ -13,7 +13,7 @@ import { Nav } from '../../../components/Nav';
 import { AutoSelect, OpenComposer, ScrollBox } from '../../../components/Small';
 import { Submit } from '../../../components/Submit';
 import { getCase, getSettings } from '../../../lib/api';
-import { warrantyCheck } from '../../../lib/check';
+import { allowedDecisions, warrantyCheck } from '../../../lib/check';
 import { conversation, type ConvItem } from '../../../lib/conversation';
 import { formatDate, formatEuro, formatWhen } from '../../../lib/format';
 import { nextStep } from '../../../lib/next';
@@ -183,6 +183,10 @@ export default async function Fallakte({ params }: { params: Promise<{ id: strin
   );
   const items = conversation(record, settings.profile.shortName);
   const values = templateValues(settings, file.customer.name, file.caseId);
+  const goodwill = {
+    maxCents: settings.rules.goodwillMaxCents,
+    totalCents: file.quote?.repair.total,
+  };
   const templates = settings.messages.templates.map((x) => ({
     ...x,
     text: fillTemplate(x.text, values),
@@ -283,7 +287,12 @@ export default async function Fallakte({ params }: { params: Promise<{ id: strin
                         <OpenComposer what="rueckfrage" label={t.next.askProof} />
                       )
                     ) : (
-                      <DecisionButton action={act} decision={next.decision} big />
+                      <DecisionButton
+                        action={act}
+                        decision={next.decision}
+                        big
+                        goodwill={goodwill}
+                      />
                     )
                   ) : next.kind === 'antworten' ? (
                     <OpenComposer what="antworten" label={t.next.reply} />
@@ -328,6 +337,20 @@ export default async function Fallakte({ params }: { params: Promise<{ id: strin
                 <Facts
                   items={[
                     [
+                      t.check.basis,
+                      check.until === undefined
+                        ? t.check.basisLine.open(settings.profile.shortName)
+                        : check.inWarranty
+                          ? t.check.basisLine.in(
+                              settings.profile.shortName,
+                              formatDate(check.until),
+                            )
+                          : t.check.basisLine.ended(
+                              settings.profile.shortName,
+                              formatDate(check.until),
+                            ),
+                    ],
+                    [
                       f.purchased,
                       file.device.purchaseDate && check.months !== undefined
                         ? t.check.purchased(formatDate(file.device.purchaseDate), check.months)
@@ -336,7 +359,11 @@ export default async function Fallakte({ params }: { params: Promise<{ id: strin
                     [
                       f.protection,
                       file.protection
-                        ? `${file.protection.provider} · ${file.protection.product}`
+                        ? t.check.insured(
+                            file.protection.provider,
+                            file.protection.product,
+                            formatDate(file.protection.validUntil),
+                          )
                         : undefined,
                     ],
                     [
@@ -353,10 +380,10 @@ export default async function Fallakte({ params }: { params: Promise<{ id: strin
                   <details className="more-actions" open={!decided && check.verdict === 'offen'}>
                     <summary>{decided ? t.check.change : t.check.other}</summary>
                     <div className="choices">
-                      {retailerDecisions
+                      {allowedDecisions(check)
                         .filter((d) => d !== (decided ?? check.verdict))
                         .map((d) => (
-                          <DecisionButton key={d} action={act} decision={d} />
+                          <DecisionButton key={d} action={act} decision={d} goodwill={goodwill} />
                         ))}
                     </div>
                   </details>

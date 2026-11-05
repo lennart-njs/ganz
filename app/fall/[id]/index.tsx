@@ -67,6 +67,7 @@ import { guideThread, safetyConfirmed } from '@/lib/guideThread';
 import { openMail, openPhone } from '@/lib/linking';
 import { dealerService, insurerShortName, partnerKind, serviceFor } from '@/lib/service';
 import { toDiagnosis } from '@/lib/diagnosis';
+import { goodwillLine } from '@/lib/goodwill';
 import { can } from '@/model/policies/actions';
 import { selectCaseFacts } from '@/model/policies/caseFacts';
 import { CONSENT_SCOPES, scopedConsent } from '@/model/policies/consentScopes';
@@ -668,6 +669,8 @@ export default function FallGespraech() {
     }
     if (e.type === 'haendler_entscheidung') {
       lines = [de.sharing.decision[p.decision as keyof typeof de.sharing.decision] ?? ''];
+      const share = goodwillLine(short, p);
+      if (share) lines.push(share);
       hint = p.note ? String(p.note) : undefined;
     }
     if (e.type === 'haendler_betrieb') {

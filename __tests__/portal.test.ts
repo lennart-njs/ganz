@@ -10,6 +10,7 @@ import { demoConfig } from '@/config/demo.config';
 import { fruendSettings, messagePreview, portalSeed } from '@/config/portal.demo';
 import { catalog } from '@/data/catalog';
 import { de } from '@/i18n/de';
+import { formatEuro } from '@/i18n/format';
 import { getGuide } from '@/lib/guideCatalog';
 import {
   fillTemplate,
@@ -19,7 +20,12 @@ import {
   settingsSections,
 } from '@/model/portal';
 import type { SharedPhoto } from '@/model/sharing';
-import { PURCHASE_WARRANTY_MONTHS, fullMonths, warrantyCheck } from '@/portal/lib/check';
+import {
+  PURCHASE_WARRANTY_MONTHS,
+  allowedDecisions,
+  fullMonths,
+  warrantyCheck,
+} from '@/portal/lib/check';
 import { DEFAULT_REGULATOR_RULES } from '@/model/policies/regulator';
 import { conversation } from '@/portal/lib/conversation';
 import { nextStep } from '@/portal/lib/next';
@@ -78,6 +84,23 @@ describe('Händlerportal: Logik', () => {
     expect(warrantyCheck(insured('2027-01-01T00:00:00Z'), s.rules).verdict).toBe('an_versicherer');
     // Abgelaufene Versicherung: kein Verweis auf sie
     expect(warrantyCheck(insured('2026-01-01T00:00:00Z'), s.rules).verdict).toBe('abgelehnt');
+    // Was die Regel zulässt, gleich mit der App: in der Frist keine Kulanz, danach keine
+    // Gewährleistung, Versicherung nur mit gültigem Vertrag, Ablehnen immer
+    const allowed = (file: Parameters<typeof warrantyCheck>[0]) =>
+      allowedDecisions(warrantyCheck(file, s.rules));
+    expect(allowed(bought('2025-06-14T00:00:00+02:00'))).toEqual(['gewaehrleistung', 'abgelehnt']);
+    expect(allowed(bought('2024-08-05T12:00:00+02:00'))).toEqual(['kulanz', 'abgelehnt']);
+    expect(allowed(insured('2027-01-01T00:00:00Z'))).toEqual([
+      'kulanz',
+      'an_versicherer',
+      'abgelehnt',
+    ]);
+    expect(
+      allowed({
+        ...bought('2025-06-14T00:00:00+02:00'),
+        device: { ...base.device, purchaseDate: undefined },
+      }),
+    ).toEqual(['gewaehrleistung', 'kulanz', 'abgelehnt']);
     // Versicherung vor Kulanz (U10)
     expect(
       warrantyCheck(
@@ -163,6 +186,22 @@ describe('Händlerportal: Logik', () => {
     // Keine zwei Systemblöcke direkt hintereinander
     items.forEach((x, i) => {
       if (i > 0) expect(x.kind === 'system' && items[i - 1]!.kind === 'system').toBe(false);
+    });
+  });
+
+  test('Gespräch: Kulanz mit Betrag steht wie in der App, Kurzname aus den Einstellungen', () => {
+    const r = records.find((x) => x.retailerEvents.length > 0)!;
+    const e = {
+      ...r.retailerEvents[0]!,
+      id: 'kulanz-betrag',
+      type: 'haendler_entscheidung' as const,
+      payload: { decision: 'kulanz', coverCents: 18000, totalCents: 24400 },
+    };
+    const text = conversation({ ...r, retailerEvents: [e] }, 'Fründ').find(
+      (x) => x.kind === 'dealer',
+    );
+    expect(text).toMatchObject({
+      text: `${de.sharing.decision.kulanz}\n${de.sharing.goodwill.split('Fründ', formatEuro(18000), formatEuro(6400))}`,
     });
   });
 

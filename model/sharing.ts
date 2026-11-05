@@ -121,7 +121,15 @@ export function partStatusOf(payload: Readonly<Record<string, unknown>>): PartSt
 export type RetailerAction =
   | { type: 'annehmen' }
   | { type: 'rueckfrage'; question: string; options: string[] }
-  | { type: 'entscheidung'; decision: RetailerDecision; note?: string }
+  | {
+      type: 'entscheidung';
+      decision: RetailerDecision;
+      note?: string;
+      /** Kulanz: so viel übernimmt der Händler, in Cent */
+      coverCents?: number;
+      /** Kulanz: Kostenvoranschlag beim Entscheiden, in Cent. Daraus folgt der Rest. */
+      totalCents?: number;
+    }
   | { type: 'betrieb'; partnerName: string; slot?: string }
   | { type: 'status'; status: RetailerStatus; note?: string }
   | { type: 'nachricht'; text: string }
@@ -164,6 +172,23 @@ export interface SharedCaseRecord {
 }
 
 const ACTION_TEXT_MAX = 500;
+/** Obergrenze für Beträge aus dem Portal: 10.000 € */
+const ACTION_CENTS_MAX = 1_000_000;
+const isCents = (x: unknown): x is number =>
+  typeof x === 'number' && Number.isInteger(x) && x >= 0 && x <= ACTION_CENTS_MAX;
+
+/**
+ * Kulanz mit Betrag: was der Händler übernimmt und, wenn der Kostenvoranschlag mitkam, was für den
+ * Haushalt bleibt. Aus der Payload des Ereignisses, für App und Portal gleich.
+ */
+export function goodwillShare(
+  payload: Readonly<Record<string, unknown>>,
+): { cover: number; rest?: number } | undefined {
+  if (payload.decision !== 'kulanz' || !isCents(payload.coverCents)) return undefined;
+  const cover = payload.coverCents;
+  if (!isCents(payload.totalCents)) return { cover };
+  return { cover, rest: Math.max(0, payload.totalCents - cover) };
+}
 
 /** Prüft eine Aktion aus dem Portal. null: ungültig. */
 export function parseRetailerAction(body: unknown): RetailerAction | null {
@@ -186,14 +211,22 @@ export function parseRetailerAction(body: unknown): RetailerAction | null {
         options: (options as string[]).map((x) => x.trim()),
       };
     }
-    case 'entscheidung':
+    case 'entscheidung': {
       if (!(retailerDecisions as readonly string[]).includes(o.decision as string)) return null;
       if (o.note !== undefined && !text(o.note)) return null;
+      // Beträge nur bei Kulanz, der Voranschlag nur mit Betrag und nicht kleiner als er
+      const cover = o.coverCents;
+      const total = o.totalCents;
+      if (cover !== undefined && (o.decision !== 'kulanz' || !isCents(cover))) return null;
+      if (total !== undefined && (!isCents(cover) || !isCents(total) || total < cover)) return null;
       return {
         type: 'entscheidung',
         decision: o.decision as RetailerDecision,
         ...(typeof o.note === 'string' && o.note.trim() ? { note: o.note.trim() } : {}),
+        ...(isCents(cover) ? { coverCents: cover } : {}),
+        ...(isCents(total) ? { totalCents: total } : {}),
       };
+    }
     case 'betrieb':
       if (!text(o.partnerName, true) || (o.slot !== undefined && !text(o.slot))) return null;
       return {
