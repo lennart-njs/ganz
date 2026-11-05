@@ -11,6 +11,7 @@ import { services } from '@/services';
 import { useAppStore } from '@/store/appStore';
 import { APP } from '@/test/app';
 import * as regressions from '@/test/regressions';
+import { openAll } from '@/test/sections';
 import { unwrap } from '@/test/result';
 
 const cameraMock = jest.requireMock('expo-camera').__permission;
@@ -250,12 +251,13 @@ describe('„Passt nicht“ verwirft das Ergebnis', () => {
       errorPattern: undefined,
       displayMessage: undefined,
     });
-    // Vorschau für die Fachkraft im Gespräch, unter „Details“ (Entscheidung 20): ohne Zeile „Ergebnis“
+    // Die Fallakte, die auch die Fachkraft sieht (seit Entscheidung 38 nicht mehr als Vorschau im
+    // Gespräch): ohne Zeile „Ergebnis“
     await act(async () => {
       unwrap(useAppStore.getState().escalate(id));
-      router.replace(`/fall/${id}`);
+      router.replace(`/fall/${id}/fallakte`);
     });
-    await fireEvent.press(screen.getAllByRole('button', { name: de.help.details }).at(-1)!);
+    await openAll();
     const card = within(screen.getByTestId(CASE_FILE_CARD));
     expect(card.getByText(de.help.facts.problem)).toBeTruthy();
     expect(card.queryByText(de.help.facts.result)).toBeNull();

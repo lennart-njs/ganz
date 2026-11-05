@@ -3,6 +3,7 @@ import { router } from 'expo-router';
 import { useRef, useState } from 'react';
 import { Platform, Pressable, StyleSheet } from 'react-native';
 
+import { AssistantConsentText } from '@/components/app/AssistantConsent';
 import { DemoControlSheet } from '@/components/app/DemoControlSheet';
 import { DemoHint } from '@/components/app/DemoHint';
 import {
@@ -21,8 +22,10 @@ import { demoConfig } from '@/config/demo.config';
 import { useNotice } from '@/hooks/useNotice';
 import { de } from '@/i18n/de';
 import { formatDateTime, formatEuro, formatMonthYear } from '@/i18n/format';
+import { hasChatConsent } from '@/lib/chat/context';
+import { grantAssistantConsent } from '@/lib/chat/useAssistant';
 import { categoryLabels, scopeList } from '@/lib/consent';
-import { textStamp } from '@/lib/legalTexts';
+import { PRIVACY_RECIPIENTS, textStamp } from '@/lib/legalTexts';
 import { openSystemSettings } from '@/lib/linking';
 import { scopedConsent } from '@/model/policies/consentScopes';
 import { notifications } from '@/services/notifications';
@@ -30,7 +33,11 @@ import { notificationsOn, selectContract, useAppStore, type Appearance } from '@
 
 const t = de.profile;
 
-/** Profil: Person, Schutz, Weitergaben mit Widerruf (B-40), Datenschutz, Version */
+/**
+ * Profil: Person, Schutz, Weitergaben mit Widerruf (B-40), Freiwilliges, Datenschutz, Version.
+ * Hier stehen die Texte zu Weitergaben und Einwilligungen, im Gespräch nur noch der Tap
+ * (Entscheidung 38).
+ */
 export default function Profil() {
   const state = useAppStore();
   const person = state.persons[0];
@@ -40,10 +47,14 @@ export default function Profil() {
   const manufacturerConsent = consents.find(
     (c) => c.purpose === 'hersteller_einzelfall' && !c.revokedAt,
   );
-  // Hersteller und Mitteilungen haben eigene Schalter unter „Freiwillig“
+  // Assistent, Hersteller und Mitteilungen haben eigene Schalter unter „Freiwillig“
   const caseConsents = consents.filter(
-    (c) => c.purpose !== 'hersteller_einzelfall' && c.purpose !== 'mitteilungen',
+    (c) =>
+      c.purpose !== 'chat_assistent' &&
+      c.purpose !== 'hersteller_einzelfall' &&
+      c.purpose !== 'mitteilungen',
   );
+  const assistantOn = hasChatConsent(state);
   const version = Constants.expoConfig?.version ?? '';
   const [demoOpen, setDemoOpen] = useState(false);
   const taps = useRef<number[]>([]);
@@ -57,6 +68,18 @@ export default function Profil() {
     if (taps.current.length >= 7) {
       taps.current = [];
       setDemoOpen(true);
+    }
+  };
+
+  // Einschalten speichert die Einwilligung mit dem Text darunter, Ausschalten widerruft jede aktive
+  const toggleAssistant = (on: boolean) => {
+    if (on) {
+      grantAssistantConsent();
+      return;
+    }
+    const s = useAppStore.getState();
+    for (const c of s.consents) {
+      if (c.purpose === 'chat_assistent' && !c.revokedAt) s.revokeConsent(c.id);
     }
   };
 
@@ -177,9 +200,11 @@ export default function Profil() {
       <Section
         title={t.optional}
         summary={t.optionalCount(
-          [!!manufacturerConsent, notificationsOn(state)].filter(Boolean).length,
+          [assistantOn, !!manufacturerConsent, notificationsOn(state)].filter(Boolean).length,
         )}
       >
+        <Checkbox label={de.chat.consentTitle} checked={assistantOn} onChange={toggleAssistant} />
+        <AssistantConsentText />
         <Checkbox
           label={t.manufacturerCase(demoConfig.manufacturer.name)}
           sub={t.manufacturerCaseSub(scopeList('hersteller_einzelfall'))}
@@ -209,6 +234,15 @@ export default function Profil() {
 
       <Section title={t.privacy}>
         <Text variant="body">{t.privacyText}</Text>
+        <Text variant="labelStrong" accessibilityRole="header">
+          {t.privacyWho}
+        </Text>
+        {PRIVACY_RECIPIENTS.map(([who, purpose]) => (
+          <Text key={who} variant="body">
+            {t.privacyRecipient(t.recipients[who], scopeList(purpose))}
+          </Text>
+        ))}
+        <Text variant="meta">{t.privacyShareBasis}</Text>
       </Section>
 
       {/* Versteckte Geste: 7-mal tippen öffnet die Demo-Steuerung (Review 3, Punkt 13) */}

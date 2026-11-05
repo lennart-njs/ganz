@@ -16,6 +16,7 @@ import {
   LEGAL_TEXTS,
   LEGAL_TEXT_KEYS,
   PLACEHOLDER_NAMES,
+  RETIRED_TEXT_KEYS,
   caseNames,
   demoNames,
   legalParts,
@@ -24,7 +25,6 @@ import {
   textStamp,
   type LegalTextKey,
 } from '@/lib/legalTexts';
-import { scopeList } from '@/lib/consent';
 import { CONSENT_SCOPES } from '@/model/policies/consentScopes';
 import { sha256Hex } from '@/model/sha256';
 import { useAppStore } from '@/store/appStore';
@@ -58,16 +58,21 @@ describe('Versionierte Texte', () => {
     for (const v of known) expect(v).toMatch(/^\d{4}-\d{2}-\d+$/);
   });
 
-  test('jeder festgehaltene Text steht im Register', () => {
-    expect(Object.keys(versions).sort()).toEqual([...LEGAL_TEXT_KEYS].sort());
+  test('jeder festgehaltene Text steht im Register oder ist ausgemustert (Entscheidung 38)', () => {
+    expect(Object.keys(versions).sort()).toEqual([...LEGAL_TEXT_KEYS, ...RETIRED_TEXT_KEYS].sort());
+    for (const key of RETIRED_TEXT_KEYS) {
+      expect(LEGAL_TEXT_KEYS).not.toContain(key);
+      // Die Zeilen bleiben als Beleg für ältere Bestätigungen
+      expect(Object.keys(versions[key] ?? {}).length).toBeGreaterThan(0);
+    }
   });
 
   test('ein geänderter Satz ändert den Hash, die Prüfung oben würde rot', () => {
     const key: LegalTextKey = 'fachkraft_videocall';
     const before = templateHash(key);
     // de ist „as const“, der Typ kennt nur den heutigen Wortlaut
-    const help = de.help as { legalBasis: string };
-    jest.replaceProperty(help, 'legalBasis', `${de.help.legalBasis} Neu.`);
+    const thread = de.thread as { callStart: string };
+    jest.replaceProperty(thread, 'callStart', `${de.thread.callStart} Neu.`);
     expect(templateHash(key)).not.toBe(before);
     expect(templateHash(key)).not.toBe(versions[key]![LEGAL_TEXTS[key].version]);
   });
@@ -138,8 +143,8 @@ describe('Versionierte Texte', () => {
     expect(names.versicherer).toBe(other.shortName);
     expect(legalText('schadenmeldung', names)).toContain(other.shortName);
 
-    // Gekauft bei einem anderen Händler: Sein Name steht im Satz vor „Ja, senden“ und im Hash
-    // (Übertragung 3.1). Ohne Händler am Gerät gibt es diesen Satz nicht.
+    // Gekauft bei einem anderen Händler: Sein Name steht in der Antwort vor „Ja, senden“ und im
+    // Hash (Übertragung 3.1, Entscheidung 38). Ohne Händler am Gerät gibt es diese Antwort nicht.
     const lindemann = demoConfig.dealers.find((d) => d.id === 'lindemann')!;
     const elsewhere = s.addDevice({
       manufacturerId: 'miele',
@@ -151,9 +156,10 @@ describe('Versionierte Texte', () => {
     const bought = s.createCase({ deviceId: elsewhere.id, entry: 'foto', problemLabel: 'x' });
     const dealerNames = caseNames(useAppStore.getState(), bought.id);
     expect(dealerNames.haendler).toBe(lindemann.name);
-    expect(legalParts('haendler_weitergabe', dealerNames)[0]).toBe(
-      de.sharing.dataSummary(lindemann.name, scopeList('weitergabe_haendler')),
-    );
+    expect(legalParts('haendler_weitergabe', dealerNames)).toEqual([
+      de.sharing.offer(lindemann.name),
+      de.sharing.send,
+    ]);
     expect(textStamp('haendler_weitergabe', dealerNames).textHash).not.toBe(
       textStamp('haendler_weitergabe', caseNames(useAppStore.getState(), fruend.id)).textHash,
     );
@@ -204,19 +210,23 @@ describe('Hinweise ohne Bestätigung stehen auf dem Screen', () => {
       await renderRouter(APP, { initialUrl: '/profil' });
       await fireEvent.press(screen.getByRole('button', { name: de.profile.privacy }));
     },
-    assistent_hinweis: async () => {
-      const id = openCase();
-      useAppStore.getState().addChatMessage({ caseId: id, role: 'haushalt', text: 'Hallo' });
-      useAppStore.getState().addChatMessage({ caseId: id, role: 'assistent', text: 'Guten Tag' });
-      await renderRouter(APP, { initialUrl: `/fall/${id}` });
-    },
-    eingabe_hinweis: async () => {
-      await renderRouter(APP, { initialUrl: `/fall/${openCase()}` });
-    },
   };
 
   test('jeder Text, den kein Code stempelt, hat hier seinen Screen', () => {
     expect(LEGAL_TEXT_KEYS.filter((k) => !stamped(k)).sort()).toEqual(Object.keys(SHOWN).sort());
+  });
+
+  // Entscheidung 38: Im Gespräch stehen weder „Computerprogramm, kein Mensch“ an der ersten
+  // Antwort noch ein Hinweis unter dem Eingabefeld. Den ersten Satz zeigt die Einwilligung.
+  test('ausgemusterte Hinweise stehen nicht mehr im Gespräch', async () => {
+    const id = openCase();
+    useAppStore.getState().addChatMessage({ caseId: id, role: 'haushalt', text: 'Hallo' });
+    useAppStore.getState().addChatMessage({ caseId: id, role: 'assistent', text: 'Guten Tag' });
+    await renderRouter(APP, { initialUrl: `/fall/${id}` });
+    expect(screen.getByText('Guten Tag')).toBeTruthy();
+    expect(screen.queryByText(de.chat.who)).toBeNull();
+    expect(screen.queryByText(/Was du hier schreibst/)).toBeNull();
+    expect(legalParts('assistent_einwilligung')).toContain(de.chat.who);
   });
 
   test.each(Object.keys(SHOWN) as LegalTextKey[])(

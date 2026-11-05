@@ -750,18 +750,8 @@ export const de = {
     stepsDone: (done: number, total: number) => `${done} von ${total} Schritten erledigt`,
     abortedAt: (step: number, title: string) => `Ging nicht bei Schritt ${step}: ${title}`,
     notStarted: 'Anleitung nicht gestartet',
-    shareTitle: (expert: string, company: string) => `Das sieht ${expert} (${company})`,
-    /** Ein Satz vor dem Videocall. data: die Kategorien aus consentScopes (weitergabe_fachkraft), mit de.common.list */
-    shareSummary: (expert: string, company: string, data: string) =>
-      `${expert} (${company}) sieht ${data}. Keine Aufnahme.`,
-    details: 'Details',
     noRecording: 'Keine Aufnahme. Ton und Bild werden nicht gespeichert.',
-    legalBasis:
-      'Grundlage ist deine Anfrage (Art. 6 Abs. 1 lit. b DSGVO). Ohne deinen Tap geht nichts weiter.',
     screenshots: 'Screenshots als Nachweis erlauben',
-    /** data: die Kategorien aus consentScopes (screenshots_im_call), mit de.common.list */
-    screenshotsSub: (data: string) =>
-      `Freiwillig. Die Fachkraft darf ${data} für die Fallakte speichern. Du kannst das im Profil widerrufen.`,
     others: 'Andere Wege',
     onSite: 'Vor-Ort-Diagnose',
     onSiteSub: 'Ein Fachbetrieb kommt und schaut es sich an',
@@ -1266,7 +1256,11 @@ export const de = {
     intro:
       'Beschreib, was passiert. Der Assistent fragt nach und sagt dir, ob eine Anleitung passt oder ob besser eine Fachkraft hilft.',
     who: 'Ein Computerprogramm, kein Mensch. Es kann sich irren. Bei Gefahr: Stecker ziehen und Hilfe holen.',
-    consentTitle: 'Bevor du schreibst',
+    /**
+     * Einwilligung in den Assistenten: im Profil unter „Freiwillig“ und, solange sie fehlt, im
+     * Sheet nach der ersten Nachricht (Entscheidung 38). Kein Hinweis mehr im Gespräch.
+     */
+    consentTitle: 'Reparatur-Assistent nutzen',
     /** Darunter stehen die Kategorien aus consentScopes (chat_assistent) als Liste */
     consentText: (provider: string) => `Zur Auswertung bekommt ${provider}:`,
     /**
@@ -1280,9 +1274,9 @@ export const de = {
       'Freiwillig, mit deiner Einwilligung (Art. 6 Abs. 1 lit. a DSGVO). Du kannst sie im Profil widerrufen. Ohne Einwilligung hilft dir eine Fachkraft im Videocall.',
     consentAccept: 'Einverstanden',
     consentDecline: 'Lieber eine Fachkraft',
+    /** Antwort im Gespräch, solange die Einwilligung fehlt: öffnet das Sheet mit ihrem Text */
+    consentOpen: 'Assistent einschalten',
     inputLabel: 'Deine Nachricht',
-    /** Unter dem Eingabefeld: Eigene Worte gehen an den Assistenten */
-    inputNotice: 'Was du hier schreibst, geht an den Reparatur-Assistenten.',
     send: 'Senden',
     typing: 'Der Assistent schreibt',
     you: 'Du',
@@ -1366,16 +1360,8 @@ export const de = {
       storniert: 'Storniert',
     },
     offer: (dealer: string) => `Fall an ${dealer} senden`,
-    offerSub: 'Gewährleistung oder Kulanz',
-    /**
-     * Ein Satz vor dem Senden. data: die Kategorien aus consentScopes (weitergabe_haendler), mit
-     * de.common.list. Teil von haendler_weitergabe (lib/legalTexts.ts), nur mit neuer Version ändern.
-     */
-    dataSummary: (dealer: string, data: string) => `${dealer} sieht ${data}.`,
-    confirmText:
-      'Nur diesen Fall. Nicht dabei sind dein Gespräch mit dem Reparatur-Assistenten und deine Vertragsnummer.',
-    legal:
-      'Grundlage ist deine Anfrage (Art. 6 Abs. 1 lit. b DSGVO). Du kannst die Weitergabe im Profil widerrufen. Dann sieht der Händler deine Angaben nicht mehr.',
+    /** company: Kurzname des Unternehmens, das den Fall prüft (Regulierer, hier der Händler) */
+    offerSub: (company: string) => `${company} prüft den Fall`,
     send: 'Ja, senden',
     cancel: 'Doch nicht',
     sent: (dealer: string) => `Gesendet. ${dealer} meldet sich hier im Gespräch.`,
@@ -1856,6 +1842,18 @@ export const de = {
     privacy: 'Datenschutz',
     privacyText:
       'Verantwortlich ist mach’s. Wir speichern Fotos, Gerätedaten, Schritte und Befunde zu deinen Fällen. Weitergegeben wird nur, was du vorher bestätigst. Du hast das Recht auf Auskunft, Berichtigung, Löschung und Widerspruch.',
+    /** Wer was sieht, wenn du auf die Weitergabe tippst (Entscheidung 38, lib/legalTexts.ts) */
+    privacyWho: 'Wer was sieht',
+    /** data: die Kategorien aus consentScopes, mit de.common.list */
+    privacyRecipient: (who: string, data: string) => `${who}: ${data}.`,
+    recipients: {
+      fachkraft: 'Fachkraft im Videocall und beim Rückruf',
+      haendler: 'Händler, wenn du ihm den Fall sendest',
+      betrieb: 'Betrieb beim Termin',
+      versicherer: 'Versicherer bei der Schadenmeldung',
+    },
+    privacyShareBasis:
+      'Grundlage ist deine Anfrage (Art. 6 Abs. 1 lit. b DSGVO). Ohne deinen Tap geht nichts weiter. Eine Weitergabe kannst du unter „Weitergaben und Einwilligungen“ widerrufen.',
     version: (v: string) => `Version ${v}`,
     demo: 'Demo',
   },
@@ -1869,7 +1867,7 @@ export const de = {
     kamera: 'Wähle, was du fotografierst, und tippe auf den Auslöser.',
     ergebnis: 'Starte die Anleitung. „Passt nicht“ führt zurück.',
     anleitung: 'Tippe dich mit „Erledigt“ durch. „Geht nicht“ zeigt, wie mach’s Hilfe holt.',
-    hilfe: 'Starte den Videocall. Vorher steht, wer welche Daten sieht.',
+    hilfe: 'Starte den Videocall.',
     kosten: 'Klapp „Das geht an …“ auf: So kommt der Fall beim Versicherer an.',
     status: 'Mit „Nächster Schritt (Demo)“ springst du durch Freigabe und Termin.',
     profil: 'Tippe 7-mal auf die Versionsnummer für die Demo-Steuerung.',

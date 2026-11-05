@@ -75,6 +75,24 @@ function markForwarded(sent: readonly ChatMessage[], forwarded: boolean) {
     );
 }
 
+/**
+ * Einwilligung in den Assistenten speichern: im Profil unter „Freiwillig“ oder im Sheet nach der
+ * ersten Nachricht (Entscheidung 38). Ohne Fall: Sie gilt für jedes Gespräch. Die Fallakte zeigt
+ * die Weitergabe in jedem Fall, aus dem Nachrichten gingen (R-15).
+ */
+export function grantAssistantConsent() {
+  useAppStore.getState().grantConsent(
+    scopedConsent('chat_assistent', {
+      recipient: {
+        id: demoConfig.assistant.id,
+        kind: 'dienstleister',
+        name: demoConfig.assistant.name,
+      },
+      text: textStamp('assistent_einwilligung'),
+    }),
+  );
+}
+
 export function useAssistant(caseId: string) {
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<AssistantError>();
@@ -169,18 +187,7 @@ export function useAssistant(caseId: string) {
   };
 
   const accept = () => {
-    // Ohne Fall: Die Einwilligung gilt für jedes Gespräch. Die Fallakte zeigt die Weitergabe in
-    // jedem Fall, aus dem Nachrichten gingen (R-15).
-    useAppStore.getState().grantConsent(
-      scopedConsent('chat_assistent', {
-        recipient: {
-          id: demoConfig.assistant.id,
-          kind: 'dienstleister',
-          name: demoConfig.assistant.name,
-        },
-        text: textStamp('assistent_einwilligung'),
-      }),
-    );
+    grantAssistantConsent();
     const w = waiting;
     setWaiting(undefined);
     if (w) post(w.text, w.photoId);

@@ -60,14 +60,16 @@ tags:
 - assertVisible: "Was klappt nicht\\?"
 - tapOn: 'Hilfe holen'
 
-# Fall an den Händler: Vorher steht, was er sieht. Erst der Tap gibt den Fall weiter.
+# Fall an den Händler: Erst „Ja, senden“ gibt den Fall weiter. Wer was sieht, steht im Profil
+# (Entscheidung 38).
 - extendedWaitUntil:
     visible:
       id: 'antwort-haendler'
     timeout: 10000
 - tapOn:
     id: 'antwort-haendler'
-- assertVisible: 'Nur diesen Fall\. .*'
+- assertVisible:
+    id: 'antwort-haendler-senden'
 - assertNotVisible: 'Gesendet\. .* meldet sich hier im Gespräch\.'
 - takeScreenshot: haendler-2-vorschau
 - tapOn:

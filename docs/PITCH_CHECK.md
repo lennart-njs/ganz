@@ -23,7 +23,7 @@ Scheitert eine Prüfung, gibt es keinen Tag. Trag den Fehler in `docs/BEFUNDE.md
 Der Ablauf aus `docs/ABLAEUFE.md` → „Demo“, vom Demo-Startstand aus. Telefon und Portal stehen nebeneinander.
 
 1. Am Telefon: „Was ist kaputt?“ → „Wasser bleibt stehen“. Fünf Schritte „Erledigt“, im Schritt „Ablaufpumpe reinigen“ „Geht nicht“ → „Hilfe holen“.
-2. „Fall an Fründ Elektrogeräte AG senden“ → die Vorschau lesen → „Ja, senden“.
+2. „Fall an Fründ Elektrogeräte AG senden“ → „Ja, senden“.
 3. Im Portal anmelden (`demo@fruend.example`, `demo`). Den Fall öffnen, „Fall annehmen“, „Gewährleistung bestätigen“. Dann eine Nachricht und einen Terminvorschlag senden.
 4. Am Telefon ein Zeitfenster wählen.
 5. Im Portal Auswertung und Einstellungen → Schnittstellen zeigen.
@@ -31,7 +31,7 @@ Der Ablauf aus `docs/ABLAEUFE.md` → „Demo“, vom Demo-Startstand aus. Telef
 Bestanden, wenn:
 - jeder Schritt ohne Hänger, Fehlermeldung oder leere Fläche läuft,
 - der Fall die erste Fallnummer aus `config/demo.config.ts` trägt,
-- vor „Ja, senden“ steht, was Fründ sieht, und erst der Tap den Fall sendet,
+- im Gespräch kein Hinweistext steht (Entscheidung 38) und erst „Ja, senden“ den Fall sendet,
 - nach dem Tap „Gesendet. Fründ Elektrogeräte AG meldet sich hier im Gespräch.“ steht, danach die Begrüßung mit Kontaktkarte und „Hast du den Kaufbeleg noch?“,
 - im Portal der Hinweis „Neuer Fall“ mit der Fallnummer kommt,
 - die Prüfung im Portal mit dem Kaufdatum aus dem Startstand „Gewährleistung“ vorschlägt,

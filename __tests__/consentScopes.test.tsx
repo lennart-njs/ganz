@@ -1,6 +1,9 @@
 // Test je Zweck: Die Vorschau zeigt genau die Kategorien, die die Bestätigung speichert. Beide
-// kommen aus model/policies/consentScopes.ts (ZUKUNFTSPLAN Phase 1, Abnahme; R-14).
+// kommen aus model/policies/consentScopes.ts (ZUKUNFTSPLAN Phase 1, Abnahme; R-14). Seit
+// Entscheidung 38 steht für Fachkraft und Händler keine Vorschau mehr im Gespräch, sondern die
+// Liste im Profil unter „Datenschutz“. Der Stempel belegt die Antwort, auf die du getippt hast.
 import * as Notifications from 'expo-notifications';
+import { router } from 'expo-router';
 import { act, fireEvent, renderRouter, screen, within } from 'expo-router/testing-library';
 
 import { CASE_FILE_CARD } from '@/components/app/CaseFileCard';
@@ -10,7 +13,13 @@ import { asksNotifications } from '@/lib/booking';
 import { chatContext } from '@/lib/chat/context';
 import type { ChatContext } from '@/lib/chat/prompt';
 import { categoryLabels, scopeLabels } from '@/lib/consent';
-import { caseNames, legalParts, textStamp, type LegalTextKey } from '@/lib/legalTexts';
+import {
+  PRIVACY_RECIPIENTS,
+  caseNames,
+  legalParts,
+  textStamp,
+  type LegalTextKey,
+} from '@/lib/legalTexts';
 import { buildSharedCaseFile } from '@/lib/sharing';
 import { statusView } from '@/lib/statusView';
 import { CONSENT_SCOPES, DATA_CATEGORIES, type DataCategory } from '@/model/policies/consentScopes';
@@ -84,6 +93,23 @@ function expectShown(text: LegalTextKey) {
   for (const part of legalParts(text)) {
     expect([part, screen.queryAllByText(part).length > 0]).toEqual([part, true]);
   }
+}
+
+/** Im Profil unter „Datenschutz“: die Zeile des Empfängers nennt genau den Umfang des Zwecks */
+async function expectProfileLine(purpose: ConsentPurpose, categories: readonly string[]) {
+  const entry = PRIVACY_RECIPIENTS.find(([, p]) => p === purpose);
+  expect(entry).toBeDefined();
+  const [who] = entry!;
+  await act(async () => router.push('/profil'));
+  await openAll();
+  expect(
+    screen.getByText(
+      de.profile.privacyRecipient(
+        de.profile.recipients[who],
+        de.common.list(categoryLabels(categories)),
+      ),
+    ),
+  ).toBeTruthy();
 }
 
 /** Fall mit allem: Foto und Ergebnis, Chat, Anleitung bis „Geht nicht“ mit Notiz, optional Befund */
@@ -204,21 +230,20 @@ const flows: Record<ConsentPurpose, Record<string, () => Promise<void> | void>> 
     },
   },
   weitergabe_fachkraft: {
-    'vor dem Videocall: der Satz und die Karte unter „Details“ zeigen, was gespeichert wird':
-      async () => {
-        const id = fullCase({ finding: false });
-        await renderRouter(APP, { initialUrl: `/fall/${id}` });
-        // Ein Satz nennt die Kategorien aus dem Umfang, Grundlage steht darunter (Entscheidung 20)
-        expectShown('fachkraft_videocall');
-        await openAll();
-        const shown = cardCategories();
-        expectItems('weitergabe_fachkraft');
-        await tap(new RegExp(`^${de.thread.callStart}`));
-        await flush();
-        const consent = expectStored('weitergabe_fachkraft', 'fachkraft_videocall', id);
-        expect(shown).toEqual(consent.dataCategories);
-      },
-    'vor dem Rückruf: dieselbe Liste im Sheet': async () => {
+    'Videocall: im Gespräch nur die Antwort, das Profil nennt, was gespeichert wird': async () => {
+      const id = fullCase({ finding: false });
+      await renderRouter(APP, { initialUrl: `/fall/${id}` });
+      // Keine Liste und kein Satz vor dem Call (Entscheidung 38)
+      for (const key of DATA_CATEGORIES) {
+        expect(screen.queryAllByText(de.help.item(de.dataCategory[key]))).toEqual([]);
+      }
+      expectShown('fachkraft_videocall');
+      await tap(new RegExp(`^${de.thread.callStart}`));
+      await flush();
+      const consent = expectStored('weitergabe_fachkraft', 'fachkraft_videocall', id);
+      await expectProfileLine('weitergabe_fachkraft', consent.dataCategories);
+    },
+    'vor dem Rückruf: das Sheet ohne Liste, der Tap speichert': async () => {
       const id = fullCase({ finding: false });
       useAppStore.getState().setDemo({ videoScenario: 'keine_fachkraft' });
       await renderRouter(APP, { initialUrl: `/fall/${id}` });
@@ -226,7 +251,9 @@ const flows: Record<ConsentPurpose, Record<string, () => Promise<void> | void>> 
       await flush();
       const before = consentsFor('weitergabe_fachkraft', id).length;
       await tap(de.waiting.callbackSlots[0]!);
-      expectItems('weitergabe_fachkraft');
+      for (const key of DATA_CATEGORIES) {
+        expect(screen.queryAllByText(de.help.item(de.dataCategory[key]))).toEqual([]);
+      }
       expectShown('fachkraft_rueckruf');
       await tap(de.waiting.requestCallback);
       expect(consentsFor('weitergabe_fachkraft', id)).toHaveLength(before + 1);
@@ -244,17 +271,12 @@ const flows: Record<ConsentPurpose, Record<string, () => Promise<void> | void>> 
       const file = buildSharedCaseFile(useAppStore.getState(), id, [], '2026-11-04T12:00:00Z')!;
       for (const key of Object.keys(file)) expect(Object.keys(sharedFileCategory)).toContain(key);
     },
-    // Seit Schritt 3.1 (Übertragung): Umfang und Stempel wie bei den anderen Zwecken. Ein Satz nennt
-    // die Kategorien, keine Liste (Entscheidung 20).
-    'Gespräch: der Satz vor „Ja, senden“ nennt genau, was die Bestätigung speichert': async () => {
+    // Seit Schritt 3.1 (Übertragung): Umfang und Stempel wie bei den anderen Zwecken. Seit
+    // Entscheidung 38 ohne Satz vor „Ja, senden“, die Kategorien nennt das Profil.
+    'Gespräch: erst „Ja, senden“ speichert, das Profil nennt, was gespeichert wird': async () => {
       const id = dealerCase();
       await renderRouter(APP, { initialUrl: `/fall/${id}` });
       await tap(new RegExp(`^${escapeRegExp(de.sharing.offer(dealer.name))}`));
-      const summary = de.sharing.dataSummary(
-        dealer.name,
-        de.common.list(scopeLabels('weitergabe_haendler')),
-      );
-      expect(screen.getByText(summary)).toBeTruthy();
       expectShown('haendler_weitergabe');
       for (const key of DATA_CATEGORIES) {
         expect(screen.queryAllByText(de.help.item(de.dataCategory[key]))).toEqual([]);
@@ -266,13 +288,11 @@ const flows: Record<ConsentPurpose, Record<string, () => Promise<void> | void>> 
       expect(consent.textHash).toBe(
         textStamp('haendler_weitergabe', caseNames(useAppStore.getState(), id)).textHash,
       );
-      expect(
-        de.sharing.dataSummary(dealer.name, de.common.list(categoryLabels(consent.dataCategories))),
-      ).toBe(summary);
+      await expectProfileLine('weitergabe_haendler', consent.dataCategories);
     },
     // Bei Fründ sind die Namen des Falls die der Demo. Der Stempel muss aber den Händler aus dem
-    // Gerät nennen, sonst passte der Hash bei jedem anderen Händler nicht zum gezeigten Satz.
-    'Gekauft bei einem anderen Händler: Satz und Stempel nennen ihn': async () => {
+    // Gerät nennen, sonst passte der Hash bei jedem anderen Händler nicht zur gezeigten Antwort.
+    'Gekauft bei einem anderen Händler: Antwort und Stempel nennen ihn': async () => {
       const other = demoConfig.dealers.find((d) => d.id === 'lindemann')!;
       const id = dealerCase(other.id);
       const names = caseNames(useAppStore.getState(), id);
@@ -282,8 +302,7 @@ const flows: Record<ConsentPurpose, Record<string, () => Promise<void> | void>> 
       for (const part of legalParts('haendler_weitergabe', names)) {
         expect([part, screen.queryAllByText(part).length > 0]).toEqual([part, true]);
       }
-      const scope = de.common.list(scopeLabels('weitergabe_haendler'));
-      expect(screen.queryByText(de.sharing.dataSummary(dealer.name, scope))).toBeNull();
+      expect(screen.queryByText(de.sharing.offer(dealer.name))).toBeNull();
       await tap(de.sharing.send);
       const consent = consentsFor('weitergabe_haendler', id).at(-1)!;
       expect(consent.recipient).toEqual({ id: other.id, kind: 'haendler', name: other.name });
@@ -292,19 +311,16 @@ const flows: Record<ConsentPurpose, Record<string, () => Promise<void> | void>> 
     },
   },
   screenshots_im_call: {
-    'der Satz unter dem Kästchen nennt genau die gespeicherten Kategorien': async () => {
+    'das Kästchen ohne Unterzeile, erst der Tap speichert (Entscheidung 38)': async () => {
       const id = fullCase({ finding: false });
       await renderRouter(APP, { initialUrl: `/fall/${id}` });
-      const sub = de.help.screenshotsSub(de.common.list(scopeLabels('screenshots_im_call')));
-      expect(screen.getByText(sub)).toBeTruthy();
       expectShown('screenshots');
+      expect(screen.queryByText(/Freiwillig\. Die Fachkraft darf/)).toBeNull();
+      expect(consentsFor('screenshots_im_call', id)).toEqual([]);
       await fireEvent.press(screen.getByRole('checkbox', { name: de.help.screenshots }));
       await tap(new RegExp(`^${de.thread.callStart}`));
       await flush();
-      const consent = expectStored('screenshots_im_call', 'screenshots', id);
-      expect(de.help.screenshotsSub(de.common.list(categoryLabels(consent.dataCategories)))).toBe(
-        sub,
-      );
+      expectStored('screenshots_im_call', 'screenshots', id);
     },
   },
   weitergabe_betrieb: {
@@ -385,19 +401,35 @@ const flows: Record<ConsentPurpose, Record<string, () => Promise<void> | void>> 
     },
   },
   chat_assistent: {
-    'die Liste vor der Einwilligung zeigt genau, was gespeichert wird': async () => {
+    'Gespräch: das Sheet zeigt genau, was gespeichert wird, das Gespräch selbst nichts':
+      async () => {
+        start();
+        const c = useAppStore
+          .getState()
+          .createCase({ deviceId: addWasher().id, entry: 'freitext', problemLabel: 'Pumpe' });
+        await renderRouter(APP, { initialUrl: `/fall/${c.id}` });
+        await fireEvent.changeText(
+          screen.getByLabelText(de.thread.inputLabel),
+          'Es pumpt nicht ab.',
+        );
+        await tap(de.chat.send);
+        expect(screen.queryAllByText(de.help.item(de.dataCategory.nachrichten))).toEqual([]);
+        await tap(de.chat.consentOpen);
+        expectItems('chat_assistent');
+        expectShown('assistent_einwilligung');
+        await tap(de.chat.consentAccept);
+        await flush();
+        expectStored('chat_assistent', 'assistent_einwilligung');
+      },
+    'Profil: das Kästchen mit demselben Text speichert dieselbe Einwilligung': async () => {
       start();
-      const c = useAppStore
-        .getState()
-        .createCase({ deviceId: addWasher().id, entry: 'freitext', problemLabel: 'Pumpe' });
-      await renderRouter(APP, { initialUrl: `/fall/${c.id}` });
-      await fireEvent.changeText(screen.getByLabelText(de.thread.inputLabel), 'Es pumpt nicht ab.');
-      await tap(de.chat.send);
+      await renderRouter(APP, { initialUrl: '/profil' });
+      // Die Abschnitte im Profil sind eingeklappt (Entscheidung 23)
+      await openAll();
       expectItems('chat_assistent');
       expectShown('assistent_einwilligung');
-      await tap(de.chat.consentAccept);
-      await flush();
-      expectStored('chat_assistent', 'assistent_einwilligung');
+      await fireEvent.press(screen.getByRole('checkbox', { name: de.chat.consentTitle }));
+      expect(expectStored('chat_assistent', 'assistent_einwilligung').caseId).toBeUndefined();
     },
     'was lib/chat/context.ts mitschickt, steht in der Einwilligung': () => {
       const id = fullCase({ finding: false });

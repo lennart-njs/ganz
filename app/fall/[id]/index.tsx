@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { StyleSheet, View } from 'react-native';
 import type { KeyboardAwareScrollViewRef } from 'react-native-keyboard-controller';
 
+import { AssistantConsentSheet } from '@/components/app/AssistantConsent';
 import { BindingSummary } from '@/components/app/BindingSummary';
 import { CallbackSheet } from '@/components/app/CallbackSheet';
 import { CaseFileCard } from '@/components/app/CaseFileCard';
@@ -13,7 +14,6 @@ import { BotSays, QuickReplies, Typing, UserSaid, type Reply } from '@/component
 import { CostCompare } from '@/components/app/CostCompare';
 import { DemoHint } from '@/components/app/DemoHint';
 import { GuideStepCard } from '@/components/app/GuideStepCard';
-import { ScopeItems } from '@/components/app/ScopeItems';
 import { CloseCaseSheet } from '@/components/nav/CloseCaseSheet';
 import { leaveCase } from '@/components/nav/leaveCase';
 import {
@@ -192,8 +192,10 @@ export default function FallGespraech() {
   // „Geht nicht“ in der Anleitung: Notiz für die Fachkraft
   const [notWorking, setNotWorking] = useState(false);
   const [note, setNote] = useState('');
-  // Fall an den Händler: erst zeigen, was er sieht, dann senden (Entscheidung 28)
+  // Fall an den Händler: erst „Ja, senden“, dann senden (Entscheidung 28, 38)
   const [dealerConfirm, setDealerConfirm] = useState(false);
+  // Einwilligung in den Assistenten, solange sie nicht im Profil steht (Entscheidung 38)
+  const [consentSheet, setConsentSheet] = useState(false);
   // Eingabefeld: an den Assistenten oder an den Händler (Entscheidung 32). Ohne Wahl: wer zuletzt sprach.
   const [recipientPick, setRecipientPick] = useState<'assistent' | 'haendler'>();
 
@@ -439,9 +441,20 @@ export default function FallGespraech() {
 
   const escalate = () => useAppStore.getState().escalate(caseId);
 
+  // Sheet „Reparatur-Assistent nutzen“: Ja schickt die wartende Nachricht, Nein macht sie zur Notiz
+  const acceptAssistant = () => {
+    setConsentSheet(false);
+    assistant.accept();
+  };
+  const declineAssistant = () => {
+    setConsentSheet(false);
+    assistant.decline();
+    escalate();
+  };
+
   // Der Tap bestätigt die Weitergabe an die Fachkraft. Der Store speichert sie mit dem Call.
-  // Umfang und Rechtsgrundlage kommen aus CONSENT_SCOPES, wie in der Liste darüber (R-14).
-  // Der Stempel trägt die Namen, die der Satz darüber zeigt (beim Händler-Gerät sein Kundendienst).
+  // Umfang und Rechtsgrundlage kommen aus CONSENT_SCOPES, wie im Profil unter „Datenschutz“ (R-14,
+  // Entscheidung 38). Der Stempel trägt die Namen des Falls (beim Händler-Gerät sein Kundendienst).
   const startCall = () => {
     const recipient = { id: helpPartner.id, kind: 'betrieb' as const, name: helpPartner.name };
     const names = caseNames(state, caseId);
@@ -1119,9 +1132,8 @@ export default function FallGespraech() {
     );
   }
 
-  // Gespräch mit dem Reparatur-Assistenten. Die erste Antwort sagt, dass ein Computerprogramm
-  // antwortet und kein Mensch (Entscheidung Nr. 6, Art. 50 Abs. 1 KI-VO).
-  const firstReply = msgs.find((m) => m.role === 'assistent')?.id;
+  // Gespräch mit dem Reparatur-Assistenten. Dass ein Computerprogramm antwortet, steht in der
+  // Einwilligung im Profil (Entscheidung 38), über jeder Folge steht sein Name.
   msgs.forEach((m, i) =>
     add(
       m.at,
@@ -1129,13 +1141,8 @@ export default function FallGespraech() {
       m.role === 'haushalt' ? (
         <UserSaid text={m.text} photoUri={photoOf(m.photoId)} />
       ) : (
-        <BotSays
-          name={de.chat.title}
-          sender={msgs[i - 1]?.role !== 'assistent'}
-          lines={[m.text]}
-          hint={m.id === firstReply ? de.chat.who : undefined}
-        >
-          {/* Einschätzung zum Foto (Entscheidung 26), unter dem Hinweis zur ersten Antwort */}
+        <BotSays name={de.chat.title} sender={msgs[i - 1]?.role !== 'assistent'} lines={[m.text]}>
+          {/* Einschätzung zum Foto (Entscheidung 26) */}
           {m.assessment ? (
             <Text variant="body" tone="muted">
               {de.chat.assessment[m.assessment]}
@@ -1257,41 +1264,29 @@ export default function FallGespraech() {
       reply(`haendler-antwort-${i}`, o, () => answerDealer(dealerQuestion, o));
     }
   } else if (dealerConfirm && dealerOffer && dealer) {
-    // Was der Händler sieht, steht vor dem Senden (wie beim Versicherer, B-53). Ein Satz mit den
-    // Kategorien aus dem Umfang der Bestätigung, dann was nicht dabei ist und die Grundlage. Das
-    // sind die gestempelten Teile von haendler_weitergabe (Entscheidung 20, R-14).
+    // Senden erst mit „Ja, senden“. Wer was sieht, steht im Profil unter „Datenschutz“
+    // (Entscheidung 38). Gestempelt sind die Antwort und „Ja, senden“ (haendler_weitergabe).
     tail.push(
-      <View key="haendler" style={styles.stack}>
-        <UserSaid text={de.sharing.offer(dealer.name)} onEdit={() => setDealerConfirm(false)} />
-        <BotSays lines={[]}>
-          <Text variant="bodyLg">
-            {de.sharing.dataSummary(dealer.name, scopeList('weitergabe_haendler'))}
-          </Text>
-          <Text variant="body">{de.sharing.confirmText}</Text>
-          <Text variant="meta">{de.sharing.legal}</Text>
-        </BotSays>
-      </View>,
+      <UserSaid
+        key="haendler"
+        text={de.sharing.offer(dealer.name)}
+        onEdit={() => setDealerConfirm(false)}
+      />,
     );
     reply('haendler-senden', de.sharing.send, shareWithDealer);
     reply('haendler-nicht', de.sharing.cancel, () => setDealerConfirm(false));
   } else if (assistant.waiting) {
-    // Einwilligung vor der ersten Nachricht an den Assistenten
+    // Die Einwilligung fehlt (sonst steht sie im Profil, Entscheidung 38): Die Nachricht wartet,
+    // der Text der Einwilligung steht im Sheet, nicht im Gespräch.
     tail.push(
-      <View key="consent" style={styles.stack}>
-        <UserSaid text={assistant.waiting.text} photoUri={photoOf(assistant.waiting.photoId)} />
-        <BotSays name={de.chat.title} lines={[de.chat.consentTitle]} hint={de.chat.who}>
-          <Text variant="bodyLg">{de.chat.consentText(demoConfig.assistant.name)}</Text>
-          <ScopeItems purpose="chat_assistent" />
-          <Text variant="body">{de.chat.consentExcluded}</Text>
-          <Text variant="meta">{de.chat.consentBasis}</Text>
-        </BotSays>
-      </View>,
+      <UserSaid
+        key="consent"
+        text={assistant.waiting.text}
+        photoUri={photoOf(assistant.waiting.photoId)}
+      />,
     );
-    reply('einverstanden', de.chat.consentAccept, assistant.accept);
-    reply('ablehnen', de.chat.consentDecline, () => {
-      assistant.decline();
-      escalate();
-    });
+    reply('einverstanden', de.chat.consentOpen, () => setConsentSheet(true));
+    reply('ablehnen', de.chat.consentDecline, declineAssistant);
   } else if (facts.closed && !can(facts, 'problem_besteht_weiter')) {
     // Abgebrochen, oder erledigt, während für das Gerät ein anderer Fall offen ist (Nr. 13)
     reply('fallakte', t.caseFile, () => router.push(`/fall/${caseId}/fallakte`));
@@ -1392,7 +1387,7 @@ export default function FallGespraech() {
           'haendler',
           de.sharing.offer(dealerFirst.name),
           () => setDealerConfirm(true),
-          de.sharing.offerSub,
+          de.sharing.offerSub(dealerName),
         );
       }
       reply(
@@ -1609,36 +1604,15 @@ export default function FallGespraech() {
     if (demoTap) reply('demo', t.demoNext, () => useAppStore.getState().simulateNext(caseId));
     reply('status', de.status.caseFile, () => router.push(`/fall/${caseId}/fallakte`));
   } else if (can(facts, 'videocall_anfragen')) {
-    // Hilfe holen: wer welche Daten sieht, steht vor dem Call (B-19)
+    // Hilfe holen: Wer was sieht, steht im Profil unter „Datenschutz“ (Entscheidung 38). Hier
+    // bleiben die Kosten mit Schutz und das freiwillige Kästchen für Screenshots.
     tail.push(
       <BotSays key="hilfe" sender={false} lines={[]}>
-        {/* Ein Satz: wer was sieht, aus dem Umfang der Bestätigung (B-19, R-14). Grundlage und
-            Screenshots bleiben sichtbar, die Fallakte steht unter „Details“ (Entscheidung 20). */}
-        <Text variant="bodyLg">
-          {de.help.shareSummary(expert, helpPartner.name, scopeList('weitergabe_fachkraft'))}
-        </Text>
-        <Text variant="meta">{de.help.legalBasis}</Text>
         {contract ? (
           <Text variant="meta">{de.help.costNote(insurer, formatEuro(state.demo.deductible))}</Text>
         ) : null}
         <View style={styles.full}>
-          <Checkbox
-            label={de.help.screenshots}
-            sub={de.help.screenshotsSub(scopeList('screenshots_im_call'))}
-            checked={screenshots}
-            onChange={setScreenshots}
-          />
-        </View>
-        <View style={styles.full}>
-          <Disclosure title={de.help.details}>
-            <Text variant="labelStrong">{de.help.shareTitle(expert, helpPartner.name)}</Text>
-            <ScopeItems purpose="weitergabe_fachkraft" />
-            {/* Was die Fachkraft vorab sieht: das echte Protokoll (B-22) */}
-            <CaseFileCard
-              caseId={caseId}
-              categories={CONSENT_SCOPES.weitergabe_fachkraft.dataCategories}
-            />
-          </Disclosure>
+          <Checkbox label={de.help.screenshots} checked={screenshots} onChange={setScreenshots} />
         </View>
       </BotSays>,
     );
@@ -1747,7 +1721,7 @@ export default function FallGespraech() {
       'haendler',
       de.sharing.offer(dealer.name),
       () => setDealerConfirm(true),
-      de.sharing.offerSub,
+      de.sharing.offerSub(dealerName),
     );
   }
 
@@ -1797,8 +1771,6 @@ export default function FallGespraech() {
               ? de.chat.placeholderStep(stepNow)
               : de.chat.placeholder
         }
-        // Eigene Worte gehen an den Reparatur-Assistenten (eingabe_hinweis), nicht beim Händler
-        hint={toDealer ? undefined : de.chat.inputNotice}
         value={input}
         error={inputError}
         onChangeText={(v) => {
@@ -1894,6 +1866,12 @@ export default function FallGespraech() {
           onPress={() => finishGuide('geht_nicht', note)}
         />
       </Sheet>
+      <AssistantConsentSheet
+        visible={consentSheet && !!assistant.waiting}
+        onAccept={acceptAssistant}
+        onDecline={declineAssistant}
+        onClose={() => setConsentSheet(false)}
+      />
       <CallbackSheet
         caseId={caseId}
         slot={callbackSlot}

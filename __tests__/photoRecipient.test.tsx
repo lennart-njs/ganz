@@ -236,14 +236,13 @@ describe('Foto bleibt beim gewählten Empfänger (Übertragung 1.1)', () => {
       'Hier das Typenschild',
     );
     expect(screen.getByText(attachedForDealer)).toBeTruthy();
-    expect(screen.queryByText(de.chat.inputNotice)).toBeNull();
     await tap(de.chat.photoRemove);
     expect(screen.queryByText(attachedForDealer)).toBeNull();
     expect(screen.queryByText(de.chat.photoAttached)).toBeNull();
     expect(switcher()).toBeTruthy();
   });
 
-  test('mit Foto für den Assistenten nennt der Hinweis ihn, die Zeile über dem Feld nennt Fründ nicht', async () => {
+  test('mit Foto für den Assistenten nennt das Feld ihn, die Zeile über dem Feld nennt Fründ nicht', async () => {
     const { caseId, deviceId } = sharedCase();
     const photo = useAppStore.getState().addPhoto({
       caseId,
@@ -257,7 +256,8 @@ describe('Foto bleibt beim gewählten Empfänger (Übertragung 1.1)', () => {
     expect(switcher()).toBeNull();
     expect(screen.getByText(de.chat.photoAttached)).toBeTruthy();
     expect(screen.queryByText(attachedForDealer)).toBeNull();
-    expect(screen.getByText(de.chat.inputNotice)).toBeTruthy();
+    // Kein Hinweis unter dem Feld (Entscheidung 38), das Feld selbst nennt den Assistenten
+    expect(screen.getByLabelText(de.thread.inputLabel)).toBeTruthy();
   });
 
   test('Weitergabe an Fründ beendet, während sein Foto hängt: das Foto geht an niemanden', async () => {

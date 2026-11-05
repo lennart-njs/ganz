@@ -77,9 +77,10 @@ describe('Eigene Worte (B-54)', () => {
       'Die Maschine riecht verbrannt.',
     );
     await tap(de.chat.send);
-    // Weiter im Gespräch des Falls, der Assistent fragt zuerst nach der Einwilligung
+    // Weiter im Gespräch des Falls. Ohne Einwilligung im Profil fragt es zuerst, ohne Text im
+    // Gespräch (Entscheidung 38)
     expect(r.getPathname()).toBe('/fall/GS-24817');
-    expect(screen.getByText(de.chat.consentTitle)).toBeTruthy();
+    expect(screen.getByRole('button', { name: de.chat.consentOpen })).toBeTruthy();
     await tap(de.chat.consentDecline);
     expect(useAppStore.getState().cases['GS-24817']).toMatchObject({
       entry: 'freitext',

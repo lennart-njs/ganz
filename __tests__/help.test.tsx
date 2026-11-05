@@ -1,3 +1,4 @@
+import { router } from 'expo-router';
 import { act, fireEvent, renderRouter, screen } from 'expo-router/testing-library';
 import * as RN from 'react-native';
 import { StyleSheet } from 'react-native';
@@ -9,7 +10,9 @@ import { CONSENT_SCOPES } from '@/model/policies/consentScopes';
 import { services } from '@/services';
 import { useAppStore } from '@/store/appStore';
 import { APP } from '@/test/app';
+import { escapeRegExp } from '@/test/regressions';
 import { unwrap } from '@/test/result';
+import { openAll } from '@/test/sections';
 import { colors } from '@/theme/colors';
 
 const tap = (name: string | RegExp) => fireEvent.press(screen.getByRole('button', { name }));
@@ -89,30 +92,32 @@ describe('Ohne bestätigte Weitergabe startet kein Call', () => {
 });
 
 describe('Hilfe holen', () => {
-  test('zeigt, wer welche Daten sieht, und das echte Protokoll', async () => {
+  test('im Gespräch kein Satz, wer was sieht (Entscheidung 38), die Fallakte zeigt das Protokoll', async () => {
     const id = caseWithAbort();
     await renderRouter(APP, { initialUrl: `/fall/${id}` });
-    const partner = demoConfig.partners[0]!.name;
-    // Ein Satz vorab mit dem Umfang aus consentScopes, alles Weitere unter „Details“ (Entscheidung 20)
+    // Wer was sieht, steht im Profil unter „Datenschutz“, nicht vor dem Call
     expect(
-      screen.getByText(
-        de.help.shareSummary(demoConfig.expert.name, partner, scopeList('weitergabe_fachkraft')),
-      ),
+      screen.queryByText(new RegExp(escapeRegExp(scopeList('weitergabe_fachkraft')))),
+    ).toBeNull();
+    expect(screen.queryByText(/Art\. 6 Abs\. 1 lit\. b/)).toBeNull();
+    expect(
+      screen.getByRole('button', { name: new RegExp(`^${de.thread.callStart}`) }),
     ).toBeTruthy();
-    await tap(de.help.details);
-    expect(screen.getByText(de.help.shareTitle(demoConfig.expert.name, partner))).toBeTruthy();
-    expect(screen.getByText(de.help.stepsDone(4, 7))).toBeTruthy();
-    expect(screen.getByText(de.help.abortedAt(5, 'Pumpe freimachen'))).toBeTruthy();
     // Keine Kostenzusage, kein Schadenfall
     expect(screen.getByText(de.help.costNote('Kranich', '0 €'))).toBeTruthy();
     expect(useAppStore.getState().cases[id]?.claim).toBeUndefined();
+    // Das echte Protokoll, das die Fachkraft sieht, steht in der Fallakte
+    await act(async () => router.push(`/fall/${id}/fallakte`));
+    await openAll();
+    expect(screen.getByText(de.help.stepsDone(4, 7))).toBeTruthy();
+    expect(screen.getByText(de.help.abortedAt(5, 'Pumpe freimachen'))).toBeTruthy();
   });
 
   test('ohne Anleitung steht „Anleitung nicht gestartet“, nicht „1 Schritt“ (B-22)', async () => {
     const id = setup();
     useAppStore.getState().escalate(id);
-    await renderRouter(APP, { initialUrl: `/fall/${id}` });
-    await tap(de.help.details);
+    await renderRouter(APP, { initialUrl: `/fall/${id}/fallakte` });
+    await openAll();
     expect(screen.getByText(de.help.notStarted)).toBeTruthy();
   });
 
@@ -147,7 +152,6 @@ describe('Hilfe holen', () => {
   test('Screenshots nur mit eigener Einwilligung (lit. a)', async () => {
     const id = caseWithAbort();
     await renderRouter(APP, { initialUrl: `/fall/${id}` });
-    await tap(de.help.details);
     await fireEvent.press(screen.getByRole('checkbox', { name: de.help.screenshots }));
     await tap(new RegExp(`^${de.thread.callStart}`));
     await flush();
@@ -208,15 +212,15 @@ describe('Keine Fachkraft frei', () => {
     });
   });
 
-  test('vor dem Rückruf nennt ein Sheet Empfänger und Daten, erst der Tap bestätigt (R-16)', async () => {
+  test('vor dem Rückruf ein Sheet, erst der Tap bestätigt (R-16), die Liste steht im Profil (Entscheidung 38)', async () => {
     const { id } = await noExpert();
     const before = expertConsents(id).length;
     await tap(slot);
     expect(screen.getByRole('header', { name: de.waiting.confirmTitle(slot) })).toBeTruthy();
+    expect(screen.getByText(de.waiting.confirmText)).toBeTruthy();
     const partner = demoConfig.partners.find((p) => p.id === demoConfig.expert.partnerId)!;
-    expect(screen.getByText(de.help.shareTitle(demoConfig.expert.name, partner.name))).toBeTruthy();
     for (const item of scopeLabels('weitergabe_fachkraft')) {
-      expect(screen.getAllByText(de.help.item(item)).length).toBeGreaterThan(0);
+      expect(screen.queryAllByText(de.help.item(item))).toEqual([]);
     }
     expect(callbacks(id)).toHaveLength(0);
     expect(expertConsents(id)).toHaveLength(before);
@@ -258,7 +262,8 @@ describe('Keine Fachkraft frei', () => {
     // Nur das Sheet, die Kopfzeile des Stacks prüft der Test in a11y.test.tsx
     const sheet = screen.container.queryAll((x) => x.props.accessibilityViewIsModal === true)[0]!;
     const texts = sheet.queryAll((x) => x.type === 'Text');
-    expect(texts.length).toBeGreaterThan(4);
+    // Überschrift, Satz und die beiden Buttons
+    expect(texts.length).toBeGreaterThanOrEqual(4);
     for (const n of texts) {
       expect(n.props.allowFontScaling).not.toBe(false);
       expect(n.props.maxFontSizeMultiplier ?? 2).toBeGreaterThanOrEqual(2);

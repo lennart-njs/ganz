@@ -1,7 +1,4 @@
-import { StyleSheet } from 'react-native';
-
-import { ScopeItems } from '@/components/app/ScopeItems';
-import { Button, Card, Sheet, Text, Toast } from '@/components/ds';
+import { Button, Sheet, Text, Toast } from '@/components/ds';
 import { useCommand } from '@/hooks/useCommand';
 import { de } from '@/i18n/de';
 import { caseNames, textStamp } from '@/lib/legalTexts';
@@ -18,8 +15,8 @@ interface CallbackSheetProps {
 }
 
 /**
- * Bestätigung vor dem Rückruf: wer welche Daten sieht, wie vor dem Videocall (B-19, B-23).
- * Erst der Tap speichert die Weitergabe an die Fachkraft (lit. b) und fragt den Rückruf an (R-16).
+ * Bestätigung vor dem Rückruf. Wer welche Daten sieht, steht im Profil unter „Datenschutz“
+ * (Entscheidung 38). Erst der Tap speichert die Weitergabe an die Fachkraft (lit. b) und fragt den Rückruf an (R-16).
  * Fachkraft und Betrieb sind dieselben wie im Videocall: beim Händler-Gerät sein Kundendienst
  * (Entscheidung 16), sonst die aus der Konfiguration (lib/service.ts).
  */
@@ -51,22 +48,9 @@ export function CallbackSheet({ caseId, slot, onClose }: CallbackSheetProps) {
   return (
     <Sheet visible={!!slot} onClose={onClose} title={t.confirmTitle(slot ?? '')}>
       <Text variant="body">{t.confirmText}</Text>
-      <Card>
-        <Text variant="labelStrong" accessibilityRole="header">
-          {de.help.shareTitle(expert.name, partner.name)}
-        </Text>
-        <ScopeItems purpose="weitergabe_fachkraft" />
-        <Text variant="meta" style={styles.gapTop}>
-          {de.help.legalBasis}
-        </Text>
-      </Card>
       {send.toast ? <Toast message={send.toast} /> : null}
       <Button label={t.requestCallback} fullWidth onPress={confirm} />
       <Button label={de.common.cancel} variant="secondary" fullWidth onPress={onClose} />
     </Sheet>
   );
 }
-
-const styles = StyleSheet.create({
-  gapTop: { marginTop: 8 },
-});

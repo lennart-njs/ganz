@@ -229,6 +229,7 @@ describe('R-15 Chat-Einwilligung mit caseId', () => {
     const r = await renderRouter(APP, { initialUrl: `/fall/${a.id}` });
     await fireEvent.changeText(screen.getByLabelText(de.thread.inputLabel), 'Es pumpt nicht ab.');
     await tap(de.chat.send);
+    await tap(de.chat.consentOpen);
     await tap(de.chat.consentAccept);
     await flush();
     let b = '';

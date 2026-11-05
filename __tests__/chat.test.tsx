@@ -80,6 +80,12 @@ describe('Reparatur-Assistent', () => {
     );
     await ask('Es pumpt nicht ab.');
     expect(r.getPathname()).toBe('/fall/GS-24817');
+    // Im Gespräch steht kein Text der Einwilligung, nur die Wahl (Entscheidung 38)
+    expect(screen.queryByText(t.consentText(demoConfig.assistant.name))).toBeNull();
+    expect(screen.getByRole('button', { name: t.consentDecline })).toBeTruthy();
+    expect(fetchMock).not.toHaveBeenCalled();
+    await tap(t.consentOpen);
+    // Den Text zeigt das Sheet, so wie im Profil
     expect(screen.getByText(t.consentText(demoConfig.assistant.name))).toBeTruthy();
     expect(fetchMock).not.toHaveBeenCalled();
     await tap(t.consentAccept);
@@ -105,6 +111,7 @@ describe('Reparatur-Assistent', () => {
       }),
     );
     await ask('Nach dem Waschen steht Wasser in der Trommel.');
+    await tap(t.consentOpen);
     await tap(t.consentAccept);
     await flush();
 
@@ -141,6 +148,7 @@ describe('Reparatur-Assistent', () => {
       reply({ reply: 'Das sollte sich eine Fachkraft ansehen.', suggestion: 'hilfe', guideId: '' }),
     );
     await ask('Der Kühlschrank riecht verbrannt.');
+    await tap(t.consentOpen);
     await tap(t.consentAccept);
     await flush();
     expect(JSON.parse(fetchMock.mock.calls[0][1].body).context.category).toBe('kuehlschrank');
@@ -158,6 +166,7 @@ describe('Reparatur-Assistent', () => {
     await renderRouter(APP, { initialUrl: '/fall/neu' });
     fetchMock.mockReturnValueOnce(reply({ error: 'kein_schluessel' }, 503));
     await ask('Die Tür geht nicht auf.');
+    await tap(t.consentOpen);
     await tap(t.consentAccept);
     await flush();
     expect(screen.getByText(de.thread.noteFallback)).toBeTruthy();
@@ -178,6 +187,7 @@ describe('Reparatur-Assistent', () => {
     await renderRouter(APP, { initialUrl: '/fall/neu' });
     fetchMock.mockRejectedValueOnce(new TypeError('Network request failed'));
     await ask('Die Tür geht nicht auf.');
+    await tap(t.consentOpen);
     await tap(t.consentAccept);
     await flush();
     expect(screen.getByText(t.errors.netz)).toBeTruthy();
@@ -225,6 +235,7 @@ describe('Reparatur-Assistent', () => {
     await renderRouter(APP, { initialUrl: '/fall/neu' });
     fetchMock.mockRejectedValueOnce(new TypeError('Network request failed'));
     await ask('Die Tür geht nicht auf.');
+    await tap(t.consentOpen);
     await tap(t.consentAccept);
     await flush();
     expect(screen.getByText(t.errors.netz)).toBeTruthy();
@@ -239,6 +250,7 @@ describe('Reparatur-Assistent', () => {
     await renderRouter(APP, { initialUrl: '/fall/neu' });
     fetchMock.mockRejectedValueOnce(new TypeError('Network request failed'));
     await ask('Die Tür geht nicht auf.');
+    await tap(t.consentOpen);
     await tap(t.consentAccept);
     await flush();
     await tap(t.saveNote);
@@ -272,6 +284,7 @@ describe('Reparatur-Assistent', () => {
     await renderRouter(APP, { initialUrl: '/fall/neu' });
     fetchMock.mockReturnValueOnce(reply({ error: 'ausgelastet' }, 429));
     await ask('Die Tür geht nicht auf.');
+    await tap(t.consentOpen);
     await tap(t.consentAccept);
     await flush();
     expect(screen.getByText(t.errors.ausgelastet)).toBeTruthy();
@@ -364,56 +377,60 @@ describe('Reparatur-Assistent', () => {
     expect(r.getPathname()).toBe(`/fall/${c.id}/foto-frage`);
   });
 
-  test('am Eingabefeld steht, dass eigene Worte an den Assistenten gehen', async () => {
+  test('am Eingabefeld steht kein Hinweis, wohin eigene Worte gehen (Entscheidung 38)', async () => {
+    const notice = /Was du hier schreibst/;
     setup();
     await renderRouter(APP, { initialUrl: '/fall/neu' });
-    expect(screen.getByText(t.inputNotice)).toBeTruthy();
-    expect(screen.getByLabelText(de.thread.inputLabel).props.accessibilityHint).toBe(t.inputNotice);
+    expect(screen.queryByText(notice)).toBeNull();
+    expect(screen.getByLabelText(de.thread.inputLabel).props.accessibilityHint).toBeUndefined();
     const c = useAppStore.getState().createCase({
       deviceId: useAppStore.getState().devices[0]!.id,
       entry: 'freitext',
       problemLabel: 'Pumpe',
     });
     await act(async () => router.push(`/fall/${c.id}`));
-    expect(screen.getByText(t.inputNotice)).toBeTruthy();
-    expect(screen.getByLabelText(de.thread.inputLabel).props.accessibilityHint).toBe(t.inputNotice);
+    expect(screen.queryByText(notice)).toBeNull();
+    expect(screen.getByLabelText(de.thread.inputLabel).props.accessibilityHint).toBeUndefined();
+    expect(JSON.stringify(de)).not.toMatch(notice);
   });
 
   test('die Einwilligung verspricht nichts über eigene Worte', async () => {
     setup();
     await renderRouter(APP, { initialUrl: '/fall/neu' });
     await ask('Es pumpt nicht ab.');
+    await tap(t.consentOpen);
     expect(screen.getByText(t.consentExcluded)).toBeTruthy();
     // Der frühere Satz versprach das auch für Freitext, der solche Angaben enthalten kann
     expect(JSON.stringify(de)).not.toContain('Nicht dabei sind Fotos, Adresse und Vertragsnummer');
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
-  test('der Hinweis „Computerprogramm, kein Mensch“ steht in der Einwilligung und an der ersten Antwort', async () => {
+  test('der Hinweis „Computerprogramm, kein Mensch“ steht in der Einwilligung, nicht an der Antwort (Entscheidung 38)', async () => {
     setup();
     await renderRouter(APP, { initialUrl: '/fall/neu' });
     fetchMock
       .mockReturnValueOnce(reply({ reply: 'Steht Wasser in der Trommel?', suggestion: 'keine' }))
       .mockReturnValueOnce(reply({ reply: 'Dann prüf den Laugenfilter.', suggestion: 'keine' }));
     await ask('Es pumpt nicht ab.');
-    // In der Einwilligung, vor der ersten Nachricht an den Assistenten
+    // Im Gespräch nicht, im Sheet der Einwilligung schon, für Screenreader lesbar
+    expect(screen.queryByText(t.who)).toBeNull();
+    await tap(t.consentOpen);
     expect(screen.getByText(t.consentTitle)).toBeTruthy();
-    expect(screen.getAllByText(t.who)).toHaveLength(1);
+    expect(screen.getByText(t.who)).not.toHaveProp('accessibilityElementsHidden', true);
     await tap(t.consentAccept);
     await flush();
     // Der Stempel der Einwilligung belegt den Hinweis mit
     const consent = useAppStore.getState().consents.find((k) => k.purpose === 'chat_assistent');
     expect(consent?.textHash).toBe(textStamp('assistent_einwilligung').textHash);
     expect(legalParts('assistent_einwilligung')).toContain(t.who);
-    // An der ersten Antwort, für Screenreader lesbar
+    // Die Antworten tragen den Namen des Assistenten, der Hinweis steht nicht daran
     expect(screen.getByText('Steht Wasser in der Trommel?')).toBeTruthy();
-    expect(screen.getAllByText(t.who)).toHaveLength(1);
-    expect(screen.getByText(t.who)).not.toHaveProp('accessibilityElementsHidden', true);
-    // Nur an der ersten, nicht an jeder Antwort
+    expect(screen.getByText(t.title)).toBeTruthy();
+    expect(screen.queryByText(t.who)).toBeNull();
     await ask('Ja, es steht Wasser drin.');
     await flush();
     expect(screen.getByText('Dann prüf den Laugenfilter.')).toBeTruthy();
-    expect(screen.getAllByText(t.who)).toHaveLength(1);
+    expect(screen.queryByText(t.who)).toBeNull();
   });
 
   test('die Oberfläche sagt nie „KI“ oder „AI“', () => {
@@ -544,6 +561,7 @@ describe('Einwilligung ohne Fall (R-15)', () => {
       reply({ reply: 'Steht Wasser drin?', suggestion: 'keine', guideId: '' }),
     );
     await ask('Es pumpt nicht ab.');
+    await tap(t.consentOpen);
     await tap(t.consentAccept);
     await flush();
     return c.id;
@@ -584,6 +602,7 @@ describe('Einwilligung ohne Fall (R-15)', () => {
     // Ohne Netz ging nichts raus
     fetchMock.mockRejectedValueOnce(new TypeError('Network request failed'));
     await ask('Es pumpt nicht ab.');
+    await tap(t.consentOpen);
     await tap(t.consentAccept);
     await flush();
     expect(transfer()).toBeUndefined();
@@ -652,12 +671,15 @@ describe('Einwilligung ohne Fall (R-15)', () => {
     await act(async () => router.push('/profil'));
     // Abschnitte sind zu (Entscheidung 23)
     await openAll();
-    await fireEvent.press(
-      screen.getByHintText(
-        de.profile.revokeLabel(de.consentPurpose.chat_assistent, demoConfig.assistant.name),
-      ),
-    );
+    // Unter „Freiwillig“ steht das Kästchen mit dem Text der Einwilligung (Entscheidung 38)
+    const box = screen.getByRole('checkbox', { name: t.consentTitle });
+    expect(box.props.accessibilityState).toMatchObject({ checked: true });
+    expect(screen.getByText(t.consentBasis)).toBeTruthy();
+    await fireEvent.press(box);
     expect(chatConsent()?.revokedAt).toBeDefined();
+    expect(
+      screen.getByRole('checkbox', { name: t.consentTitle }).props.accessibilityState,
+    ).toMatchObject({ checked: false });
 
     // Die Fallakte nennt die Weitergabe weiter, mit dem Widerruf
     await act(async () => router.push(`/fall/${id}/fallakte`));
@@ -669,7 +691,7 @@ describe('Einwilligung ohne Fall (R-15)', () => {
     // Das Gespräch fragt erst wieder, und ohne Ja geht nichts an den Assistenten
     await act(async () => router.push(`/fall/${id}`));
     await ask('Noch eine Frage');
-    expect(screen.getByText(t.consentTitle)).toBeTruthy();
+    expect(screen.getByRole('button', { name: t.consentOpen })).toBeTruthy();
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 });
@@ -919,11 +941,14 @@ describe('Anfrage an den eigenen Server', () => {
     expect(second).toMatch(INSTALLATION_ID);
     expect(second).not.toBe(first);
 
-    // Demo-Startstand: ohne Einwilligung in den Assistenten
+    // Demo-Startstand: mit Einwilligung in den Assistenten (Entscheidung 38), ohne Installations-ID
     await act(async () => useAppStore.getState().loadDemoStart());
     expect(await AsyncStorage.getItem(INSTALLATION_KEY)).toBeNull();
     const third = await askAgain();
     expect(third).not.toBe(second);
+    const startConsent = useAppStore
+      .getState()
+      .consents.find((c) => c.purpose === 'chat_assistent' && !c.revokedAt)!;
 
     // Widerruf einer anderen Einwilligung: Die ID bleibt
     const grant = (purpose: 'chat_assistent' | 'mitteilungen') =>
@@ -949,7 +974,11 @@ describe('Anfrage an den eigenen Server', () => {
     await act(async () => useAppStore.getState().revokeConsent(other.id));
     expect(await AsyncStorage.getItem(INSTALLATION_KEY)).toBe(third);
 
-    // Widerruf der Einwilligung in den Assistenten
+    // Widerruf einer von zwei Einwilligungen in den Assistenten: Die ID bleibt, solange eine gilt
+    await act(async () => useAppStore.getState().revokeConsent(startConsent.id));
+    expect(await AsyncStorage.getItem(INSTALLATION_KEY)).toBe(third);
+
+    // Widerruf der letzten Einwilligung in den Assistenten
     await act(async () => useAppStore.getState().revokeConsent(chat.id));
     expect(await AsyncStorage.getItem(INSTALLATION_KEY)).toBeNull();
     const fourth = await askAgain();
@@ -991,6 +1020,7 @@ describe('Anfrage an den eigenen Server', () => {
     await renderRouter(APP, { initialUrl: '/fall/neu' });
     fetchMock.mockReturnValueOnce(reply({ error: 'token' }, 401));
     await ask('Die Tür geht nicht auf.');
+    await tap(t.consentOpen);
     await tap(t.consentAccept);
     await flush();
     expect(screen.getByText(de.thread.noteFallback)).toBeTruthy();

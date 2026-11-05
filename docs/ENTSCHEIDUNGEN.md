@@ -145,3 +145,12 @@ Lennart: „Der Hersteller muss sich denken: Wow, damit will ich jeden meiner F�
 35. **Videocall im Portal:** sichtbar, nicht funktional.
 36. **Team sichtbar:** mehrere Personen mit Rollen, die Anmeldung bleibt ein Demo-Konto.
 37. **Auswertung aus den Demo-Fällen,** dafür deutlich mehr Beispielfälle anlegen.
+
+## Nach dem Test am Telefon (05.11.2026)
+
+Lennart im Chat, mit zwei markierten Screenshots aus dem Fall GS-24821:
+
+38. **Keine Hinweistexte im Gespräch.** Was rot markiert war, kommt raus: die Karte „Bevor du schreibst“ vor dem Reparatur-Assistenten, „Was du hier schreibst, geht an den Reparatur-Assistenten.“ unter dem Eingabefeld, der Block „Markus T. (Fründ Kundendienst) sieht … Grundlage ist deine Anfrage … Ohne deinen Tap geht nichts weiter.“ vor dem Videocall und die Unterzeile am Kästchen „Screenshots als Nachweis erlauben“. Begründung von Lennart: „all diese Hinweistexte sind damit erledigt, dass der Kunde in den Einstellungen das akzeptiert hat.“ Die Einwilligung in den Assistenten steht deshalb im Profil unter „Freiwillig“, wer was sieht im Profil unter „Datenschutz“. Im Gespräch bleibt der Tap.
+    - **Unter dem Angebot „Fall an … senden“** steht „<Unternehmen> prüft den Fall“, und zwar das Unternehmen, das zuständig ist (Regulierer). Ersetzt „Gewährleistung oder Kulanz“.
+    - **Antworten unten im Gespräch** klappen beim Hochscrollen ein und kommen beim Herunterscrollen wieder, in jedem Gespräch.
+    - **Auf- und zuklappen:** Jeder Bereich, der sich auf- und zuklappen lässt (etwa im Profil), ist eine Kachel mit grauem Rahmen. Der Schalter dazu soll eindeutiger sein als der bisherige Pfeil.

@@ -5,8 +5,7 @@ import { openAll } from '../test/sections';
 import { demoConfig } from '@/config/demo.config';
 import { de } from '@/i18n/de';
 import { formatEuro } from '@/i18n/format';
-import { scopeList } from '@/lib/consent';
-import { caseNames, legalText, textStamp } from '@/lib/legalTexts';
+import { caseNames, legalParts, textStamp } from '@/lib/legalTexts';
 import { can } from '@/model/policies/actions';
 import { selectCaseFacts } from '@/model/policies/caseFacts';
 import { scopedConsent } from '@/model/policies/consentScopes';
@@ -175,27 +174,21 @@ describe('Videocall und Rückruf beim Händler-Gerät', () => {
     useAppStore.getState().setDemo({ videoScenario: 'keine_fachkraft' });
     await renderRouter(APP, { initialUrl: `/fall/${id}` });
     await flush();
-    // Der Satz vor dem Call nennt den Kundendienst, der Stempel belegt genau diesen Satz
-    const summary = de.help.shareSummary(EXPERT, SERVICE, scopeList('weitergabe_fachkraft'));
-    expect(screen.getByText(summary)).toBeTruthy();
+    // Vor dem Call nur die Antwort (Entscheidung 38). Die Bestätigung nennt den Kundendienst.
     await tap(new RegExp(`^${de.thread.callStart}`));
     await flush();
     const names = caseNames(useAppStore.getState(), id);
     expect(names).toMatchObject({ fachkraft: EXPERT, fachbetrieb: SERVICE });
     const call = expertConsents(id).at(-1)!;
     expect(call.recipient.name).toBe(SERVICE);
-    expect(legalText('fachkraft_videocall', names)).toContain(summary);
+    expect(legalParts('fachkraft_videocall', names)).toEqual([de.thread.callStart]);
     expect(call.textHash).toBe(textStamp('fachkraft_videocall', names).textHash);
-    expect(call.textHash).not.toBe(textStamp('fachkraft_videocall').textHash);
 
     // Rückruf: dieselbe Fachkraft und derselbe Betrieb wie im Call, nicht die der Konfiguration
     const slot = de.waiting.callbackSlots[0]!;
     await tap(new RegExp(`^${slot}`));
     await flush();
-    expect(screen.getByText(de.help.shareTitle(EXPERT, SERVICE))).toBeTruthy();
-    expect(
-      screen.queryByText(de.help.shareTitle(demoConfig.expert.name, configPartner.name)),
-    ).toBeNull();
+    expect(screen.getByText(de.waiting.confirmText)).toBeTruthy();
     await tap(de.waiting.requestCallback);
     await flush();
     const consents = expertConsents(id);
@@ -303,14 +296,11 @@ describe('Kosten beim Händler-Gerät: kein „Du zahlst“ vor der Wahl (Übert
     expect(screen.getByRole('button', { name: de.appointment.requestPaid })).toBeTruthy();
   });
 
-  test('„Fall an … senden“ aus dem Kosten-Schritt zeigt erst, was der Händler sieht', async () => {
+  test('„Fall an … senden“ aus dem Kosten-Schritt sendet erst mit „Ja, senden“', async () => {
     const id = quotedCase();
     await renderRouter(APP, { initialUrl: `/fall/${id}` });
     await flush();
     await tap(re(offer));
-    expect(
-      screen.getByText(de.sharing.dataSummary(dealer.name, scopeList('weitergabe_haendler'))),
-    ).toBeTruthy();
     expect(screen.getByRole('button', { name: de.sharing.send })).toBeTruthy();
     expect(useAppStore.getState().consents.some((k) => k.purpose === 'weitergabe_haendler')).toBe(
       false,
@@ -342,26 +332,24 @@ describe('Kosten beim Händler-Gerät: kein „Du zahlst“ vor der Wahl (Übert
     expect(send).toBeGreaterThanOrEqual(0);
     expect(self).toBeGreaterThan(send);
 
-    // Gesendet wird erst im Gespräch, nachdem du gesehen hast, was der Händler sieht
+    // Gesendet wird erst im Gespräch, mit „Ja, senden“
     await tap(re(offer));
     await flush();
     expect(r.getPathname()).toBe(`/fall/${id}`);
-    const summary = de.sharing.dataSummary(dealer.name, scopeList('weitergabe_haendler'));
-    expect(screen.getByText(summary)).toBeTruthy();
     expect(screen.getByRole('button', { name: de.sharing.send })).toBeTruthy();
     const shared = () =>
       useAppStore.getState().consents.some((k) => k.purpose === 'weitergabe_haendler');
     expect(shared()).toBe(false);
 
-    // „Doch nicht“, dann noch einmal aus den Details: Die Vorschau kommt wieder
+    // „Doch nicht“, dann noch einmal aus den Details: „Ja, senden“ kommt wieder
     await tap(de.sharing.cancel);
-    expect(screen.queryByText(summary)).toBeNull();
+    expect(screen.queryByRole('button', { name: de.sharing.send })).toBeNull();
     await act(async () => router.push(`/fall/${id}/kosten`));
     await flush();
     await tap(re(offer));
     await flush();
     expect(r.getPathname()).toBe(`/fall/${id}`);
-    expect(screen.getByText(summary)).toBeTruthy();
+    expect(screen.getByRole('button', { name: de.sharing.send })).toBeTruthy();
     expect(shared()).toBe(false);
     await tap(de.sharing.send);
     expect(shared()).toBe(true);

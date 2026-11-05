@@ -45,7 +45,7 @@ tags:
 - assertVisible: "Was klappt nicht\\?"
 - tapOn: 'Hilfe holen'
 
-# Videocall: Vor dem Call steht, wer welche Daten sieht. Erst der Tap gibt sie weiter.
+# Videocall: Erst der Tap gibt die Daten weiter. Wer was sieht, steht im Profil (Entscheidung 38).
 - extendedWaitUntil:
     visible:
       id: 'antwort-call'

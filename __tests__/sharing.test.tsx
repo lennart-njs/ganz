@@ -2,7 +2,6 @@ import { act, fireEvent, renderRouter, screen } from 'expo-router/testing-librar
 
 import { demoConfig } from '@/config/demo.config';
 import { de } from '@/i18n/de';
-import { scopeList } from '@/lib/consent';
 import { buildSharedCaseFile, TIMELINE_EVENTS } from '@/lib/sharing';
 import { can } from '@/model/policies/actions';
 import { selectCaseFacts } from '@/model/policies/caseFacts';
@@ -23,8 +22,6 @@ const dealer = {
   name: demoConfig.dealers[0]!.name,
 };
 const backend = services.backend as jest.Mocked<typeof services.backend>;
-/** Der Satz vor „Ja, senden“: was der Händler sieht, aus dem Umfang der Bestätigung */
-const summary = de.sharing.dataSummary(dealer.name, scopeList('weitergabe_haendler'));
 
 function setup(withDealer = true) {
   const s = useAppStore.getState();
@@ -52,13 +49,13 @@ beforeEach(() => {
 });
 
 describe('Fall an den Händler (Entscheidung 28)', () => {
-  test('erst sehen, was der Händler bekommt, dann mit einem Tap senden', async () => {
+  test('erst „Ja, senden“, dann mit einem Tap senden (Entscheidung 38: kein Satz davor)', async () => {
     const caseId = setup();
     await renderRouter(APP, { initialUrl: `/fall/${caseId}` });
     await tap(new RegExp(`^${de.sharing.offer(dealer.name)}`));
-    expect(screen.getByText(summary)).toBeTruthy();
-    expect(screen.getByText(de.sharing.confirmText)).toBeTruthy();
-    expect(screen.getByText(de.sharing.legal)).toBeTruthy();
+    expect(screen.getByRole('button', { name: de.sharing.send })).toBeTruthy();
+    expect(screen.getByRole('button', { name: de.sharing.cancel })).toBeTruthy();
+    expect(screen.queryByText(/Art\. 6 Abs\. 1 lit\. b/)).toBeNull();
     // Noch nichts gesendet
     expect(useAppStore.getState().consents.some((k) => k.purpose === 'weitergabe_haendler')).toBe(
       false,
@@ -458,7 +455,6 @@ describe('Gespräch mit dem Händler nach den Regeln (Übertragung Schritt 3)', 
     });
     expect(screen.queryByRole('button', { name: de.sharing.send })).toBeNull();
     expect(screen.queryByRole('button', { name: de.sharing.cancel })).toBeNull();
-    expect(screen.queryByText(summary)).toBeNull();
     expect(screen.getByRole('button', { name: de.thread.caseFile })).toBeTruthy();
     expect(screen.getByRole('button', { name: de.thread.done })).toBeTruthy();
     expect(dealerConsents(caseId)).toEqual([]);

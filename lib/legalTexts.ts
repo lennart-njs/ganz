@@ -8,6 +8,11 @@
 // __tests__/fixtures/text-versions.json. Dort kommt je neue Version eine Zeile dazu. Alte Zeilen
 // bleiben, wie sie sind: Sie belegen, was Bestätigungen mit dieser Version gezeigt haben.
 // Phase 4 zieht das in die Registry unter compliance/, den Wortlaut legt der Anwalt fest.
+//
+// Entscheidung 38: Hinweise zur Weitergabe stehen nicht mehr im Gespräch, sondern im Profil.
+// Wer was sieht, steht dort unter „Datenschutz“, die Einwilligung in den Assistenten unter
+// „Freiwillig“. Im Gespräch bleibt der Tap. Der Stempel einer Weitergabe belegt deshalb, was beim
+// Tap zu sehen war: die Antwort, auf die du getippt hast.
 import { demoConfig } from '@/config/demo.config';
 import { de } from '@/i18n/de';
 import { CONSENT_SCOPES, type TextStamp } from '@/model/policies/consentScopes';
@@ -40,6 +45,14 @@ interface LegalText {
 
 const items = (purpose: ConsentPurpose) => scopeLabels(purpose).map((l) => de.help.item(l));
 
+/** Empfänger im Profil unter „Datenschutz“, je mit dem Umfang seiner Weitergabe (Entscheidung 38) */
+export const PRIVACY_RECIPIENTS = [
+  ['fachkraft', 'weitergabe_fachkraft'],
+  ['haendler', 'weitergabe_haendler'],
+  ['betrieb', 'weitergabe_betrieb'],
+  ['versicherer', 'weitergabe_versicherer'],
+] as const satisfies readonly (readonly [string, ConsentPurpose])[];
+
 export const LEGAL_TEXTS = {
   /** Onboarding: „Was mit deinen Daten passiert“. 2026-11-1: Name mach’s statt ganz. */
   datenschutz_start: {
@@ -50,28 +63,29 @@ export const LEGAL_TEXTS = {
       de.onboarding.privacyBasis,
     ],
   },
-  /** Profil: „Datenschutz“. 2026-11-1: Name mach’s statt ganz. */
+  /**
+   * Profil: „Datenschutz“. 2026-11-1: Name mach’s statt ganz. 2026-11-5: dazu, wer was sieht und
+   * auf welcher Grundlage (Entscheidung 38). Das stand vorher vor jeder Weitergabe im Gespräch.
+   */
   datenschutz_profil: {
-    version: '2026-11-1',
-    parts: () => [de.profile.privacyText],
-  },
-  /** Wer antwortet: ein Computerprogramm, kein Mensch. In der Einwilligung und an der ersten Antwort. */
-  assistent_hinweis: {
-    version: '2026-10-1',
-    parts: () => [de.chat.who],
-  },
-  /** Unter dem Eingabefeld in „Problem melden“ und im Gespräch */
-  eingabe_hinweis: {
-    version: '2026-11-1',
-    parts: () => [de.chat.inputNotice],
+    version: '2026-11-5',
+    parts: () => [
+      de.profile.privacyText,
+      de.profile.privacyWho,
+      ...PRIVACY_RECIPIENTS.map(([who, purpose]) =>
+        de.profile.privacyRecipient(de.profile.recipients[who], scopeList(purpose)),
+      ),
+      de.profile.privacyShareBasis,
+    ],
   },
   /**
-   * Vor der ersten Nachricht an den Assistenten (lit. a). Mit dem Hinweis, dass ein
-   * Computerprogramm antwortet (Art. 50 Abs. 1 KI-VO), so steht er im Gespräch.
-   * 2026-11-4: Fotos, die du im Gespräch aufnimmst, gehören zum Umfang (Entscheidung 26).
+   * Einwilligung in den Assistenten (lit. a), mit dem Hinweis, dass ein Computerprogramm antwortet
+   * (Art. 50 Abs. 1 KI-VO). 2026-11-4: Fotos, die du im Gespräch aufnimmst, gehören zum Umfang
+   * (Entscheidung 26). 2026-11-5: im Profil unter „Freiwillig“ und, solange sie fehlt, im Sheet
+   * nach der ersten Nachricht. Dort steht derselbe Text (Entscheidung 38).
    */
   assistent_einwilligung: {
-    version: '2026-11-4',
+    version: '2026-11-5',
     scope: 'chat_assistent',
     parts: (n) => [
       de.chat.consentTitle,
@@ -83,33 +97,28 @@ export const LEGAL_TEXTS = {
     ],
   },
   /**
-   * Vor dem Videocall: was die Fachkraft sieht (lit. b). 2026-11-2: ein Satz mit den Kategorien
-   * aus dem Umfang, die Karte „Fallakte“ steht unter „Details“ (Entscheidung 20).
+   * Videocall (lit. b). 2026-11-2: ein Satz mit den Kategorien und die Grundlage vor dem Call.
+   * 2026-11-5: nur die Antwort „Videocall starten“, wer was sieht steht im Profil (Entscheidung 38).
    */
   fachkraft_videocall: {
-    version: '2026-11-2',
+    version: '2026-11-5',
     scope: 'weitergabe_fachkraft',
-    parts: (n) => [
-      de.help.shareSummary(n.fachkraft, n.fachbetrieb, scopeList('weitergabe_fachkraft')),
-      de.help.legalBasis,
-    ],
+    parts: () => [de.thread.callStart],
   },
-  /** Sheet vor dem Rückruf (lit. b). Die Überschrift nennt nur das Zeitfenster. */
+  /**
+   * Sheet vor dem Rückruf (lit. b). Die Überschrift nennt nur das Zeitfenster. 2026-11-5: ohne
+   * Liste und Grundlage, die stehen im Profil (Entscheidung 38).
+   */
   fachkraft_rueckruf: {
-    version: '2026-11-1',
+    version: '2026-11-5',
     scope: 'weitergabe_fachkraft',
-    parts: (n) => [
-      de.waiting.confirmText,
-      de.help.shareTitle(n.fachkraft, n.fachbetrieb),
-      ...items('weitergabe_fachkraft'),
-      de.help.legalBasis,
-    ],
+    parts: () => [de.waiting.confirmText, de.waiting.requestCallback],
   },
-  /** Kästchen „Screenshots als Nachweis erlauben“ (lit. a) */
+  /** Kästchen „Screenshots als Nachweis erlauben“ (lit. a). 2026-11-5: ohne Unterzeile (Entscheidung 38). */
   screenshots: {
-    version: '2026-11-1',
+    version: '2026-11-5',
     scope: 'screenshots_im_call',
-    parts: () => [de.help.screenshots, de.help.screenshotsSub(scopeList('screenshots_im_call'))],
+    parts: () => [de.help.screenshots],
   },
   /** Kosten und Gespräch: „Das geht an …“ und der Satz zur Meldung (lit. b) */
   schadenmeldung: {
@@ -136,16 +145,13 @@ export const LEGAL_TEXTS = {
    * „Fall an … senden“ (lit. b, Entscheidung 28): ein Satz mit den Kategorien aus dem Umfang,
    * dann was nicht dabei ist und die Grundlage (Entscheidung 20). 2026-11-4: Umfang und Stempel
    * wie bei den anderen Weitergaben. Bis 2026-11-3 sechs Zeilen, gespeichert als Bezeichnungen
-   * ohne Hash (docs/ANNAHMEN.md, Übertragung U5).
+   * ohne Hash (docs/ANNAHMEN.md, Übertragung U5). 2026-11-5: nur noch die Antwort „Fall an …
+   * senden“ und „Ja, senden“, wer was sieht steht im Profil (Entscheidung 38).
    */
   haendler_weitergabe: {
-    version: '2026-11-4',
+    version: '2026-11-5',
     scope: 'weitergabe_haendler',
-    parts: (n) => [
-      de.sharing.dataSummary(n.haendler, scopeList('weitergabe_haendler')),
-      de.sharing.confirmText,
-      de.sharing.legal,
-    ],
+    parts: (n) => [de.sharing.offer(n.haendler), de.sharing.send],
   },
   /** Profil: Einzelfälle an den Hersteller (lit. a) */
   hersteller_einzelfall: {
@@ -175,6 +181,15 @@ export const LEGAL_TEXTS = {
 } satisfies Record<string, LegalText>;
 
 export type LegalTextKey = keyof typeof LEGAL_TEXTS;
+
+/**
+ * Texte, die die App nicht mehr zeigt (Entscheidung 38). Ihre Zeilen in text-versions.json bleiben:
+ * Sie belegen, was ältere Bestätigungen gezeigt haben.
+ * - assistent_hinweis: „Ein Computerprogramm, kein Mensch …“ an der ersten Antwort. Der Satz steht
+ *   weiter in der Einwilligung.
+ * - eingabe_hinweis: „Was du hier schreibst, geht an den Reparatur-Assistenten.“
+ */
+export const RETIRED_TEXT_KEYS = ['assistent_hinweis', 'eingabe_hinweis'] as const;
 
 export const LEGAL_TEXT_KEYS = Object.keys(LEGAL_TEXTS) as LegalTextKey[];
 

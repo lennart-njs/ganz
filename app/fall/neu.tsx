@@ -260,7 +260,6 @@ export default function ProblemMelden() {
       <ChatInput
         label={de.thread.inputLabel}
         placeholder={de.chat.placeholder}
-        hint={de.chat.inputNotice}
         error={textError}
         value={text}
         onChangeText={(v) => {

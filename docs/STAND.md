@@ -14,7 +14,7 @@ Zuletzt aktualisiert: 04.11.2026 · Branch `claude/clever-bardeen-bpc32q` · Am 
 - **Website machs.io:** Register-Fassung live seit 03.11.2026 (Commit f739a6c). Die Navigation wird beim Scrollen zum „m’“. Die Erklärsätze sind raus.
 - **Übertragung der ganz-Linie** (Lennart: „Jetzt übertragen.“): Merge 045fc93, dann die Schritte 1.1 bis 4.1. Einzelheiten in `docs/ANNAHMEN.md` → „Übertragung (04.11.2026)“.
   - Regeln für Fälle in `model/policies/`, auch für den Händler. Lint `ganz/kein-status-vergleich` ohne Ausnahmen.
-  - „Fall an Fründ senden“ zeigt in einem Satz, was Fründ sieht. Die Bestätigung speichert Umfang und Text. Die Akte enthält nur das.
+  - „Fall an Fründ senden“ sendet erst mit „Ja, senden“. Wer was sieht, steht im Profil unter „Datenschutz“ (Entscheidung 38). Die Bestätigung speichert Umfang und Stempel. Die Akte enthält nur das.
   - Ein Foto bleibt beim gewählten Empfänger, Assistent oder Händler.
   - Gespeicherter Stand mit Prüfung beim Laden. Backend-Eingänge mit Größenlimit, Chat-Route mit Token und Grenzen.
   - Demo-Startstand mit Fründ (Profil → 7-mal Versionsnummer). Mit seinem Kaufdatum schlägt das Portal „Gewährleistung“ vor.

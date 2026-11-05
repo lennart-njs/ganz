@@ -1,5 +1,7 @@
 // Demo-Startstände für den Pitch (ZUKUNFTSPLAN Phase 0, Pitch-Rhythmus). Feste IDs und eine feste
-// Zeit, damit jedes Laden denselben Stand ergibt. Kein Fall, keine Einwilligung.
+// Zeit, damit jedes Laden denselben Stand ergibt. Kein Fall. Eine Einwilligung: In den
+// Reparatur-Assistenten hat der Haushalt im Profil eingewilligt (Entscheidung 38), so steht im
+// Gespräch kein Hinweis.
 // - 'haendler' („Demo-Startstand laden“): der Stand nach dem Onboarding der Demo mit Fründ
 //   (Entscheidung 31): Gerät aus dem Katalog, gekauft beim Händler, „Nein, keine Versicherung“.
 //   Dazu das Kaufdatum als Beispielwert, nach dem das Onboarding nicht fragt.
@@ -8,8 +10,11 @@
 // Das Onboarding baut Gerät, Händler und Vertrag mit denselben Funktionen.
 import { demoConfig } from '@/config/demo.config';
 import { catalog, type CatalogModel } from '@/data/catalog';
+import { textStamp } from '@/lib/legalTexts';
+import { scopedConsent } from '@/model/policies/consentScopes';
 import type {
   Cents,
+  Consent,
   Contract,
   Device,
   Household,
@@ -29,6 +34,7 @@ export const DEMO_START_IDS = {
   household: 'haushalt-demo',
   contract: 'vertrag-demo',
   device: 'geraet-demo',
+  assistantConsent: 'einwilligung-assistent-demo',
 } as const;
 
 /** Der Vertrag aus der Konfiguration, so wie „Schutz verknüpfen“ ihn anlegt. */
@@ -121,7 +127,27 @@ export function demoStartData(initial: AppData, kind: DemoStartKind = 'haendler'
     address: { ...cfg.household.address },
     createdAt: at,
   };
-  const base = { ...initial, onboardingDone: true, household, persons: [person] };
+  // Wie „Reparatur-Assistent nutzen“ im Profil (grantAssistantConsent), mit fester ID und Zeit
+  const assistantConsent: Consent = {
+    ...scopedConsent('chat_assistent', {
+      recipient: {
+        id: cfg.assistant.id,
+        kind: 'dienstleister',
+        name: cfg.assistant.name,
+      },
+      text: textStamp('assistent_einwilligung'),
+    }),
+    id: ids.assistantConsent,
+    personId: person.id,
+    grantedAt: at,
+  };
+  const base = {
+    ...initial,
+    onboardingDone: true,
+    household,
+    persons: [person],
+    consents: [assistantConsent],
+  };
   const device = (input: NewDevice): Device => ({
     ...input,
     id: ids.device,

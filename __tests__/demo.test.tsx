@@ -6,7 +6,10 @@ import { demoConfig } from '@/config/demo.config';
 import { fruendSettings } from '@/config/portal.demo';
 import { de } from '@/i18n/de';
 import { catalog } from '@/data/catalog';
+import { hasChatConsent, hasPhotoConsent } from '@/lib/chat/context';
 import { deviceTitle } from '@/lib/devices';
+import { textStamp } from '@/lib/legalTexts';
+import { scopedConsent } from '@/model/policies/consentScopes';
 import { warrantyCheck } from '@/portal/lib/check';
 import { seedRecords } from '@/server/backend/seed';
 import { defaultDemoSettings, initialData, useAppStore, type AppData } from '@/store/appStore';
@@ -215,6 +218,29 @@ describe('Demo-Startstand', () => {
   /** Ganze Monate zwischen zwei Zeitpunkten, wie die Prüfung im Portal (portal/lib/check.ts) */
   const monthsBetween = (from: string, to: string) =>
     Math.floor((Date.parse(to) - Date.parse(from)) / (30.44 * 86_400_000));
+  /**
+   * Die einzige Einwilligung im Startstand: in den Reparatur-Assistenten, wie mit dem Kästchen im
+   * Profil (Entscheidung 38). Ohne Fall, mit dem Stempel des Texts im Profil.
+   */
+  const expectAssistantConsentOnly = (s: AppData) => {
+    expect(s.consents).toEqual([
+      {
+        ...scopedConsent('chat_assistent', {
+          recipient: {
+            id: demoConfig.assistant.id,
+            kind: 'dienstleister',
+            name: demoConfig.assistant.name,
+          },
+          text: textStamp('assistent_einwilligung'),
+        }),
+        id: DEMO_START_IDS.assistantConsent,
+        personId: DEMO_START_IDS.person,
+        grantedAt: demoConfig.demo.startAt,
+      },
+    ]);
+    expect(hasChatConsent(s)).toBe(true);
+    expect(hasPhotoConsent(s)).toBe(true);
+  };
   /** Gespeicherter Stand mit den festen IDs und Zeiten des Startstands */
   const withStartIds = (s: AppData, times: string[]): AppData => {
     const ids = DEMO_START_IDS;
@@ -310,7 +336,6 @@ describe('Demo-Startstand', () => {
       s.events,
       s.photos,
       s.diagnoses,
-      s.consents,
       s.quotes,
       s.bookings,
       s.videoSessions,
@@ -318,6 +343,7 @@ describe('Demo-Startstand', () => {
     ]) {
       expect(list).toEqual([]);
     }
+    expectAssistantConsentOnly(s);
     // Ein gültiger gespeicherter Stand: nach einem Neustart lädt er ohne Hinweis.
     expect(() => parseStoredState(s)).not.toThrow();
   });
@@ -360,7 +386,8 @@ describe('Demo-Startstand', () => {
     const start = demoStartData(initialData);
     const device = { ...start.devices[0]! };
     delete device.purchaseDate;
-    expect(fromOnboarding).toEqual({ ...start, devices: [device] });
+    // Bis auf die Einwilligung in den Assistenten, die im Profil steht (Entscheidung 38)
+    expect(fromOnboarding).toEqual({ ...start, devices: [device], consents: [] });
   });
 
   test('Demo-Startstand Versicherung: Schutz verknüpft, das Gerät aus dem Vertrag, kein Fall', () => {
@@ -412,7 +439,6 @@ describe('Demo-Startstand', () => {
       s.events,
       s.photos,
       s.diagnoses,
-      s.consents,
       s.quotes,
       s.bookings,
       s.videoSessions,
@@ -420,6 +446,7 @@ describe('Demo-Startstand', () => {
     ]) {
       expect(list).toEqual([]);
     }
+    expectAssistantConsentOnly(s);
     // Ein gültiger gespeicherter Stand: nach einem Neustart lädt er ohne Hinweis.
     expect(() => parseStoredState(s)).not.toThrow();
   });
@@ -443,7 +470,8 @@ describe('Demo-Startstand', () => {
       s.contracts[0]!.linkedAt,
       s.devices[0]!.createdAt,
     ]);
-    expect(fromOnboarding).toEqual(demoStartData(initialData, 'versicherung'));
+    // Bis auf die Einwilligung in den Assistenten, die im Profil steht (Entscheidung 38)
+    expect(fromOnboarding).toEqual({ ...demoStartData(initialData, 'versicherung'), consents: [] });
   });
 
   test('„Demo-Startstand laden“ in der Demo-Steuerung führt zur Startseite, mit dem Gerät von Fründ', async () => {

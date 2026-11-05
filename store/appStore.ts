@@ -1976,7 +1976,8 @@ export function createAppStore(storage: StateStorage = AsyncStorage, env: StoreE
             void deleteInstallationId();
           },
 
-          // Der Startstand hat keine Einwilligung in den Assistenten, also auch keine Installations-ID
+          // Die Installations-ID entsteht erst beim ersten Senden an den Assistenten, auch wenn der
+          // Startstand seine Einwilligung schon hat (Entscheidung 38)
           loadDemoStart: (kind) => {
             set({ ...demoStartData(initialData, kind), appearance: get().appearance });
             void deleteInstallationId();
