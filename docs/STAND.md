@@ -7,7 +7,7 @@ Zuletzt aktualisiert: 05.11.2026 · Branch `claude/clever-bardeen-bpc32q` · Am 
 **Freitag, 06.11.2026: Demo bei Fründ Elektrogeräte AG.** Publikum: erst einmal nur Fründ (Entscheidung 34). Ablauf siehe `docs/ABLAEUFE.md` → „Demo“, vom Demo-Startstand aus. Vorher am Telefon `docs/PITCH_CHECK.md` → „1. Händler-Weg“ proben.
 
 - **Demo-Stand: 31e5786** (Portal A bis C, stimmige Beispielfälle, Härtung). Im Browser geprüft: Demo 6 von 6, gleiche Klickfolge wie 67d2fd8, Portal-Rundgang ohne Fehler.
-- **Mit den Produktideen (D): 0239fc4** (Spitze des Branches, darauf nur noch Doku). Ebenfalls 6 von 6 und ohne Fehler. Neu sichtbar: Grundlage in der Prüfung, Kulanz mit Betrag, „Nachbesserung“, Fristen „ruht“, Herstelleranfrage.
+- **Mit den Produktideen (D): 9a5325c** (darauf nur noch Doku). Ebenfalls 6 von 6 und ohne Fehler. Neu sichtbar: Grundlage in der Prüfung, Kulanz mit Betrag, „Nachbesserung“, Fristen „ruht“, Herstelleranfrage.
 - **Vor dem Start:** `git pull`, dann `rm -rf portal/.next` und `rm -f .data/ganz-backend.json`. Im Portal neu anmelden (alte Sitzungen gelten nicht mehr). Nach zehn falschen Passwörtern sperrt die Anmeldung zehn Minuten, `npx expo start` neu starten hebt das auf.
 
 ## Fertig
