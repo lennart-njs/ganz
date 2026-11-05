@@ -63,7 +63,7 @@ Der Demo-Modus ist in `config/demo.config.ts` eingeschaltet (`demo.enabled`).
 3. „Was ist kaputt?“ → „Wasser bleibt stehen“. Die Anleitung kommt aus der Gebrauchsanweisung (Quelle mit Seite unter jedem Schritt).
 4. Fünf Schritte „Erledigt“, im Schritt „Ablaufpumpe reinigen“ „Geht nicht“ → „Hilfe holen“.
 5. „Videocall starten“ → Markus T. vom Fründ Kundendienst → Auflegen → Befund → „Passt, weiter“.
-6. „Weiter zum Termin“ → Fründ Kundendienst → Zeitfenster → „Zahlungspflichtig buchen“.
+6. „Wer soll die Kosten übernehmen?“: Oben steht „Fall an Fründ Elektrogeräte AG senden“. Für den Termin „Reparatur selbst zahlen (189 €)“ → Fründ Kundendienst → Zeitfenster → „Zahlungspflichtig buchen“.
 7. Weiter wie unten ab Schritt 7.
 
 Statt Schritt 1 und 2 geht auch „Demo-Startstand laden“ in der Demo-Steuerung. Als Maestro-Flow bis „Ja, senden“: `e2e/haendler.yaml`.

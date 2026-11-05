@@ -110,7 +110,7 @@ Annahmen, die ich beim Bauen getroffen habe. Jede lässt sich ändern.
 - **Ersparnis** wird berechnet und als „in diesem Fall“ beschriftet (B-48). „Beispielwerte“ steht darunter, solange die Demo-Hinweise an sind.
 - **Termin vorbehaltlich Freigabe** (Entscheidung 5): Man kann den Termin direkt nach der Meldung anfragen. Der Screen sagt das.
 - **Button-Lösung:** Zahlt die Nutzerin etwas (Selbstbeteiligung über 0 € oder Reparatur selbst), heißt der Button „Zahlungspflichtig buchen“. Die Selbstbeteiligung kommt aus den Demo-Einstellungen, Standard 0 €.
-- **Ohne Schutz** gibt es keinen Schadenfall. „Weiter zum Termin“ führt zur zahlungspflichtigen Buchung, der Fall wechselt dabei auf `in_reparatur`.
+- **Ohne Schutz** gibt es keinen Schadenfall. Ohne Händler führt „Weiter zum Termin“ zur zahlungspflichtigen Buchung, mit Händler „Reparatur selbst zahlen (189 €)“ (Übertragung 4.1). Der Fall wechselt dabei auf `in_reparatur`.
 - **Abgelehnt:** Der Kosten-Screen bietet „Reparatur selbst zahlen“, „Kostenvoranschlag behalten“ und „Fall schließen“.
 - **Ersatzgerät:** Nach der Meldung geht es direkt zum Status. Kranich meldet sich zum Ersatzgerät. Einen eigenen Ablauf dafür gibt es im Prototyp nicht.
 - **Laugenpumpe:** Der Betrieb bestellt und baut ein (Entscheidung 3). Der Store lehnt einen Versand der Pumpe an den Haushalt ab. Der Ökodesign-Text sagt, dass die 15 Arbeitstage für den Betrieb gelten (Review 4.1).
