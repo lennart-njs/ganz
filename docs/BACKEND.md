@@ -20,6 +20,7 @@ Fall ändert sich ─POST (Token)──────▶ aktualisiert Akte, Antwor
                                   ◀── POST /api/v1/portal/sammelaktion ── mehrere Fälle
                                   ◀── GET/PUT /api/v1/portal/einstellungen
                                   ◀── GET  /api/v1/portal/auswertung ── anonyme Zahlen
+                                  ◀── POST /api/v1/portal/abmelden ── sperrt das Token
 alle 5 s ─GET /api/v1/faelle/:id/ereignisse (Token)─▶ Ereignisse des Händlers
 Widerruf im Profil ─DELETE /api/v1/faelle/:id (Token)─▶ Personendaten weg
 ```
@@ -29,7 +30,7 @@ Widerruf im Profil ─DELETE /api/v1/faelle/:id (Token)─▶ Personendaten weg
 - **Backend** sind API-Routen im Expo-Dev-Server (`app/api/v1/…`), wie schon der Reparatur-Assistent. Speicher ist eine JSON-Datei `.data/ganz-backend.json` (Dateiname bleibt, wie Repo und Ordner) (`server/backend/fileStore.ts`, nicht im Git). Beim ersten Start legt er 42 Beispielfälle für Fründ in allen Ständen und 168 anonyme Fälle für die Auswertung an, verteilt über zwölf Wochen (`server/backend/seed.ts`, Bausteine in `config/portal.demo.ts`). Zufall mit festem Startwert: Die Demo sieht jedes Mal gleich aus.
 - **Beispiele bleiben frisch.** Liegt die letzte Aktivität an Beispielfällen mehr als sechs Stunden zurück, rücken alle ihre Zeitpunkte um dieselbe Spanne an heute heran. Am Freitag sind die neuen Fälle also wieder von heute, die Fristen knapp. Fälle aus der App bleiben unverändert. Ganz neu anlegen: `.data/ganz-backend.json` löschen.
 - **Portal** ist eine eigene Web-App in `portal/` (Next.js). Sie spricht nur über die API mit dem Backend, nie direkt mit dem Speicher.
-- **Anmeldung im Portal** mit dem Demo-Konto aus `config/portal.demo.ts` (`demo@fruend.example` = Sandra K. im Team von Fründ), Passwort `demo` aus derselben Datei (`portalLogin.demoPassword`). Es gilt nur in der Entwicklung (`npx expo start`) oder mit `PORTAL_DEMO_LOGIN=1`. `PORTAL_DEMO_PASSWORD` ersetzt es. In Produktion ohne beides kann sich niemand anmelden. Die Sitzung ist ein signiertes Token mit 8 Stunden Laufzeit (`PORTAL_SESSION_SECRET`). Aktionen tragen den Namen des Teammitglieds.
+- **Anmeldung im Portal** mit dem Demo-Konto aus `config/portal.demo.ts` (`demo@fruend.example` = Sandra K. im Team von Fründ), Passwort `demo` aus derselben Datei (`portalLogin.demoPassword`). Es gilt nur in der Entwicklung (`npx expo start`) oder mit `PORTAL_DEMO_LOGIN=1`. `PORTAL_DEMO_PASSWORD` ersetzt es. In Produktion ohne beides kann sich niemand anmelden. Die Sitzung ist ein signiertes Token mit 8 Stunden Laufzeit (`PORTAL_SESSION_SECRET`) und eigener Kennung. Abmelden sperrt sie bis zum Ablauf (`.data/portal-revoked.json`), danach lehnt jede Route unter `/api/v1/portal/` das Token ab. Aktionen tragen den Namen des Teammitglieds.
 
 ## Regeln beim Eingang eines Falls
 

@@ -113,3 +113,22 @@ export async function login(
     return 'offline';
   }
 }
+
+/**
+ * Abmelden: sperrt das Token im Backend. Danach gilt es nirgends mehr, auch nicht, wenn jemand das
+ * Cookie kopiert hat. false: Backend nicht erreichbar oder Token schon ungültig. Das Cookie löscht
+ * die Route /abmelden in jedem Fall.
+ */
+export async function logout(token: string): Promise<boolean> {
+  try {
+    const res = await fetch(`${BASE}/api/v1/portal/abmelden`, {
+      method: 'POST',
+      cache: 'no-store',
+      headers: { Authorization: `Bearer ${token}` },
+      signal: AbortSignal.timeout(5000),
+    });
+    return res.ok;
+  } catch {
+    return false;
+  }
+}

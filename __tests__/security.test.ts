@@ -3,12 +3,21 @@
  */
 // Härtung von Demo-Backend und Portal: Fälle aus der App, Anmeldung, Abmelden, Einstellungen,
 // Cookie und Header des Portals.
+import crypto from 'node:crypto';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 
 import { POST as share } from '@/app/api/v1/faelle+api';
+import { POST as signOut } from '@/app/api/v1/portal/abmelden+api';
 import { POST as login } from '@/app/api/v1/portal/anmelden+api';
+import { GET as stats } from '@/app/api/v1/portal/auswertung+api';
+import { GET as getSettings, PUT as putSettings } from '@/app/api/v1/portal/einstellungen+api';
+import { GET as list } from '@/app/api/v1/portal/faelle+api';
+import { GET as detail } from '@/app/api/v1/portal/faelle/[id]+api';
+import { POST as act } from '@/app/api/v1/portal/faelle/[id]/aktionen+api';
+import { POST as work } from '@/app/api/v1/portal/faelle/[id]/bearbeitung+api';
+import { POST as bulk } from '@/app/api/v1/portal/sammelaktion+api';
 import { portalLogin } from '@/config/portal.demo';
 import { createRateLimiter } from '@/lib/chat/guard';
 import type { SharedCaseFile } from '@/model/sharing';
@@ -50,14 +59,19 @@ const stored = async (id: string) =>
   (await getCaseStore().listForTenant(fruend)).find((r) => r.file.caseId === id);
 
 let dir: string;
+const dataDirBefore = process.env.GANZ_DATA_DIR;
 beforeEach(() => {
   dir = fs.mkdtempSync(path.join(os.tmpdir(), 'ganz-security-'));
   setCaseStore(new FileCaseStore(path.join(dir, 'db.json')));
+  // Sperrliste der Sitzungen je Test frisch. Das Geheimnis hat auth.ts schon beim Laden gelesen.
+  process.env.GANZ_DATA_DIR = dir;
   shareRateLimits.create.reset();
   shareRateLimits.update.reset();
 });
 afterEach(() => {
   setCaseStore(undefined);
+  if (dataDirBefore === undefined) delete process.env.GANZ_DATA_DIR;
+  else process.env.GANZ_DATA_DIR = dataDirBefore;
   fs.rmSync(dir, { recursive: true, force: true });
 });
 
@@ -206,5 +220,104 @@ describe('Anmeldung: Passwort nur ausdrücklich', () => {
     // In der Entwicklung (Demo) wie bisher
     const dev = { NODE_ENV: 'development', PORTAL_DEMO_PASSWORD: undefined };
     expect((await withEnv(dev, () => signIn(portalLogin.email, 'demo'))).status).toBe(200);
+  });
+});
+
+async function bearer() {
+  const res = await signIn(portalLogin.email, 'demo');
+  expect(res.status).toBe(200);
+  return { Authorization: `Bearer ${((await res.json()) as { token: string }).token}` };
+}
+
+/** Jede Route unter /api/v1/portal/ mit diesen Headern: ihre Statuscodes */
+async function everyPortalRoute(headers: Record<string, string>) {
+  const id = seedRecords()[0]!.file.caseId;
+  const put = { method: 'PUT', headers, json: { section: 'notifications', value: {} } };
+  const post = (json: unknown) => ({ method: 'POST', headers, json });
+  return [
+    (await list(req('/api/v1/portal/faelle', { headers }))).status,
+    (await detail(req(`/api/v1/portal/faelle/${id}`, { headers }), { id })).status,
+    (await act(req(`/api/v1/portal/faelle/${id}/aktionen`, post({ type: 'annehmen' })), { id }))
+      .status,
+    (
+      await work(
+        req(`/api/v1/portal/faelle/${id}/bearbeitung`, post({ type: 'notiz', text: 'x' })),
+        {
+          id,
+        },
+      )
+    ).status,
+    (
+      await bulk(
+        req('/api/v1/portal/sammelaktion', post({ ids: [id], action: { type: 'annehmen' } })),
+      )
+    ).status,
+    (await getSettings(req('/api/v1/portal/einstellungen', { headers }))).status,
+    (await putSettings(req('/api/v1/portal/einstellungen', put))).status,
+    (await stats(req('/api/v1/portal/auswertung', { headers }))).status,
+    (await signOut(req('/api/v1/portal/abmelden', { method: 'POST', headers }))).status,
+  ];
+}
+
+describe('Abmelden sperrt das Token', () => {
+  test('nach dem Abmelden lehnt jede Route unter /api/v1/portal/ das Token ab', async () => {
+    // Gegenprobe: Mit einem gültigen Token kommt keine Route mit 401 zurück
+    expect(await everyPortalRoute(await bearer())).not.toContain(401);
+    const auth = await bearer();
+    expect((await list(req('/api/v1/portal/faelle', { headers: auth }))).status).toBe(200);
+    const out = await signOut(req('/api/v1/portal/abmelden', { method: 'POST', headers: auth }));
+    expect(out.status).toBe(200);
+    expect(await everyPortalRoute(auth)).toEqual(Array(9).fill(401));
+  });
+
+  test('nur dieses Token: eine andere Anmeldung bleibt gültig', async () => {
+    const first = await bearer();
+    const second = await bearer();
+    await signOut(req('/api/v1/portal/abmelden', { method: 'POST', headers: first }));
+    expect((await list(req('/api/v1/portal/faelle', { headers: first }))).status).toBe(401);
+    expect((await list(req('/api/v1/portal/faelle', { headers: second }))).status).toBe(200);
+  });
+
+  test('ohne gültiges Token: 401, die Sperrliste bleibt, wie sie ist', async () => {
+    const res = await signOut(req('/api/v1/portal/abmelden', { method: 'POST' }));
+    expect(res.status).toBe(401);
+    const bad = await signOut(
+      req('/api/v1/portal/abmelden', { method: 'POST', headers: { Authorization: 'Bearer x.y' } }),
+    );
+    expect(bad.status).toBe(401);
+    expect(fs.existsSync(path.join(dir, 'portal-revoked.json'))).toBe(false);
+  });
+
+  test('die Sperrliste vergisst abgelaufene Tokens', async () => {
+    const file = path.join(dir, 'portal-revoked.json');
+    fs.writeFileSync(file, JSON.stringify({ alt: Date.now() - 1000, offen: Date.now() + 60_000 }));
+    await signOut(req('/api/v1/portal/abmelden', { method: 'POST', headers: await bearer() }));
+    const listed = Object.keys(JSON.parse(fs.readFileSync(file, 'utf8')) as object);
+    expect(listed).toHaveLength(2);
+    expect(listed).toContain('offen');
+    expect(listed).not.toContain('alt');
+  });
+
+  test('Tokens ohne Kennung (von vor der Sperrliste) gelten nicht mehr', async () => {
+    const secret = 'nur-fuer-diesen-test';
+    let auth: typeof import('@/server/backend/auth') | undefined;
+    await withEnv({ PORTAL_SESSION_SECRET: secret }, async () => {
+      jest.isolateModules(() => {
+        // Neu laden, damit auth.ts dieses Geheimnis liest
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
+        auth = require('@/server/backend/auth');
+      });
+    });
+    const token = (claims: object) => {
+      const body = Buffer.from(JSON.stringify(claims)).toString('base64url');
+      const sig = crypto.createHmac('sha256', secret).update(body).digest('base64url');
+      return new Request('http://localhost/api/v1/portal/faelle', {
+        headers: { Authorization: `Bearer ${body}.${sig}` },
+      });
+    };
+    const claims = { ...fruend, exp: Date.now() + 60_000 };
+    expect(auth!.tenantFrom(token(claims))).toBeNull();
+    expect(auth!.tenantFrom(token({ ...claims, jti: 'k1' }))).toMatchObject({ id: 'fruend' });
+    expect(auth!.tenantFrom(token({ ...claims, jti: 'k1', exp: Date.now() - 1 }))).toBeNull();
   });
 });
