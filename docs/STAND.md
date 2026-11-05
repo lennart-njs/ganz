@@ -21,12 +21,12 @@ Zuletzt aktualisiert: 04.11.2026 · Branch `claude/clever-bardeen-bpc32q` · Am 
   - Regulierer als reine Regel. Beim Händler-Gerät kein „Du zahlst“ vor der Wahl, Selbstzahlen mit Preis.
   - CI und `scripts/ci-checks.sh` prüfen auch das Portal. Commits über `scripts/commit-if-green.sh`.
 - **Generalprobe** im Browser auf 3d3b3d2: Demo-Ablauf 6 von 6, gleiche Klickfolge wie 67d2fd8, keine Fehler in der Konsole. Auch Startstand bis Termin, Foto an Fründ, alter Speicherstand.
-- Alle Prüfungen grün (1449 Tests).
+- Alle Prüfungen grün (1452 Tests).
 
 ## Offen
 
 - Lennarts lokale Kopie (`~/Desktop/ganz`) steht auf 588e6af. Mit `git pull` nachziehen, danach `npm install` und `cd portal && npm ci && npm run build`. Die Übertragung bringt `zod` und `fast-check` neu dazu. Ohne sie startet Metro nicht.
-- Von welchem Stand läuft die Demo? Der übertragene Stand ist im Browser geprobt, am Telefon noch nicht. Zuerst am Telefon prüfen: einen Fall aus dem Demo-Startstand öffnen (Fristrechnung in Berliner Zeit, zum ersten Mal unter Hermes).
+- Von welchem Stand läuft die Demo? Der übertragene Stand ist im Browser geprobt, am Telefon noch nicht. Zuerst am Telefon prüfen: einen Fall aus dem Demo-Startstand öffnen und den Händler-Weg einmal ganz gehen. Die Frist rechnet die App selbst, ohne Zeitzonen-Funktion des Telefons.
 - Rückweg für Freitag: 67d2fd8, der letzte gute Stand vor der Übertragung (`docs/ABLAEUFE.md` → „Demo“).
 - Schritt 4.2 (Kaufmonat beim Gerät) wartet auf Lennarts Antwort. Bis dahin schlägt das Portal für Geräte ohne Kaufdatum „Abgelaufen“ vor: „Anders entscheiden“.
 - Nach der Demo: Schritte 5 bis 7 der Übertragung. Meldung an den Regulierer, Händler-Entscheidung als Freigabe, offene Befunde, Entscheidungen zusammenführen und umnummerieren.

@@ -1,12 +1,14 @@
 // Regulierer als reine Regel (model/policies/regulator.ts, Übertragung Schritt 4)
 import { demoConfig } from '@/config/demo.config';
 import { CONSENT_SCOPES } from '@/model/policies/consentScopes';
+import { assert, integer, property } from 'fast-check';
 import {
   DEFAULT_REGULATOR_RULES,
   REGULATOR_CONSENT,
   type RegulatorInput,
   type RegulatorOption,
   type RegulatorRules,
+  berlinOffset,
   purchaseWarrantyUntil,
   regulatorOptions,
   withinPurchaseWarranty,
@@ -391,8 +393,8 @@ describe('withinPurchaseWarranty: Kalendermonate, Kalendertage in Berlin', () =>
   });
 
   test('Kaufdatum außerhalb der Jahre 100 bis 9999: kein Ende, ohne Absturz', () => {
-    // Am Rand des Datumsbereichs gibt es kein Ende mehr, vor Christus verliert das Jahr in Berlin
-    // sein Vorzeichen, und Date.UTC macht aus den Jahren 0 bis 99 die Jahre 1900 bis 1999
+    // Am Rand des Datumsbereichs gibt es kein Ende mehr, und Date.UTC macht aus den Jahren 0 bis 99
+    // die Jahre 1900 bis 1999
     for (const bought of [
       '+275759-01-01T00:00:00.000Z',
       '+275758-09-13T00:00:00.000Z',
@@ -417,6 +419,78 @@ describe('withinPurchaseWarranty: Kalendermonate, Kalendertage in Berlin', () =>
   test('ohne darstellbares Ende: kein Ende, ohne Absturz', () => {
     expect(purchaseWarrantyUntil(BOUGHT_03_2025, 4_000_000)).toBeUndefined();
     expect(withinPurchaseWarranty(BOUGHT_03_2025, AS_OF, 4_000_000)).toBe(false);
+  });
+});
+
+/** Abstand Berlin zu UTC nach Intl in Node, als Gegenprobe zur gerechneten Regel */
+const berlinParts = new Intl.DateTimeFormat('en-US', {
+  timeZone: 'Europe/Berlin',
+  hourCycle: 'h23',
+  year: 'numeric',
+  month: 'numeric',
+  day: 'numeric',
+  hour: 'numeric',
+  minute: 'numeric',
+  second: 'numeric',
+});
+function intlOffset(t: number): number {
+  const p = Object.fromEntries(
+    berlinParts.formatToParts(new Date(t)).map((x) => [x.type, Number(x.value)]),
+  );
+  const wall = Date.UTC(p.year!, p.month! - 1, p.day!, p.hour! % 24, p.minute!, p.second!);
+  return wall - Math.floor(t / 1000) * 1000;
+}
+
+describe('berlinOffset: gerechnet, ohne Intl mit timeZone (Hermes)', () => {
+  test('gleich wie Intl an jedem möglichen Umstellungstag 1981 bis 2199, kurz vor und zur Umstellung', () => {
+    for (let y = 1981; y < 2200; y++) {
+      for (const [month, from, to] of [
+        [2, 24, 31],
+        [8, 23, 30],
+        [9, 24, 31],
+      ] as const) {
+        for (let d = from; d <= to; d++) {
+          const one = Date.UTC(y, month, d, 1);
+          for (const t of [one - 1, one, one + 3_600_000]) {
+            expect([y, month + 1, d, t - one, berlinOffset(t)]).toEqual([
+              y,
+              month + 1,
+              d,
+              t - one,
+              intlOffset(t),
+            ]);
+          }
+        }
+      }
+    }
+  });
+
+  test('gleich wie Intl zu beliebigen Zeitpunkten 1981 bis 2199', () => {
+    assert(
+      property(integer({ min: Date.UTC(1981, 0, 1), max: Date.UTC(2200, 0, 1) - 1 }), (t) => {
+        expect(berlinOffset(t)).toBe(intlOffset(t));
+      }),
+      { numRuns: 5000 },
+    );
+  });
+
+  test('die Frist rechnet ohne Intl.DateTimeFormat', () => {
+    const original = Intl.DateTimeFormat;
+    const spy = jest.spyOn(Intl, 'DateTimeFormat').mockImplementation(() => {
+      throw new Error('Intl.DateTimeFormat gibt es hier nicht');
+    });
+    try {
+      expect(purchaseWarrantyUntil('2025-06-14T00:00:00+02:00', 24)).toBe(
+        '2027-06-14T21:59:59.999Z',
+      );
+      expect(purchaseWarrantyUntil('2024-11-02T08:00:00.000Z', 24)).toBe(
+        '2026-11-02T22:59:59.999Z',
+      );
+      expect(spy).not.toHaveBeenCalled();
+    } finally {
+      spy.mockRestore();
+    }
+    expect(Intl.DateTimeFormat).toBe(original);
   });
 });
 

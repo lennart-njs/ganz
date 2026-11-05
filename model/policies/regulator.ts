@@ -104,41 +104,37 @@ interface Day {
   readonly d: number;
 }
 
-const BERLIN = 'Europe/Berlin';
-let berlinFormat: Intl.DateTimeFormat | undefined;
+const HOUR = 3_600_000;
+const DAY = 24 * HOUR;
 
-/** Wanduhr in Berlin zum Zeitpunkt t, auf die Sekunde. Das Format entsteht erst beim ersten Aufruf. */
-function berlinClock(
-  t: number,
-): Day & { readonly h: number; readonly min: number; readonly s: number } {
-  berlinFormat ??= new Intl.DateTimeFormat('en-US', {
-    timeZone: BERLIN,
-    year: 'numeric',
-    month: 'numeric',
-    day: 'numeric',
-    hour: 'numeric',
-    minute: 'numeric',
-    second: 'numeric',
-    hour12: false,
-  });
-  const parts = berlinFormat.formatToParts(new Date(t));
-  const part = (type: Intl.DateTimeFormatPartTypes) =>
-    Number(parts.find((p) => p.type === type)?.value);
-  // Manche Laufzeiten schreiben Mitternacht als 24 Uhr
-  return {
-    y: part('year'),
-    m: part('month'),
-    d: part('day'),
-    h: part('hour') % 24,
-    min: part('minute'),
-    s: part('second'),
-  };
+/** Letzter Sonntag im Monat month (1 bis 12) des Jahres y, 1 Uhr UTC */
+function lastSundayOneUtc(y: number, month: number): number {
+  // Tag 0 des Folgemonats ist der letzte Tag des Monats
+  const last = Date.UTC(y, month, 0, 1);
+  return last - new Date(last).getUTCDay() * DAY;
 }
 
-/** Abstand der Berliner Uhr zu UTC in ms zum Zeitpunkt t (Winter 1 Stunde, Sommer 2 Stunden) */
-function berlinOffset(t: number): number {
-  const c = berlinClock(t);
-  return Date.UTC(c.y, c.m - 1, c.d, c.h, c.min, c.s) - Math.floor(t / 1000) * 1000;
+/**
+ * Abstand der Berliner Uhr zu UTC zum Zeitpunkt t: im Winter 1 Stunde, im Sommer 2. Gerechnet,
+ * nicht über Intl mit timeZone: Das lief unter Hermes (Expo Go) nie, und die Fakten jedes Falls mit
+ * Kaufdatum hängen daran. Die Regel der EU gilt in Berlin seit 1981: Sommerzeit ab dem letzten
+ * Sonntag im März, 1 Uhr UTC, bis 1995 bis zum letzten Sonntag im September, seit 1996 bis zum
+ * letzten Sonntag im Oktober, jeweils 1 Uhr UTC. Vor 1981 rechnet die Funktion ohne Sommerzeit.
+ * Für so alte Käufe ist die Frist lange abgelaufen, nur das Ende verschiebt sich um höchstens
+ * eine Stunde. Ein Test vergleicht die Regel für die Jahre 1981 bis 2199 mit Intl in Node.
+ */
+export function berlinOffset(t: number): number {
+  const y = new Date(t).getUTCFullYear();
+  if (y < 1981) return HOUR;
+  const start = lastSundayOneUtc(y, 3);
+  const end = lastSundayOneUtc(y, y < 1996 ? 9 : 10);
+  return t >= start && t < end ? 2 * HOUR : HOUR;
+}
+
+/** Kalendertag in Berlin zum Zeitpunkt t */
+function berlinDay(t: number): Day {
+  const wall = new Date(t + berlinOffset(t));
+  return { y: wall.getUTCFullYear(), m: wall.getUTCMonth() + 1, d: wall.getUTCDate() };
 }
 
 /** Erster Zeitpunkt des Tages in Berlin. Mitternacht liegt nie in einer Zeitumstellung. */
@@ -160,9 +156,9 @@ function addCalendarMonths({ y, m, d }: Day, months: number): Day {
 
 /**
  * Kaufdaten, mit denen die Frist rechnet: vom Jahr 100 bis zum Jahr 9999. Davor macht Date.UTC
- * aus den Jahren 0 bis 99 die Jahre 1900 bis 1999, und vor Christus verliert das Jahr in Berlin
- * sein Vorzeichen. Danach braucht ein ISO-Datum ein Vorzeichen, und am Rand des Datumsbereichs gibt
- * es kein Ende mehr. Die App legt solche Daten nicht an, ein kaputter Speicher kann sie enthalten.
+ * aus den Jahren 0 bis 99 die Jahre 1900 bis 1999. Danach braucht ein ISO-Datum ein Vorzeichen,
+ * und am Rand des Datumsbereichs gibt es kein Ende mehr. Die App legt solche Daten nicht an, ein
+ * kaputter Speicher kann sie enthalten.
  */
 const FIRST_PURCHASE = Date.UTC(100, 0, 1);
 const AFTER_LAST_PURCHASE = Date.UTC(10000, 0, 1);
@@ -183,7 +179,7 @@ export function purchaseWarrantyUntil(
   if (bought === undefined || bought < FIRST_PURCHASE || bought >= AFTER_LAST_PURCHASE) {
     return undefined;
   }
-  const last = addCalendarMonths(berlinClock(bought), months);
+  const last = addCalendarMonths(berlinDay(bought), months);
   const next = new Date(Date.UTC(last.y, last.m - 1, last.d + 1));
   if (Number.isNaN(next.getTime())) return undefined;
   const end = startOfBerlinDay({
