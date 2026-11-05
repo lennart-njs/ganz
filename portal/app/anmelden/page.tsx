@@ -4,6 +4,8 @@ import { de } from '@/i18n/de';
 import { Wordmark } from '../../components/Wordmark';
 import { LoginForm } from './LoginForm';
 
+export const metadata = { title: de.portal.login.submit };
+
 export default function Anmelden() {
   // Demo: das Konto ist vorausgefüllt
   const email = portalLogin.email;

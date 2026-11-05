@@ -4,7 +4,7 @@ import { revalidatePath } from 'next/cache';
 
 import { de } from '@/i18n/de';
 import { parseOptions, workflowStatuses, type WorkflowStatus } from '@/model/portal';
-import type { PartStatus, RetailerDecision } from '@/model/sharing';
+import { retailerDecisions, type PartStatus, type RetailerDecision } from '@/model/sharing';
 
 import { sendAction, sendWorkflow } from '../../../lib/api';
 
@@ -76,7 +76,7 @@ export async function quick(id: string, form: FormData) {
     const decision = text(form, 'decision') as RetailerDecision;
     // Eine Ablehnung nur mit Grund, der Grund steht in der App unter der Absage
     const note = text(form, 'note') || undefined;
-    const valid = ['gewaehrleistung', 'kulanz', 'an_versicherer', 'abgelehnt'].includes(decision);
+    const valid = (retailerDecisions as readonly string[]).includes(decision);
     if (valid && (decision !== 'abgelehnt' || note))
       await sendAction(id, { type: 'entscheidung', decision, note });
   }

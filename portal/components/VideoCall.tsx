@@ -32,17 +32,11 @@ export function VideoCall({
   const [seconds, setSeconds] = useState(-3);
   const [mic, setMic] = useState(true);
   const [cam, setCam] = useState(true);
-  const [shot, setShot] = useState(false);
 
   useEffect(() => {
     const id = setInterval(() => setSeconds((s) => s + 1), 1000);
     return () => clearInterval(id);
   }, []);
-  useEffect(() => {
-    if (!shot) return;
-    const id = setTimeout(() => setShot(false), 2500);
-    return () => clearTimeout(id);
-  }, [shot]);
 
   const live = seconds >= 0;
   return (
@@ -59,12 +53,6 @@ export function VideoCall({
       <div className={`stage${live ? ' live' : ''}`}>
         <span className="ring" aria-hidden />
         <span className="big avatar">{initials(customer)}</span>
-        {shot ? (
-          <p className="flash" role="status">
-            <span className="dot" aria-hidden />
-            {t.shotDone}
-          </p>
-        ) : null}
       </div>
       <div className={`self${cam ? '' : ' off'}`} aria-label={t.you}>
         <span className="avatar">{initials(user)}</span>
@@ -86,9 +74,8 @@ export function VideoCall({
         >
           {cam ? t.cam : t.camOff}
         </button>
-        <button type="button" className="round" disabled={!live} onClick={() => setShot(true)}>
-          {t.shot}
-        </button>
+        {/* Kein „Foto in der Fallakte“: Das Portal kennt die Einwilligung der Kundschaft in
+            Screenshots nicht, und gespeichert wurde nichts (Portal-Prüfung 05.11.) */}
         <Link className="round end" href={back}>
           {t.end}
         </Link>

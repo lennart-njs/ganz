@@ -10,6 +10,8 @@ import { de } from '@/i18n/de';
 
 const t = de.portal.live;
 const POLL_MS = 5000;
+/** So lange bleibt ein Hinweis stehen. Mit Maus oder Fokus darauf bleibt er, bis man ihn schließt. */
+const TOAST_MS = 20_000;
 
 interface Pulse {
   sig: string;
@@ -20,6 +22,7 @@ export function Live() {
   const router = useRouter();
   const last = useRef<Pulse>(undefined);
   const [toast, setToast] = useState<Pulse['latest']>();
+  const [hold, setHold] = useState(false);
 
   useEffect(() => {
     let stop = false;
@@ -50,15 +53,23 @@ export function Live() {
   }, [router]);
 
   useEffect(() => {
-    if (!toast) return;
-    const id = setTimeout(() => setToast(undefined), 8000);
+    if (!toast || hold) return;
+    const id = setTimeout(() => setToast(undefined), TOAST_MS);
     return () => clearTimeout(id);
-  }, [toast]);
+  }, [toast, hold]);
 
   return (
     <div className="toasts" role="status" aria-live="polite">
       {toast ? (
-        <div className="toast">
+        <div
+          className="toast"
+          onMouseEnter={() => setHold(true)}
+          onMouseLeave={() => setHold(false)}
+          onFocus={() => setHold(true)}
+          onBlur={(e) => {
+            if (!e.currentTarget.contains(e.relatedTarget)) setHold(false);
+          }}
+        >
           <span className="dot" aria-hidden />
           <span>
             <b>{toast.kind === 'fall' ? t.newCase(toast.caseId) : t.newMessage(toast.who)}</b>
@@ -74,7 +85,10 @@ export function Live() {
             type="button"
             className="x"
             aria-label={t.dismiss}
-            onClick={() => setToast(undefined)}
+            onClick={() => {
+              setToast(undefined);
+              setHold(false);
+            }}
           >
             ×
           </button>

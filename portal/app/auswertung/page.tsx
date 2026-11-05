@@ -9,6 +9,7 @@ import { computeStats } from '../../lib/stats';
 const t = de.portal.stats;
 
 export const dynamic = 'force-dynamic';
+export const metadata = { title: de.portal.nav.stats };
 
 const dec = new Intl.NumberFormat('de-DE', { maximumFractionDigits: 1 });
 const pct = new Intl.NumberFormat('de-DE', { maximumFractionDigits: 0 });

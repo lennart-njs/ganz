@@ -12,6 +12,7 @@ import { workflowStatuses, type WorkflowStatus } from '@/model/portal';
 import { bulkAction, moveCase } from '../app/actions';
 import type { Row } from '../lib/rows';
 import { Avatar, SlaChip, WorkflowChip } from './Chips';
+import { useIntentionalChange } from './Small';
 import { typing } from './Shortcuts';
 
 const t = de.portal;
@@ -21,9 +22,18 @@ const queues: Queue[] = ['offen', ...workflowStatuses];
 const inQueue = (r: Row, q: Queue) =>
   q === 'alle' ? true : q === 'offen' ? r.status !== 'erledigt' : r.status === q;
 
-/** Dringendes zuerst: Fristen aufsteigend, dann neueste */
-const byUrgency = (a: Row, b: Row) =>
-  (a.sla?.left ?? Infinity) - (b.sla?.left ?? Infinity) || b.sharedAt.localeCompare(a.sharedAt);
+const toneRank = { over: 0, warn: 1, ok: 2 } as const;
+const rankOf = (r: Row) => (r.sla ? toneRank[r.sla.tone] : 3);
+/**
+ * Überfällige und knappe Fristen zuerst, die dringendste oben. Danach die neuesten zuerst: Ein Fall,
+ * der gerade hereinkommt, steht oben in seinem Block und nicht unter Fällen mit mehr Zeit.
+ */
+const byUrgency = (a: Row, b: Row) => {
+  const d = rankOf(a) - rankOf(b);
+  if (d) return d;
+  if (rankOf(a) < 2) return a.sla!.left - b.sla!.left || b.sharedAt.localeCompare(a.sharedAt);
+  return b.sharedAt.localeCompare(a.sharedAt);
+};
 
 export function Worklist({
   title,
@@ -49,8 +59,14 @@ export function Worklist({
   const [focus, setFocus] = useState(0);
   const [flash, setFlash] = useState<string>();
   const [pending, start] = useTransition();
-  // Tafel: Verschieben sofort zeigen, bis der Server es bestätigt
+  // Tafel: Verschieben sofort zeigen, bis der Server es bestätigt. Neue Daten vom Server lösen
+  // den eigenen Stand ab, sonst bliebe eine Karte stehen, die jemand anders weiterbewegt hat.
   const [moved, setMoved] = useState<Record<string, WorkflowStatus>>({});
+  const [seenRows, setSeenRows] = useState(rows);
+  if (rows !== seenRows) {
+    setSeenRows(rows);
+    setMoved({});
+  }
   const listRef = useRef<HTMLUListElement>(null);
 
   const all = useMemo(
@@ -336,19 +352,14 @@ export function Worklist({
                             {r.decision ? <span className="chip">{r.decision}</span> : null}
                           </span>
                         </Link>
-                        <label className="sr">
-                          {t.list.moveTo('')}
-                          <select
-                            value={r.status}
-                            onChange={(e) => move(r.id, e.target.value as WorkflowStatus)}
-                          >
-                            {workflowStatuses.map((s) => (
-                              <option key={s} value={s}>
-                                {t.workflow[s]}
-                              </option>
-                            ))}
-                          </select>
-                        </label>
+                        {r.revoked ? null : (
+                          <MoveSelect
+                            key={r.status}
+                            id={r.id}
+                            status={r.status}
+                            onMove={(s) => move(r.id, s)}
+                          />
+                        )}
                       </li>
                     ))}
                   </ul>
@@ -370,48 +381,21 @@ export function Worklist({
           >
             {t.list.bulkAccept}
           </button>
-          <label className="bulk-select">
-            <span className="sr">{t.list.bulkAssign}</span>
-            <select
-              className="input"
-              value=""
-              disabled={pending}
-              onChange={(e) =>
-                runBulk({
-                  type: 'zuweisen',
-                  assigneeId: e.target.value === '-' ? null : e.target.value,
-                })
-              }
-            >
-              <option value="" disabled>
-                {t.list.bulkAssign}
-              </option>
-              {team.map((m) => (
-                <option key={m.id} value={m.id}>
-                  {m.name}
-                </option>
-              ))}
-              <option value="-">{t.list.unassigned}</option>
-            </select>
-          </label>
-          <label className="bulk-select">
-            <span className="sr">{t.list.bulkState}</span>
-            <select
-              className="input"
-              value=""
-              disabled={pending}
-              onChange={(e) => runBulk({ type: 'stand', status: e.target.value as WorkflowStatus })}
-            >
-              <option value="" disabled>
-                {t.list.bulkState}
-              </option>
-              {workflowStatuses.map((s) => (
-                <option key={s} value={s}>
-                  {t.workflow[s]}
-                </option>
-              ))}
-            </select>
-          </label>
+          <BulkSelect
+            label={t.list.bulkAssign}
+            disabled={pending}
+            options={[
+              ...team.map((m) => ({ value: m.id, label: m.name })),
+              { value: '-', label: t.list.unassigned },
+            ]}
+            onPick={(v) => runBulk({ type: 'zuweisen', assigneeId: v === '-' ? null : v })}
+          />
+          <BulkSelect
+            label={t.list.bulkState}
+            disabled={pending}
+            options={workflowStatuses.map((s) => ({ value: s, label: t.workflow[s] }))}
+            onPick={(v) => runBulk({ type: 'stand', status: v as WorkflowStatus })}
+          />
           <button className="btn btn-2 btn-sm" type="button" onClick={() => setSelected(new Set())}>
             {t.list.bulkClear}
           </button>
@@ -424,6 +408,113 @@ export function Worklist({
         </p>
       ) : null}
     </>
+  );
+}
+
+/** Auswahl in der Sammelleiste: mit Maus sofort, mit Tastatur erst mit „Übernehmen“ */
+function BulkSelect({
+  label,
+  options,
+  disabled,
+  onPick,
+}: {
+  label: string;
+  options: { value: string; label: string }[];
+  disabled: boolean;
+  onPick: (value: string) => void;
+}) {
+  const [value, setValue] = useState('');
+  const pick = (v: string) => {
+    setValue('');
+    change.reset();
+    if (v) onPick(v);
+  };
+  const change = useIntentionalChange((el) => pick(el.value));
+  return (
+    <>
+      <label className="bulk-select">
+        <span className="sr">{label}</span>
+        <select
+          className="input"
+          value={value}
+          disabled={disabled}
+          {...change.props}
+          onChange={(e) => {
+            const v = e.target.value;
+            if (change.immediate()) pick(v);
+            else setValue(v);
+          }}
+        >
+          <option value="" disabled>
+            {label}
+          </option>
+          {options.map((o) => (
+            <option key={o.value} value={o.value}>
+              {o.label}
+            </option>
+          ))}
+        </select>
+      </label>
+      {change.pending && value ? (
+        <button
+          className="btn btn-sm"
+          type="button"
+          disabled={disabled}
+          onClick={() => pick(value)}
+        >
+          {t.apply}
+        </button>
+      ) : null}
+    </>
+  );
+}
+
+/**
+ * Verschieben ohne Ziehen, für Tastatur und Screenreader. Erst sichtbar, wenn es den Fokus hat.
+ * Mit der Tastatur wirkt es erst mit „Übernehmen“ oder Enter.
+ */
+function MoveSelect({
+  id,
+  status,
+  onMove,
+}: {
+  id: string;
+  status: WorkflowStatus;
+  onMove: (status: WorkflowStatus) => void;
+}) {
+  const [value, setValue] = useState<WorkflowStatus>(status);
+  const go = (v: string) => {
+    change.reset();
+    if (v !== status) onMove(v as WorkflowStatus);
+  };
+  const change = useIntentionalChange((el) => go(el.value));
+  return (
+    <div className={`kmove${change.pending ? ' open' : ''}`}>
+      <label className="field">
+        <span>{t.list.moveCase(id)}</span>
+        <select
+          className="input"
+          value={value}
+          {...change.props}
+          onChange={(e) => {
+            const v = e.target.value as WorkflowStatus;
+            setValue(v);
+            if (change.immediate()) go(v);
+          }}
+        >
+          {workflowStatuses.map((s) => (
+            <option key={s} value={s}>
+              {t.workflow[s]}
+            </option>
+          ))}
+        </select>
+      </label>
+      {change.pending && value !== status ? (
+        <button className="btn btn-sm" type="button" onClick={() => go(value)}>
+          {t.apply}
+        </button>
+      ) : null}
+    </div>
   );
 }
 

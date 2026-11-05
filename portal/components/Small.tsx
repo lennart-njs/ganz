@@ -2,9 +2,46 @@
 
 // Kleine Bausteine mit Verhalten: Auswahl, die sofort speichert; Gespräch, das unten beginnt;
 // Knopf, der das Antwortfeld öffnet.
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
+
+import { de } from '@/i18n/de';
 
 import { openComposer } from './Composer';
+import { Submit } from './Submit';
+
+/**
+ * Eine Auswahl wirkt sofort, wenn sie mit Maus oder Finger gewählt wird. Mit der Tastatur löst
+ * jeder Pfeil ein change aus (Windows, WCAG 3.2.2): Dann wirkt sie erst mit „Übernehmen“ oder
+ * Enter (Portal-Prüfung 05.11.).
+ */
+export function useIntentionalChange(
+  onEnter: (el: HTMLSelectElement) => void = (el) => el.form?.requestSubmit(),
+) {
+  const pointer = useRef(false);
+  const [pending, setPending] = useState(false);
+  return {
+    pending,
+    reset: () => setPending(false),
+    props: {
+      onPointerDown: () => {
+        pointer.current = true;
+      },
+      onKeyDown: (e: React.KeyboardEvent<HTMLSelectElement>) => {
+        pointer.current = false;
+        if (e.key === 'Enter' && pending) {
+          e.preventDefault();
+          onEnter(e.currentTarget);
+        }
+      },
+    },
+    /** true: gleich ausführen; sonst wartet die Auswahl auf „Übernehmen“ */
+    immediate: () => {
+      if (pointer.current) return true;
+      setPending(true);
+      return false;
+    },
+  };
+}
 
 export function AutoSelect({
   action,
@@ -21,8 +58,9 @@ export function AutoSelect({
   label: string;
   options: { value: string; label: string }[];
 }) {
+  const change = useIntentionalChange();
   return (
-    <form action={action} className="field">
+    <form action={action} className="field" onSubmit={change.reset}>
       <input type="hidden" name="kind" value={kind} />
       <label htmlFor={`auto-${name}`}>{label}</label>
       <select
@@ -31,7 +69,10 @@ export function AutoSelect({
         className="input"
         defaultValue={value}
         key={value}
-        onChange={(e) => e.currentTarget.form?.requestSubmit()}
+        {...change.props}
+        onChange={(e) => {
+          if (change.immediate()) e.currentTarget.form?.requestSubmit();
+        }}
       >
         {options.map((o) => (
           <option key={o.value} value={o.value}>
@@ -39,6 +80,7 @@ export function AutoSelect({
           </option>
         ))}
       </select>
+      {change.pending ? <Submit className="btn btn-2 btn-sm">{de.portal.apply}</Submit> : null}
     </form>
   );
 }

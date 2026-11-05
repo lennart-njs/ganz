@@ -161,7 +161,6 @@ export const settingsSections: SettingsSection[] = [
   'integrations',
 ];
 
-/** Platzhalter in Nachrichten: {kunde}, {fall}, {haendler}, {telefon} */
 /**
  * Antworten auf eine Rückfrage, eine pro Zeile, höchstens vier. Ein Komma trennt nicht: „Ja, ich
  * schicke ein Foto“ ist eine Antwort (im Portal-Rundgang zerfiel sie in zwei).
@@ -179,10 +178,24 @@ export function formatOptions(options: readonly string[]): string {
   return options.join('\n');
 }
 
-export function fillTemplate(
-  text: string,
-  values: { kunde?: string; fall?: string; haendler?: string; telefon?: string },
-): string {
+/** Platzhalter in Nachrichten: {kunde}, {fall}, {haendler}, {telefon} */
+export type TemplateValues = { kunde?: string; fall?: string; haendler?: string; telefon?: string };
+
+/** Werte für die Platzhalter an einer Stelle: Vorname der Kundschaft, Fall, Händler, Telefon */
+export function templateValues(
+  s: Pick<DealerSettings, 'profile'>,
+  customerName: string,
+  caseId: string,
+): TemplateValues {
+  return {
+    kunde: customerName.split(' ')[0] || customerName,
+    fall: caseId,
+    haendler: s.profile.shortName,
+    telefon: s.profile.phone,
+  };
+}
+
+export function fillTemplate(text: string, values: TemplateValues): string {
   return text
     .replaceAll('{kunde}', values.kunde ?? '')
     .replaceAll('{fall}', values.fall ?? '')

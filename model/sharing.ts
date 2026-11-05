@@ -100,7 +100,14 @@ export interface SharedCaseFile {
 
 // ---------- Aktionen im Händlerportal ----------
 
-export type RetailerDecision = 'gewaehrleistung' | 'kulanz' | 'an_versicherer' | 'abgelehnt';
+/** Entscheidungen des Händlers, in der Reihenfolge der Prüfung (U10) */
+export const retailerDecisions = [
+  'gewaehrleistung',
+  'kulanz',
+  'an_versicherer',
+  'abgelehnt',
+] as const;
+export type RetailerDecision = (typeof retailerDecisions)[number];
 export type RetailerStatus = 'in_pruefung' | 'ersatzteil_bestellt' | 'abgeschlossen';
 
 export type PartStatus = 'bestellt' | 'geliefert';
@@ -180,10 +187,7 @@ export function parseRetailerAction(body: unknown): RetailerAction | null {
       };
     }
     case 'entscheidung':
-      if (
-        !['gewaehrleistung', 'kulanz', 'an_versicherer', 'abgelehnt'].includes(o.decision as string)
-      )
-        return null;
+      if (!(retailerDecisions as readonly string[]).includes(o.decision as string)) return null;
       if (o.note !== undefined && !text(o.note)) return null;
       return {
         type: 'entscheidung',

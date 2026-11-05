@@ -494,7 +494,10 @@ kbd {
   background: var(--accent-soft);
 }
 .row.off {
-  opacity: 0.6;
+  background: var(--chalk);
+}
+.row.off :is(.row-id, .row-who, .row-problem > span:first-child) {
+  color: var(--muted);
 }
 .row-link {
   color: var(--body);
@@ -634,7 +637,26 @@ kbd {
   color: var(--body);
 }
 .kcard.off {
-  opacity: 0.6;
+  background: var(--chalk);
+  cursor: default;
+}
+.kcard.off :is(.row-id, .row-who) {
+  color: var(--muted);
+}
+/* Verschieben ohne Ziehen: erst mit Fokus sichtbar */
+.kmove {
+  display: grid;
+  gap: 8px;
+  padding: 0 14px 14px;
+}
+.kmove:not(:focus-within):not(.open) {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
 }
 .kline {
   display: flex;
@@ -1045,7 +1067,7 @@ details.card > summary {
 .tool.select select {
   display: inline-flex;
   align-items: center;
-  height: 40px;
+  height: 44px;
   padding: 0 14px;
   border: 0;
   border-radius: 999px;
@@ -1249,7 +1271,7 @@ fieldset {
 .choice span {
   display: inline-flex;
   align-items: center;
-  height: 40px;
+  height: 44px;
   padding: 0 14px;
   border-radius: 999px;
   background: var(--chalk);
@@ -1261,6 +1283,17 @@ fieldset {
 .choice input:checked + span {
   background: var(--ink);
   color: var(--bg);
+}
+/* Gewählt nicht nur an der Farbe: ein Haken davor */
+.choice input:checked + span::before,
+.tool[aria-pressed='true']::before {
+  content: '';
+  width: 5px;
+  height: 10px;
+  margin: -3px 9px 0 1px;
+  border: solid currentColor;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
 }
 .choice input:focus-visible + span {
   outline: 2px solid var(--accent);
@@ -1688,7 +1721,10 @@ fieldset {
   align-items: center;
 }
 .team-row.off {
-  opacity: 0.6;
+  color: var(--muted);
+}
+.team-row.off :is(b, strong, .input) {
+  color: var(--muted);
 }
 @media (max-width: 1100px) {
   .rowform.two,
@@ -1969,4 +2005,53 @@ details.card > summary:focus-visible {
   display: flex;
   align-items: center;
   color: var(--ink);
+}
+/* „Vorschau“ an Einstellungen ohne Wirkung */
+.chip.preview {
+  height: 24px;
+  padding: 0 10px;
+  font-size: 12px;
+  vertical-align: middle;
+}
+
+/* Schmale Bildschirme: Einstellungen ohne seitliches Scrollen (Portal-Rundgang 05.11.) */
+.settings > *,
+.scard {
+  min-width: 0;
+}
+@media (max-width: 640px) {
+  .snav {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .snav a {
+    flex: none;
+  }
+  .fgrid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .rowform,
+  .rowform.two,
+  .team-row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .choices {
+    flex-wrap: wrap;
+  }
+  .scard .input {
+    min-width: 0;
+  }
+}
+/* Felder in den Standorten: Telefon und Ort nicht abgeschnitten */
+.rowform .input {
+  min-width: 0;
+  text-overflow: ellipsis;
+}
+@media (min-width: 1101px) {
+  .rowform:not(.two) {
+    grid-template-columns:
+      minmax(0, 1.1fr) minmax(0, 1.4fr) minmax(0, 0.7fr) minmax(0, 1.1fr)
+      minmax(0, 1.3fr) auto;
+  }
 }

@@ -1391,7 +1391,7 @@ export const de = {
     part: (part: string, status: 'bestellt' | 'geliefert', eta?: string) =>
       status === 'geliefert'
         ? `Das Ersatzteil ist da: ${part}.`
-        : `Das Ersatzteil ist bestellt: ${part}.${eta ? ` Lieferung in ${eta}.` : ''}`,
+        : `Das Ersatzteil ist bestellt: ${part}.${eta ? ` Lieferzeit: ${eta}.` : ''}`,
     contact: {
       call: 'Anrufen',
       mail: 'E-Mail',
@@ -1427,6 +1427,8 @@ export const de = {
   portal: {
     brand: 'machs.io',
     title: 'Händlerportal',
+    /** Auswahl mit der Tastatur: erst mit diesem Knopf wirksam */
+    apply: 'Übernehmen',
     /** Fehler-, 404- und Ladeseiten (portal/app/error.tsx, not-found.tsx, loading.tsx) */
     problem: {
       title: 'Das hat gerade nicht geklappt.',
@@ -1485,7 +1487,8 @@ export const de = {
       bulkState: 'Stand',
       bulkClear: 'Auswahl aufheben',
       bulkDone: (n: number) => (n === 1 ? '1 Fall geändert' : `${n} Fälle geändert`),
-      moveTo: (state: string) => `Nach „${state}“ verschieben`,
+      /** Tafel: Verschieben mit der Tastatur */
+      moveCase: (id: string) => `Fall ${id} verschieben`,
       columns: {
         case: 'Fall',
         customer: 'Kundschaft',
@@ -1521,6 +1524,7 @@ export const de = {
         ['↵', 'Öffnen'],
         ['r', 'Antworten'],
         ['n', 'Interne Notiz'],
+        ['Strg  ↵', 'Senden'],
         ['g  f', 'Fälle'],
         ['g  a', 'Auswertung'],
         ['g  e', 'Einstellungen'],
@@ -1606,7 +1610,7 @@ export const de = {
       proof: 'Kaufbeleg',
       proofYes: 'liegt vor',
       proofNo: 'fehlt',
-      goodwillMax: (eur: string) => `Kulanz bis ${eur}`,
+      goodwillMax: (eur: string) => `bis ${eur}`,
       decided: 'Entschieden',
       other: 'Anders entscheiden',
     },
@@ -1709,7 +1713,7 @@ export const de = {
       },
       topProblems: 'Häufigste Fehlerbilder',
       byModel: 'Nach Modell',
-      share: (p: string) => `${p} %`,
+      share: (p: string) => `${p}\u00a0%`,
       days: (n: string) => `${n} Tage`,
       hours: (n: string) => `${n} Std.`,
       table: 'Als Tabelle',
@@ -1717,6 +1721,8 @@ export const de = {
     },
     settings: {
       title: 'Einstellungen',
+      /** Einstellungen ohne Wirkung in der Demo */
+      preview: 'Vorschau',
       save: 'Speichern',
       saved: 'Gespeichert',
       failed: 'Nicht gespeichert',

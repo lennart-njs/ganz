@@ -9,6 +9,7 @@ import { toRows } from '../lib/rows';
 const t = de.portal;
 
 export const dynamic = 'force-dynamic';
+export const metadata = { title: de.portal.nav.cases };
 
 export default async function Faelle({
   searchParams,

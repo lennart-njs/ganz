@@ -7,6 +7,7 @@ import path from 'node:path';
 import {
   fillTemplate,
   inServiceHours,
+  templateValues,
   type AnonymousOutcome,
   type DealerSettings,
   type Workflow,
@@ -221,12 +222,7 @@ export class FileCaseStore implements CaseStore {
     record.workflow = { status: 'neu', since: file.sharedAt, lastCustomerAt: file.sharedAt };
     if (!s) return [];
     const events: CaseEvent[] = [];
-    const values = {
-      kunde: file.customer.name.split(' ')[0],
-      fall: file.caseId,
-      haendler: s.profile.shortName,
-      telefon: s.profile.phone,
-    };
+    const values = templateValues(s, file.customer.name, file.caseId);
     const contact = {
       name: s.service.ownService ? s.service.serviceName : s.profile.name,
       phone: s.profile.phone,

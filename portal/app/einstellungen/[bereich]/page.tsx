@@ -7,6 +7,7 @@ import {
   fillTemplate,
   formatOptions,
   settingsSections,
+  templateValues,
   type DealerSettings,
   type SettingsSection,
 } from '@/model/portal';
@@ -25,6 +26,12 @@ import { save, toggleIntegration } from './actions';
 const t = de.portal.settings;
 
 export const dynamic = 'force-dynamic';
+
+export async function generateMetadata({ params }: { params: Promise<{ bereich: string }> }) {
+  const { bereich } = await params;
+  const section = settingsSections.find((x) => sectionSlugs[x] === bereich);
+  return { title: section ? `${t.sections[section]} · ${t.title}` : t.title };
+}
 
 const euro = (cents: number) => String(Math.round(cents) / 100).replace('.', ',');
 const categories = Object.keys(de.deviceCategory) as DeviceCategory[];
@@ -67,12 +74,31 @@ function Lines({ name, label, value }: { name: string; label: string; value: str
   );
 }
 
-function Switch({ name, label, on }: { name: string; label: string; on: boolean }) {
+/**
+ * Kennzeichen für Einstellungen, die in der Demo noch nichts bewirken (Portal-Prüfung 05.11.):
+ * Sie sehen echt aus, ändern aber nichts. Kein Erklärtext, nur das Wort.
+ */
+function Preview() {
+  return <span className="chip muted preview">{t.preview}</span>;
+}
+
+function Switch({
+  name,
+  label,
+  on,
+  preview,
+}: {
+  name: string;
+  label: string;
+  on: boolean;
+  preview?: boolean;
+}) {
   return (
     <label className="switch">
       <input type="checkbox" name={name} defaultChecked={on} />
       <span className="track" aria-hidden />
       <span>{label}</span>
+      {preview ? <Preview /> : null}
     </label>
   );
 }
@@ -142,12 +168,7 @@ function Profile({ s }: { s: DealerSettings }) {
 
 function Messages({ s }: { s: DealerSettings }) {
   const m = s.messages;
-  const example = {
-    kunde: messagePreview.customer,
-    fall: messagePreview.caseNumber,
-    haendler: s.profile.shortName,
-    telefon: s.profile.phone,
-  };
+  const example = templateValues(s, messagePreview.customer, messagePreview.caseNumber);
   const block = (key: 'greeting' | 'away', label: string) => (
     <fieldset>
       <legend>{label}</legend>
@@ -379,7 +400,9 @@ function Service({ s }: { s: DealerSettings }) {
         </div>
       </fieldset>
       <fieldset>
-        <legend>{t.service.prices}</legend>
+        <legend>
+          {t.service.prices} <Preview />
+        </legend>
         <div className="fgrid">
           <Text name="travel" label={t.service.travel} value={euro(v.prices.travelCents)} />
           <Text name="hour" label={t.service.hour} value={euro(v.prices.hourCents)} />
@@ -446,7 +469,7 @@ function Notifications({ s }: { s: DealerSettings }) {
           ))}
         </tbody>
       </table>
-      <Switch name="dailyReport" label={t.notifications.dailyReport} on={n.dailyReport} />
+      <Switch name="dailyReport" label={t.notifications.dailyReport} on={n.dailyReport} preview />
       <Text name="recipients" label={t.notifications.recipients} value={n.recipients} wide />
     </>
   );
@@ -463,7 +486,9 @@ async function Privacy({ s }: { s: DealerSettings }) {
     <>
       <div className="fgrid">
         <div className="field">
-          <label htmlFor="s-retention">{t.privacy.retention}</label>
+          <label htmlFor="s-retention">
+            {t.privacy.retention} <Preview />
+          </label>
           <select
             id="s-retention"
             name="retentionMonths"
@@ -484,7 +509,7 @@ async function Privacy({ s }: { s: DealerSettings }) {
           </span>
         </div>
       </div>
-      <Switch name="accessLog" label={t.privacy.accessLog} on={p.accessLog} />
+      <Switch name="accessLog" label={t.privacy.accessLog} on={p.accessLog} preview />
       <h3 className="h3">{t.privacy.log}</h3>
       <table className="matrix log-table">
         <thead>
@@ -540,8 +565,9 @@ function Integrations({ s }: { s: DealerSettings }) {
                     <form action={toggleIntegration}>
                       <input type="hidden" name="key" value={x.key} />
                       <input type="hidden" name="value" value={on ? 'getrennt' : 'verbunden'} />
+                      {/* Zweitrangig: Auf der Seite ist kein einzelner Knopf der wichtigste */}
                       <button
-                        className={`btn btn-sm${on ? ' btn-2' : ''}`}
+                        className="btn btn-sm btn-2"
                         type="submit"
                         aria-label={on ? g.disconnectLabel(x.name) : g.connectLabel(x.name)}
                       >
@@ -594,7 +620,15 @@ export default async function Bereich({ params }: { params: Promise<{ bereich: s
           ))}
         </nav>
         <section className="card scard">
-          <h2 className="h2">{t.sections[section]}</h2>
+          <h2 className="h2">
+            {t.sections[section]}
+            {section === 'notifications' || section === 'integrations' ? (
+              <>
+                {' '}
+                <Preview />
+              </>
+            ) : null}
+          </h2>
           {section === 'integrations' ? (
             body[section]
           ) : (

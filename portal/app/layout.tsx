@@ -6,7 +6,11 @@ import { themeCss } from '../lib/theme';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: `${de.portal.title} · ${de.portal.brand}`,
+  // Jede Seite nennt sich im Tab, z. B. „Fall GS-24817 · Händlerportal“
+  title: {
+    default: `${de.portal.title} · ${de.portal.brand}`,
+    template: `%s · ${de.portal.title}`,
+  },
   icons: { icon: '/favicon.svg' },
   robots: { index: false, follow: false },
 };

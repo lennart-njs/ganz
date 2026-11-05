@@ -23,10 +23,3 @@ export const formatDate = (iso: string) => date.format(new Date(iso));
 export const formatWhen = (iso: string) =>
   `${day.format(new Date(iso))} · ${time.format(new Date(iso))}`;
 export const formatEuro = (cents: number) => euro.format(cents / 100);
-
-/** Gewährleistung: 2 Jahre ab Kauf (§ 438 BGB). Nur zur Orientierung. */
-export function warrantyEnd(purchase: string): { until: string; running: boolean } {
-  const d = new Date(purchase);
-  d.setFullYear(d.getFullYear() + 2);
-  return { until: formatDate(d.toISOString()), running: d.getTime() > Date.now() };
-}

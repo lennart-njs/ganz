@@ -34,12 +34,15 @@ export const machs = {
     warnSoft: '#FDF0D8',
     ok: '#1D6B3A',
     okSoft: '#E3F3E8',
-    /** Diagramme: Kategorien in fester Reihenfolge (geprüft auf Farbsehschwächen, dataviz) */
+    /**
+     * Diagramme: Kategorien in fester Reihenfolge. Geprüft auf Farbsehschwächen und auf 3:1 gegen
+     * Weiß (dataviz-Validator, 05.11.: 3 bis 5 waren vorher zu hell).
+     */
     chart1: '#2A78D6',
-    chart2: '#EB6834',
-    chart3: '#1BAF7A',
-    chart4: '#EDA100',
-    chart5: '#E87BA4',
+    chart2: '#DB5C29',
+    chart3: '#16916A',
+    chart4: '#B37A00',
+    chart5: '#D0598A',
   },
   dark: {
     bg: '#111316',

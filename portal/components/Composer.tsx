@@ -51,10 +51,14 @@ export function Composer({
     async (prev: ComposerState, fd: FormData) => {
       const next = await action(prev, fd);
       if (next.ok) {
-        setText('');
+        // Nur das Gesendete leeren: Ein Entwurf im Textfeld bleibt, wenn eine Rückfrage, ein
+        // Termin oder ein Teil rausging (Portal-Prüfung 05.11.)
+        const sent = String(fd.get('kind'));
+        if (sent === 'nachricht' || sent === 'notiz') setText('');
         setQuestion('');
         setOptions('');
         setPanel(undefined);
+        requestAnimationFrame(() => area.current?.focus());
       }
       return next;
     },

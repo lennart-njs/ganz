@@ -1,6 +1,5 @@
 // Gespräch in der Fallakte: Nachrichten der Kundschaft, Antworten des Händlers (so, wie sie in der
 // App stehen), Notizen des Teams und die Schritte aus der App als Systemzeilen.
-import { demoConfig } from '@/config/demo.config';
 import { de } from '@/i18n/de';
 import type {
   PartStatus,
@@ -65,10 +64,9 @@ const skip: CaseEvent['type'][] = ['rueckfrage_beantwortet', 'nachricht_an_haend
  */
 const ownEcho = (type: CaseEvent['type']) => type.startsWith('haendler_');
 
-export function conversation(r: SharedCaseRecord): ConvItem[] {
+/** short: Kurzname des Händlers aus seinen Einstellungen, für Nachrichten ohne Absender */
+export function conversation(r: SharedCaseRecord, short = r.file.recipient.name): ConvItem[] {
   const f = r.file;
-  const short =
-    demoConfig.dealers.find((d) => d.id === f.recipient.id)?.shortName ?? f.recipient.name;
   const items: ConvItem[] = [];
   for (const x of f.timeline) {
     if (skip.includes(x.type) || ownEcho(x.type)) continue;

@@ -3,8 +3,8 @@ import { notFound } from 'next/navigation';
 
 import { portalSeed } from '@/config/portal.demo';
 import { de } from '@/i18n/de';
-import { fillTemplate, workflowStatuses } from '@/model/portal';
-import type { RetailerDecision, SharedPhoto } from '@/model/sharing';
+import { fillTemplate, templateValues, workflowStatuses } from '@/model/portal';
+import { retailerDecisions, type SharedPhoto } from '@/model/sharing';
 
 import { Avatar, SlaChip, WorkflowChip } from '../../../components/Chips';
 import { Composer } from '../../../components/Composer';
@@ -24,9 +24,13 @@ import { compose, quick } from './actions';
 
 const t = de.portal;
 const f = t.file;
-const decisions: RetailerDecision[] = ['gewaehrleistung', 'kulanz', 'an_versicherer', 'abgelehnt'];
 
 export const dynamic = 'force-dynamic';
+
+export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+  return { title: t.file.case(decodeURIComponent(id)) };
+}
 
 const time = new Intl.DateTimeFormat('de-DE', {
   hour: '2-digit',
@@ -124,7 +128,8 @@ function Bubble({ x, customer, day }: { x: ConvItem; customer: string; day: bool
               alt={f.photoAlt(f.photoMessage, formatWhen(x.at))}
             />
           ) : null}
-          <p>{x.text}</p>
+          {/* Nur ein Foto ohne Worte: kein „Foto“ als Text darunter */}
+          {x.photo && x.text === de.chat.photoLabel ? null : <p>{x.text}</p>}
         </div>
         <span className="meta">
           {customer} · {time.format(new Date(x.at))}
@@ -176,14 +181,8 @@ export default async function Fallakte({ params }: { params: Promise<{ id: strin
   const askedProof = record.retailerEvents.some(
     (e) => e.type === 'haendler_rueckfrage' && e.payload.question === proofQuestion,
   );
-  const items = conversation(record);
-  const first = file.customer.name.split(' ')[0] ?? file.customer.name;
-  const values = {
-    kunde: first,
-    fall: file.caseId,
-    haendler: settings.profile.shortName,
-    telefon: settings.profile.phone,
-  };
+  const items = conversation(record, settings.profile.shortName);
+  const values = templateValues(settings, file.customer.name, file.caseId);
   const templates = settings.messages.templates.map((x) => ({
     ...x,
     text: fillTemplate(x.text, values),
@@ -255,7 +254,7 @@ export default async function Fallakte({ params }: { params: Promise<{ id: strin
               </ScrollBox>
               <Composer
                 action={compose.bind(null, file.caseId)}
-                customer={first}
+                customer={values.kunde ?? file.customer.name}
                 templates={templates}
                 questions={settings.messages.questions}
                 slots={settings.service.slots}
@@ -354,7 +353,7 @@ export default async function Fallakte({ params }: { params: Promise<{ id: strin
                   <details className="more-actions" open={!decided && check.verdict === 'offen'}>
                     <summary>{decided ? t.check.change : t.check.other}</summary>
                     <div className="choices">
-                      {decisions
+                      {retailerDecisions
                         .filter((d) => d !== (decided ?? check.verdict))
                         .map((d) => (
                           <DecisionButton key={d} action={act} decision={d} />
@@ -397,9 +396,11 @@ export default async function Fallakte({ params }: { params: Promise<{ id: strin
                   </p>
                 ) : null}
                 {file.rating ? (
-                  <p className="stars" aria-label={f.rating(file.rating)}>
-                    {'★'.repeat(file.rating)}
-                    <span className="off">{'★'.repeat(5 - file.rating)}</span>
+                  <p className="stars" role="img" aria-label={f.rating(file.rating)}>
+                    <span aria-hidden>{de.symbols.star.repeat(file.rating)}</span>
+                    <span className="off" aria-hidden>
+                      {de.symbols.star.repeat(5 - file.rating)}
+                    </span>
                   </p>
                 ) : null}
               </section>
@@ -411,10 +412,6 @@ export default async function Fallakte({ params }: { params: Promise<{ id: strin
                     [f.model, `${file.device.manufacturer} ${file.device.model}`],
                     [f.materialNumber, file.device.materialNumber],
                     [f.serialNumber, file.device.serialNumber],
-                    [
-                      f.purchased,
-                      file.device.purchaseDate ? formatDate(file.device.purchaseDate) : undefined,
-                    ],
                   ]}
                 />
               </section>
