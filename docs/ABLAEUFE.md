@@ -26,7 +26,7 @@ cd portal && npm install && npm run build && npm start
 
 Bricht `npm run build` mit „Failed to open database … invalid digit found in string“ ab, ist der Build-Cache eines älteren Next.js schuld: `rm -rf portal/.next`, dann noch einmal bauen.
 
-Portal: http://localhost:3000, Zugang `demo@fruend.example` mit Passwort `demo`. Für die Entwicklung reicht `npm run dev`. Für die Vorführung `npm start` nehmen, das läuft ohne Entwickler-Hinweise.
+Portal: http://localhost:3000, Zugang `demo@fruend.example` mit Passwort `demo`. Für die Entwicklung reicht `npm run dev`. Für die Vorführung `npm start` nehmen, das läuft ohne Entwickler-Hinweise. Nach zehn falschen Passwörtern in zehn Minuten sperrt die Anmeldung bis zu zehn Minuten. `npx expo start` neu starten hebt das sofort auf. Wer vor dem 05.11. angemeldet war, meldet sich einmal neu an.
 
 ## Prüfen
 
