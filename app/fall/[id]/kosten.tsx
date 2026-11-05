@@ -5,7 +5,7 @@ import { DemoHint } from '@/components/app/DemoHint';
 import { CaseFileCard } from '@/components/app/CaseFileCard';
 import { CaseScreen, useCaseId } from '@/components/app/CaseScreen';
 import { CostCompare } from '@/components/app/CostCompare';
-import { backToThread, leaveCase } from '@/components/nav/leaveCase';
+import { backToDealerOffer, backToThread, leaveCase } from '@/components/nav/leaveCase';
 import { ActionBar, Button, Card, Disclosure, FactList, Text, Toast } from '@/components/ds';
 import { useCommand } from '@/hooks/useCommand';
 import { de } from '@/i18n/de';
@@ -98,8 +98,15 @@ export default function Kosten() {
   const payer = caseFacts?.payer;
   // Ohne Schutz, aber ein Regulierer wie der Händler kann die Kosten übernehmen: Der Zahler steht
   // noch nicht fest. Dann kein „Du selbst“ und kein „Du zahlst“, und Selbstzahlen nennt den Preis
-  // (Übertragung 4.1). Den Fall an den Händler sendest du im Gespräch.
+  // (Übertragung 4.1).
   const payerOpen = !contract && payer === undefined;
+  // Kann der Händler die Kosten übernehmen, steht „Fall an … senden“ wie im Gespräch zuerst. Der
+  // Button führt ins Gespräch: Dort steht, was der Händler sieht, dann „Ja, senden“.
+  const dealerFirst =
+    !contract && caseFacts?.regulator?.kind === 'haendler' && can(caseFacts, 'an_haendler_senden')
+      ? caseFacts.soldBy
+      : undefined;
+  const selfPayOk = !contract && can(caseFacts, 'termin_selbst');
   const facts: [string, string][] = payerOpen
     ? []
     : payer === 'haushalt' || !contract
@@ -127,14 +134,25 @@ export default function Kosten() {
     <ActionBar>
       <Button label={t.toAppointment} size="lg" fullWidth onPress={() => toAppointment(false)} />
     </ActionBar>
-  ) : !contract && can(caseFacts, 'termin_selbst') ? (
+  ) : dealerFirst || selfPayOk ? (
     <ActionBar>
-      <Button
-        label={payerOpen ? t.rejectedSelfPay(formatEuro(quote.repair.total)) : t.toAppointment}
-        size="lg"
-        fullWidth
-        onPress={() => toAppointment(true)}
-      />
+      {dealerFirst ? (
+        <Button
+          label={de.sharing.offer(dealerFirst.name)}
+          size="lg"
+          fullWidth
+          onPress={() => backToDealerOffer(caseId)}
+        />
+      ) : null}
+      {selfPayOk ? (
+        <Button
+          label={payerOpen ? t.rejectedSelfPay(formatEuro(quote.repair.total)) : t.toAppointment}
+          variant={dealerFirst ? 'secondary' : 'primary'}
+          size="lg"
+          fullWidth
+          onPress={() => toAppointment(true)}
+        />
+      ) : null}
     </ActionBar>
   ) : undefined;
 

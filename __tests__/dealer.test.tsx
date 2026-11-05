@@ -1,3 +1,4 @@
+import { router } from 'expo-router';
 import { act, fireEvent, renderRouter, screen, within } from 'expo-router/testing-library';
 
 import { demoConfig } from '@/config/demo.config';
@@ -326,6 +327,53 @@ describe('Kosten beim Händler-Gerät: kein „Du zahlst“ vor der Wahl (Übert
     await tap(de.costs.rejectedSelfPay(price()));
     expect(r.getPathname()).toBe(`/fall/${id}/termin`);
     expect(screen.getByText(de.appointment.costsSelf(price()))).toBeTruthy();
+  });
+
+  test('Kosten im Detail: zuerst „Fall an … senden“, das führt ins Gespräch vor „Ja, senden“', async () => {
+    const id = quotedCase();
+    const r = await renderRouter(APP, { initialUrl: `/fall/${id}` });
+    await flush();
+    await act(async () => router.push(`/fall/${id}/kosten`));
+    await flush();
+    const all = labels();
+    const send = all.findIndex((l) => re(offer).test(l));
+    const self = all.findIndex((l) => re(selfPay()).test(l));
+    expect(send).toBeGreaterThanOrEqual(0);
+    expect(self).toBeGreaterThan(send);
+
+    // Gesendet wird erst im Gespräch, nachdem du gesehen hast, was der Händler sieht
+    await tap(re(offer));
+    await flush();
+    expect(r.getPathname()).toBe(`/fall/${id}`);
+    const summary = de.sharing.dataSummary(dealer.name, scopeList('weitergabe_haendler'));
+    expect(screen.getByText(summary)).toBeTruthy();
+    expect(screen.getByRole('button', { name: de.sharing.send })).toBeTruthy();
+    const shared = () =>
+      useAppStore.getState().consents.some((k) => k.purpose === 'weitergabe_haendler');
+    expect(shared()).toBe(false);
+
+    // „Doch nicht“, dann noch einmal aus den Details: Die Vorschau kommt wieder
+    await tap(de.sharing.cancel);
+    expect(screen.queryByText(summary)).toBeNull();
+    await act(async () => router.push(`/fall/${id}/kosten`));
+    await flush();
+    await tap(re(offer));
+    await flush();
+    expect(r.getPathname()).toBe(`/fall/${id}`);
+    expect(screen.getByText(summary)).toBeTruthy();
+    expect(shared()).toBe(false);
+    await tap(de.sharing.send);
+    expect(shared()).toBe(true);
+  });
+
+  test('Kosten im Detail, schon bei Fründ: nur Selbstzahlen mit Preis', async () => {
+    const id = quotedCase();
+    unwrap(useAppStore.getState().shareWithDealer(id));
+    await renderRouter(APP, { initialUrl: `/fall/${id}/kosten` });
+    await flush();
+    expect(tree()).not.toMatch(SAYS_PAY);
+    expect(screen.queryByRole('button', { name: re(offer) })).toBeNull();
+    expect(screen.getByRole('button', { name: re(selfPay()) })).toBeTruthy();
   });
 
   test('schon bei Fründ: Selbstzahlen bleibt, mit Preis, ohne zweites Angebot', async () => {

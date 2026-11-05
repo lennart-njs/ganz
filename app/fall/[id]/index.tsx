@@ -168,6 +168,7 @@ export default function FallGespraech() {
     entwurf?: string;
     foto?: string;
     an?: string;
+    senden?: string;
   }>();
   const state = useAppStore();
   const c = state.cases[caseId];
@@ -309,6 +310,25 @@ export default function FallGespraech() {
     // Nur beim ersten Öffnen
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [c?.id]);
+
+  // Aus den Details „Kosten“: gleich zeigen, was der Händler sieht, dann „Ja, senden“
+  // (Übertragung 4.1). Gilt die Regel an_haendler_senden nicht, schließt die Karte wieder. Danach
+  // fällt der Parameter weg, so öffnet ein zweiter Weg aus den Details die Karte erneut.
+  const [sendParam, setSendParam] = useState<string>();
+  if (params.senden !== sendParam) {
+    setSendParam(params.senden);
+    if (params.senden === 'haendler') setDealerConfirm(true);
+  }
+  useEffect(() => {
+    if (!params.senden) return;
+    const clear = () => router.setParams({ senden: undefined });
+    // Beim Kaltstart direkt in den Fall ist der Router erst nach dem ersten Rendern bereit
+    try {
+      clear();
+    } catch {
+      setTimeout(clear, 0);
+    }
+  }, [params.senden]);
 
   // Frage zu einem Anleitungsschritt: Entwurf ins Eingabefeld (Zustand beim Rendern anpassen)
   const [draft, setDraft] = useState<string>();

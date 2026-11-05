@@ -22,3 +22,11 @@ export function backToThread(caseId: string, entwurf?: string, foto?: string, an
     },
   });
 }
+
+/**
+ * Zurück ins Gespräch, gleich mit dem, was der Händler sieht, vor „Ja, senden“ (Entscheidung 28).
+ * Aus den Details „Kosten“: Gesendet wird nur im Gespräch (Übertragung 4.1).
+ */
+export function backToDealerOffer(caseId: string) {
+  router.dismissTo({ pathname: '/fall/[id]', params: { id: caseId, senden: 'haendler' } });
+}
