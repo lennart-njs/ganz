@@ -42,9 +42,20 @@ Die Prüfungen aus CI, mit dem Typecheck des Portals: `scripts/ci-checks.sh`. `n
 
 1. Vorher die Beispielfälle frisch anlegen: `.data/ganz-backend.json` löschen und die App neu starten. Sie bleiben aber auch ohne das aktuell.
 2. Zwei Terminals öffnen: Expo und Portal (siehe oben). Das Handy ist im selben WLAN.
-3. Abkürzung ohne Onboarding: Steht das Onboarding noch da, „Los geht’s“ → „Später hinzufügen“. Dann Profil → 7-mal auf die Versionsnummer → „Demo-Startstand laden“, danach `.data/ganz-backend.json` löschen wie in Schritt 1. Am Handy einen Fall anlegen, „Fall an Fründ senden“ tippen. Im Portal erscheint der Hinweis „Neuer Fall“, in der App sofort die Begrüßung.
-4. Im Portal annehmen, Gewährleistung bestätigen, Nachricht oder Terminvorschlag senden. Die Antwort steht nach höchstens 5 Sekunden in der App.
+3. Abkürzung ohne Onboarding: Steht das Onboarding noch da, „Los geht’s“ → „Später hinzufügen“. Dann Profil → 7-mal auf die Versionsnummer → „Demo-Startstand laden“, danach `.data/ganz-backend.json` löschen wie in Schritt 1. Am Handy einen Fall anlegen, „Fall an Fründ senden“ tippen. Im Portal erscheint der Hinweis „Neuer Fall“, in der App sofort die Begrüßung. Zeigt die App nach einem Update „Deine Daten lassen sich gerade nicht laden.“, dort „Zurücksetzen“ und dann den Startstand laden.
+4. Im Portal annehmen, Gewährleistung bestätigen, Nachricht oder Terminvorschlag senden. Die Antwort steht nach höchstens 5 Sekunden in der App. Ohne Startstand fehlt das Kaufdatum, dann schlägt die Prüfung „Abgelaufen“ vor: „Anders entscheiden“ → „Gewährleistung bestätigen“.
 5. Danach Auswertung und Einstellungen → Schnittstellen zeigen.
+
+Rückweg auf den Stand vor der Übertragung der ganz-Linie, falls der neue Stand am Tag hakt:
+
+```bash
+git fetch origin && git switch --detach 67d2fd8
+rm -rf node_modules && npm ci
+(cd portal && npm ci && npm run build)
+rm -f .data/ganz-backend.json
+```
+
+Dann Expo und Portal starten wie oben und am Handy „Alles zurücksetzen“. Auf 67d2fd8 gibt es keinen Demo-Startstand: den Fall über das Onboarding anlegen.
 
 ## Website auf Hetzner
 
