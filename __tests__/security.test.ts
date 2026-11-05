@@ -8,9 +8,12 @@ import os from 'node:os';
 import path from 'node:path';
 
 import { POST as share } from '@/app/api/v1/faelle+api';
+import { POST as login } from '@/app/api/v1/portal/anmelden+api';
+import { portalLogin } from '@/config/portal.demo';
 import { createRateLimiter } from '@/lib/chat/guard';
 import type { SharedCaseFile } from '@/model/sharing';
 import { getCaseStore, setCaseStore } from '@/server/backend';
+import { demoPassword } from '@/server/backend/auth';
 import { FileCaseStore } from '@/server/backend/fileStore';
 import { seedRecords } from '@/server/backend/seed';
 import { shareCreateRate, shareRateLimits, shareUpdateRate } from '@/server/http/rateLimits';
@@ -146,5 +149,62 @@ describe('Rate-Limit: prüfen ohne zu zählen', () => {
     expect(limiter.check(['b'], config).ok).toBe(true);
     t += 60_001;
     expect(limiter.take(['a'], config).ok).toBe(true);
+  });
+});
+
+/** Setzt Umgebungsvariablen für die Dauer von run und stellt sie danach wieder her */
+async function withEnv<T>(vars: Record<string, string | undefined>, run: () => Promise<T>) {
+  const env = process.env as Record<string, string | undefined>;
+  const before = Object.fromEntries(Object.keys(vars).map((k) => [k, env[k]]));
+  Object.assign(env, vars);
+  for (const [k, v] of Object.entries(vars)) if (v === undefined) delete env[k];
+  try {
+    return await run();
+  } finally {
+    for (const [k, v] of Object.entries(before)) {
+      if (v === undefined) delete env[k];
+      else env[k] = v;
+    }
+  }
+}
+
+const signIn = (email: unknown, password: unknown) =>
+  login(req('/api/v1/portal/anmelden', { method: 'POST', json: { email, password } }));
+
+describe('Anmeldung: Passwort nur ausdrücklich', () => {
+  test('Demo-Passwort aus der Konfiguration, nur in der Entwicklung oder mit PORTAL_DEMO_LOGIN=1', () => {
+    expect(portalLogin.demoPassword).toBe('demo');
+    expect(demoPassword({ NODE_ENV: 'development' })).toBe('demo');
+    expect(demoPassword({ NODE_ENV: 'test' })).toBe('demo');
+    expect(demoPassword({})).toBe('demo');
+    expect(demoPassword({ NODE_ENV: 'production' })).toBeNull();
+    expect(demoPassword({ NODE_ENV: 'production', PORTAL_DEMO_LOGIN: '1' })).toBe('demo');
+    expect(demoPassword({ NODE_ENV: 'production', PORTAL_DEMO_LOGIN: 'true' })).toBeNull();
+    expect(demoPassword({ NODE_ENV: 'production', PORTAL_DEMO_PASSWORD: 'lang-und-geheim' })).toBe(
+      'lang-und-geheim',
+    );
+    // Leer zählt nicht als gesetzt
+    expect(demoPassword({ NODE_ENV: 'production', PORTAL_DEMO_PASSWORD: '' })).toBeNull();
+  });
+
+  test('in Produktion ohne Angabe: keine Anmeldung, auch nicht mit „demo“', async () => {
+    const off = {
+      NODE_ENV: 'production',
+      PORTAL_DEMO_LOGIN: undefined,
+      PORTAL_DEMO_PASSWORD: undefined,
+    };
+    const res = await withEnv(off, () => signIn(portalLogin.email, 'demo'));
+    expect(res.status).toBe(401);
+    const empty = await withEnv(off, () => signIn(portalLogin.email, ''));
+    expect(empty.status).toBe(401);
+    // Mit Passwort aus der Umgebung: nur dieses
+    const own = { ...off, PORTAL_DEMO_PASSWORD: 'lang-und-geheim' };
+    expect((await withEnv(own, () => signIn(portalLogin.email, 'demo'))).status).toBe(401);
+    expect((await withEnv(own, () => signIn(portalLogin.email, 'lang-und-geheim'))).status).toBe(
+      200,
+    );
+    // In der Entwicklung (Demo) wie bisher
+    const dev = { NODE_ENV: 'development', PORTAL_DEMO_PASSWORD: undefined };
+    expect((await withEnv(dev, () => signIn(portalLogin.email, 'demo'))).status).toBe(200);
   });
 });

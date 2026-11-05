@@ -1,6 +1,6 @@
-// Anmeldung im Händlerportal (Demo). Ein Konto aus config/portal.demo.ts (Sandra K. bei Fründ),
-// Passwort aus PORTAL_DEMO_PASSWORD (Standard „demo“). Kein echtes Konto, kein echtes Passwort.
-// Später übernimmt das der Login des Backends, mit Rollen je Teammitglied.
+// Anmeldung im Händlerportal (Demo). Ein Konto aus config/portal.demo.ts (Sandra K. bei Fründ).
+// Kein echtes Konto, kein echtes Passwort. Später übernimmt das der Login des Backends, mit
+// Rollen je Teammitglied.
 import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -53,12 +53,23 @@ function safeEqual(a: string, b: string) {
   return x.length === y.length && crypto.timingSafeEqual(x, y);
 }
 
+/**
+ * Das Passwort des Demo-Kontos. PORTAL_DEMO_PASSWORD, wenn gesetzt. Sonst das aus der
+ * Konfiguration, aber nur in der Entwicklung (`npx expo start` setzt NODE_ENV=development) oder
+ * mit PORTAL_DEMO_LOGIN=1. In Produktion ohne beides: null, niemand kann sich anmelden.
+ */
+export function demoPassword(env: Record<string, string | undefined> = process.env): string | null {
+  if (env.PORTAL_DEMO_PASSWORD) return env.PORTAL_DEMO_PASSWORD;
+  const demo = env.NODE_ENV !== 'production' || env.PORTAL_DEMO_LOGIN === '1';
+  return demo ? portalLogin.demoPassword : null;
+}
+
 /** Gibt ein Sitzungs-Token zurück oder null */
 export function login(email: unknown, password: unknown): { token: string; tenant: Tenant } | null {
   if (typeof email !== 'string' || typeof password !== 'string') return null;
   const account = accounts.find((a) => a.email === email.trim().toLowerCase());
-  const expected = process.env.PORTAL_DEMO_PASSWORD ?? 'demo';
-  if (!account || !safeEqual(password, expected)) return null;
+  const expected = demoPassword();
+  if (!account || expected === null || !safeEqual(password, expected)) return null;
   const tenant: Tenant = account.tenant;
   const body = Buffer.from(
     JSON.stringify({ ...tenant, exp: Date.now() + SESSION_HOURS * 3_600_000 }),

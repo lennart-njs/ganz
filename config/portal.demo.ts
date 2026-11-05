@@ -184,8 +184,17 @@ export const fruendSettings: DealerSettings = {
   },
 };
 
-/** Demo-Anmeldung: wer im Portal angemeldet ist */
-export const portalLogin = { email: 'demo@fruend.example', memberId: 'sk', dealerId: 'fruend' };
+/**
+ * Demo-Anmeldung: wer im Portal angemeldet ist. Das Passwort gilt nur in der Entwicklung
+ * (`npx expo start`) oder mit PORTAL_DEMO_LOGIN=1. PORTAL_DEMO_PASSWORD ersetzt es
+ * (server/backend/auth.ts).
+ */
+export const portalLogin = {
+  email: 'demo@fruend.example',
+  memberId: 'sk',
+  dealerId: 'fruend',
+  demoPassword: 'demo',
+};
 
 /** Beispiel für die Vorschau unter Einstellungen → Nachrichten, für {kunde} und {fall} */
 export const messagePreview = { customer: 'Robin', caseNumber: 'GS-24816' };
