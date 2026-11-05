@@ -10,6 +10,7 @@ import { catalog, manufacturers } from '@/data/catalog';
 import { de } from '@/i18n/de';
 import { caseStatusLabel } from '@/lib/caseView';
 import { getGuide } from '@/lib/guideCatalog';
+import { DEFAULT_REGULATOR_RULES } from '@/model/policies/regulator';
 import {
   fillTemplate,
   inServiceHours,
@@ -789,7 +790,7 @@ export function seedRecords(now = Date.now()): SharedCaseRecord[] {
     .sort((a, b) => b.sharedAt - a.sharedAt);
   const ri = random(24816);
 
-  return timed.map((x, i): SharedCaseRecord => {
+  const records = timed.map((x, i): SharedCaseRecord => {
     const { plan: p, combo, sharedAt } = x;
     const dev = combo.device;
     const a = de.appliance[dev.category];
@@ -1156,6 +1157,57 @@ export function seedRecords(now = Date.now()): SharedCaseRecord[] {
       access,
     };
   });
+  return withRework(records);
+}
+
+/**
+ * Ein Beispiel für die Nachbesserung (Portal-Idee 3): Ein neuer Fall außerhalb der Frist auf den
+ * Kauf kommt zu einem Gerät, das Fründ vor ein paar Monaten repariert hat. Dafür bekommt ein
+ * erledigter Fall mit Reparatur dasselbe Gerät und dieselbe Kundschaft. Der Name in den
+ * Nachrichten wird mitgetauscht. Ohne passendes Paar bleibt alles, wie es ist.
+ */
+function withRework(records: SharedCaseRecord[]): SharedCaseRecord[] {
+  const live = catalog.find((m) => m.id === demoConfig.dealerDemo.catalogId);
+  const open = records.find(
+    (r) =>
+      r.workflow?.status === 'neu' &&
+      r.file.device.serialNumber &&
+      r.file.device.model !== live?.model &&
+      warrantyMonths(r) >= DEFAULT_REGULATOR_RULES.purchaseWarrantyMonths,
+  );
+  if (!open) return records;
+  const created = Date.parse(open.file.case.createdAt);
+  const done = records.find((r) => {
+    if (r.workflow?.status !== 'erledigt' || r.file.device.category !== open.file.device.category)
+      return false;
+    const decision = r.retailerEvents.findLast((e) => e.type === 'haendler_entscheidung')?.payload
+      .decision;
+    const since = Date.parse(r.workflow.since);
+    return (
+      (decision === 'gewaehrleistung' || decision === 'kulanz') &&
+      since < created &&
+      created - since < 12 * 30 * D
+    );
+  });
+  if (!done) return records;
+  const from = done.file.customer.name.split(' ')[0]!;
+  const to = open.file.customer.name.split(' ')[0]!;
+  const rename = (x: unknown) => (typeof x === 'string' ? x.replaceAll(from, to) : x);
+  const twin: SharedCaseRecord = {
+    ...done,
+    file: { ...done.file, customer: open.file.customer, device: open.file.device },
+    retailerEvents: done.retailerEvents.map((e) => ({
+      ...e,
+      payload: Object.fromEntries(Object.entries(e.payload).map(([k, v]) => [k, rename(v)])),
+    })),
+  };
+  return records.map((r) => (r === done ? twin : r));
+}
+
+/** Volle Monate vom Kauf bis zum Melden, grob genug für die Auswahl oben */
+function warrantyMonths(r: SharedCaseRecord): number {
+  const bought = Date.parse(r.file.device.purchaseDate ?? '');
+  return Number.isNaN(bought) ? 0 : (Date.parse(r.file.case.createdAt) - bought) / (30.44 * D);
 }
 
 /** Anonyme Zahlen: Fälle an Geräten von Fründ, die ohne Weitergabe gelöst wurden oder woanders hin gingen */

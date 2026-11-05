@@ -87,4 +87,19 @@ describe('Nachbesserung im Portal', () => {
       decision: 'gewaehrleistung',
     });
   });
+
+  it('die Beispielfälle zeigen genau eine Nachbesserung, außerhalb der Frist auf den Kauf', () => {
+    for (const now of [NOW, Date.parse('2026-11-06T18:00:00+01:00')]) {
+      const all = seedRecords(now);
+      const hits = all.filter((r) => previousRepair(r, all));
+      expect(hits).toHaveLength(1);
+      const r = hits[0]!;
+      const twin = all.find((x) => x.file.caseId === previousRepair(r, all)!.caseId)!;
+      expect(twin.file.customer).toEqual(r.file.customer);
+      expect(warrantyCheck(r.file, fruendSettings.rules, r).inWarranty).toBe(false);
+      expect(warrantyCheck(r.file, fruendSettings.rules, r, previousRepair(r, all)).verdict).toBe(
+        'gewaehrleistung',
+      );
+    }
+  });
 });
