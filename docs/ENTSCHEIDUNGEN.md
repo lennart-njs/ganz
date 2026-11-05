@@ -154,3 +154,10 @@ Lennart im Chat, mit zwei markierten Screenshots aus dem Fall GS-24821:
     - **Unter dem Angebot „Fall an … senden“** steht „<Unternehmen> prüft den Fall“, und zwar das Unternehmen, das zuständig ist (Regulierer). Ersetzt „Gewährleistung oder Kulanz“.
     - **Antworten unten im Gespräch** klappen beim Hochscrollen ein und kommen beim Herunterscrollen wieder, in jedem Gespräch.
     - **Auf- und zuklappen:** Jeder Bereich, der sich auf- und zuklappen lässt (etwa im Profil), ist eine Kachel mit grauem Rahmen. Der Schalter dazu soll eindeutiger sein als der bisherige Pfeil.
+
+## Händlerportal nach der Prüfung (05.11.2026)
+
+Lennart auf die Vorschläge „ist das händlerportal clean? … mach mir vorschläge“: „Alles umsetzen. Danach demo erneut.“
+
+39. **Vorschläge A bis D umsetzen.** A: Fehler auf dem Demo-Weg. B: Portal und App rechnen gleich (Frist auf den Kauf, Kaufdatum fehlt, Abbruch, Kaufbeleg). C: Feinschliff, Barrierefreiheit, Absicherung, stimmige Beispielfälle. D: die Produktideen 1 bis 5, also Grundlage wie in der App mit erlaubten Entscheidungen, Kulanz mit Betrag als Beleg in der App, Nachbesserung erkennen, Fristen in Servicezeiten mit Betrieb nach Postleitzahl, Herstelleranfrage vorausgefüllt (Vorschau). Einzelheiten und Annahmen in `docs/ANNAHMEN.md` → „Händlerportal: Feinschliff und Produktideen“.
+
