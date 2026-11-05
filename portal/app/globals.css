@@ -859,10 +859,6 @@ dialog.keys::backdrop {
   .file {
     grid-template-columns: 1fr;
   }
-  /* Einspaltig klebt das Gespräch nicht: Es lag sonst über der Seitenspalte (D-Probe 05.11.) */
-  .convcard {
-    position: static;
-  }
 }
 .stack {
   display: grid;
@@ -901,6 +897,13 @@ details.card > summary {
   gap: 0;
   padding: 0;
   overflow: hidden;
+}
+/* Einspaltig klebt das Gespräch nicht: Es lag sonst über der Seitenspalte (D-Probe 05.11.).
+   Steht nach der Regel oben, sonst gewinnt sticky. */
+@media (max-width: 1000px) {
+  .convcard {
+    position: static;
+  }
 }
 .conv {
   display: flex;
