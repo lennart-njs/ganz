@@ -1,6 +1,6 @@
 # Stand
 
-Zuletzt aktualisiert: 04.11.2026 · Branch `claude/clever-bardeen-bpc32q` · Am Ende jedes Chats aktualisieren.
+Zuletzt aktualisiert: 05.11.2026 · Branch `claude/clever-bardeen-bpc32q` · Am Ende jedes Chats aktualisieren.
 
 ## Nächster Termin
 
@@ -20,12 +20,14 @@ Zuletzt aktualisiert: 04.11.2026 · Branch `claude/clever-bardeen-bpc32q` · Am 
   - Demo-Startstand mit Fründ (Profil → 7-mal Versionsnummer). Mit seinem Kaufdatum schlägt das Portal „Gewährleistung“ vor.
   - Regulierer als reine Regel. Beim Händler-Gerät kein „Du zahlst“ vor der Wahl, Selbstzahlen mit Preis.
   - CI und `scripts/ci-checks.sh` prüfen auch das Portal. Commits über `scripts/commit-if-green.sh`.
+- **Nach dem Test am Telefon (Entscheidung 38):** Keine Hinweistexte mehr im Gespräch. Die Einwilligung in den Reparatur-Assistenten steht im Profil unter „Freiwillig“, wer was sieht unter „Datenschutz“. Beide Startstände haben die Einwilligung. Unter „Fall an Fründ senden“ steht „Fründ prüft den Fall“. Antworten unten klappen beim Hochscrollen zu einer Zeile ein. Aufklappbare Bereiche sind Kacheln mit grauem Rahmen und Plus und Minus.
 - **Generalprobe** im Browser auf 3d3b3d2: Demo-Ablauf 6 von 6, gleiche Klickfolge wie 67d2fd8, keine Fehler in der Konsole. Auch Startstand bis Termin, Foto an Fründ, alter Speicherstand.
-- Alle Prüfungen grün (1452 Tests).
+- Alle Prüfungen grün (1460 Tests). Demo im Browser 6 von 6 auf dem Stand nach Entscheidung 38.
 
 ## Offen
 
-- Lennarts lokale Kopie (`~/Desktop/ganz`) steht auf 588e6af. Mit `git pull` nachziehen, danach `npm install` und `cd portal && npm ci && npm run build`. Die Übertragung bringt `zod` und `fast-check` neu dazu. Ohne sie startet Metro nicht.
+- Lennarts lokale Kopie (`~/Desktop/ganz`) mit `git pull` nachziehen. Baut das Portal nicht („Failed to open database … invalid digit found in string“), zuerst `rm -rf portal/.next`.
+- Offen für Lennart: Soll die Vorschau vor „Ja, senden“ zurück? Sie ist mit Entscheidung 38 raus, ebenso „Computerprogramm, kein Mensch“ an der ersten Antwort. Beides für den Anwalt in `docs/ANNAHMEN.md` → „Entscheidung 38“.
 - Von welchem Stand läuft die Demo? Der übertragene Stand ist im Browser geprobt, am Telefon noch nicht. Zuerst am Telefon prüfen: einen Fall aus dem Demo-Startstand öffnen und den Händler-Weg einmal ganz gehen. Die Frist rechnet die App selbst, ohne Zeitzonen-Funktion des Telefons.
 - Rückweg für Freitag: 67d2fd8, der letzte gute Stand vor der Übertragung (`docs/ABLAEUFE.md` → „Demo“).
 - Schritt 4.2 (Kaufmonat beim Gerät) wartet auf Lennarts Antwort. Bis dahin schlägt das Portal für Geräte ohne Kaufdatum „Abgelaufen“ vor: „Anders entscheiden“.
