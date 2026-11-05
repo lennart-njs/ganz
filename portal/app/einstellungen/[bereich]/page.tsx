@@ -620,15 +620,11 @@ export default async function Bereich({ params }: { params: Promise<{ bereich: s
           ))}
         </nav>
         <section className="card scard">
-          <h2 className="h2">
-            {t.sections[section]}
-            {section === 'notifications' || section === 'integrations' ? (
-              <>
-                {' '}
-                <Preview />
-              </>
-            ) : null}
-          </h2>
+          {/* Das Kennzeichen steht neben der Überschrift, nicht in ihrem Namen */}
+          <div className="shead">
+            <h2 className="h2">{t.sections[section]}</h2>
+            {section === 'notifications' || section === 'integrations' ? <Preview /> : null}
+          </div>
           {section === 'integrations' ? (
             body[section]
           ) : (
