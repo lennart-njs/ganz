@@ -1,11 +1,14 @@
-// Rate-Limits der Route für Fälle aus der App. Dasselbe Rate-Limit
+// Rate-Limits der Routen für Fälle aus der App und für die Anmeldung im Portal. Dasselbe Rate-Limit
 // wie die Chat-Route (lib/chat/guard.ts), im Speicher des Prozesses. Expo bündelt jede Route
 // einzeln, darum hat jede Route ihre eigenen Zähler.
 //
 // Ohne vertrauten Proxy (CHAT_TRUSTED_PROXY_HOPS) sieht die Route keine IP-Adresse. Dann zählen
-// alle Anfragen als eine Adresse („unbekannt“), die Grenzen gelten also für alle zusammen. Die
-// Werte sind so gewählt, dass die Demo und die Tests weit darunter bleiben.
+// alle Anfragen als eine Adresse („unbekannt“), die Grenzen gelten also für alle zusammen. Bei der
+// Anmeldung ist der Absender ohnehin der Server des Portals, nicht der Browser. Die Werte lassen
+// der Demo viel Luft: ein Telefon, ein paar neue Fälle, eine Anmeldung.
 import { createRateLimiter, type RateLimitConfig } from '@/lib/chat/guard';
+
+const NONE = Number.MAX_SAFE_INTEGER;
 
 /** Neue Fälle aus der App (ohne X-Share-Token). Begrenzt, wie viele Fälle jemand im Netz anlegt. */
 export const shareCreateRate: RateLimitConfig = {
@@ -27,3 +30,17 @@ export const shareRateLimits = {
   create: createRateLimiter(),
   update: createRateLimiter(),
 };
+
+/**
+ * Anmeldung im Portal: zählt nur Fehlversuche, je IP-Adresse und je E-Mail. Nach 10 in
+ * 10 Minuten ist Pause, bis der älteste aus dem Fenster fällt. Erfolgreiche Anmeldungen zählen
+ * nicht. Keine Tagesgrenze: Sie würde das Konto bis Mitternacht sperren.
+ */
+export const loginRate: RateLimitConfig = {
+  perWindow: 10,
+  windowMs: 10 * 60_000,
+  perDay: NONE,
+  dailyTotal: NONE,
+};
+
+export const loginFailures = createRateLimiter();

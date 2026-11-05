@@ -1445,6 +1445,7 @@ export const de = {
       submit: 'Anmelden',
       failed: 'E-Mail oder Passwort falsch.',
       offline: 'Die Verbindung zum Server fehlt. Bitte gleich noch einmal versuchen.',
+      tooMany: 'Zu viele Versuche. Bitte versuchen Sie es in zehn Minuten noch einmal.',
     },
     nav: {
       cases: 'Fälle',

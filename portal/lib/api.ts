@@ -96,10 +96,11 @@ export async function getAnonymous(): Promise<AnonymousOutcome[]> {
   return ((await res.json()) as { anonymous: AnonymousOutcome[] }).anonymous;
 }
 
+/** Anmelden. gesperrt: zu viele Fehlversuche, das Backend antwortet eine Weile mit 429. */
 export async function login(
   email: string,
   password: string,
-): Promise<{ token: string } | 'falsch' | 'offline'> {
+): Promise<{ token: string } | 'falsch' | 'offline' | 'gesperrt'> {
   try {
     const res = await fetch(`${BASE}/api/v1/portal/anmelden`, {
       method: 'POST',
@@ -107,6 +108,7 @@ export async function login(
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email, password }),
     });
+    if (res.status === 429) return 'gesperrt';
     if (!res.ok) return 'falsch';
     return (await res.json()) as { token: string };
   } catch {

@@ -7,7 +7,7 @@ import { setSession } from '../../lib/session';
 
 export async function signIn(_prev: string | undefined, form: FormData) {
   const result = await login(String(form.get('email') ?? ''), String(form.get('password') ?? ''));
-  if (result === 'falsch' || result === 'offline') return result;
+  if (typeof result === 'string') return result;
   await setSession(result.token);
   redirect('/');
 }

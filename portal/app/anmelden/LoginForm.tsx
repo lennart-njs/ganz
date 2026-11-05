@@ -38,7 +38,7 @@ export function LoginForm({ email }: { email?: string }) {
       {error ? (
         <p className="flash bad" role="alert">
           <span className="dot" aria-hidden />
-          {error === 'offline' ? t.offline : t.failed}
+          {error === 'offline' ? t.offline : error === 'gesperrt' ? t.tooMany : t.failed}
         </p>
       ) : null}
       <button className="btn btn-block" type="submit" disabled={pending}>

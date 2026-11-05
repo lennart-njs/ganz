@@ -19,13 +19,20 @@ import { POST as act } from '@/app/api/v1/portal/faelle/[id]/aktionen+api';
 import { POST as work } from '@/app/api/v1/portal/faelle/[id]/bearbeitung+api';
 import { POST as bulk } from '@/app/api/v1/portal/sammelaktion+api';
 import { portalLogin } from '@/config/portal.demo';
+import { de } from '@/i18n/de';
 import { createRateLimiter } from '@/lib/chat/guard';
 import type { SharedCaseFile } from '@/model/sharing';
 import { getCaseStore, setCaseStore } from '@/server/backend';
 import { demoPassword } from '@/server/backend/auth';
 import { FileCaseStore } from '@/server/backend/fileStore';
 import { seedRecords } from '@/server/backend/seed';
-import { shareCreateRate, shareRateLimits, shareUpdateRate } from '@/server/http/rateLimits';
+import {
+  loginFailures,
+  loginRate,
+  shareCreateRate,
+  shareRateLimits,
+  shareUpdateRate,
+} from '@/server/http/rateLimits';
 
 const req = (url: string, init: RequestInit & { json?: unknown } = {}) =>
   new Request(`http://localhost${url}`, {
@@ -67,6 +74,7 @@ beforeEach(() => {
   process.env.GANZ_DATA_DIR = dir;
   shareRateLimits.create.reset();
   shareRateLimits.update.reset();
+  loginFailures.reset();
 });
 afterEach(() => {
   setCaseStore(undefined);
@@ -319,5 +327,70 @@ describe('Abmelden sperrt das Token', () => {
     expect(auth!.tenantFrom(token(claims))).toBeNull();
     expect(auth!.tenantFrom(token({ ...claims, jti: 'k1' }))).toMatchObject({ id: 'fruend' });
     expect(auth!.tenantFrom(token({ ...claims, jti: 'k1', exp: Date.now() - 1 }))).toBeNull();
+  });
+});
+
+describe('Anmeldung: Rate-Limit für Fehlversuche', () => {
+  const via = (ip: string, email: unknown, password: unknown) =>
+    login(
+      req('/api/v1/portal/anmelden', {
+        method: 'POST',
+        headers: { 'X-Forwarded-For': ip },
+        json: { email, password },
+      }),
+    );
+
+  test('nach 10 Fehlversuchen 429 mit Retry-After, auch mit dem richtigen Passwort', async () => {
+    for (let i = 0; i < loginRate.perWindow; i++) {
+      expect((await signIn(portalLogin.email, `falsch-${i}`)).status).toBe(401);
+    }
+    const blocked = await signIn(portalLogin.email, 'demo');
+    expect(blocked.status).toBe(429);
+    expect(await blocked.json()).toEqual({ error: 'zu_viele' });
+    const retry = Number(blocked.headers.get('retry-after'));
+    expect(retry).toBeGreaterThan(0);
+    expect(retry).toBeLessThanOrEqual(loginRate.windowMs / 1000);
+  });
+
+  test('nach dem Fenster geht es wieder', async () => {
+    const start = Date.now();
+    const clock = jest.spyOn(Date, 'now').mockReturnValue(start);
+    try {
+      for (let i = 0; i < loginRate.perWindow; i++) await signIn(portalLogin.email, 'falsch');
+      expect((await signIn(portalLogin.email, 'demo')).status).toBe(429);
+      clock.mockReturnValue(start + loginRate.windowMs + 1000);
+      expect((await signIn(portalLogin.email, 'demo')).status).toBe(200);
+    } finally {
+      clock.mockRestore();
+    }
+  });
+
+  test('erfolgreiche Anmeldungen zählen nicht', async () => {
+    for (let i = 0; i < loginRate.perWindow * 2; i++) {
+      expect((await signIn(portalLogin.email, 'demo')).status).toBe(200);
+    }
+  });
+
+  test('je IP-Adresse und je E-Mail, wenn ein vertrauter Proxy die Adresse nennt', async () => {
+    await withEnv({ CHAT_TRUSTED_PROXY_HOPS: '1' }, async () => {
+      // Eine Adresse probiert viele E-Mails: Diese Adresse ist gesperrt, eine andere nicht
+      for (let i = 0; i < loginRate.perWindow; i++) {
+        expect((await via('10.0.0.1', `x${i}@example.org`, 'falsch')).status).toBe(401);
+      }
+      expect((await via('10.0.0.1', portalLogin.email, 'demo')).status).toBe(429);
+      expect((await via('10.0.0.2', portalLogin.email, 'demo')).status).toBe(200);
+      // Viele Adressen probieren eine E-Mail: Diese E-Mail ist gesperrt, egal von wo
+      for (let i = 0; i < loginRate.perWindow; i++) {
+        const email = ` ${portalLogin.email.toUpperCase()} `;
+        expect((await via(`10.0.1.${i}`, email, 'x')).status).toBe(401);
+      }
+      expect((await via('10.0.0.3', portalLogin.email, 'demo')).status).toBe(429);
+      expect((await via('10.0.0.3', 'jemand@example.org', 'falsch')).status).toBe(401);
+    });
+  });
+
+  test('der Text für das Portal: ruhig, Sie-Form, ohne Ausrufezeichen', () => {
+    expect(de.portal.login.tooMany).toMatch(/\bSie\b/);
+    expect(de.portal.login.tooMany).not.toMatch(/!/);
   });
 });
